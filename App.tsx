@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  PLAYER_OPTIONS, 
-  BOARD_IMAGE_URLS, 
+import {
+  PLAYER_OPTIONS,
+  BOARD_IMAGE_URLS,
   initializePlayers,
   initializePieces,
   PIECE_COUNTS_BY_PLAYER_COUNT,
@@ -19,6 +19,7 @@ import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   formatLocationId,
   getLocationIdFromPosition,
+  DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
 } from './game';
 
 // --- Helper Components ---
@@ -140,7 +141,6 @@ const CampaignScreen: React.FC<{
   players: Player[];
   pieces: Piece[];
   boardTiles: BoardTile[];
-  pieceBins: { [key: string]: { count: number; imageUrl: string } };
   currentPlayerId: number;
   lastDroppedPosition: { top: number; left: number } | null;
   isTestMode: boolean;
@@ -158,8 +158,6 @@ const CampaignScreen: React.FC<{
   onPieceMove: (pieceId: string, newPosition: { top: number; left: number }) => void;
   onBoardTileMove: (boardTileId: string, newPosition: { top: number; left: number }) => void;
   onEndTurn: () => void;
-  onAddPieceFromBin: (pieceName: string, position: { top: number; left: number }) => void;
-  onReturnPieceToBin: (pieceId: string) => void;
   onPlaceTile: (tileId: number, targetSpace: TileReceivingSpace) => void;
   onRevealTile: (tileId: string | null) => void;
   onReceiverDecision: (decision: 'accept' | 'reject') => void;
@@ -167,7 +165,7 @@ const CampaignScreen: React.FC<{
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, pieceBins, currentPlayerId, lastDroppedPosition, isTestMode, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onAddPieceFromBin, onReturnPieceToBin, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, isTestMode, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -180,9 +178,6 @@ const CampaignScreen: React.FC<{
   const unoccupiedSpaces = tileSpaces.filter(space => !occupiedOwnerIds.has(space.ownerId));
 
   const logContainerRef = useRef<HTMLDivElement>(null);
-
-  const marksInSupply = pieceBins['Mark']?.count > 0;
-  const heelsInSupply = pieceBins['Heel']?.count > 0;
 
   useEffect(() => {
     if (logContainerRef.current) {
@@ -260,12 +255,11 @@ const CampaignScreen: React.FC<{
     setDropIndicator(null);
     const boardTileId = e.dataTransfer.getData("boardTileId");
     const pieceId = e.dataTransfer.getData("pieceId");
-    const pieceNameFromBin = e.dataTransfer.getData("pieceName");
 
     const boardRect = e.currentTarget.getBoundingClientRect();
     const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
     const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
-    
+
     let left = rawLeft;
     let top = rawTop;
     if (boardRotation !== 0) {
@@ -287,12 +281,8 @@ const CampaignScreen: React.FC<{
 
     const snappedPosition = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
-    if (snappedPosition) {
-        if (pieceId) {
-            onPieceMove(pieceId, snappedPosition);
-        } else if (pieceNameFromBin) {
-            onAddPieceFromBin(pieceNameFromBin, snappedPosition);
-        }
+    if (snappedPosition && pieceId) {
+        onPieceMove(pieceId, snappedPosition);
     }
   };
 
@@ -314,17 +304,6 @@ const CampaignScreen: React.FC<{
     }
   };
 
-  const handleDragStartFromBin = (e: React.DragEvent<HTMLDivElement>, pieceName: string) => {
-    if (pieceBins[pieceName]?.count > 0) {
-      e.dataTransfer.setData("pieceName", pieceName);
-      e.dataTransfer.effectAllowed = 'copy';
-      const { imageUrl } = pieceBins[pieceName];
-      setDraggedPieceInfo({ name: pieceName, imageUrl });
-    } else {
-      e.preventDefault();
-    }
-  };
-  
   const handleDragEndPiece = () => {
     setDraggedPieceInfo(null);
     setDropIndicator(null);
@@ -339,17 +318,6 @@ const CampaignScreen: React.FC<{
   const handleDragStartBoardTile = (e: React.DragEvent<HTMLDivElement>, boardTileId: string) => {
     e.dataTransfer.setData("boardTileId", boardTileId);
     e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDropOnBin = (e: React.DragEvent<HTMLDivElement>, binName: string) => {
-    e.preventDefault();
-    const pieceId = e.dataTransfer.getData("pieceId");
-    if (pieceId) {
-      const piece = pieces.find(p => p.id === pieceId);
-      if (piece && piece.name === binName) {
-        onReturnPieceToBin(pieceId);
-      }
-    }
   };
 
   const currentPlayer = players.find(p => p.id === currentPlayerId);
@@ -552,57 +520,6 @@ const CampaignScreen: React.FC<{
         {/* Right Column: Supply & Log */}
         <div className="w-full lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
           <div className="lg:sticky lg:top-8 flex flex-col gap-8">
-            {/* Piece Supply */}
-            <div>
-              <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Piece Supply</h2>
-              <div className="flex flex-wrap justify-center items-start gap-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                {Object.entries(pieceBins).map(([name, { count, imageUrl }]) => {
-                  let isPieceDisabled = false;
-                  let disabledTooltip = '';
-
-                  if (name === 'Heel') {
-                    if (marksInSupply) {
-                      isPieceDisabled = true;
-                      disabledTooltip = 'Heels are available after Marks run out.';
-                    }
-                  } else if (name === 'Pawn') {
-                    if (marksInSupply) {
-                      isPieceDisabled = true;
-                      disabledTooltip = 'Pawns are available after Marks and Heels run out.';
-                    } else if (heelsInSupply) {
-                      isPieceDisabled = true;
-                      disabledTooltip = 'Pawns are available after Heels run out.';
-                    }
-                  }
-                  
-                  const canDrag = count > 0 && !isPieceDisabled;
-
-                  return (
-                    <div 
-                      key={name} 
-                      className="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-700/50 border border-gray-600" 
-                      onDragOver={handleDragOver} 
-                      onDrop={(e) => handleDropOnBin(e, name)}
-                      title={disabledTooltip}
-                    >
-                      <div 
-                        draggable={canDrag} 
-                        onDragStart={(e) => handleDragStartFromBin(e, name)} 
-                        onDragEnd={handleDragEndPiece}
-                        className={`relative ${canDrag ? 'cursor-grab' : 'cursor-not-allowed opacity-50'}`} 
-                        aria-label={canDrag ? `Drag a ${name} piece` : `${name} piece is currently unavailable`}
-                        aria-disabled={!canDrag}
-                      >
-                        <img src={imageUrl} alt={name} className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-md" />
-                        <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">{count}</span>
-                      </div>
-                      <span className="text-sm font-semibold text-slate-300">{name}s</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            
             {/* Game Log */}
             <div>
               <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Game Log</h2>
@@ -725,7 +642,6 @@ const App: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
-  const [pieceBins, setPieceBins] = useState<{ [key: string]: { count: number; imageUrl: string } }>({});
   const [playerCount, setPlayerCount] = useState<number>(0);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
@@ -761,7 +677,6 @@ const App: React.FC = () => {
     setPlayers([]);
     setPlayerCount(0);
     setPieces([]);
-    setPieceBins({});
     setLastDroppedPosition(null);
     setBoardTiles([]);
     setHasPlayedTileThisTurn(false);
@@ -799,25 +714,21 @@ const App: React.FC = () => {
 
       if (playersWithPassedHands[0].hand.length === 0) {
         setGameState('CAMPAIGN');
-        const initialPieces = initializePieces(playerCount);
+
+        // Create pieces from default positions
+        const defaultPositions = DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT[playerCount] || [];
+        const initialPieces: Piece[] = defaultPositions.map((piece, index) => ({
+          id: `piece_${index}`,
+          name: piece.name,
+          displayName: piece.displayName,
+          imageUrl: PIECE_TYPES[piece.name.toUpperCase()].imageUrl,
+          position: piece.position,
+          rotation: calculatePieceRotation(piece.position, playerCount),
+        }));
+
         setPieces(initialPieces);
         setPiecesAtTurnStart(initialPieces);
-        
-        const totalCounts = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount];
-        const onBoardCounts = initialPieces.reduce((counts, piece) => {
-          counts[piece.name] = (counts[piece.name] || 0) + 1;
-          return counts;
-        }, {} as { [key: string]: number });
 
-        const initialBinCounts = Object.values(PIECE_TYPES).reduce((bins, pieceInfo) => {
-          const total = totalCounts[pieceInfo.name.toUpperCase()] || 0;
-          const onBoard = onBoardCounts[pieceInfo.name] || 0;
-          bins[pieceInfo.name] = { count: total - onBoard, imageUrl: pieceInfo.imageUrl };
-          return bins;
-        }, {} as { [key: string]: { count: number; imageUrl: string } });
-        
-        setPieceBins(initialBinCounts);
-        
         const startingTileId = 3;
         const startingPlayerIndex = playersWithPassedHands.findIndex(p => p.keptTiles.some(t => t.id === startingTileId));
 
@@ -951,25 +862,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddPieceFromBin = (pieceName: string, position: { top: number; left: number }) => {
-    if (pieceBins[pieceName] && pieceBins[pieceName].count > 0) {
-      setLastDroppedPosition(position);
-      const newPiece: Piece = {
-        id: `piece_${Date.now()}_${Math.random()}`, name: pieceName, imageUrl: PIECE_TYPES[pieceName.toUpperCase()].imageUrl, position, rotation: calculatePieceRotation(position, playerCount),
-      };
-      setPieces(prev => [...prev, newPiece]);
-      setPieceBins(prev => ({ ...prev, [pieceName]: { ...prev[pieceName], count: prev[pieceName].count - 1 }, }));
-    }
-  };
-
-  const handleReturnPieceToBin = (pieceId: string) => {
-    const pieceToReturn = pieces.find(p => p.id === pieceId);
-    if (pieceToReturn) {
-      setPieces(prev => prev.filter(p => p.id !== pieceId));
-      setPieceBins(prev => ({ ...prev, [pieceToReturn.name]: { ...prev[pieceToReturn.name], count: prev[pieceToReturn.name].count + 1 }, }));
-    }
-  };
-  
   const handlePlaceTile = (tileId: number, targetSpace: TileReceivingSpace) => {
     if (hasPlayedTileThisTurn) return;
     const currentPlayer = players[currentPlayerIndex];
@@ -1092,7 +984,6 @@ const App: React.FC = () => {
             players={players}
             pieces={pieces}
             boardTiles={boardTiles}
-            pieceBins={pieceBins}
             currentPlayerId={currentPlayer.id}
             lastDroppedPosition={lastDroppedPosition}
             isTestMode={isTestMode}
@@ -1110,8 +1001,6 @@ const App: React.FC = () => {
             onPieceMove={handlePieceMove}
             onBoardTileMove={handleBoardTileMove}
             onEndTurn={handleEndTurn}
-            onAddPieceFromBin={handleAddPieceFromBin}
-            onReturnPieceToBin={handleReturnPieceToBin}
             onPlaceTile={handlePlaceTile}
             onRevealTile={handleRevealTile}
             onReceiverDecision={handleReceiverDecision}
