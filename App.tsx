@@ -415,19 +415,37 @@ const CampaignScreen: React.FC<{
             )}
             
             {dropIndicator && (
-              <div
-                className={`${indicatorSizeClass} absolute pointer-events-none transition-all duration-100 ease-in-out`}
-                style={{
-                  top: `${dropIndicator.position.top}%`,
-                  left: `${dropIndicator.position.left}%`,
-                  transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
-                  filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
-                  opacity: 0.7,
-                }}
-                aria-hidden="true"
-              >
-                <img src={dropIndicator.imageUrl} alt="" className="w-full h-full object-contain" />
-              </div>
+              <>
+                {/* Soft green glow indicator showing snap location */}
+                <div
+                  className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
+                  style={{
+                    top: `${dropIndicator.position.top}%`,
+                    left: `${dropIndicator.position.left}%`,
+                    width: '80px',
+                    height: '80px',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                    boxShadow: '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                    border: '2px solid rgba(34, 197, 94, 0.6)',
+                  }}
+                  aria-hidden="true"
+                />
+                {/* Drop indicator piece preview */}
+                <div
+                  className={`${indicatorSizeClass} absolute pointer-events-none transition-all duration-100 ease-in-out`}
+                  style={{
+                    top: `${dropIndicator.position.top}%`,
+                    left: `${dropIndicator.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
+                    filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
+                    opacity: 0.7,
+                  }}
+                  aria-hidden="true"
+                >
+                  <img src={dropIndicator.imageUrl} alt="" className="w-full h-full object-contain" />
+                </div>
+              </>
             )}
 
             {unoccupiedSpaces.map(space => (

@@ -481,8 +481,9 @@ export function findNearestVacantLocation(
 
   if (nearestLocation) {
     const isRostrum = nearestLocation.id.includes('rostrum');
-    // Rostrums get a larger drop radius to make them less fickle.
-    const maxDistance = isRostrum ? 9.0 : 6.0;
+    // Rostrums and offices get a larger drop radius for better UX.
+    const isOffice = nearestLocation.id.includes('office');
+    const maxDistance = (isRostrum || isOffice) ? 15.0 : 12.0;
     if (minDistance < maxDistance) {
       return { position: nearestLocation.position, id: nearestLocation.id };
     }
