@@ -85,9 +85,9 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p2_rostrum1', position: { left: 72.20, top: 52.48 } },
   { id: 'p2_rostrum2', position: { left: 54.82, top: 22.39 } },
   // Offices
-  { id: 'p1_office', position: { left: 29.84, top: 32.62 } },
-  { id: 'p2_office', position: { left: 71.03, top: 32.18 } },
-  { id: 'p3_office', position: { left: 50.88, top: 67.97 } },
+  { id: 'p1_office', position: { left: 31.93, top: 24.80 } },
+  { id: 'p2_office', position: { left: 76.12, top: 36.53 } },
+  { id: 'p3_office', position: { left: 43.97, top: 68.83 } },
   // Community (23 spaces based on testing)
   { id: 'community1', position: { left: 44.32, top: 47.40 } },
   { id: 'community2', position: { left: 53.07, top: 45.52 } },
@@ -154,10 +154,10 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p4_rostrum1', position: { left: 25.18, top: 59.71 } },
     { id: 'p4_rostrum2', position: { left: 54.14, top: 75.72 } },
     // Offices
-    { id: 'p1_office', position: { left: 24.94, top: 38.95 } },
-    { id: 'p2_office', position: { left: 62.98, top: 27.89 } },
-    { id: 'p3_office', position: { left: 74.89, top: 63.39 } },
-    { id: 'p4_office', position: { left: 38.38, top: 74.98 } },
+    { id: 'p1_office', position: { left: 18.14, top: 44.88 } },
+    { id: 'p2_office', position: { left: 55.98, top: 20.22 } },
+    { id: 'p3_office', position: { left: 82.19, top: 55.71 } },
+    { id: 'p4_office', position: { left: 44.32, top: 80.24 } },
     // Community (spread out to avoid overlap)
     { id: 'community1', position: { left: 41.46, top: 43.27 } },
     { id: 'community2', position: { left: 41.31, top: 53.91 } },
@@ -215,11 +215,11 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p5_rostrum1', position: { left: 39.17, top: 67.54 } },
     { id: 'p5_rostrum2', position: { left: 58.79, top: 66.69 } },
     // Offices
-    { id: 'p1_office', position: { left: 19.35, top: 51.67 } },
-    { id: 'p2_office', position: { left: 34.75, top: 23.43 } },
-    { id: 'p3_office', position: { left: 67.74, top: 27.25 } },
-    { id: 'p4_office', position: { left: 73.19, top: 58.82 } },
-    { id: 'p5_office', position: { left: 43.93, top: 73.60 } },
+    { id: 'p1_office', position: { left: 15.75, top: 44.69 } },
+    { id: 'p2_office', position: { left: 39.35, top: 17.14 } },
+    { id: 'p3_office', position: { left: 74.97, top: 29.36 } },
+    { id: 'p4_office', position: { left: 72.95, top: 65.12 } },
+    { id: 'p5_office', position: { left: 36.38, top: 74.57 } },
     // Community (40 spaces based on testing)
     { id: 'community1', position: { left: 37.34, top: 41.21 } },
     { id: 'community2', position: { left: 40.36, top: 46.88 } },
