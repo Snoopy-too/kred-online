@@ -489,8 +489,14 @@ const CampaignScreen: React.FC<{
               let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
               if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+
+              // Apply 15% size reduction for 3-player mode
+              const scaleMultiplier = playerCount === 3 ? 0.85 : 1;
+              const baseScale = 0.798;
+              const finalScale = baseScale * scaleMultiplier;
+
               return (
-                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation}deg) scale(0.798)`, cursor: 'grab' }} aria-hidden="true" />
+                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation}deg) scale(${finalScale})`, cursor: 'grab' }} aria-hidden="true" />
               );
             })}
           </div>
