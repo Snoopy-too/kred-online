@@ -233,13 +233,13 @@ const CampaignScreen: React.FC<{
         top = rotatedY + centerY;
     }
 
-    const snappedPosition = findNearestVacantLocation({ top, left }, pieces, playerCount);
+    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
-    if (snappedPosition) {
-        const newRotation = calculatePieceRotation(snappedPosition, playerCount);
-        if (!dropIndicator || dropIndicator.position.top !== snappedPosition.top || dropIndicator.position.left !== snappedPosition.left) {
+    if (snappedLocation) {
+        const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
+        if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
              setDropIndicator({
-                position: snappedPosition,
+                position: snappedLocation.position,
                 rotation: newRotation,
                 name: draggedPieceInfo.name,
                 imageUrl: draggedPieceInfo.imageUrl
@@ -279,10 +279,10 @@ const CampaignScreen: React.FC<{
         return;
     }
 
-    const snappedPosition = findNearestVacantLocation({ top, left }, pieces, playerCount);
+    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
-    if (snappedPosition && pieceId) {
-        onPieceMove(pieceId, snappedPosition);
+    if (snappedLocation && pieceId) {
+        onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
     }
   };
 
@@ -343,6 +343,7 @@ const CampaignScreen: React.FC<{
       else if (dropIndicator.name === 'Pawn') indicatorSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
       else indicatorSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
   }
+  const indicatorScaleStyle = dropIndicator ? { transform: 'scale(0.84)' } : {};
 
   return (
     <main className="min-h-screen w-full bg-gray-900 flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans">
@@ -396,7 +397,7 @@ const CampaignScreen: React.FC<{
                 style={{
                   top: `${dropIndicator.position.top}%`,
                   left: `${dropIndicator.position.left}%`,
-                  transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg)`,
+                  transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
                   filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
                   opacity: 0.7,
                 }}
@@ -466,7 +467,7 @@ const CampaignScreen: React.FC<{
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
               if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
               return (
-                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation}deg)`, cursor: 'grab' }} aria-hidden="true" />
+                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation}deg) scale(0.798)`, cursor: 'grab' }} aria-hidden="true" />
               );
             })}
           </div>
@@ -717,14 +718,19 @@ const App: React.FC = () => {
 
         // Create pieces from default positions
         const defaultPositions = DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT[playerCount] || [];
-        const initialPieces: Piece[] = defaultPositions.map((piece, index) => ({
-          id: `piece_${index}`,
-          name: piece.name,
-          displayName: piece.displayName,
-          imageUrl: PIECE_TYPES[piece.name.toUpperCase()].imageUrl,
-          position: piece.position,
-          rotation: calculatePieceRotation(piece.position, playerCount),
-        }));
+        const initialPieces: Piece[] = defaultPositions.map((piece, index) => {
+          // Default pieces are placed in the community area, so they have no rotation
+          const locationId = 'community_default';
+          return {
+            id: `piece_${index}`,
+            name: piece.name,
+            displayName: piece.displayName,
+            imageUrl: PIECE_TYPES[piece.name.toUpperCase()].imageUrl,
+            position: piece.position,
+            rotation: calculatePieceRotation(piece.position, playerCount, locationId),
+            locationId,
+          };
+        });
 
         setPieces(initialPieces);
         setPiecesAtTurnStart(initialPieces);
@@ -746,10 +752,10 @@ const App: React.FC = () => {
     }
   };
   
-  const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }) => {
+  const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
     setLastDroppedPosition(newPosition);
-    const newRotation = calculatePieceRotation(newPosition, playerCount);
-    setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation } : p));
+    const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
+    setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p));
   };
 
   const handleBoardTileMove = (boardTileId: string, newPosition: { top: number; left: number }) => {

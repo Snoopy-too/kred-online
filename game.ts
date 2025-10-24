@@ -30,6 +30,7 @@ export interface Piece {
   imageUrl: string;
   position: { top: number; left: number }; // in percentage
   rotation: number;
+  locationId?: string; // ID of the drop location where this piece is placed
 }
 
 // Represents a tile instance on the game board
@@ -87,6 +88,11 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p1_office', position: { left: 29.84, top: 32.62 } },
   { id: 'p2_office', position: { left: 71.03, top: 32.18 } },
   { id: 'p3_office', position: { left: 50.88, top: 67.97 } },
+  // Community
+  { id: 'community1', position: { left: 50.00, top: 45.00 } },
+  { id: 'community2', position: { left: 45.00, top: 50.00 } },
+  { id: 'community3', position: { left: 55.00, top: 50.00 } },
+  { id: 'community4', position: { left: 50.00, top: 55.00 } },
 ];
 
 const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -132,6 +138,13 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p2_office', position: { left: 62.98, top: 27.89 } },
     { id: 'p3_office', position: { left: 74.89, top: 63.39 } },
     { id: 'p4_office', position: { left: 38.38, top: 74.98 } },
+    // Community
+    { id: 'community1', position: { left: 50.00, top: 45.00 } },
+    { id: 'community2', position: { left: 45.00, top: 50.00 } },
+    { id: 'community3', position: { left: 55.00, top: 50.00 } },
+    { id: 'community4', position: { left: 50.00, top: 55.00 } },
+    { id: 'community5', position: { left: 42.00, top: 45.00 } },
+    { id: 'community6', position: { left: 58.00, top: 55.00 } },
 ];
 
 const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -187,6 +200,14 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p3_office', position: { left: 67.74, top: 27.25 } },
     { id: 'p4_office', position: { left: 73.19, top: 58.82 } },
     { id: 'p5_office', position: { left: 43.93, top: 73.60 } },
+    // Community
+    { id: 'community1', position: { left: 50.00, top: 45.00 } },
+    { id: 'community2', position: { left: 45.00, top: 50.00 } },
+    { id: 'community3', position: { left: 55.00, top: 50.00 } },
+    { id: 'community4', position: { left: 50.00, top: 55.00 } },
+    { id: 'community5', position: { left: 42.00, top: 45.00 } },
+    { id: 'community6', position: { left: 58.00, top: 55.00 } },
+    { id: 'community7', position: { left: 50.00, top: 40.00 } },
 ];
 
 export const DROP_LOCATIONS_BY_PLAYER_COUNT: { [playerCount: number]: DropLocation[] } = {
@@ -283,11 +304,18 @@ const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = 
 
 /**
  * Calculates the rotation of a piece so its bottom faces the board center.
+ * Community pieces have no rotation (0 degrees).
  * @param position The position of the piece in percentage { top, left }.
  * @param playerCount The number of players in the game.
+ * @param locationId Optional location ID to check if it's a community location.
  * @returns The rotation in degrees.
  */
-export function calculatePieceRotation(position: { top: number; left: number }, playerCount: number): number {
+export function calculatePieceRotation(position: { top: number; left: number }, playerCount: number, locationId?: string): number {
+  // Community pieces have no rotation
+  if (locationId && locationId.startsWith('community')) {
+    return 0;
+  }
+
   const boardCenter = BOARD_CENTERS[playerCount] || { left: 50, top: 50 };
   const dx = position.left - boardCenter.left;
   const dy = position.top - boardCenter.top;
@@ -301,13 +329,13 @@ export function calculatePieceRotation(position: { top: number; left: number }, 
  * @param dropPosition The position where the user tried to drop the piece.
  * @param allPieces The list of all pieces currently on the board.
  * @param playerCount The number of players.
- * @returns The position of the nearest vacant spot, or null if all are occupied or too far away.
+ * @returns The position and ID of the nearest vacant spot, or null if all are occupied or too far away.
  */
 export function findNearestVacantLocation(
   dropPosition: { top: number; left: number },
   allPieces: Piece[],
   playerCount: number
-): { top: number; left: number } | null {
+): { position: { top: number; left: number }; id: string } | null {
   const validLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount];
   if (!validLocations || validLocations.length === 0) {
     return null;
@@ -335,27 +363,49 @@ export function findNearestVacantLocation(
   }
   
   // From the available locations, find the one closest to the drop point.
-  let nearestLocation: DropLocation | null = null;
-  let minDistance = Infinity;
-  
   const calculateDistance = (pos1: {left: number, top: number}, pos2: {left: number, top: number}): number => {
     return Math.sqrt(Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2));
   }
 
+  // First, check for a community location nearby (prioritize community)
+  let communityLocation: DropLocation | null = null;
+  let minCommunityDistance = Infinity;
+
   for (const loc of vacantLocations) {
-    const distance = calculateDistance(dropPosition, loc.position);
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearestLocation = loc;
+    if (loc.id.includes('community')) {
+      const distance = calculateDistance(dropPosition, loc.position);
+      if (distance < minCommunityDistance) {
+        minCommunityDistance = distance;
+        communityLocation = loc;
+      }
+    }
+  }
+
+  // If we found a nearby community location (within 9.0), return it
+  if (communityLocation && minCommunityDistance < 9.0) {
+    return { position: communityLocation.position, id: communityLocation.id };
+  }
+
+  // Otherwise, find the nearest non-community location
+  let nearestLocation: DropLocation | null = null;
+  let minDistance = Infinity;
+
+  for (const loc of vacantLocations) {
+    if (!loc.id.includes('community')) {
+      const distance = calculateDistance(dropPosition, loc.position);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestLocation = loc;
+      }
     }
   }
 
   if (nearestLocation) {
     const isRostrum = nearestLocation.id.includes('rostrum');
     // Rostrums get a larger drop radius to make them less fickle.
-    const maxDistance = isRostrum ? 9.0 : 6.0; 
+    const maxDistance = isRostrum ? 9.0 : 6.0;
     if (minDistance < maxDistance) {
-      return nearestLocation.position;
+      return { position: nearestLocation.position, id: nearestLocation.id };
     }
   }
 
@@ -466,7 +516,8 @@ export function initializePieces(playerCount: number): Piece[] {
           name: markInfo.name,
           imageUrl: markInfo.imageUrl,
           position: position,
-          rotation: calculatePieceRotation(position, playerCount),
+          rotation: calculatePieceRotation(position, playerCount, seatId),
+          locationId: seatId,
         };
         initialPieces.push(newPiece);
       } else {
