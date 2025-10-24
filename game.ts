@@ -139,12 +139,12 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p3_office', position: { left: 74.89, top: 63.39 } },
     { id: 'p4_office', position: { left: 38.38, top: 74.98 } },
     // Community (spread out to avoid overlap)
-    { id: 'community1', position: { left: 50.00, top: 35.00 } },
-    { id: 'community2', position: { left: 30.00, top: 45.00 } },
-    { id: 'community3', position: { left: 70.00, top: 45.00 } },
-    { id: 'community4', position: { left: 40.00, top: 60.00 } },
-    { id: 'community5', position: { left: 50.00, top: 60.00 } },
-    { id: 'community6', position: { left: 60.00, top: 60.00 } },
+    { id: 'community1', position: { left: 41.46, top: 43.27 } },
+    { id: 'community2', position: { left: 41.31, top: 53.91 } },
+    { id: 'community3', position: { left: 41.05, top: 47.10 } },
+    { id: 'community4', position: { left: 61.21, top: 50.63 } },
+    { id: 'community5', position: { left: 58.34, top: 55.42 } },
+    { id: 'community6', position: { left: 58.74, top: 46.55 } },
 ];
 
 const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
