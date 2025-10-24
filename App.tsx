@@ -144,6 +144,8 @@ const CampaignScreen: React.FC<{
   currentPlayerId: number;
   lastDroppedPosition: { top: number; left: number } | null;
   isTestMode: boolean;
+  freePlacementMode: boolean;
+  setFreePlacementMode: (mode: boolean) => void;
   hasPlayedTileThisTurn: boolean;
   revealedTileId: string | null;
   tileTransaction: { placerId: number; receiverId: number; boardTileId: string; tile: Tile } | null;
@@ -155,7 +157,7 @@ const CampaignScreen: React.FC<{
   placerViewingTileId: string | null;
   gameLog: string[];
   onNewGame: () => void;
-  onPieceMove: (pieceId: string, newPosition: { top: number; left: number }) => void;
+  onPieceMove: (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => void;
   onBoardTileMove: (boardTileId: string, newPosition: { top: number; left: number }) => void;
   onEndTurn: () => void;
   onPlaceTile: (tileId: number, targetSpace: TileReceivingSpace) => void;
@@ -165,7 +167,7 @@ const CampaignScreen: React.FC<{
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, isTestMode, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, isTestMode, freePlacementMode, setFreePlacementMode, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -781,25 +783,32 @@ const App: React.FC = () => {
 
         // Create pieces from default positions
         const defaultPositions = DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT[playerCount] || [];
+        console.log('Creating initial pieces from', defaultPositions.length, 'default positions for', playerCount, 'players');
         const initialPieces: Piece[] = defaultPositions.map((piece, index) => {
           // Default pieces are placed in the community area, so they have no rotation
           const locationId = 'community_default';
+          const pieceType = PIECE_TYPES[piece.name.toUpperCase()];
+          if (!pieceType) {
+            console.error(`Unknown piece type: ${piece.name}`);
+          }
           return {
             id: `piece_${index}`,
             name: piece.name,
             displayName: piece.displayName,
-            imageUrl: PIECE_TYPES[piece.name.toUpperCase()].imageUrl,
+            imageUrl: pieceType?.imageUrl || '',
             position: piece.position,
             rotation: calculatePieceRotation(piece.position, playerCount, locationId),
             locationId,
           };
         });
 
+        console.log('Initial pieces created:', initialPieces.length);
         setPieces(initialPieces);
         setPiecesAtTurnStart(initialPieces);
 
         const startingTileId = 3;
-        const startingPlayerIndex = playersWithPassedHands.findIndex(p => p.keptTiles.some(t => t.id === startingTileId));
+        const startingPlayerIndex = playersWithPassedHands.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
+        console.log('startingPlayerIndex:', startingPlayerIndex, 'playersWithPassedHands:', playersWithPassedHands);
 
         setCurrentPlayerIndex(startingPlayerIndex !== -1 ? startingPlayerIndex : 0);
         setHasPlayedTileThisTurn(false);
@@ -1038,6 +1047,7 @@ const App: React.FC = () => {
   }
 
   const renderGameState = () => {
+    console.log('renderGameState called with gameState:', gameState, 'playerCount:', playerCount, 'players:', players.length, 'currentPlayerIndex:', currentPlayerIndex);
     switch (gameState) {
       case 'DRAFTING':
         return <DraftingScreen players={players} currentPlayerIndex={currentPlayerIndex} draftRound={draftRound} onSelectTile={handleSelectTile} />;
@@ -1045,7 +1055,11 @@ const App: React.FC = () => {
       case 'PENDING_ACCEPTANCE':
       case 'PENDING_CHALLENGE':
         const currentPlayer = players[currentPlayerIndex];
-        if (!currentPlayer) return null;
+        if (!currentPlayer || players.length === 0) {
+          // Wait for state to be set up properly
+          console.log('currentPlayer not found. currentPlayerIndex:', currentPlayerIndex, 'players.length:', players.length);
+          return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-slate-300">Loading campaign... (currentPlayer issue)</div>;
+        }
         return (
           <CampaignScreen
             gameState={gameState}
@@ -1066,6 +1080,8 @@ const App: React.FC = () => {
             challengedTile={challengedTile}
             placerViewingTileId={placerViewingTileId}
             gameLog={gameLog}
+            freePlacementMode={freePlacementMode}
+            setFreePlacementMode={setFreePlacementMode}
             onNewGame={handleNewGame}
             onPieceMove={handlePieceMove}
             onBoardTileMove={handleBoardTileMove}
