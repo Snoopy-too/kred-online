@@ -791,8 +791,8 @@ const App: React.FC = () => {
         const defaultPositions = DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT[playerCount] || [];
         console.log('Creating initial pieces from', defaultPositions.length, 'default positions for', playerCount, 'players');
         const initialPieces: Piece[] = defaultPositions.map((piece, index) => {
-          // Default pieces are placed in the community area, so they have no rotation
-          const locationId = 'community_default';
+          // Find the location ID for this position
+          const locationId = getLocationIdFromPosition(piece.position, playerCount) || 'community_default';
           const pieceType = PIECE_TYPES[piece.name.toUpperCase()];
           if (!pieceType) {
             console.error(`Unknown piece type: ${piece.name}`);

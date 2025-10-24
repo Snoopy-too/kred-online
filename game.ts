@@ -88,11 +88,31 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p1_office', position: { left: 29.84, top: 32.62 } },
   { id: 'p2_office', position: { left: 71.03, top: 32.18 } },
   { id: 'p3_office', position: { left: 50.88, top: 67.97 } },
-  // Community (spread out to avoid overlap)
-  { id: 'community1', position: { left: 50.00, top: 35.00 } },
-  { id: 'community2', position: { left: 35.00, top: 50.00 } },
-  { id: 'community3', position: { left: 50.00, top: 50.00 } },
-  { id: 'community4', position: { left: 65.00, top: 50.00 } },
+  // Community (23 spaces based on testing)
+  { id: 'community1', position: { left: 44.32, top: 47.40 } },
+  { id: 'community2', position: { left: 53.07, top: 45.52 } },
+  { id: 'community3', position: { left: 43.91, top: 44.58 } },
+  { id: 'community4', position: { left: 59.11, top: 39.79 } },
+  { id: 'community5', position: { left: 50.00, top: 35.00 } },
+  { id: 'community6', position: { left: 50.00, top: 50.00 } },
+  { id: 'community7', position: { left: 42.97, top: 40.73 } },
+  { id: 'community8', position: { left: 56.82, top: 48.23 } },
+  { id: 'community9', position: { left: 48.07, top: 44.90 } },
+  { id: 'community10', position: { left: 58.70, top: 45.00 } },
+  { id: 'community11', position: { left: 46.40, top: 46.10 } },
+  { id: 'community12', position: { left: 56.00, top: 46.10 } },
+  { id: 'community13', position: { left: 45.20, top: 38.00 } },
+  { id: 'community14', position: { left: 48.70, top: 38.00 } },
+  { id: 'community15', position: { left: 52.20, top: 38.00 } },
+  { id: 'community16', position: { left: 55.70, top: 38.00 } },
+  { id: 'community17', position: { left: 45.20, top: 42.00 } },
+  { id: 'community18', position: { left: 48.70, top: 42.00 } },
+  { id: 'community19', position: { left: 52.20, top: 42.00 } },
+  { id: 'community20', position: { left: 55.70, top: 42.00 } },
+  { id: 'community21', position: { left: 50.40, top: 46.00 } },
+  { id: 'community22', position: { left: 46.90, top: 50.00 } },
+  { id: 'community23', position: { left: 50.40, top: 50.00 } },
+  { id: 'community24', position: { left: 53.90, top: 50.00 } },
 ];
 
 const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -336,11 +356,12 @@ const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = 
 };
 
 /**
- * Calculates the rotation of a piece so its bottom faces the board center.
- * Community pieces have no rotation (0 degrees).
+ * Calculates the rotation of a piece so its top points away from the board center.
+ * Pieces in seats, rostrums, and offices are rotated to point outward from the board center.
+ * Community pieces and free placement pieces have no rotation (0 degrees).
  * @param position The position of the piece in percentage { top, left }.
  * @param playerCount The number of players in the game.
- * @param locationId Optional location ID to check if it's a community location.
+ * @param locationId Optional location ID to check if it's a community or free placement location.
  * @returns The rotation in degrees.
  */
 export function calculatePieceRotation(position: { top: number; left: number }, playerCount: number, locationId?: string): number {
@@ -353,7 +374,7 @@ export function calculatePieceRotation(position: { top: number; left: number }, 
   const dx = position.left - boardCenter.left;
   const dy = position.top - boardCenter.top;
   const angleRadians = Math.atan2(dy, dx);
-  // Convert radians to degrees and add 90 to align the 'top' of the image away from the center
+  // Convert radians to degrees and add 90 to orient the top of the piece away from the board center
   return angleRadians * (180 / Math.PI) + 90;
 }
 
@@ -501,7 +522,7 @@ export function getLocationIdFromPosition(
     }
   }
 
-  return minDistance < 1.0 ? closestLocationId : null;
+  return minDistance < 5.0 ? closestLocationId : null;
 }
 
 /**
