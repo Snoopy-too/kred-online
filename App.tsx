@@ -143,6 +143,7 @@ const CampaignScreen: React.FC<{
   boardTiles: BoardTile[];
   currentPlayerId: number;
   lastDroppedPosition: { top: number; left: number } | null;
+  lastDroppedPieceId: string | null;
   isTestMode: boolean;
   freePlacementMode: boolean;
   setFreePlacementMode: (mode: boolean) => void;
@@ -167,7 +168,7 @@ const CampaignScreen: React.FC<{
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, isTestMode, freePlacementMode, setFreePlacementMode, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, freePlacementMode, setFreePlacementMode, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -614,10 +615,10 @@ const CampaignScreen: React.FC<{
                   ) : (
                     <div className="space-y-2">
                       {pieces.map((piece) => (
-                        <div key={piece.id} className="font-mono text-slate-300 border-b border-gray-600 pb-1">
-                          <div className="font-semibold text-cyan-300">{piece.displayName || piece.name}</div>
-                          <div className="text-slate-400">Left: {piece.position.left.toFixed(2)}% | Top: {piece.position.top.toFixed(2)}%</div>
-                          <div className="text-slate-400">Rotation: {piece.rotation.toFixed(1)}° | Location: {piece.locationId || 'unknown'}</div>
+                        <div key={piece.id} className={`font-mono border-b border-gray-600 pb-1 ${piece.id === lastDroppedPieceId ? 'text-yellow-300' : 'text-slate-300'}`}>
+                          <div className={`font-semibold ${piece.id === lastDroppedPieceId ? 'text-yellow-400' : 'text-cyan-300'}`}>{piece.displayName || piece.name}</div>
+                          <div className={piece.id === lastDroppedPieceId ? 'text-yellow-200' : 'text-slate-400'}>Left: {piece.position.left.toFixed(2)}% | Top: {piece.position.top.toFixed(2)}%</div>
+                          <div className={piece.id === lastDroppedPieceId ? 'text-yellow-200' : 'text-slate-400'}>Rotation: {piece.rotation.toFixed(1)}° | Location: {piece.locationId || 'unknown'}</div>
                         </div>
                       ))}
                     </div>
@@ -737,6 +738,7 @@ const App: React.FC = () => {
   const [isTestMode, setIsTestMode] = useState(false);
   const [freePlacementMode, setFreePlacementMode] = useState(false);
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
+  const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
   const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
   const [revealedTileId, setRevealedTileId] = useState<string | null>(null);
 
@@ -850,6 +852,7 @@ const App: React.FC = () => {
   
   const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
     setLastDroppedPosition(newPosition);
+    setLastDroppedPieceId(pieceId);
     const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
     setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p));
   };
@@ -1093,6 +1096,7 @@ const App: React.FC = () => {
             boardTiles={boardTiles}
             currentPlayerId={currentPlayer.id}
             lastDroppedPosition={lastDroppedPosition}
+            lastDroppedPieceId={lastDroppedPieceId}
             isTestMode={isTestMode}
             hasPlayedTileThisTurn={hasPlayedTileThisTurn}
             revealedTileId={revealedTileId}
