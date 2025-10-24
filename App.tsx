@@ -537,6 +537,27 @@ const CampaignScreen: React.FC<{
               </div>
             </div>
 
+            {/* Piece Tracker (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Piece Tracker</h2>
+                <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 max-h-96 overflow-y-auto text-xs">
+                  {pieces.length === 0 ? (
+                    <p className="text-slate-400 text-center italic">No pieces on board</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {pieces.map((piece) => (
+                        <div key={piece.id} className="font-mono text-slate-300 border-b border-gray-600 pb-1">
+                          <div className="font-semibold text-cyan-300">{piece.displayName || piece.name}</div>
+                          <div className="text-slate-400">Left: {piece.position.left.toFixed(2)}% | Top: {piece.position.top.toFixed(2)}%</div>
+                          <div className="text-slate-400">Rotation: {piece.rotation.toFixed(1)}° | Location: {piece.locationId || 'unknown'}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -88,11 +88,11 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p1_office', position: { left: 29.84, top: 32.62 } },
   { id: 'p2_office', position: { left: 71.03, top: 32.18 } },
   { id: 'p3_office', position: { left: 50.88, top: 67.97 } },
-  // Community
-  { id: 'community1', position: { left: 50.00, top: 45.00 } },
-  { id: 'community2', position: { left: 45.00, top: 50.00 } },
-  { id: 'community3', position: { left: 55.00, top: 50.00 } },
-  { id: 'community4', position: { left: 50.00, top: 55.00 } },
+  // Community (spread out to avoid overlap)
+  { id: 'community1', position: { left: 50.00, top: 35.00 } },
+  { id: 'community2', position: { left: 35.00, top: 50.00 } },
+  { id: 'community3', position: { left: 50.00, top: 50.00 } },
+  { id: 'community4', position: { left: 65.00, top: 50.00 } },
 ];
 
 const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -138,13 +138,13 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p2_office', position: { left: 62.98, top: 27.89 } },
     { id: 'p3_office', position: { left: 74.89, top: 63.39 } },
     { id: 'p4_office', position: { left: 38.38, top: 74.98 } },
-    // Community
-    { id: 'community1', position: { left: 50.00, top: 45.00 } },
-    { id: 'community2', position: { left: 45.00, top: 50.00 } },
-    { id: 'community3', position: { left: 55.00, top: 50.00 } },
-    { id: 'community4', position: { left: 50.00, top: 55.00 } },
-    { id: 'community5', position: { left: 42.00, top: 45.00 } },
-    { id: 'community6', position: { left: 58.00, top: 55.00 } },
+    // Community (spread out to avoid overlap)
+    { id: 'community1', position: { left: 50.00, top: 35.00 } },
+    { id: 'community2', position: { left: 30.00, top: 45.00 } },
+    { id: 'community3', position: { left: 70.00, top: 45.00 } },
+    { id: 'community4', position: { left: 40.00, top: 60.00 } },
+    { id: 'community5', position: { left: 50.00, top: 60.00 } },
+    { id: 'community6', position: { left: 60.00, top: 60.00 } },
 ];
 
 const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -200,14 +200,14 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p3_office', position: { left: 67.74, top: 27.25 } },
     { id: 'p4_office', position: { left: 73.19, top: 58.82 } },
     { id: 'p5_office', position: { left: 43.93, top: 73.60 } },
-    // Community
-    { id: 'community1', position: { left: 50.00, top: 45.00 } },
-    { id: 'community2', position: { left: 45.00, top: 50.00 } },
-    { id: 'community3', position: { left: 55.00, top: 50.00 } },
-    { id: 'community4', position: { left: 50.00, top: 55.00 } },
-    { id: 'community5', position: { left: 42.00, top: 45.00 } },
-    { id: 'community6', position: { left: 58.00, top: 55.00 } },
-    { id: 'community7', position: { left: 50.00, top: 40.00 } },
+    // Community (spread out to avoid overlap)
+    { id: 'community1', position: { left: 50.00, top: 30.00 } },
+    { id: 'community2', position: { left: 25.00, top: 45.00 } },
+    { id: 'community3', position: { left: 75.00, top: 45.00 } },
+    { id: 'community4', position: { left: 35.00, top: 65.00 } },
+    { id: 'community5', position: { left: 50.00, top: 65.00 } },
+    { id: 'community6', position: { left: 65.00, top: 65.00 } },
+    { id: 'community7', position: { left: 50.00, top: 50.00 } },
 ];
 
 export const DROP_LOCATIONS_BY_PLAYER_COUNT: { [playerCount: number]: DropLocation[] } = {
