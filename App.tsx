@@ -147,6 +147,8 @@ const CampaignScreen: React.FC<{
   isTestMode: boolean;
   freePlacementMode: boolean;
   setFreePlacementMode: (mode: boolean) => void;
+  boardRotationEnabled: boolean;
+  setBoardRotationEnabled: (enabled: boolean) => void;
   hasPlayedTileThisTurn: boolean;
   revealedTileId: string | null;
   tileTransaction: { placerId: number; receiverId: number; boardTileId: string; tile: Tile } | null;
@@ -168,13 +170,13 @@ const CampaignScreen: React.FC<{
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, freePlacementMode, setFreePlacementMode, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, freePlacementMode, setFreePlacementMode, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
   const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string } | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string } | null>(null);
-  const boardRotation = PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0;
+  const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
   
   const tileSpaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
   const occupiedOwnerIds = new Set(boardTiles.map(bt => bt.ownerId));
@@ -602,6 +604,21 @@ const CampaignScreen: React.FC<{
                   </label>
                   <p className="text-xs text-slate-400 mt-2">When ON, pieces can be placed anywhere on the board. When OFF, pieces snap to valid locations.</p>
                 </div>
+
+                {/* Board Rotation Toggle */}
+                <div className="bg-gray-700 rounded-lg p-4 mt-4">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={boardRotationEnabled}
+                      onChange={(e) => setBoardRotationEnabled(e.target.checked)}
+                      className="w-5 h-5 accent-cyan-500"
+                    />
+                    <span className="text-slate-200 font-semibold">Board Rotation</span>
+                    <span className="text-xs text-slate-400 ml-auto">{boardRotationEnabled ? '(ON)' : '(OFF)'}</span>
+                  </label>
+                  <p className="text-xs text-slate-400 mt-2">When ON, the board rotates to show each player's perspective. When OFF, the board stays fixed.</p>
+                </div>
               </div>
             )}
 
@@ -737,6 +754,7 @@ const App: React.FC = () => {
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
   const [freePlacementMode, setFreePlacementMode] = useState(false);
+  const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
   const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
   const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
@@ -1110,6 +1128,8 @@ const App: React.FC = () => {
             gameLog={gameLog}
             freePlacementMode={freePlacementMode}
             setFreePlacementMode={setFreePlacementMode}
+            boardRotationEnabled={boardRotationEnabled}
+            setBoardRotationEnabled={setBoardRotationEnabled}
             onNewGame={handleNewGame}
             onPieceMove={handlePieceMove}
             onBoardTileMove={handleBoardTileMove}
