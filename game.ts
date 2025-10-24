@@ -85,9 +85,9 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p2_rostrum1', position: { left: 72.20, top: 52.48 } },
   { id: 'p2_rostrum2', position: { left: 54.82, top: 22.39 } },
   // Offices
-  { id: 'p1_office', position: { left: 31.93, top: 24.80 } },
-  { id: 'p2_office', position: { left: 76.12, top: 36.53 } },
-  { id: 'p3_office', position: { left: 43.97, top: 68.83 } },
+  { id: 'p1_office', position: { left: 31.95, top: 25.01 } },
+  { id: 'p2_office', position: { left: 76.22, top: 36.38 } },
+  { id: 'p3_office', position: { left: 44.03, top: 68.87 } },
   // Community (23 spaces based on testing)
   { id: 'community1', position: { left: 44.32, top: 47.40 } },
   { id: 'community2', position: { left: 53.07, top: 45.52 } },
@@ -154,10 +154,10 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p4_rostrum1', position: { left: 25.18, top: 59.71 } },
     { id: 'p4_rostrum2', position: { left: 54.14, top: 75.72 } },
     // Offices
-    { id: 'p1_office', position: { left: 18.14, top: 44.88 } },
-    { id: 'p2_office', position: { left: 55.98, top: 20.22 } },
-    { id: 'p3_office', position: { left: 82.19, top: 55.71 } },
-    { id: 'p4_office', position: { left: 44.32, top: 80.24 } },
+    { id: 'p1_office', position: { left: 18.18, top: 44.34 } },
+    { id: 'p2_office', position: { left: 55.99, top: 19.63 } },
+    { id: 'p3_office', position: { left: 82.55, top: 55.08 } },
+    { id: 'p4_office', position: { left: 44.43, top: 79.79 } },
     // Community (spread out to avoid overlap)
     { id: 'community1', position: { left: 41.46, top: 43.27 } },
     { id: 'community2', position: { left: 41.31, top: 53.91 } },
@@ -215,11 +215,11 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p5_rostrum1', position: { left: 39.17, top: 67.54 } },
     { id: 'p5_rostrum2', position: { left: 58.79, top: 66.69 } },
     // Offices
-    { id: 'p1_office', position: { left: 15.75, top: 44.69 } },
-    { id: 'p2_office', position: { left: 39.35, top: 17.14 } },
-    { id: 'p3_office', position: { left: 74.97, top: 29.36 } },
-    { id: 'p4_office', position: { left: 72.95, top: 65.12 } },
-    { id: 'p5_office', position: { left: 36.38, top: 74.57 } },
+    { id: 'p1_office', position: { left: 15.70, top: 44.75 } },
+    { id: 'p2_office', position: { left: 39.45, top: 17.10 } },
+    { id: 'p3_office', position: { left: 75.18, top: 29.31 } },
+    { id: 'p4_office', position: { left: 72.89, top: 65.24 } },
+    { id: 'p5_office', position: { left: 36.22, top: 74.70 } },
     // Community (40 spaces based on testing)
     { id: 'community1', position: { left: 37.34, top: 41.21 } },
     { id: 'community2', position: { left: 40.36, top: 46.88 } },
@@ -365,8 +365,8 @@ const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = 
  * @returns The rotation in degrees.
  */
 export function calculatePieceRotation(position: { top: number; left: number }, playerCount: number, locationId?: string): number {
-  // Community pieces and free placement have no rotation
-  if (locationId && (locationId.startsWith('community') || locationId === 'free_placement')) {
+  // Community pieces, free placement, and offices have no rotation
+  if (locationId && (locationId.startsWith('community') || locationId === 'free_placement' || locationId.includes('office'))) {
     return 0;
   }
 
@@ -680,10 +680,10 @@ export const DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT: { [key: number]: { name: s
   ],
   4: [
     // Marks
-    { name: 'Mark', displayName: 'M1', position: { left: 42.8, top: 34.5 } },
-    { name: 'Mark', displayName: 'M2', position: { left: 34.9, top: 40.2 } },
-    { name: 'Mark', displayName: 'M3', position: { left: 31.7, top: 48.6 } },
-    { name: 'Mark', displayName: 'M4', position: { left: 68.0, top: 44.0 } },
+    { name: 'Mark', displayName: 'M1', position: { left: 18.18, top: 44.34 } },
+    { name: 'Mark', displayName: 'M2', position: { left: 55.99, top: 19.63 } },
+    { name: 'Mark', displayName: 'M3', position: { left: 82.55, top: 55.08 } },
+    { name: 'Mark', displayName: 'M4', position: { left: 44.43, top: 79.79 } },
     { name: 'Mark', displayName: 'M5', position: { left: 61.8, top: 36.6 } },
     { name: 'Mark', displayName: 'M6', position: { left: 52.9, top: 33.5 } },
     { name: 'Mark', displayName: 'M7', position: { left: 57.6, top: 67.8 } },
