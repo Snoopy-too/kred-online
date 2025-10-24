@@ -311,8 +311,8 @@ const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = 
  * @returns The rotation in degrees.
  */
 export function calculatePieceRotation(position: { top: number; left: number }, playerCount: number, locationId?: string): number {
-  // Community pieces have no rotation
-  if (locationId && locationId.startsWith('community')) {
+  // Community pieces and free placement have no rotation
+  if (locationId && (locationId.startsWith('community') || locationId === 'free_placement')) {
     return 0;
   }
 

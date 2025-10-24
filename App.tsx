@@ -233,6 +233,20 @@ const CampaignScreen: React.FC<{
         top = rotatedY + centerY;
     }
 
+    // Free placement mode: show indicator at exact drop position with 0 rotation
+    if (freePlacementMode) {
+        const newRotation = calculatePieceRotation({ top, left }, playerCount, 'free_placement');
+        if (!dropIndicator || dropIndicator.position.top !== top || dropIndicator.position.left !== left) {
+            setDropIndicator({
+                position: { top, left },
+                rotation: newRotation,
+                name: draggedPieceInfo.name,
+                imageUrl: draggedPieceInfo.imageUrl
+            });
+        }
+        return;
+    }
+
     const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
     if (snappedLocation) {
@@ -276,6 +290,13 @@ const CampaignScreen: React.FC<{
 
     if (boardTileId && isTestMode) {
         onBoardTileMove(boardTileId, { top, left });
+        return;
+    }
+
+    // Free placement mode: allow pieces to be placed anywhere without snapping
+    if (freePlacementMode && pieceId) {
+        const freeLocationId = 'free_placement';
+        onPieceMove(pieceId, { top, left }, freeLocationId);
         return;
     }
 
@@ -537,6 +558,26 @@ const CampaignScreen: React.FC<{
               </div>
             </div>
 
+            {/* Test Mode Controls */}
+            {isTestMode && (
+              <div className="mt-8 space-y-4">
+                {/* Free Placement Toggle */}
+                <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={freePlacementMode}
+                      onChange={(e) => setFreePlacementMode(e.target.checked)}
+                      className="w-5 h-5 accent-cyan-500"
+                    />
+                    <span className="text-slate-200 font-semibold">Free Placement Mode</span>
+                    <span className="text-xs text-slate-400 ml-auto">{freePlacementMode ? '(ON)' : '(OFF)'}</span>
+                  </label>
+                  <p className="text-xs text-slate-400 mt-2">When ON, pieces can be placed anywhere on the board. When OFF, pieces snap to valid locations.</p>
+                </div>
+              </div>
+            )}
+
             {/* Piece Tracker (Test Mode Only) */}
             {isTestMode && (
               <div className="mt-8">
@@ -668,6 +709,7 @@ const App: React.FC = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
+  const [freePlacementMode, setFreePlacementMode] = useState(false);
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
   const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
   const [revealedTileId, setRevealedTileId] = useState<string | null>(null);
