@@ -200,14 +200,47 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p3_office', position: { left: 67.74, top: 27.25 } },
     { id: 'p4_office', position: { left: 73.19, top: 58.82 } },
     { id: 'p5_office', position: { left: 43.93, top: 73.60 } },
-    // Community (spread out to avoid overlap)
-    { id: 'community1', position: { left: 50.00, top: 30.00 } },
-    { id: 'community2', position: { left: 25.00, top: 45.00 } },
-    { id: 'community3', position: { left: 75.00, top: 45.00 } },
-    { id: 'community4', position: { left: 35.00, top: 65.00 } },
-    { id: 'community5', position: { left: 50.00, top: 65.00 } },
-    { id: 'community6', position: { left: 65.00, top: 65.00 } },
-    { id: 'community7', position: { left: 50.00, top: 50.00 } },
+    // Community (40 spaces based on testing)
+    { id: 'community1', position: { left: 37.34, top: 41.21 } },
+    { id: 'community2', position: { left: 40.36, top: 46.88 } },
+    { id: 'community3', position: { left: 56.20, top: 37.40 } },
+    { id: 'community4', position: { left: 40.68, top: 40.92 } },
+    { id: 'community5', position: { left: 39.01, top: 38.28 } },
+    { id: 'community6', position: { left: 39.11, top: 43.36 } },
+    { id: 'community7', position: { left: 51.30, top: 40.53 } },
+    { id: 'community8', position: { left: 55.36, top: 40.63 } },
+    { id: 'community9', position: { left: 44.22, top: 40.92 } },
+    { id: 'community10', position: { left: 55.26, top: 56.64 } },
+    { id: 'community11', position: { left: 56.30, top: 46.29 } },
+    { id: 'community12', position: { left: 57.24, top: 43.75 } },
+    { id: 'community13', position: { left: 35.89, top: 44.82 } },
+    { id: 'community14', position: { left: 60.05, top: 45.51 } },
+    { id: 'community15', position: { left: 40.89, top: 56.64 } },
+    { id: 'community16', position: { left: 42.50, top: 36.90 } },
+    { id: 'community17', position: { left: 46.00, top: 36.90 } },
+    { id: 'community18', position: { left: 49.50, top: 36.90 } },
+    { id: 'community19', position: { left: 53.00, top: 36.90 } },
+    { id: 'community20', position: { left: 47.80, top: 40.90 } },
+    { id: 'community21', position: { left: 42.50, top: 44.90 } },
+    { id: 'community22', position: { left: 46.00, top: 44.90 } },
+    { id: 'community23', position: { left: 49.50, top: 44.90 } },
+    { id: 'community24', position: { left: 53.00, top: 44.90 } },
+    { id: 'community25', position: { left: 42.50, top: 48.90 } },
+    { id: 'community26', position: { left: 46.00, top: 48.90 } },
+    { id: 'community27', position: { left: 49.50, top: 48.90 } },
+    { id: 'community28', position: { left: 53.00, top: 48.90 } },
+    { id: 'community29', position: { left: 42.50, top: 52.90 } },
+    { id: 'community30', position: { left: 46.00, top: 52.90 } },
+    { id: 'community31', position: { left: 49.50, top: 52.90 } },
+    { id: 'community32', position: { left: 53.00, top: 52.90 } },
+    { id: 'community33', position: { left: 44.30, top: 56.90 } },
+    { id: 'community34', position: { left: 47.80, top: 56.90 } },
+    { id: 'community35', position: { left: 51.30, top: 56.90 } },
+    { id: 'community36', position: { left: 37.90, top: 46.70 } },
+    { id: 'community37', position: { left: 37.80, top: 50.30 } },
+    { id: 'community38', position: { left: 57.40, top: 53.40 } },
+    { id: 'community39', position: { left: 57.80, top: 49.40 } },
+    { id: 'community40', position: { left: 37.90, top: 54.10 } },
 ];
 
 export const DROP_LOCATIONS_BY_PLAYER_COUNT: { [playerCount: number]: DropLocation[] } = {
@@ -344,7 +377,7 @@ export function findNearestVacantLocation(
   // Find the list of locations that have at least one open slot.
   const vacantLocations = validLocations.filter(loc => {
     // Count how many total slots are defined at this exact coordinate.
-    const capacityAtCoord = validLocations.filter(otherLoc => 
+    const capacityAtCoord = validLocations.filter(otherLoc =>
         Math.abs(otherLoc.position.left - loc.position.left) < 0.01 &&
         Math.abs(otherLoc.position.top - loc.position.top) < 0.01
     ).length;
@@ -361,13 +394,38 @@ export function findNearestVacantLocation(
   if (vacantLocations.length === 0) {
     return null; // No vacant spots available
   }
-  
+
   // From the available locations, find the one closest to the drop point.
   const calculateDistance = (pos1: {left: number, top: number}, pos2: {left: number, top: number}): number => {
     return Math.sqrt(Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2));
   }
 
-  // First, check for a community location nearby (prioritize community)
+  // Check if drop is near the center of the board (50, 50)
+  const distanceFromCenter = calculateDistance(dropPosition, { left: 50, top: 50 });
+  const isNearCenter = distanceFromCenter < 15.0; // "reasonably close" threshold
+
+  // If near center, prioritize vacant community locations
+  if (isNearCenter) {
+    let nearestCommunityLocation: DropLocation | null = null;
+    let minCommunityDistance = Infinity;
+
+    for (const loc of vacantLocations) {
+      if (loc.id.includes('community')) {
+        const distance = calculateDistance(dropPosition, loc.position);
+        if (distance < minCommunityDistance) {
+          minCommunityDistance = distance;
+          nearestCommunityLocation = loc;
+        }
+      }
+    }
+
+    // Return the nearest community location if one exists
+    if (nearestCommunityLocation) {
+      return { position: nearestCommunityLocation.position, id: nearestCommunityLocation.id };
+    }
+  }
+
+  // Otherwise, check for a community location nearby (prioritize community)
   let communityLocation: DropLocation | null = null;
   let minCommunityDistance = Infinity;
 
