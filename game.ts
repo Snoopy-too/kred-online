@@ -88,31 +88,21 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p1_office', position: { left: 31.95, top: 25.01 } },
   { id: 'p2_office', position: { left: 76.22, top: 36.38 } },
   { id: 'p3_office', position: { left: 44.03, top: 68.87 } },
-  // Community (23 spaces based on testing)
-  { id: 'community1', position: { left: 44.32, top: 47.40 } },
-  { id: 'community2', position: { left: 53.07, top: 45.52 } },
-  { id: 'community3', position: { left: 43.91, top: 44.58 } },
-  { id: 'community4', position: { left: 59.11, top: 39.79 } },
-  { id: 'community5', position: { left: 50.00, top: 35.00 } },
-  { id: 'community6', position: { left: 50.00, top: 50.00 } },
-  { id: 'community7', position: { left: 42.97, top: 40.73 } },
-  { id: 'community8', position: { left: 56.82, top: 48.23 } },
-  { id: 'community9', position: { left: 48.07, top: 44.90 } },
-  { id: 'community10', position: { left: 58.70, top: 45.00 } },
-  { id: 'community11', position: { left: 46.40, top: 46.10 } },
-  { id: 'community12', position: { left: 56.00, top: 46.10 } },
-  { id: 'community13', position: { left: 45.20, top: 38.00 } },
-  { id: 'community14', position: { left: 48.70, top: 38.00 } },
-  { id: 'community15', position: { left: 52.20, top: 38.00 } },
-  { id: 'community16', position: { left: 55.70, top: 38.00 } },
-  { id: 'community17', position: { left: 45.20, top: 42.00 } },
-  { id: 'community18', position: { left: 48.70, top: 42.00 } },
-  { id: 'community19', position: { left: 52.20, top: 42.00 } },
-  { id: 'community20', position: { left: 55.70, top: 42.00 } },
-  { id: 'community21', position: { left: 50.40, top: 46.00 } },
-  { id: 'community22', position: { left: 46.90, top: 50.00 } },
-  { id: 'community23', position: { left: 50.40, top: 50.00 } },
-  { id: 'community24', position: { left: 53.90, top: 50.00 } },
+  // Community (11 spaces with proper spacing - no overlap with seats)
+  // Top row (top: 42.0%)
+  { id: 'community1', position: { left: 45.20, top: 42.00 } },
+  { id: 'community2', position: { left: 48.70, top: 42.00 } },
+  { id: 'community3', position: { left: 52.20, top: 42.00 } },
+  { id: 'community4', position: { left: 55.70, top: 42.00 } },
+  // Middle row (top: 46.0-47.8%)
+  { id: 'community5', position: { left: 43.70, top: 47.70 } },
+  { id: 'community6', position: { left: 50.40, top: 46.00 } },
+  { id: 'community7', position: { left: 53.50, top: 47.80 } },
+  { id: 'community8', position: { left: 57.00, top: 46.00 } },
+  // Bottom row (top: 50.0%)
+  { id: 'community9', position: { left: 46.90, top: 50.00 } },
+  { id: 'community10', position: { left: 50.40, top: 50.00 } },
+  { id: 'community11', position: { left: 53.90, top: 50.00 } },
 ];
 
 const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
