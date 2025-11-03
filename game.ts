@@ -269,6 +269,96 @@ export const DROP_LOCATIONS_BY_PLAYER_COUNT: { [playerCount: number]: DropLocati
   5: FIVE_PLAYER_DROP_LOCATIONS,
 };
 
+/**
+ * GAME RULE: Seat-to-Rostrum Support Mapping
+ *
+ * Each player has 2 rostrums. The 6 seats for each player are divided into two groups of 3.
+ * A player may only move a piece from their seats into a rostrum if ALL 3 supporting seats are full.
+ * If all 3 supporting seats for a rostrum become vacant, any piece at that rostrum must be moved
+ * to one of the supporting seats.
+ *
+ * Support structure (same for all player counts: 3, 4, 5 players):
+ * - Seats 1-3 support Rostrum 1
+ * - Seats 4-6 support Rostrum 2
+ */
+export interface RostrumSupport {
+  rostrum: string; // e.g., 'p1_rostrum1'
+  supportingSeats: string[]; // e.g., ['p1_seat1', 'p1_seat2', 'p1_seat3']
+}
+
+export interface PlayerRostrum {
+  playerId: number;
+  rostrums: RostrumSupport[];
+  office: string; // e.g., 'p1_office'
+}
+
+/**
+ * Comprehensive mapping of rostrums to their supporting seats for all player counts.
+ * The structure is the same regardless of player count (3, 4, or 5 players).
+ */
+export const ROSTRUM_SUPPORT_RULES: { [playerId: number]: PlayerRostrum } = {
+  1: {
+    playerId: 1,
+    rostrums: [
+      { rostrum: 'p1_rostrum1', supportingSeats: ['p1_seat1', 'p1_seat2', 'p1_seat3'] },
+      { rostrum: 'p1_rostrum2', supportingSeats: ['p1_seat4', 'p1_seat5', 'p1_seat6'] },
+    ],
+    office: 'p1_office',
+  },
+  2: {
+    playerId: 2,
+    rostrums: [
+      { rostrum: 'p2_rostrum1', supportingSeats: ['p2_seat1', 'p2_seat2', 'p2_seat3'] },
+      { rostrum: 'p2_rostrum2', supportingSeats: ['p2_seat4', 'p2_seat5', 'p2_seat6'] },
+    ],
+    office: 'p2_office',
+  },
+  3: {
+    playerId: 3,
+    rostrums: [
+      { rostrum: 'p3_rostrum1', supportingSeats: ['p3_seat1', 'p3_seat2', 'p3_seat3'] },
+      { rostrum: 'p3_rostrum2', supportingSeats: ['p3_seat4', 'p3_seat5', 'p3_seat6'] },
+    ],
+    office: 'p3_office',
+  },
+  4: {
+    playerId: 4,
+    rostrums: [
+      { rostrum: 'p4_rostrum1', supportingSeats: ['p4_seat1', 'p4_seat2', 'p4_seat3'] },
+      { rostrum: 'p4_rostrum2', supportingSeats: ['p4_seat4', 'p4_seat5', 'p4_seat6'] },
+    ],
+    office: 'p4_office',
+  },
+  5: {
+    playerId: 5,
+    rostrums: [
+      { rostrum: 'p5_rostrum1', supportingSeats: ['p5_seat1', 'p5_seat2', 'p5_seat3'] },
+      { rostrum: 'p5_rostrum2', supportingSeats: ['p5_seat4', 'p5_seat5', 'p5_seat6'] },
+    ],
+    office: 'p5_office',
+  },
+};
+
+/**
+ * BASE GAME RULES - Piece Movement Restrictions
+ *
+ * 1. ROSTRUM OCCUPATION:
+ *    - A piece can only be moved to a rostrum if ALL 3 supporting seats are full
+ *    - If all 3 supporting seats become vacant, the piece must be moved to a supporting seat
+ *
+ * 2. OFFICE OCCUPATION:
+ *    - A piece can only be moved to a player's office if BOTH of that player's rostrums are filled
+ *    - Once in an office, a piece can only be moved by that office's owner
+ *
+ * 3. PROTECTED MOVEMENT:
+ *    - Opponents CANNOT move a piece from a player's seats into that player's rostrums
+ *    - Opponents CANNOT move a piece from a player's rostrums or offices (pieces in these are protected)
+ *    - Only the owner of a piece can move it from their own rostrums or offices
+ *
+ * 4. COMMUNITY SPACES:
+ *    - Any player can move any piece to community spaces (unless otherwise blocked by other rules)
+ */
+
 export const PLAYER_PERSPECTIVE_ROTATIONS: { [playerCount: number]: { [playerId: number]: number } } = {
   3: { 1: -120, 2: 120, 3: 0 },
   4: { 1: -135, 2: 135, 3: 45, 4: -45 },
@@ -509,6 +599,215 @@ export function formatLocationId(locationId: string): string {
     }
     
     return `Player ${playerId}'s ${locationName}`;
+}
+
+/**
+ * Extracts the player ID from a location ID (e.g., 'p1_seat1' -> 1).
+ * @param locationId The location ID to parse.
+ * @returns The player ID as a number, or null if not a player-owned location.
+ */
+export function getPlayerIdFromLocationId(locationId: string): number | null {
+  if (!locationId) return null;
+  const match = locationId.match(/^p(\d+)_/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/**
+ * Checks if a location is owned by a specific player (seat, rostrum, or office).
+ * @param locationId The location ID to check.
+ * @param playerId The player ID to verify ownership.
+ * @returns True if the location belongs to the player.
+ */
+export function isLocationOwnedByPlayer(locationId: string, playerId: number): boolean {
+  const ownerId = getPlayerIdFromLocationId(locationId);
+  return ownerId === playerId;
+}
+
+/**
+ * Gets the player's rostrum rules.
+ * @param playerId The player ID (1-5).
+ * @returns The PlayerRostrum object containing rostrum support rules and office location.
+ */
+export function getPlayerRostrumRules(playerId: number): PlayerRostrum | null {
+  return ROSTRUM_SUPPORT_RULES[playerId] || null;
+}
+
+/**
+ * Finds the rostrum support rule for a specific rostrum ID.
+ * @param rostrumId The rostrum ID (e.g., 'p1_rostrum1').
+ * @returns The RostrumSupport object, or null if not found.
+ */
+export function getRostrumSupportRule(rostrumId: string): RostrumSupport | null {
+  const playerId = getPlayerIdFromLocationId(rostrumId);
+  if (!playerId) return null;
+
+  const playerRules = getPlayerRostrumRules(playerId);
+  if (!playerRules) return null;
+
+  return playerRules.rostrums.find(r => r.rostrum === rostrumId) || null;
+}
+
+/**
+ * Counts how many pieces currently occupy a set of seats.
+ * @param seatIds The seat IDs to check.
+ * @param pieces The current pieces on the board.
+ * @returns The number of pieces in the specified seats.
+ */
+export function countPiecesInSeats(seatIds: string[], pieces: Piece[]): number {
+  return pieces.filter(piece =>
+    piece.locationId && seatIds.includes(piece.locationId)
+  ).length;
+}
+
+/**
+ * Checks if all supporting seats for a rostrum are full.
+ * @param rostrumId The rostrum ID to check.
+ * @param pieces The current pieces on the board.
+ * @returns True if all 3 supporting seats are occupied.
+ */
+export function areSupportingSeatsFullForRostrum(rostrumId: string, pieces: Piece[]): boolean {
+  const rule = getRostrumSupportRule(rostrumId);
+  if (!rule) return false;
+
+  const occupiedCount = countPiecesInSeats(rule.supportingSeats, pieces);
+  return occupiedCount === rule.supportingSeats.length; // All 3 seats must be full
+}
+
+/**
+ * Counts how many pieces occupy a player's rostrums.
+ * @param playerId The player ID.
+ * @param pieces The current pieces on the board.
+ * @returns The number of pieces in the player's rostrums.
+ */
+export function countPiecesInPlayerRostrums(playerId: number, pieces: Piece[]): number {
+  const playerRules = getPlayerRostrumRules(playerId);
+  if (!playerRules) return 0;
+
+  const rostrumIds = playerRules.rostrums.map(r => r.rostrum);
+  return pieces.filter(piece =>
+    piece.locationId && rostrumIds.includes(piece.locationId)
+  ).length;
+}
+
+/**
+ * Checks if both of a player's rostrums are filled (at least one piece in each).
+ * @param playerId The player ID.
+ * @param pieces The current pieces on the board.
+ * @returns True if both rostrums contain at least one piece.
+ */
+export function areBothRostrumsFilledForPlayer(playerId: number, pieces: Piece[]): boolean {
+  const playerRules = getPlayerRostrumRules(playerId);
+  if (!playerRules) return false;
+
+  for (const rostrumRule of playerRules.rostrums) {
+    const haspiece = pieces.some(p => p.locationId === rostrumRule.rostrum);
+    if (!haspiece) return false; // At least one rostrum is empty
+  }
+
+  return true; // Both rostrums have pieces
+}
+
+/**
+ * Checks if a piece can be moved to a specific location based on game rules.
+ *
+ * RULES:
+ * 1. Pieces can only be moved to rostrums if ALL supporting seats are full
+ * 2. Pieces can only be moved to a player's office if BOTH rostrums are filled
+ * 3. Opponents cannot move a piece to another player's rostrum or office
+ * 4. Opponents cannot move a piece FROM another player's rostrum or office
+ * 5. Community spaces are always accessible (no restrictions)
+ *
+ * @param pieceId The ID of the piece being moved.
+ * @param currentLocationId The current location of the piece.
+ * @param targetLocationId The target location for the piece.
+ * @param movingPlayerId The ID of the player making the move.
+ * @param pieces The current pieces on the board.
+ * @returns An object with { isAllowed: boolean, reason: string }
+ */
+export function validatePieceMovement(
+  pieceId: string,
+  currentLocationId: string | undefined,
+  targetLocationId: string,
+  movingPlayerId: number,
+  pieces: Piece[]
+): { isAllowed: boolean; reason: string } {
+  // Community locations are always accessible
+  if (targetLocationId.includes('community')) {
+    return { isAllowed: true, reason: 'Community spaces are always accessible' };
+  }
+
+  const targetPlayerId = getPlayerIdFromLocationId(targetLocationId);
+  if (!targetPlayerId) {
+    return { isAllowed: true, reason: 'Location has no ownership restrictions' };
+  }
+
+  const currentPlayerId = currentLocationId ? getPlayerIdFromLocationId(currentLocationId) : null;
+  const isOwnPiece = currentPlayerId === movingPlayerId || movingPlayerId === targetPlayerId;
+
+  // --- RULE 3 & 4: Protected Movement - Opponents cannot move between player-owned locations ---
+  if (currentPlayerId && currentPlayerId !== movingPlayerId) {
+    // Trying to move an opponent's piece FROM their seat, rostrum, or office
+    if (currentLocationId?.includes('seat') || currentLocationId?.includes('rostrum') || currentLocationId?.includes('office')) {
+      return {
+        isAllowed: false,
+        reason: `Cannot move opponent's piece from ${formatLocationId(currentLocationId)}`,
+      };
+    }
+  }
+
+  // --- Moving to a ROSTRUM ---
+  if (targetLocationId.includes('rostrum')) {
+    if (targetPlayerId !== movingPlayerId) {
+      return {
+        isAllowed: false,
+        reason: `Cannot move a piece to opponent's rostrum`,
+      };
+    }
+
+    // RULE 1: Check if all supporting seats are full
+    if (!areSupportingSeatsFullForRostrum(targetLocationId, pieces)) {
+      const rule = getRostrumSupportRule(targetLocationId);
+      if (rule) {
+        const occupied = countPiecesInSeats(rule.supportingSeats, pieces);
+        return {
+          isAllowed: false,
+          reason: `Cannot move to ${formatLocationId(targetLocationId)} - only ${occupied}/3 supporting seats are full`,
+        };
+      }
+    }
+
+    return { isAllowed: true, reason: 'All supporting seats are full' };
+  }
+
+  // --- Moving to an OFFICE ---
+  if (targetLocationId.includes('office')) {
+    if (targetPlayerId !== movingPlayerId) {
+      return {
+        isAllowed: false,
+        reason: `Cannot move a piece to opponent's office`,
+      };
+    }
+
+    // RULE 2: Check if both rostrums are filled
+    if (!areBothRostrumsFilledForPlayer(targetPlayerId, pieces)) {
+      return {
+        isAllowed: false,
+        reason: `Cannot move to office - not both rostrums are filled yet`,
+      };
+    }
+
+    return { isAllowed: true, reason: 'Both rostrums are filled' };
+  }
+
+  // --- Moving to opponent's SEAT ---
+  if (targetLocationId.includes('seat') && targetPlayerId !== movingPlayerId) {
+    return {
+      isAllowed: false,
+      reason: `Cannot move a piece to opponent's seat`,
+    };
+  }
+
+  return { isAllowed: true, reason: 'Move is valid' };
 }
 
 
