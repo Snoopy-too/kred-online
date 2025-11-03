@@ -124,7 +124,7 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p1_seat5', position: { left: 31.02, top: 48.79 } },
     { id: 'p1_seat6', position: { left: 31.35, top: 53.40 } },
     // Player 2 Seats
-    { id: 'p2_seat1', position: { left: 69.26, top: 44.88 } },
+    { id: 'p2_seat1', position: { left: 67.62, top: 43.57 } },
     { id: 'p2_seat2', position: { left: 65.14, top: 40.54 } },
     { id: 'p2_seat3', position: { left: 61.43, top: 37.35 } },
     { id: 'p2_seat4', position: { left: 57.09, top: 35.33 } },
@@ -416,77 +416,35 @@ export function findNearestVacantLocation(
     return null; // No vacant spots available
   }
 
-  // From the available locations, find the one closest to the drop point.
+  // Distance calculation function
   const calculateDistance = (pos1: {left: number, top: number}, pos2: {left: number, top: number}): number => {
     return Math.sqrt(Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2));
   }
 
-  // Check if drop is near the center of the board (50, 50)
-  const distanceFromCenter = calculateDistance(dropPosition, { left: 50, top: 50 });
-  const isNearCenter = distanceFromCenter < 15.0; // "reasonably close" threshold
-
-  // If near center, prioritize vacant community locations
-  if (isNearCenter) {
-    let nearestCommunityLocation: DropLocation | null = null;
-    let minCommunityDistance = Infinity;
-
-    for (const loc of vacantLocations) {
-      if (loc.id.includes('community')) {
-        const distance = calculateDistance(dropPosition, loc.position);
-        if (distance < minCommunityDistance) {
-          minCommunityDistance = distance;
-          nearestCommunityLocation = loc;
-        }
-      }
-    }
-
-    // Return the nearest community location if one exists
-    if (nearestCommunityLocation) {
-      return { position: nearestCommunityLocation.position, id: nearestCommunityLocation.id };
-    }
-  }
-
-  // Otherwise, check for a community location nearby (prioritize community)
-  let communityLocation: DropLocation | null = null;
-  let minCommunityDistance = Infinity;
-
-  for (const loc of vacantLocations) {
-    if (loc.id.includes('community')) {
-      const distance = calculateDistance(dropPosition, loc.position);
-      if (distance < minCommunityDistance) {
-        minCommunityDistance = distance;
-        communityLocation = loc;
-      }
-    }
-  }
-
-  // If we found a nearby community location (within 9.0), return it
-  if (communityLocation && minCommunityDistance < 9.0) {
-    return { position: communityLocation.position, id: communityLocation.id };
-  }
-
-  // Otherwise, find the nearest non-community location
+  // Find the nearest location using consistent distance thresholds
   let nearestLocation: DropLocation | null = null;
   let minDistance = Infinity;
 
   for (const loc of vacantLocations) {
-    if (!loc.id.includes('community')) {
-      const distance = calculateDistance(dropPosition, loc.position);
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestLocation = loc;
-      }
+    const distance = calculateDistance(dropPosition, loc.position);
+
+    // Determine the maximum distance threshold based on location type
+    let maxDistance = 12.0; // Default for regular locations (seats)
+    if (loc.id.includes('community')) {
+      maxDistance = 9.0; // Community locations are easier to target
+    } else if (loc.id.includes('rostrum') || loc.id.includes('office')) {
+      maxDistance = 15.0; // Rostrums and offices get a larger drop radius for better UX
+    }
+
+    // Check if this location is within its type's threshold and closer than previous nearest
+    if (distance < maxDistance && distance < minDistance) {
+      minDistance = distance;
+      nearestLocation = loc;
     }
   }
 
   if (nearestLocation) {
-    const isRostrum = nearestLocation.id.includes('rostrum');
-    // Rostrums and offices get a larger drop radius for better UX.
-    const isOffice = nearestLocation.id.includes('office');
-    const maxDistance = (isRostrum || isOffice) ? 15.0 : 12.0;
-    if (minDistance < maxDistance) {
-      return { position: nearestLocation.position, id: nearestLocation.id };
-    }
+    return { position: nearestLocation.position, id: nearestLocation.id };
   }
 
   return null;
