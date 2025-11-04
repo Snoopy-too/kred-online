@@ -516,6 +516,7 @@ export enum MoveRequirementType {
 
 export interface DefinedMove {
   type: DefinedMoveType;
+  category: 'M' | 'O'; // 'M' = My domain, 'O' = Opponent domain
   requirement: MoveRequirementType;
   description: string;
   options: string[];
@@ -528,14 +529,21 @@ export interface DefinedMove {
  * Complete definition of all Defined Moves available in the game.
  * These moves are triggered by playing tiles during the game.
  */
+/**
+ * DEFINED MOVES
+ *
+ * (M) moves affect pieces originating in the player's own domain
+ * (O) moves affect pieces originating in an opponent's domain
+ */
 export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
   [DefinedMoveType.REMOVE]: {
     type: DefinedMoveType.REMOVE,
+    category: 'O',
     requirement: MoveRequirementType.OPTIONAL,
-    description: 'Take a Mark or Heel from a seat in opponent\'s domain and return it to community',
+    description: '(O) Remove – Take a Mark or a Heel from a seat in an opponent\'s domain and return it to the community.',
     options: [
-      'Target opponent\'s seat',
-      'Return piece to community',
+      'a. Take a Mark or Heel from an opponent\'s seat',
+      'b. Return the piece to the community',
     ],
     canTargetOwnDomain: false,
     canTargetOpponentDomain: true,
@@ -543,12 +551,13 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
   },
   [DefinedMoveType.ADVANCE]: {
     type: DefinedMoveType.ADVANCE,
+    category: 'M',
     requirement: MoveRequirementType.MANDATORY,
-    description: 'Move a piece UP the hierarchy in own domain (community → seat → rostrum → office)',
+    description: '(M) Advance – Player\'s choice of ONE of the following',
     options: [
-      'Community → vacant seat in own domain',
-      'Own seat → supporting Rostrum (requires all 3 seats full)',
-      'Own Rostrum → own Office (requires both rostrums filled)',
+      'a. Take a piece from the community and add it to an open seat in their domain',
+      'b. Take a piece from a seat in their domain and place it into the open Rostrum that that seat supports',
+      'c. Take a piece from a Rostrum in their domain and place it into the office in their domain',
     ],
     canTargetOwnDomain: true,
     canTargetOpponentDomain: false,
@@ -556,11 +565,12 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
   },
   [DefinedMoveType.INFLUENCE]: {
     type: DefinedMoveType.INFLUENCE,
+    category: 'O',
     requirement: MoveRequirementType.OPTIONAL,
-    description: 'Move opponent\'s piece along the adjacency chain',
+    description: '(O) Influence – A player may move another player\'s piece from a seat to an adjacent seat (even if that seat is in another player\'s domain), OR from an opponent\'s rostrum to an adjacent rostrum in another player\'s domain.',
     options: [
-      'Opponent\'s seat → adjacent seat (in any domain)',
-      'Opponent\'s Rostrum → adjacent Rostrum (requires all 3 seats full)',
+      'a. Move another player\'s piece from a seat to an adjacent seat',
+      'b. Move another player\'s piece from a rostrum to an adjacent rostrum in another player\'s domain',
     ],
     canTargetOwnDomain: false,
     canTargetOpponentDomain: true,
@@ -568,10 +578,11 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
   },
   [DefinedMoveType.ASSIST]: {
     type: DefinedMoveType.ASSIST,
+    category: 'O',
     requirement: MoveRequirementType.OPTIONAL,
-    description: 'Add a piece from community to opponent\'s vacant seat',
+    description: '(O) Assist – A player may add a piece from the community to an opponent\'s vacant seat.',
     options: [
-      'Community → opponent\'s vacant seat',
+      'a. Take a piece from the community and add it to an opponent\'s vacant seat',
     ],
     canTargetOwnDomain: false,
     canTargetOpponentDomain: true,
@@ -579,12 +590,13 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
   },
   [DefinedMoveType.WITHDRAW]: {
     type: DefinedMoveType.WITHDRAW,
+    category: 'M',
     requirement: MoveRequirementType.MANDATORY,
-    description: 'Move a piece DOWN the hierarchy in own domain (unless domain is empty)',
+    description: '(M) Withdraw – A player MUST do one of the following UNLESS they have 0 pieces in their domain',
     options: [
-      'Own Office → vacant Rostrum in own domain',
-      'Own Rostrum → vacant Seat in own domain',
-      'Own Seat → Community',
+      'a. Move a piece from an office to a vacant rostrum in their domain',
+      'b. Move a piece from a rostrum in their domain to a vacant seat in their domain',
+      'c. Move a piece from a seat in their domain to the community',
     ],
     canTargetOwnDomain: true,
     canTargetOpponentDomain: false,
@@ -592,11 +604,12 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
   },
   [DefinedMoveType.ORGANIZE]: {
     type: DefinedMoveType.ORGANIZE,
+    category: 'M',
     requirement: MoveRequirementType.MANDATORY,
-    description: 'Move piece to adjacent location',
+    description: '(M) Organize – A player must do one of the following',
     options: [
-      'Own seat → adjacent seat (can be in any domain)',
-      'Own Rostrum → adjacent Rostrum (in opponent\'s domain, requires all 3 seats full)',
+      'a. Move a piece from a seat in their domain to an adjacent seat, even if it ends up in an opponent\'s domain',
+      'b. Move a piece from a rostrum in their domain to an adjacent rostrum in an opponent\'s domain',
     ],
     canTargetOwnDomain: true,
     canTargetOpponentDomain: true,
@@ -750,180 +763,180 @@ export interface TileRequirement {
  * Each tile specifies the exact moves that MUST be executed by the receiving player.
  */
 export const TILE_REQUIREMENTS: { [tileId: string]: TileRequirement } = {
-  // Tiles requiring Remove and Advance
+  // Tiles 01-02: Require Remove (O) and Advance (M)
   '01': {
     tileId: '01',
     requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ADVANCE],
-    description: 'Remove and Advance',
+    description: '(O) Remove and (M) Advance',
     canBeRejected: false,
   },
   '02': {
     tileId: '02',
     requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ADVANCE],
-    description: 'Remove and Advance',
+    description: '(O) Remove and (M) Advance',
     canBeRejected: false,
   },
 
-  // Tiles requiring Influence and Advance
+  // Tiles 03-04: Require Influence (O) and Advance (M)
   '03': {
     tileId: '03',
     requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.ADVANCE],
-    description: 'Influence and Advance',
+    description: '(O) Influence and (M) Advance',
     canBeRejected: false,
   },
   '04': {
     tileId: '04',
     requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.ADVANCE],
-    description: 'Influence and Advance',
+    description: '(O) Influence and (M) Advance',
     canBeRejected: false,
   },
 
-  // Tiles requiring only Advance
+  // Tiles 05-06: Require only Advance (M)
   '05': {
     tileId: '05',
     requiredMoves: [DefinedMoveType.ADVANCE],
-    description: 'Advance',
+    description: '(M) Advance',
     canBeRejected: false,
   },
   '06': {
     tileId: '06',
     requiredMoves: [DefinedMoveType.ADVANCE],
-    description: 'Advance',
+    description: '(M) Advance',
     canBeRejected: false,
   },
 
-  // Tiles requiring Assist and Advance
+  // Tiles 07-08: Require Assist (O) and Advance (M)
   '07': {
     tileId: '07',
     requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ADVANCE],
-    description: 'Assist and Advance',
+    description: '(O) Assist and (M) Advance',
     canBeRejected: false,
   },
   '08': {
     tileId: '08',
     requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ADVANCE],
-    description: 'Assist and Advance',
+    description: '(O) Assist and (M) Advance',
     canBeRejected: false,
   },
 
-  // Tiles requiring Remove and Organize
+  // Tiles 09-10: Require Remove (O) and Organize (M)
   '09': {
     tileId: '09',
     requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ORGANIZE],
-    description: 'Remove and Organize',
+    description: '(O) Remove and (M) Organize',
     canBeRejected: false,
   },
   '10': {
     tileId: '10',
     requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ORGANIZE],
-    description: 'Remove and Organize',
+    description: '(O) Remove and (M) Organize',
     canBeRejected: false,
   },
 
-  // Tile requiring only Influence
+  // Tile 11: Require only Influence (O)
   '11': {
     tileId: '11',
     requiredMoves: [DefinedMoveType.INFLUENCE],
-    description: 'Influence',
+    description: '(O) Influence',
     canBeRejected: false,
   },
 
-  // Tile requiring only Organize
+  // Tile 12: Require only Organize (M)
   '12': {
     tileId: '12',
     requiredMoves: [DefinedMoveType.ORGANIZE],
-    description: 'Organize',
+    description: '(M) Organize',
     canBeRejected: false,
   },
 
-  // Tiles requiring Assist and Organize
+  // Tiles 13-14: Require Assist (O) and Organize (M)
   '13': {
     tileId: '13',
     requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ORGANIZE],
-    description: 'Assist and Organize',
+    description: '(O) Assist and (M) Organize',
     canBeRejected: false,
   },
   '14': {
     tileId: '14',
     requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ORGANIZE],
-    description: 'Assist and Organize',
+    description: '(O) Assist and (M) Organize',
     canBeRejected: false,
   },
 
-  // Tiles requiring only Remove
+  // Tiles 15-16: Require only Remove (O)
   '15': {
     tileId: '15',
     requiredMoves: [DefinedMoveType.REMOVE],
-    description: 'Remove',
+    description: '(O) Remove',
     canBeRejected: false,
   },
   '16': {
     tileId: '16',
     requiredMoves: [DefinedMoveType.REMOVE],
-    description: 'Remove',
+    description: '(O) Remove',
     canBeRejected: false,
   },
 
-  // Tiles requiring Influence and Withdraw
+  // Tiles 17-18: Require Influence (O) and Withdraw (M)
   '17': {
     tileId: '17',
     requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.WITHDRAW],
-    description: 'Influence and Withdraw',
+    description: '(O) Influence and (M) Withdraw',
     canBeRejected: false,
   },
   '18': {
     tileId: '18',
     requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.WITHDRAW],
-    description: 'Influence and Withdraw',
+    description: '(O) Influence and (M) Withdraw',
     canBeRejected: false,
   },
 
-  // Tiles requiring only Withdraw
+  // Tiles 19-21: Require only Withdraw (M)
   '19': {
     tileId: '19',
     requiredMoves: [DefinedMoveType.WITHDRAW],
-    description: 'Withdraw',
+    description: '(M) Withdraw',
     canBeRejected: false,
   },
   '20': {
     tileId: '20',
     requiredMoves: [DefinedMoveType.WITHDRAW],
-    description: 'Withdraw',
+    description: '(M) Withdraw',
     canBeRejected: false,
   },
   '21': {
     tileId: '21',
     requiredMoves: [DefinedMoveType.WITHDRAW],
-    description: 'Withdraw',
+    description: '(M) Withdraw',
     canBeRejected: false,
   },
 
-  // Tiles requiring Assist and Withdraw
+  // Tiles 22-24: Require Assist (O) and Withdraw (M)
   '22': {
     tileId: '22',
     requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.WITHDRAW],
-    description: 'Assist and Withdraw',
+    description: '(O) Assist and (M) Withdraw',
     canBeRejected: false,
   },
   '23': {
     tileId: '23',
     requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.WITHDRAW],
-    description: 'Assist and Withdraw',
+    description: '(O) Assist and (M) Withdraw',
     canBeRejected: false,
   },
   '24': {
     tileId: '24',
     requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.WITHDRAW],
-    description: 'Assist and Withdraw',
+    description: '(O) Assist and (M) Withdraw',
     canBeRejected: false,
   },
 
-  // Blank tile (5-player mode only) - requires NO moves
+  // Blank tile (5-player mode only) - wild tile
   'BLANK': {
     tileId: 'BLANK',
     requiredMoves: [],
-    description: 'Blank - No moves allowed. Any moves made are subject to rejection/challenges.',
-    canBeRejected: true, // Only the Blank tile itself can be "rejected" if moves are made
+    description: 'Blank - Wild tile. The player may perform one "O" move and/or one "M" move, or no move at all.',
+    canBeRejected: true, // Can be rejected if moves don't match allowed patterns
   },
 };
 
