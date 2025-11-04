@@ -184,7 +184,11 @@ const CampaignScreen: React.FC<{
   onChallengerDecision?: (challenge: boolean) => void;
   onCorrectionComplete?: () => void;
   tileRejected?: boolean;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected }) => {
+  showMoveCheckResult?: boolean;
+  moveCheckResult?: { isMet: boolean; requiredMoves: any[]; performedMoves: any[]; missingMoves: any[] } | null;
+  onCloseMoveCheckResult?: () => void;
+  onCheckMove?: () => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -691,6 +695,18 @@ const CampaignScreen: React.FC<{
                   <p className="text-xs text-slate-400 mt-2">When ON, the board rotates to show each player's perspective. When OFF, the board stays fixed.</p>
                 </div>
 
+                {/* Check Move Button */}
+                {playedTile && gameState === 'TILE_PLAYED' && (
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <button
+                      onClick={() => onCheckMove?.()}
+                      className="w-full px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-lg"
+                    >
+                      ✓ Check Move
+                    </button>
+                    <p className="text-xs text-slate-400 mt-2">Validate if the moves satisfy the tile requirements.</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -872,6 +888,87 @@ const CampaignScreen: React.FC<{
              </div>
         </div>
       )}
+
+      {/* Move Check Result Modal */}
+      {showMoveCheckResult && moveCheckResult && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+          <div className="bg-gray-800 border-2 border-gray-700 p-8 rounded-xl text-center shadow-2xl max-w-lg w-full">
+            <div className="mb-8">
+              {moveCheckResult.isMet ? (
+                <div className="text-center">
+                  <div className="text-9xl text-green-500 font-bold mb-4">✓</div>
+                  <h2 className="text-4xl font-bold text-green-400 mb-2">Requirements Met!</h2>
+                  <p className="text-lg text-green-300">All tile requirements have been satisfied.</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="text-9xl text-red-500 font-bold mb-4">✕</div>
+                  <h2 className="text-4xl font-bold text-red-400 mb-2">Requirements Not Met</h2>
+                  <p className="text-lg text-red-300">The moves do not satisfy the tile requirements.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Details Section */}
+            <div className="bg-gray-700/50 rounded-lg p-6 mb-6 text-left space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-cyan-300 mb-2">Required Moves:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {moveCheckResult.requiredMoves.length > 0 ? (
+                    moveCheckResult.requiredMoves.map((move, index) => (
+                      <span key={index} className="px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded">
+                        {move}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">No specific moves required</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-cyan-300 mb-2">Moves Performed:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {moveCheckResult.performedMoves.length > 0 ? (
+                    moveCheckResult.performedMoves.map((move, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-600 text-white text-sm font-semibold rounded">
+                        {move}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">No moves performed</span>
+                  )}
+                </div>
+              </div>
+
+              {moveCheckResult.missingMoves.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-red-400 mb-2">Missing Moves:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {moveCheckResult.missingMoves.map((move, index) => (
+                      <span key={index} className="px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded">
+                        {move}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => onCloseMoveCheckResult?.()}
+              className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${
+                moveCheckResult.isMet
+                  ? 'bg-green-600 hover:bg-green-500'
+                  : 'bg-red-600 hover:bg-red-500'
+              }`}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
@@ -923,6 +1020,13 @@ const App: React.FC = () => {
   const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
   const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
   const [tileRejected, setTileRejected] = useState(false);
+  const [showMoveCheckResult, setShowMoveCheckResult] = useState(false);
+  const [moveCheckResult, setMoveCheckResult] = useState<{
+    isMet: boolean;
+    requiredMoves: any[];
+    performedMoves: any[];
+    missingMoves: any[];
+  } | null>(null);
   
   const handleStartGame = (count: number, testMode: boolean) => {
     setPlayerCount(count);
@@ -958,6 +1062,8 @@ const App: React.FC = () => {
     setChallengeOrder([]);
     setCurrentChallengerIndex(0);
     setTileRejected(false);
+    setShowMoveCheckResult(false);
+    setMoveCheckResult(null);
   };
   
   const handleSelectTile = (selectedTile: Tile) => {
@@ -1430,6 +1536,14 @@ const App: React.FC = () => {
     setHasPlayedTileThisTurn(false);
   };
 
+  const handleCheckMove = () => {
+    if (!playedTile) return;
+
+    const tileRequirements = validateTileRequirements(playedTile.tileId, movesThisTurn);
+    setMoveCheckResult(tileRequirements);
+    setShowMoveCheckResult(true);
+  };
+
   const resolveTransaction = (wasChallenged: boolean) => {
     if (!tileTransaction) return;
 
@@ -1562,6 +1676,10 @@ const App: React.FC = () => {
             onChallengerDecision={handleChallengerDecision}
             onCorrectionComplete={handleCorrectionComplete}
             tileRejected={tileRejected}
+            showMoveCheckResult={showMoveCheckResult}
+            moveCheckResult={moveCheckResult}
+            onCloseMoveCheckResult={() => setShowMoveCheckResult(false)}
+            onCheckMove={handleCheckMove}
           />
         );
       case 'PLAYER_SELECTION':

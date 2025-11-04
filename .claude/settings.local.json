@@ -20,7 +20,9 @@
       "Bash(git checkout:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(ls:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []
