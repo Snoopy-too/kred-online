@@ -180,7 +180,6 @@ const CampaignScreen: React.FC<{
   onPlacerViewTile: (tileId: string) => void;
   playedTile?: any;
   receiverAcceptance?: boolean | null;
-  gameState: GameState;
   onReceiverAcceptanceDecision?: (accepted: boolean) => void;
   onChallengerDecision?: (challenge: boolean) => void;
   onCorrectionComplete?: () => void;
@@ -386,19 +385,26 @@ const CampaignScreen: React.FC<{
   };
 
   const currentPlayer = players.find(p => p.id === currentPlayerId);
-  const isMyTurnForDecision = 
-    (gameState === 'PENDING_ACCEPTANCE' && currentPlayerId === tileTransaction?.receiverId) ||
+  // Check if it's the current player's turn for a decision (accept/reject or challenge)
+  // NEW WORKFLOW: Uses playedTile for PENDING_ACCEPTANCE
+  // OLD WORKFLOW: Uses tileTransaction for PENDING_CHALLENGE
+  const isMyTurnForDecision =
+    (gameState === 'PENDING_ACCEPTANCE' && playedTile && currentPlayerId === playedTile.receivingPlayerId) ||
+    (gameState === 'PENDING_ACCEPTANCE' && !playedTile && currentPlayerId === tileTransaction?.receiverId) ||
     (gameState === 'PENDING_CHALLENGE' && bystanders[bystanderIndex]?.id === currentPlayerId);
-  
-  const showWaitingOverlay = 
+
+  const showWaitingOverlay =
     (gameState === 'PENDING_ACCEPTANCE' || gameState === 'PENDING_CHALLENGE') && !isMyTurnForDecision;
 
   let waitingMessage = "";
+  let waitingPlayerId = undefined;
   if (showWaitingOverlay) {
     if (gameState === 'PENDING_ACCEPTANCE') {
-        waitingMessage = `Waiting for Player ${tileTransaction?.receiverId} to respond...`;
+        waitingPlayerId = playedTile?.receivingPlayerId || tileTransaction?.receiverId;
+        waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
     } else if (gameState === 'PENDING_CHALLENGE') {
-        waitingMessage = `Waiting for Player ${bystanders[bystanderIndex]?.id} to respond...`;
+        waitingPlayerId = bystanders[bystanderIndex]?.id;
+        waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
     }
   }
   
@@ -807,15 +813,15 @@ const CampaignScreen: React.FC<{
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4" aria-modal="true" role="dialog">
           <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full">
             <h2 className="text-3xl font-bold text-cyan-300 mb-2">Your Decision</h2>
-            <p className="text-slate-300 mb-6">{`Player ${tileTransaction?.placerId} has played a tile for you. What will you do?`}</p>
+            <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId} has played a tile for you. What will you do?`}</p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
               <button onClick={onTogglePrivateView} className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-500 transition-colors shadow-md w-full sm:w-auto">
                 Privately View
               </button>
-              <button onClick={() => onReceiverDecision('reject')} className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md w-full sm:w-auto">
+              <button onClick={() => playedTile ? onReceiverAcceptanceDecision(false) : onReceiverDecision('reject')} className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md w-full sm:w-auto">
                 Reject Tile
               </button>
-              <button onClick={() => onReceiverDecision('accept')} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md w-full sm:w-auto">
+              <button onClick={() => playedTile ? onReceiverAcceptanceDecision(true) : onReceiverDecision('accept')} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md w-full sm:w-auto">
                 Accept Tile
               </button>
             </div>
@@ -831,10 +837,10 @@ const CampaignScreen: React.FC<{
                   <button onClick={onTogglePrivateView} className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-500 transition-colors shadow-md">
                       Hide Tile
                   </button>
-                  <button onClick={() => onReceiverDecision('reject')} className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md">
+                  <button onClick={() => playedTile ? onReceiverAcceptanceDecision(false) : onReceiverDecision('reject')} className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md">
                       Reject Tile
                   </button>
-                  <button onClick={() => onReceiverDecision('accept')} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md">
+                  <button onClick={() => playedTile ? onReceiverAcceptanceDecision(true) : onReceiverDecision('accept')} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md">
                       Accept Tile
                   </button>
               </div>
@@ -846,12 +852,12 @@ const CampaignScreen: React.FC<{
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4" aria-modal="true" role="dialog">
           <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full">
             <h2 className="text-3xl font-bold text-cyan-300 mb-2">Challenge or Pass?</h2>
-            <p className="text-slate-300 mb-6">{`Player ${tileTransaction?.receiverId} accepted the tile from Player ${tileTransaction?.placerId}.`}</p>
+            <p className="text-slate-300 mb-6">{`Player ${playedTile?.receivingPlayerId || tileTransaction?.receiverId} accepted the tile from Player ${playedTile?.playerId || tileTransaction?.placerId}.`}</p>
             <div className="flex justify-center items-center gap-4">
-              <button onClick={() => onBystanderDecision('challenge')} className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors shadow-md">
+              <button onClick={() => playedTile ? onChallengerDecision(true) : onBystanderDecision('challenge')} className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors shadow-md">
                 Challenge
               </button>
-              <button onClick={() => onBystanderDecision('pass')} className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md">
+              <button onClick={() => playedTile ? onChallengerDecision(false) : onBystanderDecision('pass')} className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md">
                 Pass
               </button>
             </div>
@@ -1116,10 +1122,8 @@ const App: React.FC = () => {
         return;
       }
 
-      // Correction is complete - call the handler to finalize
-      if (onCorrectionComplete) {
-        onCorrectionComplete();
-      }
+      // Correction is complete - finalize the tile play
+      handleCorrectionComplete();
       return;
     }
 
