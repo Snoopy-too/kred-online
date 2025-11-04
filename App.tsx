@@ -550,15 +550,6 @@ const CampaignScreen: React.FC<{
               );
             })}
 
-            {/* Dummy Tile for Testing (Test Mode Only) */}
-            {isTestMode && !dummyTile && (
-              <button
-                onClick={() => setDummyTile({ position: { top: 50, left: 50 }, rotation: 0 })}
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-lg"
-              >
-                + Create Dummy Tile
-              </button>
-            )}
 
             {isTestMode && dummyTile && (
               <div
@@ -664,6 +655,18 @@ const CampaignScreen: React.FC<{
                   <p className="text-xs text-slate-400 mt-2">When ON, the board rotates to show each player's perspective. When OFF, the board stays fixed.</p>
                 </div>
 
+              </div>
+            )}
+
+            {/* Create Dummy Tile Button (Test Mode Only) */}
+            {isTestMode && !dummyTile && (
+              <div className="mt-8">
+                <button
+                  onClick={() => setDummyTile({ position: { top: 50, left: 50 }, rotation: 0 })}
+                  className="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-lg"
+                >
+                  + Create Dummy Tile
+                </button>
               </div>
             )}
 

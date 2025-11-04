@@ -1030,11 +1030,11 @@ const FOUR_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
 ];
 
 const FIVE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
-    { ownerId: 1, position: { left: 10.51, top: 63.82 }, rotation: -315 },
-    { ownerId: 2, position: { left: 19.97, top: 16.84 }, rotation: -240 },
-    { ownerId: 3, position: { left: 68.34, top: 10.99 }, rotation: -165 },
-    { ownerId: 4, position: { left: 88.64, top: 55.31 }, rotation: -90 },
-    { ownerId: 5, position: { left: 52.18, top: 88.27 }, rotation: -30 },
+    { ownerId: 1, position: { left: 14.64, top: 72.07 }, rotation: 93.0 },
+    { ownerId: 2, position: { left: 11.93, top: 25.49 }, rotation: 165.0 },
+    { ownerId: 3, position: { left: 58.59, top: 8.50 }, rotation: 237.0 },
+    { ownerId: 4, position: { left: 89.53, top: 44.43 }, rotation: 309.0 },
+    { ownerId: 5, position: { left: 63.07, top: 83.98 }, rotation: 21.0 },
 ];
 
 export const TILE_SPACES_BY_PLAYER_COUNT: { [key: number]: TileReceivingSpace[] } = {
