@@ -2162,7 +2162,7 @@ export function validateRemoveMove(
   const fromLocationId = move.fromLocationId;
   const toLocationId = move.toLocationId;
 
-  // Must be from an opponent's seat to community
+  // Must move to community
   if (!toLocationId?.includes('community')) return false;
 
   // Check if from an opponent's seat (not player's own seat)
@@ -2173,7 +2173,16 @@ export function validateRemoveMove(
   if (!seatPlayerMatch) return false;
 
   const seatPlayerId = parseInt(seatPlayerMatch[1]);
-  return seatPlayerId !== playerId && seatPlayerId >= 1 && seatPlayerId <= playerCount;
+  if (seatPlayerId === playerId || seatPlayerId < 1 || seatPlayerId > playerCount) {
+    return false;
+  }
+
+  // Check that the piece being moved is a Mark or Heel
+  const movingPiece = pieces.find(p => p.id === move.pieceId);
+  if (!movingPiece) return false;
+
+  const pieceName = movingPiece.name.toLowerCase();
+  return pieceName === 'mark' || pieceName === 'heel';
 }
 
 /**

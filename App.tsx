@@ -1718,7 +1718,20 @@ const App: React.FC = () => {
       } else if (isOffice(initialLocId) && isRostrum(finalLocId)) {
         moveType = 'WITHDRAW';
       } else if (isSeat(initialLocId) && isCommunity(finalLocId)) {
-        moveType = 'WITHDRAW';
+        // Determine if this is REMOVE or WITHDRAW based on piece ownership
+        const fromPlayer = getPlayerFromLocation(initialLocId);
+        if (fromPlayer === playedTile.playerId) {
+          moveType = 'WITHDRAW';
+        } else {
+          // Check if the piece is a Mark or Heel (REMOVE only for these pieces)
+          const movingPiece = pieces.find(p => p.id === currentPiece.id);
+          if (movingPiece) {
+            const pieceName = movingPiece.name.toLowerCase();
+            moveType = (pieceName === 'mark' || pieceName === 'heel') ? 'REMOVE' : 'UNKNOWN';
+          } else {
+            moveType = 'UNKNOWN';
+          }
+        }
       } else if (isSeat(initialLocId) && isSeat(finalLocId)) {
         const fromPlayer = getPlayerFromLocation(initialLocId);
         // Check if seats are adjacent using the helper function from game.ts
