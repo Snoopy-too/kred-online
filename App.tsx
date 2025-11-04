@@ -29,6 +29,7 @@ import {
   getChallengeOrder,
   getTileRequirements,
   validateSingleMove,
+  areSeatsAdjacent,
 } from './game';
 
 // --- Helper Components ---
@@ -1205,83 +1206,8 @@ const App: React.FC = () => {
     setLastDroppedPieceId(pieceId);
     const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
 
-    // Track move if we're in TILE_PLAYED or CORRECTION_REQUIRED state
-    if ((gameState === 'TILE_PLAYED' || gameState === 'CORRECTION_REQUIRED') && playedTile) {
-      // Find the piece's current location before updating
-      const movedPiece = pieces.find(p => p.id === pieceId);
-      if (movedPiece) {
-        const oldLocationId = movedPiece.locationId;
-        const fromPosition = movedPiece.position;
-
-        // Determine the move type based on locations
-        let moveType = 'UNKNOWN';
-
-        // Helper to check if location is a community location
-        const isCommunity = (loc?: string) => loc?.includes('community');
-        // Helper to check if location is a seat
-        const isSeat = (loc?: string) => loc?.includes('_seat');
-        // Helper to check if location is a rostrum
-        const isRostrum = (loc?: string) => loc?.includes('_rostrum');
-        // Helper to check if location is an office
-        const isOffice = (loc?: string) => loc?.includes('_office');
-
-        // Determine move type based on from/to locations
-        if (isCommunity(oldLocationId) && isSeat(locationId)) {
-          moveType = 'ADVANCE';
-        } else if (isSeat(oldLocationId) && isRostrum(locationId)) {
-          moveType = 'ADVANCE';
-        } else if (isRostrum(oldLocationId) && isOffice(locationId)) {
-          moveType = 'ADVANCE';
-        } else if (isRostrum(oldLocationId) && isSeat(locationId)) {
-          moveType = 'WITHDRAW';
-        } else if (isOffice(oldLocationId) && isRostrum(locationId)) {
-          moveType = 'WITHDRAW';
-        } else if (isSeat(oldLocationId) && isCommunity(locationId)) {
-          moveType = 'WITHDRAW';
-        } else if (isSeat(oldLocationId) && isSeat(locationId)) {
-          moveType = 'ORGANIZE';
-        } else if (isRostrum(oldLocationId) && isRostrum(locationId)) {
-          moveType = 'ORGANIZE';
-        } else if (isSeat(oldLocationId) && isCommunity(locationId)) {
-          moveType = 'REMOVE';
-        }
-
-        // Determine category (M or O)
-        let category: 'M' | 'O' = 'M';
-        if (moveType === 'REMOVE' || moveType === 'INFLUENCE' || moveType === 'ASSIST') {
-          category = 'O';
-        }
-
-        // Create the tracked move
-        const trackedMove: any = {
-          moveType,
-          category,
-          pieceId,
-          fromPosition,
-          fromLocationId: oldLocationId,
-          toPosition: newPosition,
-          toLocationId: locationId,
-          timestamp: Date.now(),
-        };
-
-        // Add to moves this turn (only if not a duplicate)
-        setMovesThisTurn(prev => {
-          // Check if this exact move already exists (to prevent duplicates)
-          const isDuplicate = prev.some(m =>
-            m.pieceId === pieceId &&
-            m.fromLocationId === oldLocationId &&
-            m.toLocationId === locationId &&
-            m.timestamp > Date.now() - 500 // Within 500ms
-          );
-          if (isDuplicate) {
-            return prev;
-          }
-          return [...prev, trackedMove];
-        });
-      }
-    }
-
-    // Update the piece position and location
+    // Simply update the piece position and location
+    // Move validation will be calculated when Check Move is clicked
     setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p));
   };
 
@@ -1685,17 +1611,136 @@ const App: React.FC = () => {
   const handleCheckMove = () => {
     if (!playedTile) return;
 
-    const tileRequirements = validateTileRequirements(playedTile.tileId, movesThisTurn);
+    // Calculate actual moves by comparing current piece positions to initial positions
+    // Only count a move if:
+    // 1. Piece moved from initial position to a DIFFERENT location
+    // 2. Final location is: a seat, rostrum, office (not community)
+    // 3. OR: piece started in a seat and ended in community
+    const calculatedMoves: any[] = [];
 
-    // Validate each individual move and collect details
-    // We need to validate each move against the board state AFTER the previous moves have been applied
-    const moveValidations = movesThisTurn.map((move, index) => {
-      // Start with original pieces and apply all moves up to and including the current one
+    for (const currentPiece of pieces) {
+      const initialPiece = playedTile.originalPieces.find(p => p.id === currentPiece.id);
+      if (!initialPiece) continue; // New piece (shouldn't happen in normal gameplay)
+
+      const initialLocId = initialPiece.locationId;
+      const finalLocId = currentPiece.locationId;
+
+      // Skip if piece didn't move
+      if (initialLocId === finalLocId) continue;
+
+      // Determine if this move should be counted
+      let shouldCountMove = false;
+
+      // Rule 1: Community → Seat/Rostrum/Office = COUNT
+      if (initialLocId?.includes('community') &&
+          (finalLocId?.includes('_seat') || finalLocId?.includes('_rostrum') || finalLocId?.includes('_office'))) {
+        shouldCountMove = true;
+      }
+      // Rule 2: Seat → Community = COUNT (only if started in seat)
+      else if (initialLocId?.includes('_seat') && finalLocId?.includes('community')) {
+        shouldCountMove = true;
+      }
+      // Rule 3: Seat → Seat = COUNT (intermediate moves don't matter)
+      else if (initialLocId?.includes('_seat') && finalLocId?.includes('_seat')) {
+        shouldCountMove = true;
+      }
+      // Rule 4: Seat → Rostrum = COUNT
+      else if (initialLocId?.includes('_seat') && finalLocId?.includes('_rostrum')) {
+        shouldCountMove = true;
+      }
+      // Rule 5: Rostrum → Seat/Office = COUNT
+      else if (initialLocId?.includes('_rostrum') &&
+               (finalLocId?.includes('_seat') || finalLocId?.includes('_office'))) {
+        shouldCountMove = true;
+      }
+      // Rule 6: Office → Rostrum = COUNT
+      else if (initialLocId?.includes('_office') && finalLocId?.includes('_rostrum')) {
+        shouldCountMove = true;
+      }
+      // Rule 7: Rostrum → Community = COUNT (WITHDRAW)
+      else if (initialLocId?.includes('_rostrum') && finalLocId?.includes('community')) {
+        shouldCountMove = true;
+      }
+      // Rule 8: Rostrum → Rostrum = COUNT (ORGANIZE)
+      else if (initialLocId?.includes('_rostrum') && finalLocId?.includes('_rostrum')) {
+        shouldCountMove = true;
+      }
+      // Rule 9: Office → Community = COUNT (shouldn't happen but count if it does)
+      else if (initialLocId?.includes('_office') && finalLocId?.includes('community')) {
+        shouldCountMove = true;
+      }
+
+      if (!shouldCountMove) continue;
+
+      // Determine move type
+      let moveType = 'UNKNOWN';
+      const isCommunity = (loc?: string) => loc?.includes('community');
+      const isSeat = (loc?: string) => loc?.includes('_seat');
+      const isRostrum = (loc?: string) => loc?.includes('_rostrum');
+      const isOffice = (loc?: string) => loc?.includes('_office');
+      const getPlayerFromLocation = (loc?: string): number | null => {
+        const match = loc?.match(/p(\d+)_/);
+        return match ? parseInt(match[1]) : null;
+      };
+
+      if (isCommunity(initialLocId) && isSeat(finalLocId)) {
+        const ownerPlayer = getPlayerFromLocation(finalLocId);
+        moveType = ownerPlayer === playedTile.playerId ? 'ADVANCE' : 'ASSIST';
+      } else if (isSeat(initialLocId) && isRostrum(finalLocId)) {
+        moveType = 'ADVANCE';
+      } else if (isRostrum(initialLocId) && isOffice(finalLocId)) {
+        moveType = 'ADVANCE';
+      } else if (isRostrum(initialLocId) && isSeat(finalLocId)) {
+        moveType = 'WITHDRAW';
+      } else if (isOffice(initialLocId) && isRostrum(finalLocId)) {
+        moveType = 'WITHDRAW';
+      } else if (isSeat(initialLocId) && isCommunity(finalLocId)) {
+        moveType = 'WITHDRAW';
+      } else if (isSeat(initialLocId) && isSeat(finalLocId)) {
+        const fromPlayer = getPlayerFromLocation(initialLocId);
+        // Check if seats are adjacent using the helper function from game.ts
+        if (initialLocId && finalLocId && areSeatsAdjacent(initialLocId, finalLocId, playerCount)) {
+          if (fromPlayer === playedTile.playerId) {
+            moveType = 'ORGANIZE';
+          } else {
+            moveType = 'INFLUENCE';
+          }
+        } else {
+          // Non-adjacent seats - not a valid move type
+          moveType = 'UNKNOWN';
+        }
+      } else if (isRostrum(initialLocId) && isRostrum(finalLocId)) {
+        const fromPlayer = getPlayerFromLocation(initialLocId);
+        moveType = fromPlayer === playedTile.playerId ? 'ORGANIZE' : 'INFLUENCE';
+      }
+
+      // Determine category
+      let category: 'M' | 'O' = 'M';
+      if (moveType === 'REMOVE' || moveType === 'INFLUENCE' || moveType === 'ASSIST') {
+        category = 'O';
+      }
+
+      // Create tracked move
+      calculatedMoves.push({
+        moveType,
+        category,
+        pieceId: currentPiece.id,
+        fromPosition: initialPiece.position,
+        fromLocationId: initialLocId,
+        toPosition: currentPiece.position,
+        toLocationId: finalLocId,
+        timestamp: Date.now(),
+      });
+    }
+
+    // Validate the calculated moves
+    const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+
+    const moveValidations = calculatedMoves.map((move, index) => {
+      // Build piece state after all previous moves
       let piecesForValidation = playedTile.originalPieces.map(p => ({ ...p }));
-
-      // Apply all moves before this one to get the correct board state
       for (let i = 0; i < index; i++) {
-        const prevMove = movesThisTurn[i];
+        const prevMove = calculatedMoves[i];
         piecesForValidation = piecesForValidation.map(p =>
           p.id === prevMove.pieceId
             ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }

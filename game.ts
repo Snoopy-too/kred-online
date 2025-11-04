@@ -1923,6 +1923,119 @@ export function getChallengeOrder(
 }
 
 /**
+ * Gets the next player in clockwise order around the table.
+ * 3-player: 1→3→2→1
+ * 4-player: 1→2→3→4→1
+ * 5-player: 1→2→3→4→5→1
+ */
+function getNextPlayerClockwise(playerId: number, playerCount: number): number {
+  if (playerCount === 3) {
+    // Special case for 3 players: 1→3→2→1
+    return playerId === 1 ? 3 : playerId === 3 ? 2 : 1;
+  } else {
+    // For 4 and 5 players: sequential
+    return (playerId % playerCount) + 1;
+  }
+}
+
+/**
+ * Gets the previous player in clockwise order around the table (counter-clockwise).
+ * 3-player: 1←3←2←1 (or 1→2→3→1 backward)
+ * 4-player: 1←2←3←4←1
+ * 5-player: 1←2←3←4←5←1
+ */
+function getPrevPlayerClockwise(playerId: number, playerCount: number): number {
+  if (playerCount === 3) {
+    // Special case for 3 players: 1←3←2 means prev of 1 is 2, prev of 3 is 1, prev of 2 is 3
+    return playerId === 1 ? 2 : playerId === 2 ? 3 : 1;
+  } else {
+    // For 4 and 5 players: sequential
+    return playerId === 1 ? playerCount : playerId - 1;
+  }
+}
+
+/**
+ * Determines if two seats are adjacent in the seating arrangement.
+ * Seats are numbered 1-6 around each player's domain, and adjacent means:
+ * - Same player: seat 1 next to 2, 2 next to 3, 3 next to 4, 4 next to 5, 5 next to 6
+ * - Wraps to other players: player X seat6 adjacent to next player's seat1
+ *
+ * @param seatId1 First seat ID (e.g., 'p1_seat1')
+ * @param seatId2 Second seat ID (e.g., 'p2_seat6')
+ * @param playerCount Total number of players (3, 4, or 5)
+ * @returns True if the seats are adjacent
+ */
+export function areSeatsAdjacent(seatId1: string, seatId2: string, playerCount: number): boolean {
+  // Extract player ID and seat number from location IDs
+  const match1 = seatId1.match(/p(\d+)_seat(\d)/);
+  const match2 = seatId2.match(/p(\d+)_seat(\d)/);
+
+  if (!match1 || !match2) return false;
+
+  const player1 = parseInt(match1[1]);
+  const seat1 = parseInt(match1[2]);
+  const player2 = parseInt(match2[1]);
+  const seat2 = parseInt(match2[2]);
+
+  // Same player - seats must be consecutive
+  if (player1 === player2) {
+    return Math.abs(seat1 - seat2) === 1;
+  }
+
+  // Different players - check if they're at the boundary (wrapping around the table)
+  // Forward wrap: Player X seat6 is adjacent to next player's seat1
+  const nextPlayer = getNextPlayerClockwise(player1, playerCount);
+  if (player2 === nextPlayer && seat1 === 6 && seat2 === 1) {
+    return true;
+  }
+
+  // Backward wrap: Player X seat1 is adjacent to previous player's seat6
+  const prevPlayer = getPrevPlayerClockwise(player1, playerCount);
+  if (player2 === prevPlayer && seat1 === 1 && seat2 === 6) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Gets all adjacent seats to a given seat.
+ * Used for validating INFLUENCE and ORGANIZE moves.
+ *
+ * @param seatId The seat ID (e.g., 'p1_seat3')
+ * @param playerCount Total number of players
+ * @returns Array of adjacent seat IDs
+ */
+export function getAdjacentSeats(seatId: string, playerCount: number): string[] {
+  const match = seatId.match(/p(\d+)_seat(\d)/);
+  if (!match) return [];
+
+  const player = parseInt(match[1]);
+  const seat = parseInt(match[2]);
+  const adjacent: string[] = [];
+
+  // Same player, lower seat number
+  if (seat > 1) {
+    adjacent.push(`p${player}_seat${seat - 1}`);
+  } else if (seat === 1) {
+    // Wrap to previous player's seat 6
+    const prevPlayer = getPrevPlayerClockwise(player, playerCount);
+    adjacent.push(`p${prevPlayer}_seat6`);
+  }
+
+  // Same player, higher seat number
+  if (seat < 6) {
+    adjacent.push(`p${player}_seat${seat + 1}`);
+  } else if (seat === 6) {
+    // Wrap to next player's seat 1
+    const nextPlayer = getNextPlayerClockwise(player, playerCount);
+    adjacent.push(`p${nextPlayer}_seat1`);
+  }
+
+  return adjacent;
+}
+
+/**
  * Validates whether an ADVANCE move is legal.
  * ADVANCE options:
  * a. Take a piece from community TO an open seat in their domain
@@ -2060,29 +2173,39 @@ export function validateInfluenceMove(
   const fromLocationId = move.fromLocationId;
   const toLocationId = move.toLocationId;
 
-  // Must be in opponent's domain (not player's own)
-  if (!fromLocationId || toLocationId?.includes(`p${playerId}_`)) {
-    return false;
-  }
+  if (!fromLocationId || !toLocationId) return false;
 
   // Case 1: Seat to adjacent seat
-  if (fromLocationId.includes('_seat') && toLocationId?.includes('_seat')) {
-    // This is valid if it's an opponent's piece moving to an adjacent seat
-    // We assume the move system already validates adjacency
+  if (fromLocationId.includes('_seat') && toLocationId.includes('_seat')) {
+    // Must be opponent's piece
     const fromPlayerMatch = fromLocationId.match(/p(\d+)_seat/);
-    if (fromPlayerMatch) {
-      const fromPlayerId = parseInt(fromPlayerMatch[1]);
-      return fromPlayerId !== playerId;
-    }
+    if (!fromPlayerMatch) return false;
+    const fromPlayerId = parseInt(fromPlayerMatch[1]);
+    if (fromPlayerId === playerId) return false; // Can't INFLUENCE own pieces
+
+    // Seats must be adjacent
+    return areSeatsAdjacent(fromLocationId, toLocationId, playerCount);
   }
 
   // Case 2: Rostrum to adjacent rostrum
-  if (fromLocationId.includes('_rostrum') && toLocationId?.includes('_rostrum')) {
+  if (fromLocationId.includes('_rostrum') && toLocationId.includes('_rostrum')) {
+    // Must be opponent's piece
     const fromPlayerMatch = fromLocationId.match(/p(\d+)_rostrum/);
-    if (fromPlayerMatch) {
-      const fromPlayerId = parseInt(fromPlayerMatch[1]);
-      return fromPlayerId !== playerId;
-    }
+    if (!fromPlayerMatch) return false;
+    const fromPlayerId = parseInt(fromPlayerMatch[1]);
+    if (fromPlayerId === playerId) return false; // Can't INFLUENCE own pieces
+
+    // Extract rostrum numbers from the location IDs
+    const fromRostMatch = fromLocationId.match(/p\d+_rostrum(\d)/);
+    const toRostMatch = toLocationId.match(/p\d+_rostrum(\d)/);
+
+    if (!fromRostMatch || !toRostMatch) return false;
+
+    const fromRost = parseInt(fromRostMatch[1]);
+    const toRost = parseInt(toRostMatch[1]);
+
+    // Rostrums must be adjacent (1 is adjacent to 2, and 2 to 1)
+    return Math.abs(fromRost - toRost) === 1;
   }
 
   return false;
