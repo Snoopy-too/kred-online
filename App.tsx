@@ -908,17 +908,23 @@ const CampaignScreen: React.FC<{
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
           <div className="bg-gray-800 border-2 border-gray-700 p-8 rounded-xl text-center shadow-2xl max-w-lg w-full">
             <div className="mb-8">
-              {moveCheckResult.isMet ? (
-                <div className="text-center">
-                  <div className="text-9xl text-green-500 font-bold mb-4">✓</div>
-                  <h2 className="text-4xl font-bold text-green-400 mb-2">Requirements Met!</h2>
-                  <p className="text-lg text-green-300">All tile requirements have been satisfied.</p>
-                </div>
-              ) : (
+              {!moveCheckResult.isMet ? (
                 <div className="text-center">
                   <div className="text-9xl text-red-500 font-bold mb-4">✕</div>
                   <h2 className="text-4xl font-bold text-red-400 mb-2">Requirements Not Met</h2>
                   <p className="text-lg text-red-300">The moves do not satisfy the tile requirements.</p>
+                </div>
+              ) : moveCheckResult.hasExtraMoves ? (
+                <div className="text-center">
+                  <div className="text-9xl text-yellow-400 font-bold mb-4">⚠️</div>
+                  <h2 className="text-4xl font-bold text-yellow-300 mb-2">Requirements Met</h2>
+                  <p className="text-lg text-yellow-200">But extra non-required moves were performed.</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="text-9xl text-green-500 font-bold mb-4">✓</div>
+                  <h2 className="text-4xl font-bold text-green-400 mb-2">Requirements Met!</h2>
+                  <p className="text-lg text-green-300">All tile requirements have been satisfied.</p>
                 </div>
               )}
             </div>
@@ -961,6 +967,19 @@ const CampaignScreen: React.FC<{
                   <div className="flex flex-wrap gap-2">
                     {moveCheckResult.missingMoves.map((move, index) => (
                       <span key={index} className="px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded">
+                        {move}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {moveCheckResult.hasExtraMoves && moveCheckResult.extraMoves.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">Extra Moves (Not Required):</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {moveCheckResult.extraMoves.map((move, index) => (
+                      <span key={index} className="px-3 py-1 bg-yellow-600 text-white text-sm font-semibold rounded">
                         {move}
                       </span>
                     ))}
@@ -1021,9 +1040,11 @@ const CampaignScreen: React.FC<{
             <button
               onClick={() => onCloseMoveCheckResult?.()}
               className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${
-                moveCheckResult.isMet
-                  ? 'bg-green-600 hover:bg-green-500'
-                  : 'bg-red-600 hover:bg-red-500'
+                !moveCheckResult.isMet
+                  ? 'bg-red-600 hover:bg-red-500'
+                  : moveCheckResult.hasExtraMoves
+                  ? 'bg-yellow-600 hover:bg-yellow-500'
+                  : 'bg-green-600 hover:bg-green-500'
               }`}
             >
               Close
@@ -1088,6 +1109,8 @@ const App: React.FC = () => {
     requiredMoves: any[];
     performedMoves: any[];
     missingMoves: any[];
+    hasExtraMoves: boolean;
+    extraMoves: string[];
     moveValidations?: Array<{
       moveType: string;
       isValid: boolean;
@@ -1758,8 +1781,24 @@ const App: React.FC = () => {
       };
     });
 
+    // Check if there are extra moves beyond what's required
+    const requiredMoveTypes = tileRequirements.requiredMoves;
+    const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+    const extraMoves: string[] = [];
+
+    for (const moveType of performedMoveTypes) {
+      if (!requiredMoveTypes.includes(moveType)) {
+        extraMoves.push(moveType);
+      }
+    }
+
+    // Remove duplicates from extraMoves
+    const uniqueExtraMoves = [...new Set(extraMoves)];
+
     setMoveCheckResult({
       ...tileRequirements,
+      hasExtraMoves: uniqueExtraMoves.length > 0,
+      extraMoves: uniqueExtraMoves,
       moveValidations,
     });
     setShowMoveCheckResult(true);
