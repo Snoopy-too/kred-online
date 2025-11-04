@@ -512,6 +512,14 @@ const CampaignScreen: React.FC<{
               const isReceiver = currentPlayerId === tileTransaction?.receiverId;
               const isPubliclyRevealed = revealedTileId === boardTile.id;
 
+              // NEW WORKFLOW: Check if this tile is being played (in TILE_PLAYED or PENDING_ACCEPTANCE state)
+              const isPlayedTile = playedTile && (
+                boardTile.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
+                boardTile.placerId === playedTile.playerId &&
+                boardTile.ownerId === playedTile.receivingPlayerId
+              );
+              const isTilePlayedButNotYetAccepted = isPlayedTile && (gameState === 'TILE_PLAYED' || gameState === 'PENDING_ACCEPTANCE');
+
               // Receiver's private view logic (during PENDING_ACCEPTANCE)
               const showReceiverPrivateView = isPrivatelyViewing && isTransactionalTile && isReceiver;
 
@@ -521,24 +529,32 @@ const CampaignScreen: React.FC<{
 
               const isRevealed = isPubliclyRevealed || showReceiverPrivateView || showPlacerPrivateView;
 
+              // During tile play workflow, only show white back until acceptance/rejection
+              const shouldShowWhiteBack = isTilePlayedButNotYetAccepted && !showReceiverPrivateView;
+
               return (
                 <div
                   key={boardTile.id}
                   draggable={isTestMode && !isTransactionalTile}
                   onDragStart={(isTestMode && !isTransactionalTile) ? (e) => handleDragStartBoardTile(e, boardTile.id) : undefined}
                   onClick={canPlacerClickToView ? () => onPlacerViewTile(boardTile.id) : undefined}
-                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed ? '' : 'bg-stone-100 p-1'}` }
-                  style={{ 
-                    top: `${boardTile.position.top}%`, 
-                    left: `${boardTile.position.left}%`, 
-                    transform: `translate(-50%, -50%) rotate(${boardTile.rotation || 0}deg)`, 
+                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed && !shouldShowWhiteBack ? '' : 'bg-stone-100 p-1'}` }
+                  style={{
+                    top: `${boardTile.position.top}%`,
+                    left: `${boardTile.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${boardTile.rotation || 0}deg)`,
                     cursor: canPlacerClickToView ? 'pointer' : 'default'
                   }}
                   aria-label={canPlacerClickToView ? "Click to view the tile you just played" : "A placed, face-down tile"}
                 >
-                  {!isRevealed ? (
-                     <div className="w-full h-full bg-gray-700 rounded-lg border-2 border-white shadow-inner"></div>
+                  {shouldShowWhiteBack ? (
+                    // Show white back for tile in play
+                    <div className="w-full h-full bg-white rounded-lg border-2 border-gray-400 shadow-inner"></div>
+                  ) : !isRevealed ? (
+                    // Show gray back for old workflow tiles
+                    <div className="w-full h-full bg-gray-700 rounded-lg border-2 border-white shadow-inner"></div>
                   ) : (
+                    // Show tile face for revealed tiles
                     <img src={boardTile.tile.url} alt={`Tile ${boardTile.tile.id}`} className="w-full h-full object-contain" />
                   )}
                 </div>
@@ -1158,6 +1174,18 @@ const App: React.FC = () => {
 
     // Initialize the tile play state (NEW WORKFLOW)
     const tileIdStr = tileId.toString().padStart(2, '0');
+    const boardTileId = `boardtile_${Date.now()}`;
+
+    // Create a BoardTile to display in the receiving space (face-down/white back)
+    const newBoardTile: BoardTile = {
+      id: boardTileId,
+      tile: tileToPlace,
+      position: targetSpace.position,
+      rotation: targetSpace.rotation,
+      placerId: currentPlayer.id,
+      ownerId: targetSpace.ownerId,
+    };
+
     setPlayedTile({
       tileId: tileIdStr,
       playerId: currentPlayer.id,
@@ -1166,6 +1194,9 @@ const App: React.FC = () => {
       originalPieces: pieces.map(p => ({ ...p })),
       originalBoardTiles: boardTiles.map(t => ({ ...t })),
     });
+
+    // Add the board tile to display in the receiving space
+    setBoardTiles(prev => [...prev, newBoardTile]);
 
     // Remove tile from player's hand (will be added back if rejected)
     setPlayers(prev => prev.map(p =>
@@ -1201,11 +1232,12 @@ const App: React.FC = () => {
       setReceiverAcceptance(false);
       setTileRejected(true);
 
-      // Restore original pieces and board state
+      // Restore original pieces (remove any moves made)
       setPieces(playedTile.originalPieces.map(p => ({ ...p })));
-      setBoardTiles(playedTile.originalBoardTiles.map(t => ({ ...t })));
+      // Keep the board tile visible in the receiving space (don't restore full board state)
+      // The BoardTile will remain showing the white back
 
-      // Add tile back to receiving player
+      // Add tile to receiving player's bureaucracy tiles for tracking
       const receivingPlayer = players.find(p => p.id === playedTile.receivingPlayerId);
       if (receivingPlayer) {
         setPlayers(prev =>
@@ -1261,9 +1293,10 @@ const App: React.FC = () => {
         // Reverse moves and prompt correction
         setTileRejected(true);
 
-        // Restore original pieces
+        // Restore original pieces (remove any moves made)
         setPieces(playedTile.originalPieces.map(p => ({ ...p })));
-        setBoardTiles(playedTile.originalBoardTiles.map(t => ({ ...t })));
+        // Keep the board tile visible in the receiving space (don't restore full board state)
+        // The BoardTile will remain showing the white back
 
         // Switch to tile player for correction
         const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
