@@ -20,6 +20,7 @@ import {
   formatLocationId,
   getLocationIdFromPosition,
   DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
+  isPositionInCommunityCircle,
 } from './game';
 
 // --- Helper Components ---
@@ -145,8 +146,8 @@ const CampaignScreen: React.FC<{
   lastDroppedPosition: { top: number; left: number } | null;
   lastDroppedPieceId: string | null;
   isTestMode: boolean;
-  freePlacementMode: boolean;
-  setFreePlacementMode: (mode: boolean) => void;
+  dummyTile: { position: { top: number; left: number }; rotation: number } | null;
+  setDummyTile: (tile: { position: { top: number; left: number }; rotation: number } | null) => void;
   boardRotationEnabled: boolean;
   setBoardRotationEnabled: (enabled: boolean) => void;
   hasPlayedTileThisTurn: boolean;
@@ -170,7 +171,7 @@ const CampaignScreen: React.FC<{
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, freePlacementMode, setFreePlacementMode, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -238,20 +239,6 @@ const CampaignScreen: React.FC<{
         top = rotatedY + centerY;
     }
 
-    // Free placement mode: show indicator at exact drop position with 0 rotation
-    if (freePlacementMode) {
-        const newRotation = calculatePieceRotation({ top, left }, playerCount, 'free_placement');
-        if (!dropIndicator || dropIndicator.position.top !== top || dropIndicator.position.left !== left) {
-            setDropIndicator({
-                position: { top, left },
-                rotation: newRotation,
-                name: draggedPieceInfo.name,
-                imageUrl: draggedPieceInfo.imageUrl
-            });
-        }
-        return;
-    }
-
     const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
     if (snappedLocation) {
@@ -274,6 +261,8 @@ const CampaignScreen: React.FC<{
     setDropIndicator(null);
     const boardTileId = e.dataTransfer.getData("boardTileId");
     const pieceId = e.dataTransfer.getData("pieceId");
+    const tileIdStr = e.dataTransfer.getData("tileId");
+    const isDummyTile = e.dataTransfer.getData("dummyTile");
 
     const boardRect = e.currentTarget.getBoundingClientRect();
     const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
@@ -293,18 +282,35 @@ const CampaignScreen: React.FC<{
         top = rotatedY + centerY;
     }
 
+    // Handle dummy tile drops
+    if (isDummyTile && dummyTile) {
+        setDummyTile({
+            position: { top, left },
+            rotation: dummyTile.rotation
+        });
+        return;
+    }
+
     if (boardTileId && isTestMode) {
         onBoardTileMove(boardTileId, { top, left });
         return;
     }
 
-    // Free placement mode: allow pieces to be placed anywhere without snapping
-    if (freePlacementMode && pieceId) {
-        const freeLocationId = 'free_placement';
-        onPieceMove(pieceId, { top, left }, freeLocationId);
-        return;
+    // Free placement mode: allow tiles to be placed anywhere without snapping
+    if (tileIdStr && !hasPlayedTileThisTurn) {
+        const currentPlayer = players.find(p => p.id === currentPlayerId);
+        if (currentPlayer) {
+            const freeTileSpace: TileReceivingSpace = {
+                ownerId: currentPlayerId,
+                position: { left, top },
+                rotation: 0
+            };
+            onPlaceTile(parseInt(tileIdStr, 10), freeTileSpace);
+            return;
+        }
     }
 
+    // Regular piece placement with snapping
     const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
     if (snappedLocation && pieceId) {
@@ -312,11 +318,12 @@ const CampaignScreen: React.FC<{
     }
   };
 
-  const handleDropOnTileSpace = (e: React.DragEvent<HTMLDivElement>, space: TileReceivingSpace) => {
+  const handleDropOnTileSpace = (e: React.DragEvent<HTMLDivElement>, space?: TileReceivingSpace) => {
     e.preventDefault();
     e.stopPropagation();
     const tileIdStr = e.dataTransfer.getData("tileId");
-    if (tileIdStr && !hasPlayedTileThisTurn) {
+    if (tileIdStr && !hasPlayedTileThisTurn && space) {
+        // Normal mode: drop on fixed tile space
         onPlaceTile(parseInt(tileIdStr, 10), space);
     }
   };
@@ -344,6 +351,24 @@ const CampaignScreen: React.FC<{
   const handleDragStartBoardTile = (e: React.DragEvent<HTMLDivElement>, boardTileId: string) => {
     e.dataTransfer.setData("boardTileId", boardTileId);
     e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragStartDummyTile = (e: React.DragEvent<HTMLDivElement>) => {
+    e.dataTransfer.setData("dummyTile", "true");
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEndDummyTile = () => {
+    setDropIndicator(null);
+  };
+
+  const handleRotateDummyTile = (degrees: number) => {
+    if (dummyTile) {
+      setDummyTile({
+        ...dummyTile,
+        rotation: (dummyTile.rotation + degrees) % 360
+      });
+    }
   };
 
   const currentPlayer = players.find(p => p.id === currentPlayerId);
@@ -516,10 +541,44 @@ const CampaignScreen: React.FC<{
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
+              // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
+              const isInCommunity = isPositionInCommunityCircle(piece.position);
+              const communityCounterRotation = isInCommunity ? -boardRotation : 0;
+
               return (
-                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation}deg) scale(${finalScale})`, cursor: 'grab' }} aria-hidden="true" />
+                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`, cursor: 'grab' }} aria-hidden="true" />
               );
             })}
+
+            {/* Dummy Tile for Testing (Test Mode Only) */}
+            {isTestMode && !dummyTile && (
+              <button
+                onClick={() => setDummyTile({ position: { top: 50, left: 50 }, rotation: 0 })}
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-lg"
+              >
+                + Create Dummy Tile
+              </button>
+            )}
+
+            {isTestMode && dummyTile && (
+              <div
+                draggable
+                onDragStart={handleDragStartDummyTile}
+                onDragEnd={handleDragEndDummyTile}
+                className="absolute w-12 h-24 rounded-lg shadow-xl bg-indigo-500/30 border-2 border-indigo-400 border-dashed"
+                style={{
+                  top: `${dummyTile.position.top}%`,
+                  left: `${dummyTile.position.left}%`,
+                  transform: `translate(-50%, -50%) rotate(${dummyTile.rotation}deg)`,
+                  cursor: 'grab'
+                }}
+                aria-label="Dummy tile"
+              >
+                <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs pointer-events-none">
+                  D
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="w-full max-w-5xl mt-8">
@@ -590,21 +649,6 @@ const CampaignScreen: React.FC<{
             {/* Test Mode Controls */}
             {isTestMode && (
               <div className="mt-8 space-y-4">
-                {/* Free Placement Toggle */}
-                <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={freePlacementMode}
-                      onChange={(e) => setFreePlacementMode(e.target.checked)}
-                      className="w-5 h-5 accent-cyan-500"
-                    />
-                    <span className="text-slate-200 font-semibold">Free Placement Mode</span>
-                    <span className="text-xs text-slate-400 ml-auto">{freePlacementMode ? '(ON)' : '(OFF)'}</span>
-                  </label>
-                  <p className="text-xs text-slate-400 mt-2">When ON, pieces can be placed anywhere on the board. When OFF, pieces snap to valid locations.</p>
-                </div>
-
                 {/* Board Rotation Toggle */}
                 <div className="bg-gray-700 rounded-lg p-4 mt-4">
                   <label className="flex items-center space-x-3 cursor-pointer">
@@ -619,10 +663,59 @@ const CampaignScreen: React.FC<{
                   </label>
                   <p className="text-xs text-slate-400 mt-2">When ON, the board rotates to show each player's perspective. When OFF, the board stays fixed.</p>
                 </div>
+
               </div>
             )}
 
-            {/* Piece Tracker (Test Mode Only) */}
+            {isTestMode && dummyTile && (
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Dummy Tile Tracker</h2>
+                <div className="bg-gray-800/50 rounded-lg border border-indigo-600 p-4 text-sm">
+                  <div className="font-mono border-b border-gray-600 pb-4 mb-4">
+                    <div className="font-semibold text-indigo-300 mb-3">Dummy Tile Position & Rotation</div>
+                    <div className="text-slate-300 mb-2">
+                      <span className="font-semibold">Position:</span> Left: <span className="text-cyan-400">{dummyTile.position.left.toFixed(2)}%</span> | Top: <span className="text-cyan-400">{dummyTile.position.top.toFixed(2)}%</span>
+                    </div>
+                    <div className="text-slate-300 mb-4">
+                      <span className="font-semibold">Rotation:</span> <span className="text-cyan-400">{dummyTile.rotation.toFixed(1)}°</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleRotateDummyTile(1)}
+                        className="px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded hover:bg-indigo-400 transition-colors"
+                      >
+                        +1°
+                      </button>
+                      <button
+                        onClick={() => handleRotateDummyTile(-1)}
+                        className="px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded hover:bg-indigo-400 transition-colors"
+                      >
+                        -1°
+                      </button>
+                      <button
+                        onClick={() => handleRotateDummyTile(15)}
+                        className="px-3 py-1 bg-indigo-600 text-white text-xs font-semibold rounded hover:bg-indigo-500 transition-colors"
+                      >
+                        +15°
+                      </button>
+                      <button
+                        onClick={() => handleRotateDummyTile(-15)}
+                        className="px-3 py-1 bg-indigo-600 text-white text-xs font-semibold rounded hover:bg-indigo-500 transition-colors"
+                      >
+                        -15°
+                      </button>
+                      <button
+                        onClick={() => setDummyTile(null)}
+                        className="px-3 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
+                      >
+                        Delete Tile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {isTestMode && (
               <div className="mt-8">
                 <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Piece Tracker</h2>
@@ -753,7 +846,7 @@ const App: React.FC = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [freePlacementMode, setFreePlacementMode] = useState(false);
+  const [dummyTile, setDummyTile] = useState<{ position: { top: number; left: number }; rotation: number } | null>(null);
   const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
   const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
@@ -1116,6 +1209,8 @@ const App: React.FC = () => {
             lastDroppedPosition={lastDroppedPosition}
             lastDroppedPieceId={lastDroppedPieceId}
             isTestMode={isTestMode}
+            dummyTile={dummyTile}
+            setDummyTile={setDummyTile}
             hasPlayedTileThisTurn={hasPlayedTileThisTurn}
             revealedTileId={revealedTileId}
             tileTransaction={tileTransaction}
@@ -1126,8 +1221,6 @@ const App: React.FC = () => {
             challengedTile={challengedTile}
             placerViewingTileId={placerViewingTileId}
             gameLog={gameLog}
-            freePlacementMode={freePlacementMode}
-            setFreePlacementMode={setFreePlacementMode}
             boardRotationEnabled={boardRotationEnabled}
             setBoardRotationEnabled={setBoardRotationEnabled}
             onNewGame={handleNewGame}

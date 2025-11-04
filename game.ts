@@ -1104,6 +1104,15 @@ const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = 
  * @param locationId Optional location ID to check if it's a community or free placement location.
  * @returns The rotation in degrees.
  */
+export function isPositionInCommunityCircle(position: { top: number; left: number }): boolean {
+  const communityCenter = { left: 50, top: 50 };
+  const communityRadius = 15;
+  const dx = position.left - communityCenter.left;
+  const dy = position.top - communityCenter.top;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  return distance <= communityRadius;
+}
+
 export function calculatePieceRotation(position: { top: number; left: number }, playerCount: number, locationId?: string): number {
   // Community pieces, free placement, and offices have no rotation
   if (locationId && (locationId.startsWith('community') || locationId === 'free_placement' || locationId.includes('office'))) {
