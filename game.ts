@@ -2036,6 +2036,40 @@ export function getAdjacentSeats(seatId: string, playerCount: number): string[] 
 }
 
 /**
+ * Checks if a piece can be moved from community based on community occupancy rules.
+ * Rules:
+ * - If Marks occupy community: Heels and Pawns cannot be moved from community
+ * - If Heels occupy community: Pawns cannot be moved from community
+ * - Marks can always be moved from community
+ */
+function canMoveFromCommunity(piece: Piece, pieces: Piece[]): boolean {
+  const pieceName = piece.name.toLowerCase();
+
+  // Marks can always be moved from community
+  if (pieceName === 'mark') return true;
+
+  // Check if any Marks exist in community
+  const marksInCommunity = pieces.some(p =>
+    p.locationId?.includes('community') && p.name.toLowerCase() === 'mark'
+  );
+
+  // If Marks in community, Heels and Pawns cannot move
+  if (marksInCommunity) return false;
+
+  // If moving a Pawn, check if Heels are in community
+  if (pieceName === 'pawn') {
+    const heelsInCommunity = pieces.some(p =>
+      p.locationId?.includes('community') && p.name.toLowerCase() === 'heel'
+    );
+    // Pawns can only move if no Heels in community
+    return !heelsInCommunity;
+  }
+
+  // Heels can move if no Marks in community (already checked above)
+  return true;
+}
+
+/**
  * Validates whether an ADVANCE move is legal.
  * ADVANCE options:
  * a. Take a piece from community TO an open seat in their domain
@@ -2055,7 +2089,13 @@ export function validateAdvanceMove(
   if (fromLocationId?.includes('community') && toLocationId?.includes(`p${playerId}_seat`)) {
     // Check if target seat is vacant
     const targetOccupied = pieces.some(p => p.locationId === toLocationId);
-    return !targetOccupied;
+    if (targetOccupied) return false;
+
+    // Check community movement restrictions
+    const movingPiece = pieces.find(p => p.id === move.pieceId);
+    if (!movingPiece) return false;
+
+    return canMoveFromCommunity(movingPiece, pieces);
   }
 
   // Option B: Seats 1-3 to rostrum1 (if all seats 1-3 occupied)
@@ -2264,7 +2304,13 @@ export function validateAssistMove(
   if (targetPlayerId < 1 || targetPlayerId > playerCount) return false;
 
   const targetOccupied = pieces.some(p => p.locationId === toLocationId);
-  return !targetOccupied;
+  if (targetOccupied) return false;
+
+  // Check community movement restrictions
+  const movingPiece = pieces.find(p => p.id === move.pieceId);
+  if (!movingPiece) return false;
+
+  return canMoveFromCommunity(movingPiece, pieces);
 }
 
 /**

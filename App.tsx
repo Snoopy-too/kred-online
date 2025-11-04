@@ -1225,6 +1225,39 @@ const App: React.FC = () => {
   };
   
   const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
+    // Check community movement restrictions before allowing the move
+    const movingPiece = pieces.find(p => p.id === pieceId);
+    if (movingPiece && movingPiece.locationId?.includes('community') && locationId && !locationId.includes('community')) {
+      // Piece is moving FROM community, check restrictions
+      const pieceName = movingPiece.name.toLowerCase();
+
+      // Marks can always move from community
+      if (pieceName !== 'mark') {
+        // Check if Marks are in community
+        const marksInCommunity = pieces.some(p =>
+          p.locationId?.includes('community') && p.name.toLowerCase() === 'mark'
+        );
+
+        // If Marks in community, Heels and Pawns cannot move
+        if (marksInCommunity) {
+          console.warn(`Cannot move ${movingPiece.name} from community while Marks occupy the community`);
+          return;
+        }
+
+        // If moving a Pawn, check if Heels are in community
+        if (pieceName === 'pawn') {
+          const heelsInCommunity = pieces.some(p =>
+            p.locationId?.includes('community') && p.name.toLowerCase() === 'heel'
+          );
+          // Pawns cannot move if Heels in community
+          if (heelsInCommunity) {
+            console.warn(`Cannot move ${movingPiece.name} from community while Heels occupy the community`);
+            return;
+          }
+        }
+      }
+    }
+
     setLastDroppedPosition(newPosition);
     setLastDroppedPieceId(pieceId);
     const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
