@@ -28,6 +28,7 @@ import {
   createGameStateSnapshot,
   getChallengeOrder,
   getTileRequirements,
+  validateSingleMove,
 } from './game';
 
 // --- Helper Components ---
@@ -185,7 +186,19 @@ const CampaignScreen: React.FC<{
   onCorrectionComplete?: () => void;
   tileRejected?: boolean;
   showMoveCheckResult?: boolean;
-  moveCheckResult?: { isMet: boolean; requiredMoves: any[]; performedMoves: any[]; missingMoves: any[] } | null;
+  moveCheckResult?: {
+    isMet: boolean;
+    requiredMoves: any[];
+    performedMoves: any[];
+    missingMoves: any[];
+    moveValidations?: Array<{
+      moveType: string;
+      isValid: boolean;
+      reason: string;
+      fromLocationId?: string;
+      toLocationId?: string;
+    }>;
+  } | null;
   onCloseMoveCheckResult?: () => void;
   onCheckMove?: () => void;
 }> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
@@ -953,6 +966,54 @@ const CampaignScreen: React.FC<{
                   </div>
                 </div>
               )}
+
+              {/* Individual Move Validations - Only show if there are issues or multiple moves */}
+              {moveCheckResult.moveValidations && moveCheckResult.moveValidations.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-cyan-300 mb-2">Move Details:</h3>
+                  <div className="space-y-2">
+                    {moveCheckResult.moveValidations.map((validation, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 rounded border-l-4 ${
+                          validation.isValid
+                            ? 'bg-green-900/30 border-green-500'
+                            : 'bg-red-900/30 border-red-500'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className={`text-lg font-bold ${
+                              validation.isValid ? 'text-green-400' : 'text-red-400'
+                            }`}
+                          >
+                            {validation.isValid ? '✓' : '✕'}
+                          </span>
+                          <span className={`font-semibold ${validation.isValid ? 'text-green-300' : 'text-white'}`}>
+                            {validation.moveType}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 ml-7">
+                          {validation.fromLocationId && (
+                            <>
+                              FROM: <span className="text-cyan-400">{validation.fromLocationId}</span>
+                              {validation.toLocationId && (
+                                <>
+                                  {' → TO: '}
+                                  <span className="text-cyan-400">{validation.toLocationId}</span>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </p>
+                        {!validation.isValid && (
+                          <p className="text-xs text-red-300 ml-7 mt-1">{validation.reason}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Close Button */}
@@ -1026,6 +1087,13 @@ const App: React.FC = () => {
     requiredMoves: any[];
     performedMoves: any[];
     missingMoves: any[];
+    moveValidations?: Array<{
+      moveType: string;
+      isValid: boolean;
+      reason: string;
+      fromLocationId?: string;
+      toLocationId?: string;
+    }>;
   } | null>(null);
   
   const handleStartGame = (count: number, testMode: boolean) => {
@@ -1136,6 +1204,84 @@ const App: React.FC = () => {
     setLastDroppedPosition(newPosition);
     setLastDroppedPieceId(pieceId);
     const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
+
+    // Track move if we're in TILE_PLAYED or CORRECTION_REQUIRED state
+    if ((gameState === 'TILE_PLAYED' || gameState === 'CORRECTION_REQUIRED') && playedTile) {
+      // Find the piece's current location before updating
+      const movedPiece = pieces.find(p => p.id === pieceId);
+      if (movedPiece) {
+        const oldLocationId = movedPiece.locationId;
+        const fromPosition = movedPiece.position;
+
+        // Determine the move type based on locations
+        let moveType = 'UNKNOWN';
+
+        // Helper to check if location is a community location
+        const isCommunity = (loc?: string) => loc?.includes('community');
+        // Helper to check if location is a seat
+        const isSeat = (loc?: string) => loc?.includes('_seat');
+        // Helper to check if location is a rostrum
+        const isRostrum = (loc?: string) => loc?.includes('_rostrum');
+        // Helper to check if location is an office
+        const isOffice = (loc?: string) => loc?.includes('_office');
+
+        // Determine move type based on from/to locations
+        if (isCommunity(oldLocationId) && isSeat(locationId)) {
+          moveType = 'ADVANCE';
+        } else if (isSeat(oldLocationId) && isRostrum(locationId)) {
+          moveType = 'ADVANCE';
+        } else if (isRostrum(oldLocationId) && isOffice(locationId)) {
+          moveType = 'ADVANCE';
+        } else if (isRostrum(oldLocationId) && isSeat(locationId)) {
+          moveType = 'WITHDRAW';
+        } else if (isOffice(oldLocationId) && isRostrum(locationId)) {
+          moveType = 'WITHDRAW';
+        } else if (isSeat(oldLocationId) && isCommunity(locationId)) {
+          moveType = 'WITHDRAW';
+        } else if (isSeat(oldLocationId) && isSeat(locationId)) {
+          moveType = 'ORGANIZE';
+        } else if (isRostrum(oldLocationId) && isRostrum(locationId)) {
+          moveType = 'ORGANIZE';
+        } else if (isSeat(oldLocationId) && isCommunity(locationId)) {
+          moveType = 'REMOVE';
+        }
+
+        // Determine category (M or O)
+        let category: 'M' | 'O' = 'M';
+        if (moveType === 'REMOVE' || moveType === 'INFLUENCE' || moveType === 'ASSIST') {
+          category = 'O';
+        }
+
+        // Create the tracked move
+        const trackedMove: any = {
+          moveType,
+          category,
+          pieceId,
+          fromPosition,
+          fromLocationId: oldLocationId,
+          toPosition: newPosition,
+          toLocationId: locationId,
+          timestamp: Date.now(),
+        };
+
+        // Add to moves this turn (only if not a duplicate)
+        setMovesThisTurn(prev => {
+          // Check if this exact move already exists (to prevent duplicates)
+          const isDuplicate = prev.some(m =>
+            m.pieceId === pieceId &&
+            m.fromLocationId === oldLocationId &&
+            m.toLocationId === locationId &&
+            m.timestamp > Date.now() - 500 // Within 500ms
+          );
+          if (isDuplicate) {
+            return prev;
+          }
+          return [...prev, trackedMove];
+        });
+      }
+    }
+
+    // Update the piece position and location
     setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p));
   };
 
@@ -1540,7 +1686,37 @@ const App: React.FC = () => {
     if (!playedTile) return;
 
     const tileRequirements = validateTileRequirements(playedTile.tileId, movesThisTurn);
-    setMoveCheckResult(tileRequirements);
+
+    // Validate each individual move and collect details
+    // We need to validate each move against the board state AFTER the previous moves have been applied
+    const moveValidations = movesThisTurn.map((move, index) => {
+      // Start with original pieces and apply all moves up to and including the current one
+      let piecesForValidation = playedTile.originalPieces.map(p => ({ ...p }));
+
+      // Apply all moves before this one to get the correct board state
+      for (let i = 0; i < index; i++) {
+        const prevMove = movesThisTurn[i];
+        piecesForValidation = piecesForValidation.map(p =>
+          p.id === prevMove.pieceId
+            ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+            : p
+        );
+      }
+
+      const validation = validateSingleMove(move, playedTile.playerId, piecesForValidation, playerCount);
+      return {
+        moveType: move.moveType,
+        isValid: validation.isValid,
+        reason: validation.reason,
+        fromLocationId: move.fromLocationId,
+        toLocationId: move.toLocationId,
+      };
+    });
+
+    setMoveCheckResult({
+      ...tileRequirements,
+      moveValidations,
+    });
     setShowMoveCheckResult(true);
   };
 
