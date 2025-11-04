@@ -21,6 +21,13 @@ import {
   getLocationIdFromPosition,
   DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
   isPositionInCommunityCircle,
+  TrackedMove,
+  PlayedTileState,
+  validateMovesForTilePlay,
+  validateTileRequirements,
+  createGameStateSnapshot,
+  getChallengeOrder,
+  getTileRequirements,
 } from './game';
 
 // --- Helper Components ---
@@ -171,7 +178,14 @@ const CampaignScreen: React.FC<{
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile }) => {
+  playedTile?: any;
+  receiverAcceptance?: boolean | null;
+  gameState: GameState;
+  onReceiverAcceptanceDecision?: (accepted: boolean) => void;
+  onChallengerDecision?: (challenge: boolean) => void;
+  onCorrectionComplete?: () => void;
+  tileRejected?: boolean;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -868,6 +882,21 @@ const App: React.FC = () => {
   // State for Game Log
   const [gameLog, setGameLog] = useState<string[]>([]);
   const [piecesAtTurnStart, setPiecesAtTurnStart] = useState<Piece[]>([]);
+
+  // State for new tile play workflow
+  const [playedTile, setPlayedTile] = useState<{
+    tileId: string;
+    playerId: number;
+    receivingPlayerId: number;
+    movesPerformed: any[]; // TrackedMove[]
+    originalPieces: Piece[];
+    originalBoardTiles: BoardTile[];
+  } | null>(null);
+  const [movesThisTurn, setMovesThisTurn] = useState<any[]>([]); // TrackedMove[]
+  const [receiverAcceptance, setReceiverAcceptance] = useState<boolean | null>(null); // null = awaiting decision, true = accepted, false = rejected
+  const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
+  const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
+  const [tileRejected, setTileRejected] = useState(false);
   
   const handleStartGame = (count: number, testMode: boolean) => {
     setPlayerCount(count);
@@ -896,6 +925,13 @@ const App: React.FC = () => {
     setPlacerViewingTileId(null);
     setGameLog([]);
     setPiecesAtTurnStart([]);
+    // Reset new tile play workflow states
+    setPlayedTile(null);
+    setMovesThisTurn([]);
+    setReceiverAcceptance(null);
+    setChallengeOrder([]);
+    setCurrentChallengerIndex(0);
+    setTileRejected(false);
   };
   
   const handleSelectTile = (selectedTile: Tile) => {
@@ -1050,34 +1086,57 @@ const App: React.FC = () => {
   };
 
   const handleEndTurn = () => {
+    // NEW WORKFLOW: If a tile has been played, move to acceptance phase
+    if (playedTile && gameState === 'TILE_PLAYED') {
+      // Validate moves performed (max 2 moves: 1 O and 1 M)
+      const movesValidation = validateMovesForTilePlay(movesThisTurn);
+      if (!movesValidation.isValid) {
+        alert(`Invalid moves: ${movesValidation.error}`);
+        return;
+      }
+
+      // Store moves and move to acceptance phase
+      setPlayedTile(prev => prev ? { ...prev, movesPerformed: movesThisTurn } : null);
+      setReceiverAcceptance(null); // Reset for acceptance decision
+      setGameState('PENDING_ACCEPTANCE');
+
+      // Switch to receiving player
+      const receiverIndex = players.findIndex(p => p.id === playedTile.receivingPlayerId);
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+      }
+      return;
+    }
+
+    // OLD WORKFLOW: Normal end turn (if not in tile play)
     // Log actions for the turn that just ended.
     const turnEnderId = players[currentPlayerIndex].id;
     const transactionToLog = (tileTransaction && tileTransaction.placerId === turnEnderId) ? tileTransaction : null;
-    
+
     const turnLogs = generateTurnLog(turnEnderId, piecesAtTurnStart, pieces, playerCount, transactionToLog);
 
     if (turnLogs.length > 0) {
-        const logHeader = `--- Turn Actions by Player ${turnEnderId} ---`;
-        setGameLog(prev => [...prev, logHeader, ...turnLogs]);
+      const logHeader = `--- Turn Actions by Player ${turnEnderId} ---`;
+      setGameLog(prev => [...prev, logHeader, ...turnLogs]);
     }
-    
+
     // Set piece state for the start of the next turn.
     setPiecesAtTurnStart(pieces);
 
     if (hasPlayedTileThisTurn && tileTransaction) {
-        const receiverIndex = players.findIndex(p => p.id === tileTransaction.receiverId);
-        if (receiverIndex !== -1) {
-            setGameState('PENDING_ACCEPTANCE');
-            setCurrentPlayerIndex(receiverIndex);
-            setHasPlayedTileThisTurn(false); // Reset for the acceptance phase, not a new turn action.
-            setRevealedTileId(null);
-            setIsPrivatelyViewing(false);
-            setPlacerViewingTileId(null);
-        } else {
-            advanceTurnNormally(); // Fallback if receiver not found.
-        }
-    } else {
+      const receiverIndex = players.findIndex(p => p.id === tileTransaction.receiverId);
+      if (receiverIndex !== -1) {
+        setGameState('PENDING_ACCEPTANCE');
+        setCurrentPlayerIndex(receiverIndex);
+        setHasPlayedTileThisTurn(false);
+        setRevealedTileId(null);
+        setIsPrivatelyViewing(false);
+        setPlacerViewingTileId(null);
+      } else {
         advanceTurnNormally();
+      }
+    } else {
+      advanceTurnNormally();
     }
   };
 
@@ -1087,7 +1146,7 @@ const App: React.FC = () => {
     const tileToPlace = currentPlayer.keptTiles.find(t => t.id === tileId);
 
     if (!tileToPlace || boardTiles.some(bt => bt.ownerId === targetSpace.ownerId)) return;
-      
+
     if (currentPlayer.id === targetSpace.ownerId) {
       const otherPlayers = players.filter(p => p.id !== currentPlayer.id);
       const allOthersAreOutOfTiles = otherPlayers.every(p => p.keptTiles.length === 0);
@@ -1097,11 +1156,27 @@ const App: React.FC = () => {
       }
     }
 
-    const newBoardTile: BoardTile = { id: `boardtile_${Date.now()}`, tile: tileToPlace, position: targetSpace.position, rotation: targetSpace.rotation, placerId: currentPlayer.id, ownerId: targetSpace.ownerId };
-    
-    setTileTransaction({ placerId: currentPlayer.id, receiverId: targetSpace.ownerId, boardTileId: newBoardTile.id, tile: tileToPlace });
-    setBoardTiles(prev => [...prev, newBoardTile]);
-    setPlayers(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, keptTiles: p.keptTiles.filter(t => t.id !== tileId) } : p ));
+    // Initialize the tile play state (NEW WORKFLOW)
+    const tileIdStr = tileId.toString().padStart(2, '0');
+    setPlayedTile({
+      tileId: tileIdStr,
+      playerId: currentPlayer.id,
+      receivingPlayerId: targetSpace.ownerId,
+      movesPerformed: [],
+      originalPieces: pieces.map(p => ({ ...p })),
+      originalBoardTiles: boardTiles.map(t => ({ ...t })),
+    });
+
+    // Remove tile from player's hand (will be added back if rejected)
+    setPlayers(prev => prev.map(p =>
+      p.id === currentPlayer.id
+        ? { ...p, keptTiles: p.keptTiles.filter(t => t.id !== tileId) }
+        : p
+    ));
+
+    // Set game state to allow moves (tile not yet visible to others)
+    setGameState('TILE_PLAYED');
+    setMovesThisTurn([]);
     setHasPlayedTileThisTurn(true);
   };
   
@@ -1111,6 +1186,190 @@ const App: React.FC = () => {
   
   const handlePlacerViewTile = (tileId: string) => {
     setPlacerViewingTileId(prevId => (prevId === tileId ? null : tileId));
+  };
+
+  // NEW WORKFLOW HANDLERS
+
+  /**
+   * Handle receiving player's acceptance or rejection of the played tile
+   */
+  const handleReceiverAcceptanceDecision = (accepted: boolean) => {
+    if (!playedTile) return;
+
+    if (!accepted) {
+      // REJECTION: Reverse moves and prompt player to fulfill tile requirements
+      setReceiverAcceptance(false);
+      setTileRejected(true);
+
+      // Restore original pieces and board state
+      setPieces(playedTile.originalPieces.map(p => ({ ...p })));
+      setBoardTiles(playedTile.originalBoardTiles.map(t => ({ ...t })));
+
+      // Add tile back to receiving player
+      const receivingPlayer = players.find(p => p.id === playedTile.receivingPlayerId);
+      if (receivingPlayer) {
+        setPlayers(prev =>
+          prev.map(p =>
+            p.id === receivingPlayer.id
+              ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` }] }
+              : p
+          )
+        );
+      }
+
+      // Switch back to tile player for correction
+      const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+      if (playerIndex !== -1) {
+        setCurrentPlayerIndex(playerIndex);
+        setGameState('CORRECTION_REQUIRED');
+        setMovesThisTurn([]);
+      }
+    } else {
+      // ACCEPTANCE: Move to challenge phase
+      setReceiverAcceptance(true);
+
+      // Determine challenge order (clockwise from tile player)
+      const tilePlayerIndex = players.findIndex(p => p.id === playedTile.playerId);
+      const order = getChallengeOrder(playedTile.playerId, playerCount);
+      setChallengeOrder(order);
+
+      // If there are challengers, move to first challenger
+      if (order.length > 0) {
+        const firstChallengerIndex = players.findIndex(p => p.id === order[0]);
+        setCurrentPlayerIndex(firstChallengerIndex);
+        setCurrentChallengerIndex(0);
+        setGameState('PENDING_CHALLENGE');
+      } else {
+        // No challengers, finalize the play
+        finalizeTilePlay(false, null);
+      }
+    }
+  };
+
+  /**
+   * Handle challenger's decision (challenge or pass)
+   */
+  const handleChallengerDecision = (challenge: boolean) => {
+    if (!playedTile) return;
+
+    if (challenge) {
+      // CHALLENGED: Verify if tile player met requirements
+      const tileRequirements = validateTileRequirements(playedTile.tileId, playedTile.movesPerformed);
+
+      if (!tileRequirements.isMet) {
+        // Challenge is valid - player did NOT meet requirements
+        // Reverse moves and prompt correction
+        setTileRejected(true);
+
+        // Restore original pieces
+        setPieces(playedTile.originalPieces.map(p => ({ ...p })));
+        setBoardTiles(playedTile.originalBoardTiles.map(t => ({ ...t })));
+
+        // Switch to tile player for correction
+        const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+        if (playerIndex !== -1) {
+          setCurrentPlayerIndex(playerIndex);
+          setGameState('CORRECTION_REQUIRED');
+          setMovesThisTurn([]);
+        }
+      } else {
+        // Challenge is invalid - player DID meet requirements
+        // Finalize with moves standing
+        finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
+      }
+    } else {
+      // PASS: Move to next challenger or finalize
+      const nextChallengerIndex = currentChallengerIndex + 1;
+
+      if (nextChallengerIndex >= challengeOrder.length) {
+        // No more challengers, finalize
+        finalizeTilePlay(false, null);
+      } else {
+        // Move to next challenger
+        const nextChallengerId = challengeOrder[nextChallengerIndex];
+        const nextChallengerIndex_PlayerIndex = players.findIndex(p => p.id === nextChallengerId);
+        setCurrentChallengerIndex(nextChallengerIndex);
+        setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
+      }
+    }
+  };
+
+  /**
+   * Finalize tile play - determine who keeps the tile and next player
+   */
+  const finalizeTilePlay = (wasChallenged: boolean, challengerId: number | null) => {
+    if (!playedTile) return;
+
+    // Receiving player keeps the tile (face down if accepted without challenge, face up if rejected)
+    const tile = { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` };
+
+    setPlayers(prev =>
+      prev.map(p =>
+        p.id === playedTile.receivingPlayerId
+          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+          : p
+      )
+    );
+
+    // Next player is the receiving player
+    const receiverIndex = players.findIndex(p => p.id === playedTile.receivingPlayerId);
+    if (receiverIndex !== -1) {
+      setCurrentPlayerIndex(receiverIndex);
+    }
+
+    // Reset all tile play state
+    setPlayedTile(null);
+    setMovesThisTurn([]);
+    setReceiverAcceptance(null);
+    setChallengeOrder([]);
+    setCurrentChallengerIndex(0);
+    setTileRejected(false);
+    setGameState('CAMPAIGN');
+    setHasPlayedTileThisTurn(false);
+  };
+
+  /**
+   * Handle tile player correcting their moves (after rejection or challenge)
+   */
+  const handleCorrectionComplete = () => {
+    if (!playedTile) return;
+
+    // Validate that tile player has now met the requirements
+    const tileRequirements = validateTileRequirements(playedTile.tileId, movesThisTurn);
+
+    if (!tileRequirements.isMet) {
+      alert(`Incomplete: Still missing ${tileRequirements.missingMoves.join(', ')} move(s)`);
+      return;
+    }
+
+    // Update played tile with corrected moves
+    setPlayedTile(prev => prev ? { ...prev, movesPerformed: movesThisTurn } : null);
+
+    // Move to receiving player for their turn
+    const receiverIndex = players.findIndex(p => p.id === playedTile.receivingPlayerId);
+    if (receiverIndex !== -1) {
+      setCurrentPlayerIndex(receiverIndex);
+    }
+
+    // Receiving player gets the tile
+    const tile = { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` };
+    setPlayers(prev =>
+      prev.map(p =>
+        p.id === playedTile.receivingPlayerId
+          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+          : p
+      )
+    );
+
+    // Reset state
+    setPlayedTile(null);
+    setMovesThisTurn([]);
+    setReceiverAcceptance(null);
+    setChallengeOrder([]);
+    setCurrentChallengerIndex(0);
+    setTileRejected(false);
+    setGameState('CAMPAIGN');
+    setHasPlayedTileThisTurn(false);
   };
 
   const resolveTransaction = (wasChallenged: boolean) => {
@@ -1193,8 +1452,10 @@ const App: React.FC = () => {
       case 'DRAFTING':
         return <DraftingScreen players={players} currentPlayerIndex={currentPlayerIndex} draftRound={draftRound} onSelectTile={handleSelectTile} />;
       case 'CAMPAIGN':
+      case 'TILE_PLAYED':
       case 'PENDING_ACCEPTANCE':
       case 'PENDING_CHALLENGE':
+      case 'CORRECTION_REQUIRED':
         const currentPlayer = players[currentPlayerIndex];
         if (!currentPlayer || players.length === 0) {
           // Wait for state to be set up properly
@@ -1237,6 +1498,12 @@ const App: React.FC = () => {
             onTogglePrivateView={handleTogglePrivateView}
             onContinueAfterChallenge={handleContinueAfterChallenge}
             onPlacerViewTile={handlePlacerViewTile}
+            playedTile={playedTile}
+            receiverAcceptance={receiverAcceptance}
+            onReceiverAcceptanceDecision={handleReceiverAcceptanceDecision}
+            onChallengerDecision={handleChallengerDecision}
+            onCorrectionComplete={handleCorrectionComplete}
+            tileRejected={tileRejected}
           />
         );
       case 'PLAYER_SELECTION':

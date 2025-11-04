@@ -14,7 +14,7 @@ export interface Player {
   bureaucracyTiles: Tile[];
 }
 
-export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE';
+export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLAYED' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE' | 'CORRECTION_REQUIRED';
 
 // --- Game Piece Definitions ---
 
@@ -52,6 +52,38 @@ export interface TileReceivingSpace {
   ownerId: number;
   position: { left: number; top: number };
   rotation: number;
+}
+
+// Move tracking for undo/replay functionality
+export interface TrackedMove {
+  moveType: DefinedMoveType;
+  category: 'M' | 'O'; // M = My domain, O = Opponent domain
+  pieceId: string;
+  fromPosition: { top: number; left: number };
+  fromLocationId?: string;
+  toPosition: { top: number; left: number };
+  toLocationId?: string;
+  timestamp: number;
+}
+
+// Represents a tile that has been played but not yet fully resolved
+export interface PlayedTileState {
+  tileId: string;
+  playerId: number; // Player who played the tile
+  receivingPlayerId: number; // Player who received the tile
+  playedAt: number; // Timestamp when played
+  movesPerformed: TrackedMove[]; // Moves made by the player during play
+  gameStateSnapshot: {
+    pieces: Piece[];
+    boardTiles: BoardTile[];
+  };
+}
+
+// Challenge information
+export interface ChallengeState {
+  status: 'PENDING' | 'CHALLENGED' | 'RESOLVED';
+  challengedByPlayerId?: number;
+  acceptedByReceivingPlayer: boolean;
 }
 
 // These are the ONLY valid drop locations for pieces.
@@ -1787,3 +1819,105 @@ export const DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT: { [key: number]: { name: s
     { name: 'Pawn', displayName: 'P5', position: { left: 37.9, top: 54.1 } },
   ],
 };
+
+// ============================================================================
+// MOVE VALIDATION AND TRACKING FUNCTIONS
+// ============================================================================
+
+/**
+ * Validates that moves performed match the allowed categories during tile play.
+ * During tile play, a player may perform up to 2 moves: max 1 "O" and 1 "M" move.
+ * @param movesPerformed Array of tracked moves
+ * @returns Object with isValid boolean and error message if invalid
+ */
+export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
+  isValid: boolean;
+  error?: string;
+} {
+  if (movesPerformed.length > 2) {
+    return { isValid: false, error: 'Maximum 2 moves allowed per tile play' };
+  }
+
+  const oMoveCount = movesPerformed.filter((m) => m.category === 'O').length;
+  const mMoveCount = movesPerformed.filter((m) => m.category === 'M').length;
+
+  if (oMoveCount > 1) {
+    return { isValid: false, error: 'Maximum 1 "O" move allowed' };
+  }
+
+  if (mMoveCount > 1) {
+    return { isValid: false, error: 'Maximum 1 "M" move allowed' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Checks if all required moves for a tile have been performed.
+ * @param tileId The tile ID
+ * @param movesPerformed Array of moves performed
+ * @returns Object with isMet boolean and which required moves are missing
+ */
+export function validateTileRequirements(
+  tileId: string,
+  movesPerformed: TrackedMove[]
+): {
+  isMet: boolean;
+  requiredMoves: DefinedMoveType[];
+  performedMoves: DefinedMoveType[];
+  missingMoves: DefinedMoveType[];
+} {
+  const requirements = getTileRequirements(tileId);
+  const performedMoveTypes = movesPerformed.map((m) => m.moveType);
+
+  const missingMoves = requirements.requiredMoves.filter(
+    (required) => !performedMoveTypes.includes(required)
+  );
+
+  return {
+    isMet: missingMoves.length === 0,
+    requiredMoves: requirements.requiredMoves,
+    performedMoves: performedMoveTypes,
+    missingMoves: missingMoves,
+  };
+}
+
+/**
+ * Creates a snapshot of the current game state for later restoration.
+ * @param pieces Current pieces on board
+ * @param boardTiles Current board tiles
+ * @returns Snapshot of game state
+ */
+export function createGameStateSnapshot(
+  pieces: Piece[],
+  boardTiles: BoardTile[]
+): PlayedTileState['gameStateSnapshot'] {
+  return {
+    pieces: pieces.map((p) => ({ ...p })),
+    boardTiles: boardTiles.map((t) => ({ ...t })),
+  };
+}
+
+/**
+ * Determines the order of players for challenging, starting clockwise from the tile player.
+ * @param tilePlayerId The player who played the tile
+ * @param playerCount Total number of players
+ * @returns Array of player IDs in challenge order
+ */
+export function getChallengeOrder(
+  tilePlayerId: number,
+  playerCount: number
+): number[] {
+  const challengeOrder: number[] = [];
+
+  // Start from the next player clockwise from the tile player
+  for (let i = 1; i < playerCount; i++) {
+    const playerId = ((tilePlayerId - 1 + i) % playerCount) + 1;
+    // Skip the receiving player (which is the tile player + 1, wrapping around)
+    if (playerId !== tilePlayerId) {
+      challengeOrder.push(playerId);
+    }
+  }
+
+  return challengeOrder;
+}
