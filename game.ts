@@ -2097,10 +2097,12 @@ export function validateAdvanceMove(
 
 /**
  * Validates whether a WITHDRAW move is legal.
- * WITHDRAW options (unless player has 0 pieces in their domain):
- * a. Office to vacant rostrum in their domain
- * b. Rostrum to vacant seat in their domain
- * c. Seat to community
+ * WITHDRAW options:
+ * a. Seat to community
+ * b. Rostrum to specific seats in their domain:
+ *    - rostrum1 to seats 1-3
+ *    - rostrum2 to seats 3-5
+ * c. Office to vacant rostrum in their domain
  */
 export function validateWithdrawMove(
   move: TrackedMove,
@@ -2110,24 +2112,38 @@ export function validateWithdrawMove(
   const fromLocationId = move.fromLocationId;
   const toLocationId = move.toLocationId;
 
-  // Option A: Office to vacant rostrum
-  if (fromLocationId === `p${playerId}_office`) {
-    if (toLocationId === `p${playerId}_rostrum1` || toLocationId === `p${playerId}_rostrum2`) {
+  if (!fromLocationId || !toLocationId) return false;
+
+  // Option A: Seat to community
+  if (fromLocationId?.includes(`p${playerId}_seat`) && toLocationId?.includes('community')) {
+    return true;
+  }
+
+  // Option B: Rostrum to specific seats
+  if (fromLocationId === `p${playerId}_rostrum1`) {
+    // rostrum1 can go to seats 1, 2, or 3
+    const validSeats = [`p${playerId}_seat1`, `p${playerId}_seat2`, `p${playerId}_seat3`];
+    if (validSeats.includes(toLocationId)) {
       const targetOccupied = pieces.some(p => p.locationId === toLocationId);
       return !targetOccupied;
     }
   }
 
-  // Option B: Rostrum to vacant seat
-  if ((fromLocationId === `p${playerId}_rostrum1` || fromLocationId === `p${playerId}_rostrum2`) &&
-      toLocationId?.includes(`p${playerId}_seat`)) {
-    const targetOccupied = pieces.some(p => p.locationId === toLocationId);
-    return !targetOccupied;
+  if (fromLocationId === `p${playerId}_rostrum2`) {
+    // rostrum2 can go to seats 3, 4, or 5
+    const validSeats = [`p${playerId}_seat3`, `p${playerId}_seat4`, `p${playerId}_seat5`];
+    if (validSeats.includes(toLocationId)) {
+      const targetOccupied = pieces.some(p => p.locationId === toLocationId);
+      return !targetOccupied;
+    }
   }
 
-  // Option C: Seat to community
-  if (fromLocationId?.includes(`p${playerId}_seat`) && toLocationId?.includes('community')) {
-    return true;
+  // Option C: Office to vacant rostrum
+  if (fromLocationId === `p${playerId}_office`) {
+    if (toLocationId === `p${playerId}_rostrum1` || toLocationId === `p${playerId}_rostrum2`) {
+      const targetOccupied = pieces.some(p => p.locationId === toLocationId);
+      return !targetOccupied;
+    }
   }
 
   return false;
