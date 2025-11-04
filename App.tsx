@@ -774,7 +774,11 @@ const CampaignScreen: React.FC<{
       </div>
 
       <div className="flex items-center space-x-4 mt-8">
-        <button onClick={onEndTurn} disabled={gameState !== 'CAMPAIGN'} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed">
+        <button
+          onClick={onEndTurn}
+          disabled={gameState !== 'CAMPAIGN' && gameState !== 'TILE_PLAYED' && gameState !== 'CORRECTION_REQUIRED'}
+          className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
+        >
           End Turn
         </button>
         <button onClick={onNewGame} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-md">
@@ -1102,6 +1106,23 @@ const App: React.FC = () => {
   };
 
   const handleEndTurn = () => {
+    // NEW WORKFLOW: Handle correction of rejected/challenged tile
+    if (gameState === 'CORRECTION_REQUIRED' && playedTile) {
+      // Validate that tile player has now met the requirements
+      const tileRequirements = validateTileRequirements(playedTile.tileId, movesThisTurn);
+
+      if (!tileRequirements.isMet) {
+        alert(`Incomplete: Still missing ${tileRequirements.missingMoves.join(', ')} move(s)`);
+        return;
+      }
+
+      // Correction is complete - call the handler to finalize
+      if (onCorrectionComplete) {
+        onCorrectionComplete();
+      }
+      return;
+    }
+
     // NEW WORKFLOW: If a tile has been played, move to acceptance phase
     if (playedTile && gameState === 'TILE_PLAYED') {
       // Validate moves performed (max 2 moves: 1 O and 1 M)
