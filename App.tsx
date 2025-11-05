@@ -1151,7 +1151,34 @@ const App: React.FC = () => {
       toLocationId?: string;
     }>;
   } | null>(null);
-  
+
+  // State for custom alert modals
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'error' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
+  // Helper function to show styled alert modals
+  const showAlert = (title: string, message: string, type: 'error' | 'warning' | 'info' = 'info') => {
+    setAlertModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+    });
+  };
+
+  const closeAlert = () => {
+    setAlertModal(prev => ({ ...prev, isOpen: false }));
+  };
+
   const handleStartGame = (count: number, testMode: boolean) => {
     setPlayerCount(count);
     setPlayers(initializePlayers(count));
@@ -1160,7 +1187,7 @@ const App: React.FC = () => {
     setDraftRound(1);
     setIsTestMode(testMode);
   };
-  
+
   const handleNewGame = () => {
     setGameState('PLAYER_SELECTION');
     setPlayers([]);
@@ -1392,7 +1419,7 @@ const App: React.FC = () => {
       // Validate moves performed (max 2 moves: 1 O and 1 M)
       const movesValidation = validateMovesForTilePlay(movesThisTurn);
       if (!movesValidation.isValid) {
-        alert(`Invalid moves: ${movesValidation.error}`);
+        showAlert('Invalid Moves', movesValidation.error, 'error');
         return;
       }
 
@@ -1452,7 +1479,7 @@ const App: React.FC = () => {
       const otherPlayers = players.filter(p => p.id !== currentPlayer.id);
       const allOthersAreOutOfTiles = otherPlayers.every(p => p.keptTiles.length === 0);
       if (!allOthersAreOutOfTiles) {
-        alert("You cannot play a tile for yourself until all other players have run out of tiles.");
+        showAlert('Cannot Play for Yourself', 'You cannot play a tile for yourself until all other players have run out of tiles.', 'warning');
         return;
       }
     }
@@ -1719,7 +1746,7 @@ const App: React.FC = () => {
     console.log('======================================');
 
     if (!tileRequirements.isMet) {
-      alert(`Incomplete: Still missing ${tileRequirements.missingMoves.join(', ')} move(s)`);
+      showAlert('Incomplete Moves', `Still missing ${tileRequirements.missingMoves.join(', ')} move(s)`, 'error');
       return;
     }
 
@@ -2146,7 +2173,99 @@ const App: React.FC = () => {
     }
   };
 
-  return <div className="App">{renderGameState()}</div>;
+  return (
+    <div className="App">
+      <ErrorBoundary fallback={<ErrorDisplay />}>
+        {renderGameState()}
+      </ErrorBoundary>
+
+      {/* Custom Alert Modal */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+          <div className="bg-gray-800 border-2 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8" style={{
+            borderColor: alertModal.type === 'error' ? '#ef5350' : alertModal.type === 'warning' ? '#ffa726' : '#29b6f6'
+          }}>
+            <div className="mb-4">
+              {alertModal.type === 'error' && (
+                <div className="text-6xl font-bold text-red-400 mb-2">✕</div>
+              )}
+              {alertModal.type === 'warning' && (
+                <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
+              )}
+              {alertModal.type === 'info' && (
+                <div className="text-6xl text-blue-400 mb-2">ℹ️</div>
+              )}
+            </div>
+            <h2 className="text-3xl font-bold mb-3" style={{
+              color: alertModal.type === 'error' ? '#ef5350' : alertModal.type === 'warning' ? '#ffa726' : '#29b6f6'
+            }}>
+              {alertModal.title}
+            </h2>
+            <p className="text-slate-300 mb-6 text-lg">
+              {alertModal.message}
+            </p>
+            <button
+              onClick={closeAlert}
+              className="px-8 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition-colors shadow-md"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
+
+// Error Boundary Component
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught:', error);
+    console.error('Error info:', errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
+// Error Display Component
+const ErrorDisplay: React.FC = () => (
+  <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
+    <div className="bg-gray-800 border-2 border-red-500 rounded-xl p-8 max-w-md w-full text-center">
+      <div className="text-6xl text-red-400 mb-4">✕</div>
+      <h1 className="text-3xl font-bold text-red-400 mb-4">Error Loading Game</h1>
+      <p className="text-slate-300 mb-6">An unexpected error occurred. Please check the browser console for details.</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-6 py-2 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition-colors"
+      >
+        Reload Page
+      </button>
+    </div>
+  </div>
+);
 
 export default App;
