@@ -126,21 +126,30 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p1_office', position: { left: 31.95, top: 25.01 } },
   { id: 'p2_office', position: { left: 76.22, top: 36.38 } },
   { id: 'p3_office', position: { left: 44.03, top: 68.87 } },
-  // Community (11 spaces with proper spacing - no overlap with seats)
-  // Top row (top: 42.0%)
-  { id: 'community1', position: { left: 45.20, top: 42.00 } },
-  { id: 'community2', position: { left: 48.70, top: 42.00 } },
-  { id: 'community3', position: { left: 52.20, top: 42.00 } },
-  { id: 'community4', position: { left: 55.70, top: 42.00 } },
+  // Community (18 spaces with proper spacing - no overlap with seats)
   // Middle row (top: 46.0-47.8%)
-  { id: 'community5', position: { left: 43.70, top: 47.70 } },
-  { id: 'community6', position: { left: 50.40, top: 46.00 } },
-  { id: 'community7', position: { left: 53.50, top: 47.80 } },
-  { id: 'community8', position: { left: 57.00, top: 46.00 } },
+  { id: 'community1', position: { left: 53.50, top: 47.80 } },
+  { id: 'community2', position: { left: 43.70, top: 47.70 } },
+  { id: 'community3', position: { left: 57.00, top: 46.00 } },
+  // Top row (top: 38.0%)
+  { id: 'community4', position: { left: 45.20, top: 38.00 } },
+  { id: 'community5', position: { left: 48.70, top: 38.00 } },
+  { id: 'community6', position: { left: 52.20, top: 38.00 } },
+  { id: 'community7', position: { left: 55.70, top: 38.00 } },
+  // Second row (top: 42.0%)
+  { id: 'community8', position: { left: 45.20, top: 42.00 } },
+  { id: 'community9', position: { left: 48.70, top: 42.00 } },
+  { id: 'community10', position: { left: 52.20, top: 42.00 } },
+  { id: 'community11', position: { left: 55.70, top: 42.00 } },
+  { id: 'community12', position: { left: 50.40, top: 46.00 } },
   // Bottom row (top: 50.0%)
-  { id: 'community9', position: { left: 46.90, top: 50.00 } },
-  { id: 'community10', position: { left: 50.40, top: 50.00 } },
-  { id: 'community11', position: { left: 53.90, top: 50.00 } },
+  { id: 'community13', position: { left: 46.90, top: 50.00 } },
+  { id: 'community14', position: { left: 50.40, top: 50.00 } },
+  { id: 'community15', position: { left: 53.90, top: 50.00 } },
+  // Additional locations
+  { id: 'community16', position: { left: 43.78, top: 44.51 } },
+  { id: 'community17', position: { left: 42.53, top: 42.85 } },
+  { id: 'community18', position: { left: 56.70, top: 49.51 } },
 ];
 
 const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -186,13 +195,34 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p2_office', position: { left: 55.99, top: 19.63 } },
     { id: 'p3_office', position: { left: 82.55, top: 55.08 } },
     { id: 'p4_office', position: { left: 44.43, top: 79.79 } },
-    // Community (spread out to avoid overlap)
-    { id: 'community1', position: { left: 41.46, top: 43.27 } },
-    { id: 'community2', position: { left: 41.31, top: 53.91 } },
-    { id: 'community3', position: { left: 41.05, top: 47.10 } },
-    { id: 'community4', position: { left: 61.21, top: 50.63 } },
-    { id: 'community5', position: { left: 58.34, top: 55.42 } },
-    { id: 'community6', position: { left: 58.74, top: 46.55 } },
+    // Community (27 spaces in a grid)
+    { id: 'community1', position: { left: 44.70, top: 41.60 } },
+    { id: 'community2', position: { left: 48.20, top: 41.60 } },
+    { id: 'community3', position: { left: 51.70, top: 41.60 } },
+    { id: 'community4', position: { left: 55.20, top: 41.60 } },
+    { id: 'community5', position: { left: 44.70, top: 45.60 } },
+    { id: 'community6', position: { left: 48.20, top: 45.60 } },
+    { id: 'community7', position: { left: 51.70, top: 45.60 } },
+    { id: 'community8', position: { left: 55.20, top: 45.60 } },
+    { id: 'community9', position: { left: 44.70, top: 49.60 } },
+    { id: 'community10', position: { left: 48.20, top: 49.60 } },
+    { id: 'community11', position: { left: 51.70, top: 49.60 } },
+    { id: 'community12', position: { left: 55.20, top: 49.60 } },
+    { id: 'community13', position: { left: 44.70, top: 53.60 } },
+    { id: 'community14', position: { left: 48.20, top: 53.60 } },
+    { id: 'community15', position: { left: 51.70, top: 53.60 } },
+    { id: 'community16', position: { left: 55.20, top: 53.60 } },
+    { id: 'community17', position: { left: 44.70, top: 57.60 } },
+    { id: 'community18', position: { left: 48.20, top: 57.60 } },
+    { id: 'community19', position: { left: 51.70, top: 57.60 } },
+    { id: 'community20', position: { left: 55.20, top: 57.60 } },
+    { id: 'community21', position: { left: 59.10, top: 45.25 } },
+    { id: 'community22', position: { left: 59.10, top: 49.84 } },
+    { id: 'community23', position: { left: 59.10, top: 54.43 } },
+    { id: 'community24', position: { left: 59.10, top: 58.14 } },
+    { id: 'community25', position: { left: 40.14, top: 46.03 } },
+    { id: 'community26', position: { left: 40.14, top: 50.62 } },
+    { id: 'community27', position: { left: 40.14, top: 54.13 } },
 ];
 
 const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -1193,6 +1223,46 @@ export const BANK_SPACES_BY_PLAYER_COUNT: { [key: number]: BankSpace[] } = {
   3: THREE_PLAYER_BANK_SPACES,
   4: FOUR_PLAYER_BANK_SPACES,
   5: FIVE_PLAYER_BANK_SPACES,
+};
+
+// Credibility locations - one per player to display credibility currency
+const THREE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
+  // Player 1: 21.18/15.35, facing 50.75/43.90
+  { ownerId: 1, position: { left: 21.18, top: 15.35 }, rotation: 55.00 },
+  // Player 2: 89.72/33.16, facing 50.75/43.90
+  { ownerId: 2, position: { left: 89.72, top: 33.16 }, rotation: 189.00 },
+  // Player 3: 40.45/83.68, facing 50.75/43.90
+  { ownerId: 3, position: { left: 40.45, top: 83.68 }, rotation: 320.00 },
+];
+
+const FOUR_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
+  // Player 1: 15.97/29.64, facing 50/50
+  { ownerId: 1, position: { left: 15.97, top: 29.64 }, rotation: 56.00 },
+  // Player 2: 82.95/18.65, facing 50/50
+  { ownerId: 2, position: { left: 82.95, top: 18.65 }, rotation: 186.00 },
+  // Player 3: 84.62/82.16, facing 50/50
+  { ownerId: 3, position: { left: 84.62, top: 82.16 }, rotation: 316.00 },
+  // Player 4: 17.53/83.04, facing 50/50
+  { ownerId: 4, position: { left: 17.53, top: 83.04 }, rotation: 126.00 },
+];
+
+const FIVE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
+  // Player 1: 7.22/63.80, facing 47/47
+  { ownerId: 1, position: { left: 7.22, top: 63.80 }, rotation: 44.00 },
+  // Player 2: 18.06/16.34, facing 47/47
+  { ownerId: 2, position: { left: 18.06, top: 16.34 }, rotation: 135.00 },
+  // Player 3: 69.62/11.07, facing 47/47
+  { ownerId: 3, position: { left: 69.62, top: 11.07 }, rotation: 225.00 },
+  // Player 4: 91.28/55.40, facing 47/47
+  { ownerId: 4, position: { left: 91.28, top: 55.40 }, rotation: 314.00 },
+  // Player 5: 52.95/88.41, facing 47/47
+  { ownerId: 5, position: { left: 52.95, top: 88.41 }, rotation: 44.00 },
+];
+
+export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: { [key: number]: BankSpace[] } = {
+  3: THREE_PLAYER_CREDIBILITY_LOCATIONS,
+  4: FOUR_PLAYER_CREDIBILITY_LOCATIONS,
+  5: FIVE_PLAYER_CREDIBILITY_LOCATIONS,
 };
 
 export const PIECE_TYPES: { [key: string]: GamePieceInfo } = {

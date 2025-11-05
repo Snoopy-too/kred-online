@@ -17,6 +17,7 @@ import {
   TILE_SPACES_BY_PLAYER_COUNT,
   TileReceivingSpace,
   BANK_SPACES_BY_PLAYER_COUNT,
+  CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
   BankSpace,
   PLAYER_PERSPECTIVE_ROTATIONS,
   formatLocationId,
@@ -207,7 +208,9 @@ const CampaignScreen: React.FC<{
   } | null;
   onCloseMoveCheckResult?: () => void;
   onCheckMove?: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
+  credibilityRotationAdjustments: { [playerId: number]: number };
+  setCredibilityRotationAdjustments: (adjustments: { [playerId: number]: number }) => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -631,6 +634,32 @@ const CampaignScreen: React.FC<{
               </div>
             ))}
 
+            {/* Credibility placeholders */}
+            {(() => {
+              const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+              return credibilityLocations.map((location) => {
+                const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
+                const finalRotation = (location.rotation || 0) + adjustment;
+                return (
+                  <div
+                    key={`credibility_${location.ownerId}`}
+                    className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
+                    style={{
+                      top: `${location.position.top}%`,
+                      left: `${location.position.left}%`,
+                      transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
+                    }}
+                  >
+                    <img
+                      src="/images/3_credibility.svg"
+                      alt={`Credibility for Player ${location.ownerId}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                );
+              });
+            })()}
+
             {pieces.map((piece) => {
               let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
@@ -774,6 +803,81 @@ const CampaignScreen: React.FC<{
               </div>
             )}
 
+            {/* Credibility Rotation Adjuster (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8 bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-slate-200 mb-4">Credibility Rotation Adjuster</h3>
+                <div className="space-y-4">
+                  {Array.from({ length: playerCount }, (_, i) => i + 1).map((playerId) => {
+                    const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+                    const baseRotation = credibilityLocations.find(loc => loc.ownerId === playerId)?.rotation || 0;
+                    const adjustment = credibilityRotationAdjustments[playerId] || 0;
+                    const finalRotation = baseRotation + adjustment;
+
+                    return (
+                      <div key={`cred-adj-${playerId}`} className="bg-gray-800 rounded-lg p-3 border border-gray-600">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-slate-200 font-semibold">Player {playerId}</span>
+                          <span className="text-xs text-slate-400">
+                            Base: <span className="text-cyan-400">{baseRotation.toFixed(1)}°</span> |
+                            Adjustment: <span className="text-yellow-400">{adjustment > 0 ? '+' : ''}{adjustment}°</span> |
+                            Final: <span className="text-green-400">{finalRotation.toFixed(1)}°</span>
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) - 15
+                            }))}
+                            className="px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
+                          >
+                            -15°
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) - 1
+                            }))}
+                            className="px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-500 transition-colors"
+                          >
+                            -1°
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: 0
+                            }))}
+                            className="px-2 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-500 transition-colors"
+                          >
+                            Reset
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) + 1
+                            }))}
+                            className="px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-500 transition-colors"
+                          >
+                            +1°
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) + 15
+                            }))}
+                            className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-500 transition-colors"
+                          >
+                            +15°
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Create Dummy Tile Button (Test Mode Only) */}
             {isTestMode && !dummyTile && (
               <div className="mt-8">
@@ -862,7 +966,7 @@ const CampaignScreen: React.FC<{
       <div className="flex items-center space-x-4 mt-8">
         <button
           onClick={onEndTurn}
-          disabled={gameState !== 'CAMPAIGN' && gameState !== 'TILE_PLAYED' && gameState !== 'CORRECTION_REQUIRED'}
+          disabled={(gameState !== 'CAMPAIGN' && gameState !== 'TILE_PLAYED' && gameState !== 'CORRECTION_REQUIRED') || (gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn)}
           className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
         >
           End Turn
@@ -1102,6 +1206,7 @@ const App: React.FC = () => {
   const [isTestMode, setIsTestMode] = useState(false);
   const [dummyTile, setDummyTile] = useState<{ position: { top: number; left: number }; rotation: number } | null>(null);
   const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
+  const [credibilityRotationAdjustments, setCredibilityRotationAdjustments] = useState<{ [playerId: number]: number }>({});
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
   const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
   const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
@@ -1151,6 +1256,9 @@ const App: React.FC = () => {
       toLocationId?: string;
     }>;
   } | null>(null);
+
+  const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
+  const [challengeResultMessage, setChallengeResultMessage] = useState<string | null>(null);
 
   // State for custom alert modals
   const [alertModal, setAlertModal] = useState<{
@@ -1548,6 +1656,30 @@ const App: React.FC = () => {
     if (!playedTile) return;
 
     if (!accepted) {
+      // Check if tile is perfect using same logic as Check Move
+      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+      const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+
+      // Check for extra moves
+      const requiredMoveTypes = tileRequirements.requiredMoves;
+      const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+      const extraMoves: string[] = [];
+      for (const moveType of performedMoveTypes) {
+        if (!requiredMoveTypes.includes(moveType)) {
+          extraMoves.push(moveType);
+        }
+      }
+      const uniqueExtraMoves = [...new Set(extraMoves)];
+
+      // Tile is perfect if requirements are met and no extra moves
+      const isTilePerfect = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+
+      if (isTilePerfect) {
+        // Cannot reject - show perfect tile modal
+        setShowPerfectTileModal(true);
+        return;
+      }
+
       // REJECTION: Reverse moves and prompt player to fulfill tile requirements
       setReceiverAcceptance(false);
       setTileRejected(true);
@@ -1599,36 +1731,103 @@ const App: React.FC = () => {
   };
 
   /**
+   * Handle perfect tile modal - proceed to challenge phase
+   */
+  const handlePerfectTileContinue = () => {
+    if (!playedTile) return;
+
+    setShowPerfectTileModal(false);
+    setReceiverAcceptance(true);
+
+    // Determine challenge order (clockwise from tile player, excluding giver and receiver)
+    const order = getChallengeOrder(playedTile.playerId, playerCount, playedTile.receivingPlayerId);
+    setChallengeOrder(order);
+
+    // If there are challengers, move to first challenger
+    if (order.length > 0) {
+      const firstChallengerIndex = players.findIndex(p => p.id === order[0]);
+      setCurrentPlayerIndex(firstChallengerIndex);
+      setCurrentChallengerIndex(0);
+      setGameState('PENDING_CHALLENGE');
+    } else {
+      // No challengers, finalize the play
+      finalizeTilePlay(false, null);
+    }
+  };
+
+  /**
    * Handle challenger's decision (challenge or pass)
    */
   const handleChallengerDecision = (challenge: boolean) => {
     if (!playedTile) return;
 
     if (challenge) {
-      // CHALLENGED: Verify if tile player met requirements
-      const tileRequirements = validateTileRequirements(playedTile.tileId, playedTile.movesPerformed);
+      // CHALLENGED: Use exact same logic as Check Move to verify if tile player met requirements perfectly
+      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+      const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
 
-      if (!tileRequirements.isMet) {
-        // Challenge is valid - player did NOT meet requirements
-        // Reverse moves and prompt correction
-        setTileRejected(true);
+      // Check if there are extra moves beyond what's required
+      const requiredMoveTypes = tileRequirements.requiredMoves;
+      const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+      const extraMoves: string[] = [];
 
-        // Restore original pieces (remove any moves made)
-        setPieces(playedTile.originalPieces.map(p => ({ ...p })));
-        // Keep the board tile visible in the receiving space (don't restore full board state)
-        // The BoardTile will remain showing the white back
-
-        // Switch to tile player for correction
-        const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
-        if (playerIndex !== -1) {
-          setCurrentPlayerIndex(playerIndex);
-          setGameState('CORRECTION_REQUIRED');
-          setMovesThisTurn([]);
+      for (const moveType of performedMoveTypes) {
+        if (!requiredMoveTypes.includes(moveType)) {
+          extraMoves.push(moveType);
         }
+      }
+
+      const uniqueExtraMoves = [...new Set(extraMoves)];
+      const isTilePerfect = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+
+      if (isTilePerfect) {
+        // Challenge is INVALID - player played perfectly
+        const challengerName = players.find(p => p.id === challengeOrder[currentChallengerIndex])?.name || 'Player';
+        const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
+        setChallengeResultMessage(`Challenge Failed: ${challengedPlayerName} played the tile perfectly.`);
+
+        // Schedule auto-dismiss after 5 seconds and advance to next challenger or finalize
+        setTimeout(() => {
+          setChallengeResultMessage('');
+
+          // Move to next challenger or finalize
+          const nextChallengerIndex = currentChallengerIndex + 1;
+          if (nextChallengerIndex >= challengeOrder.length) {
+            // No more challengers, finalize
+            finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
+          } else {
+            // Move to next challenger
+            const nextChallengerId = challengeOrder[nextChallengerIndex];
+            const nextChallengerIndex_PlayerIndex = players.findIndex(p => p.id === nextChallengerId);
+            setCurrentChallengerIndex(nextChallengerIndex);
+            setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
+          }
+        }, 5000);
       } else {
-        // Challenge is invalid - player DID meet requirements
-        // Finalize with moves standing
-        finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
+        // Challenge is VALID - player did NOT meet requirements perfectly
+        const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
+        setChallengeResultMessage(`Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`);
+
+        // Schedule auto-dismiss after 5 seconds and proceed with correction flow
+        setTimeout(() => {
+          setChallengeResultMessage('');
+
+          // Reverse moves and prompt correction
+          setTileRejected(true);
+
+          // Restore original pieces (remove any moves made)
+          setPieces(playedTile.originalPieces.map(p => ({ ...p })));
+          // Keep the board tile visible in the receiving space (don't restore full board state)
+          // The BoardTile will remain showing the white back
+
+          // Switch to tile player for correction
+          const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+          if (playerIndex !== -1) {
+            setCurrentPlayerIndex(playerIndex);
+            setGameState('CORRECTION_REQUIRED');
+            setMovesThisTurn([]);
+          }
+        }, 5000);
       }
     } else {
       // PASS: Move to next challenger or finalize
@@ -2173,6 +2372,8 @@ const App: React.FC = () => {
             moveCheckResult={moveCheckResult}
             onCloseMoveCheckResult={() => setShowMoveCheckResult(false)}
             onCheckMove={handleCheckMove}
+            credibilityRotationAdjustments={credibilityRotationAdjustments}
+            setCredibilityRotationAdjustments={setCredibilityRotationAdjustments}
           />
         );
       case 'PLAYER_SELECTION':
@@ -2188,6 +2389,46 @@ const App: React.FC = () => {
       </ErrorBoundary>
 
       {/* Custom Alert Modal */}
+      {showPerfectTileModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+          <div className="bg-gray-800 border-2 border-green-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
+            <div className="mb-4">
+              <div className="text-6xl text-green-400 mb-2">✓</div>
+            </div>
+            <h2 className="text-3xl font-bold mb-3 text-green-400">
+              Perfect Tile Play
+            </h2>
+            <p className="text-slate-300 mb-6 text-lg">
+              The tile requirements have been fulfilled perfectly. You cannot reject this tile. Other players may now challenge the play.
+            </p>
+            <button
+              onClick={handlePerfectTileContinue}
+              className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Challenge Result Message - displays for 5 seconds */}
+      {challengeResultMessage && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4" aria-live="polite" role="status">
+          <div className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
+            challengeResultMessage.includes('Failed')
+              ? 'bg-green-900 border-green-500 text-green-300'
+              : 'bg-orange-900 border-orange-500 text-orange-300'
+          }`}>
+            <h2 className="text-2xl font-bold mb-2">
+              {challengeResultMessage.includes('Failed') ? '✓ Challenge Failed' : '⚠️ Challenge Successful'}
+            </h2>
+            <p className="text-lg">
+              {challengeResultMessage}
+            </p>
+          </div>
+        </div>
+      )}
+
       {alertModal.isOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
           <div className="bg-gray-800 border-2 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8" style={{
