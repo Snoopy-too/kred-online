@@ -883,6 +883,31 @@ const CampaignScreen: React.FC<{
               </div>
             )}
 
+            {/* Credibility Rules Info */}
+            {isTestMode && (
+              <div className="mt-8 bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-slate-200 mb-4">Credibility System Rules</h3>
+                <div className="space-y-3 text-xs text-slate-300">
+                  <div className="bg-gray-800 rounded p-2 border-l-4 border-red-500">
+                    <p className="font-semibold text-red-400 mb-1">Lose 1 Credibility if:</p>
+                    <ul className="list-disc list-inside space-y-1 text-slate-400">
+                      <li>You play a tile that doesn't perfectly meet requirements AND receiving player rejects it</li>
+                      <li>You play a tile that doesn't perfectly meet requirements AND another player successfully challenges it</li>
+                      <li>You unsuccessfully challenge another player's move (they played perfectly)</li>
+                    </ul>
+                  </div>
+                  <div className="bg-gray-800 rounded p-2 border-l-4 border-blue-500">
+                    <p className="font-semibold text-blue-400 mb-1">Game Rules:</p>
+                    <ul className="list-disc list-inside space-y-1 text-slate-400">
+                      <li>All players start with 3 Credibility</li>
+                      <li>Credibility is shown on the board (0-3)</li>
+                      <li>Perfect plays cannot be rejected - receiver must accept</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Create Dummy Tile Button (Test Mode Only) */}
             {isTestMode && !dummyTile && (
               <div className="mt-8">
