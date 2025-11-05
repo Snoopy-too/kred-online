@@ -16,6 +16,8 @@ import {
   findNearestVacantLocation,
   TILE_SPACES_BY_PLAYER_COUNT,
   TileReceivingSpace,
+  BANK_SPACES_BY_PLAYER_COUNT,
+  BankSpace,
   PLAYER_PERSPECTIVE_ROTATIONS,
   formatLocationId,
   getLocationIdFromPosition,
@@ -151,6 +153,7 @@ const CampaignScreen: React.FC<{
   players: Player[];
   pieces: Piece[];
   boardTiles: BoardTile[];
+  bankedTiles: (BoardTile & { faceUp: boolean })[];
   currentPlayerId: number;
   lastDroppedPosition: { top: number; left: number } | null;
   lastDroppedPieceId: string | null;
@@ -204,7 +207,7 @@ const CampaignScreen: React.FC<{
   } | null;
   onCloseMoveCheckResult?: () => void;
   onCheckMove?: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -603,6 +606,27 @@ const CampaignScreen: React.FC<{
                 </div>
               );
             })}
+
+            {/* Banked tiles */}
+            {bankedTiles.map(bankedTile => (
+              <div
+                key={bankedTile.id}
+                className="absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1"
+                style={{
+                  top: `${bankedTile.position.top}%`,
+                  left: `${bankedTile.position.left}%`,
+                  transform: `translate(-50%, -50%) rotate(${bankedTile.rotation || 0}deg)`,
+                }}
+              >
+                {bankedTile.faceUp ? (
+                  // Rejected tile - face up
+                  <img src={bankedTile.tile.url} alt={`Banked Tile ${bankedTile.tile.id}`} className="w-full h-full object-contain" />
+                ) : (
+                  // Accepted tile - face down (white back)
+                  <div className="w-full h-full bg-white rounded-lg border-2 border-white shadow-inner"></div>
+                )}
+              </div>
+            ))}
 
             {pieces.map((piece) => {
               let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
@@ -1064,6 +1088,7 @@ const App: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
+  const [bankedTiles, setBankedTiles] = useState<(BoardTile & { faceUp: boolean })[]>([]);
   const [playerCount, setPlayerCount] = useState<number>(0);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
@@ -1136,6 +1161,7 @@ const App: React.FC = () => {
     setPieces([]);
     setLastDroppedPosition(null);
     setBoardTiles([]);
+    setBankedTiles([]);
     setHasPlayedTileThisTurn(false);
     setRevealedTileId(null);
     setTileTransaction(null);
@@ -1593,7 +1619,55 @@ const App: React.FC = () => {
   const finalizeTilePlay = (wasChallenged: boolean, challengerId: number | null) => {
     if (!playedTile) return;
 
-    // Receiving player keeps the tile (face down if accepted without challenge, face up if rejected)
+    // Determine if tile was rejected (face up) or accepted (face down)
+    const tileWasRejected = tileRejected;
+    const faceUpInBank = tileWasRejected;
+
+    // Get bank spaces for the receiving player
+    const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+    const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === playedTile.receivingPlayerId);
+
+    // Find the next available bank space (accounting for already banked tiles)
+    const usedBankIndices = new Set(
+      bankedTiles
+        .filter(bt => bt.ownerId === playedTile.receivingPlayerId)
+        .map(bt => playerBankSpaces.findIndex(bs => bs.position.left === bt.position.left && bs.position.top === bt.position.top))
+    );
+
+    let nextBankIndex = 0;
+    for (let i = 0; i < playerBankSpaces.length; i++) {
+      if (!usedBankIndices.has(i)) {
+        nextBankIndex = i;
+        break;
+      }
+    }
+
+    // Create the banked tile
+    if (nextBankIndex < playerBankSpaces.length) {
+      const bankSpace = playerBankSpaces[nextBankIndex];
+      const newBankedTile: BoardTile & { faceUp: boolean } = {
+        id: `bank_${playedTile.receivingPlayerId}_${nextBankIndex}_${Date.now()}`,
+        tile: { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` },
+        position: bankSpace.position,
+        rotation: bankSpace.rotation,
+        placerId: playedTile.playerId,
+        ownerId: playedTile.receivingPlayerId,
+        faceUp: faceUpInBank,
+      };
+
+      setBankedTiles(prev => [...prev, newBankedTile]);
+    }
+
+    // Remove from board tiles
+    setBoardTiles(prev =>
+      prev.filter(bt => !(
+        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
+        bt.placerId === playedTile.playerId &&
+        bt.ownerId === playedTile.receivingPlayerId
+      ))
+    );
+
+    // Receiving player keeps the tile in their bureaucracy
     const tile = { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` };
 
     setPlayers(prev =>
@@ -1950,6 +2024,7 @@ const App: React.FC = () => {
             players={players}
             pieces={pieces}
             boardTiles={boardTiles}
+            bankedTiles={bankedTiles}
             currentPlayerId={currentPlayer.id}
             lastDroppedPosition={lastDroppedPosition}
             lastDroppedPieceId={lastDroppedPieceId}
