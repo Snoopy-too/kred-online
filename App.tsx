@@ -447,7 +447,7 @@ const CampaignScreen: React.FC<{
         
         {/* Main Content (Board, Hand, etc.) */}
         <div className="flex-1 flex flex-col items-center min-w-0">
-          <div className="w-full max-w-5xl text-center mb-4">
+          <div className="w-full max-w-5xl text-center mb-4 relative z-50">
             <div className="inline-block bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-cyan-300 tracking-wide">
                   Player {currentPlayerId}'s Turn
@@ -466,10 +466,10 @@ const CampaignScreen: React.FC<{
             <img
               src={BOARD_IMAGE_URLS[playerCount]}
               alt={`A ${playerCount}-player game board`}
-              className="w-full h-full object-contain drop-shadow-2xl"
+              className="w-full h-full object-contain drop-shadow-2xl relative z-0"
             />
             <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`, backgroundSize: '2% 2%', pointerEvents: 'none' }} aria-hidden="true" />
-            <div className="absolute inset-0 text-white/20 text-[8px] sm:text-xs pointer-events-none" aria-hidden="true">
+            <div className="absolute inset-0 text-white/50 text-[8px] sm:text-xs pointer-events-none z-20" aria-hidden="true">
                 {Array.from({ length: 9 }).map((_, i) => (<div key={`x-${i}`} className="absolute" style={{ left: `${(i + 1) * 10}%`, top: '0.5%', transform: 'translateX(-50%)' }}>{(i + 1) * 10}</div>))}
                 {Array.from({ length: 9 }).map((_, i) => (<div key={`y-${i}`} className="absolute" style={{ top: `${(i + 1) * 10}%`, left: '0.5%', transform: 'translateY(-50%)' }}>{(i + 1) * 10}</div>))}
             </div>
@@ -669,7 +669,7 @@ const CampaignScreen: React.FC<{
             )}
           </div>
 
-          <div className="w-full max-w-5xl mt-8">
+          <div className="w-full max-w-5xl mt-8 relative z-50">
             <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Player {currentPlayerId}'s Hand</h2>
             <p className="text-center text-slate-400 mb-4">
               {hasPlayedTileThisTurn ? "You have played a tile this turn." : "Drag a tile to another player's receiving area on the board."}
