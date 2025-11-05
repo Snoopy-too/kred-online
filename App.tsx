@@ -406,9 +406,11 @@ const CampaignScreen: React.FC<{
 
   const currentPlayer = players.find(p => p.id === currentPlayerId);
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
+  // In test mode, always show decision dialogs so player can control all players
   // NEW WORKFLOW: Uses playedTile for PENDING_ACCEPTANCE
   // OLD WORKFLOW: Uses tileTransaction for PENDING_CHALLENGE
   const isMyTurnForDecision =
+    isTestMode ||
     (gameState === 'PENDING_ACCEPTANCE' && playedTile && currentPlayerId === playedTile.receivingPlayerId) ||
     (gameState === 'PENDING_ACCEPTANCE' && !playedTile && currentPlayerId === tileTransaction?.receiverId) ||
     (gameState === 'PENDING_CHALLENGE' && bystanders[bystanderIndex]?.id === currentPlayerId);
