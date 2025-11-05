@@ -1153,6 +1153,7 @@ const App: React.FC = () => {
   } | null>(null);
 
   const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
+  const [challengeResultMessage, setChallengeResultMessage] = useState<string | null>(null);
 
   // State for custom alert modals
   const [alertModal, setAlertModal] = useState<{
@@ -1656,11 +1657,57 @@ const App: React.FC = () => {
     if (!playedTile) return;
 
     if (challenge) {
-      // CHALLENGED: Verify if tile player met requirements
-      const tileRequirements = validateTileRequirements(playedTile.tileId, playedTile.movesPerformed);
+      // CHALLENGED: Use exact same logic as Check Move to verify if tile player met requirements perfectly
+      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+      const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
 
-      if (!tileRequirements.isMet) {
-        // Challenge is valid - player did NOT meet requirements
+      // Check if there are extra moves beyond what's required
+      const requiredMoveTypes = tileRequirements.requiredMoves;
+      const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+      const extraMoves: string[] = [];
+
+      for (const moveType of performedMoveTypes) {
+        if (!requiredMoveTypes.includes(moveType)) {
+          extraMoves.push(moveType);
+        }
+      }
+
+      const uniqueExtraMoves = [...new Set(extraMoves)];
+      const isTilePerfect = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+
+      if (isTilePerfect) {
+        // Challenge is INVALID - player played perfectly
+        const challengerName = players.find(p => p.id === challengeOrder[currentChallengerIndex])?.name || 'Player';
+        const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
+        setChallengeResultMessage(`Challenge Failed: ${challengedPlayerName} played the tile perfectly.`);
+
+        // Schedule auto-dismiss after 5 seconds
+        setTimeout(() => {
+          setChallengeResultMessage('');
+        }, 5000);
+
+        // Move to next challenger or finalize
+        const nextChallengerIndex = currentChallengerIndex + 1;
+        if (nextChallengerIndex >= challengeOrder.length) {
+          // No more challengers, finalize
+          finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
+        } else {
+          // Move to next challenger
+          const nextChallengerId = challengeOrder[nextChallengerIndex];
+          const nextChallengerIndex_PlayerIndex = players.findIndex(p => p.id === nextChallengerId);
+          setCurrentChallengerIndex(nextChallengerIndex);
+          setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
+        }
+      } else {
+        // Challenge is VALID - player did NOT meet requirements perfectly
+        const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
+        setChallengeResultMessage(`Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`);
+
+        // Schedule auto-dismiss after 5 seconds
+        setTimeout(() => {
+          setChallengeResultMessage('');
+        }, 5000);
+
         // Reverse moves and prompt correction
         setTileRejected(true);
 
@@ -1676,10 +1723,6 @@ const App: React.FC = () => {
           setGameState('CORRECTION_REQUIRED');
           setMovesThisTurn([]);
         }
-      } else {
-        // Challenge is invalid - player DID meet requirements
-        // Finalize with moves standing
-        finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
       }
     } else {
       // PASS: Move to next challenger or finalize
@@ -2257,6 +2300,24 @@ const App: React.FC = () => {
             >
               Continue
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Challenge Result Message - displays for 5 seconds */}
+      {challengeResultMessage && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4" aria-live="polite" role="status">
+          <div className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
+            challengeResultMessage.includes('Failed')
+              ? 'bg-green-900 border-green-500 text-green-300'
+              : 'bg-orange-900 border-orange-500 text-orange-300'
+          }`}>
+            <h2 className="text-2xl font-bold mb-2">
+              {challengeResultMessage.includes('Failed') ? '✓ Challenge Failed' : '⚠️ Challenge Successful'}
+            </h2>
+            <p className="text-lg">
+              {challengeResultMessage}
+            </p>
           </div>
         </div>
       )}
