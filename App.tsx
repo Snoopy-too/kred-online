@@ -648,8 +648,10 @@ const CampaignScreen: React.FC<{
                 return (
                   <div
                     key={`credibility_${location.ownerId}`}
-                    className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
+                    className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
                     style={{
+                      width: '4.064rem',
+                      height: '4.064rem',
                       top: `${location.position.top}%`,
                       left: `${location.position.left}%`,
                       transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
