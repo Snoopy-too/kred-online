@@ -126,21 +126,30 @@ const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
   { id: 'p1_office', position: { left: 31.95, top: 25.01 } },
   { id: 'p2_office', position: { left: 76.22, top: 36.38 } },
   { id: 'p3_office', position: { left: 44.03, top: 68.87 } },
-  // Community (11 spaces with proper spacing - no overlap with seats)
-  // Top row (top: 42.0%)
-  { id: 'community1', position: { left: 45.20, top: 42.00 } },
-  { id: 'community2', position: { left: 48.70, top: 42.00 } },
-  { id: 'community3', position: { left: 52.20, top: 42.00 } },
-  { id: 'community4', position: { left: 55.70, top: 42.00 } },
+  // Community (18 spaces with proper spacing - no overlap with seats)
   // Middle row (top: 46.0-47.8%)
-  { id: 'community5', position: { left: 43.70, top: 47.70 } },
-  { id: 'community6', position: { left: 50.40, top: 46.00 } },
-  { id: 'community7', position: { left: 53.50, top: 47.80 } },
-  { id: 'community8', position: { left: 57.00, top: 46.00 } },
+  { id: 'community1', position: { left: 53.50, top: 47.80 } },
+  { id: 'community2', position: { left: 43.70, top: 47.70 } },
+  { id: 'community3', position: { left: 57.00, top: 46.00 } },
+  // Top row (top: 38.0%)
+  { id: 'community4', position: { left: 45.20, top: 38.00 } },
+  { id: 'community5', position: { left: 48.70, top: 38.00 } },
+  { id: 'community6', position: { left: 52.20, top: 38.00 } },
+  { id: 'community7', position: { left: 55.70, top: 38.00 } },
+  // Second row (top: 42.0%)
+  { id: 'community8', position: { left: 45.20, top: 42.00 } },
+  { id: 'community9', position: { left: 48.70, top: 42.00 } },
+  { id: 'community10', position: { left: 52.20, top: 42.00 } },
+  { id: 'community11', position: { left: 55.70, top: 42.00 } },
+  { id: 'community12', position: { left: 50.40, top: 46.00 } },
   // Bottom row (top: 50.0%)
-  { id: 'community9', position: { left: 46.90, top: 50.00 } },
-  { id: 'community10', position: { left: 50.40, top: 50.00 } },
-  { id: 'community11', position: { left: 53.90, top: 50.00 } },
+  { id: 'community13', position: { left: 46.90, top: 50.00 } },
+  { id: 'community14', position: { left: 50.40, top: 50.00 } },
+  { id: 'community15', position: { left: 53.90, top: 50.00 } },
+  // Additional locations
+  { id: 'community16', position: { left: 43.78, top: 44.51 } },
+  { id: 'community17', position: { left: 42.53, top: 42.85 } },
+  { id: 'community18', position: { left: 56.70, top: 49.51 } },
 ];
 
 const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
