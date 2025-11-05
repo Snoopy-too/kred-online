@@ -1152,6 +1152,8 @@ const App: React.FC = () => {
     }>;
   } | null>(null);
 
+  const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
+
   // State for custom alert modals
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
@@ -1548,6 +1550,30 @@ const App: React.FC = () => {
     if (!playedTile) return;
 
     if (!accepted) {
+      // Check if tile is perfect using same logic as Check Move
+      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+      const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+
+      // Check for extra moves
+      const requiredMoveTypes = tileRequirements.requiredMoves;
+      const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+      const extraMoves: string[] = [];
+      for (const moveType of performedMoveTypes) {
+        if (!requiredMoveTypes.includes(moveType)) {
+          extraMoves.push(moveType);
+        }
+      }
+      const uniqueExtraMoves = [...new Set(extraMoves)];
+
+      // Tile is perfect if requirements are met and no extra moves
+      const isTilePerfect = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+
+      if (isTilePerfect) {
+        // Cannot reject - show perfect tile modal
+        setShowPerfectTileModal(true);
+        return;
+      }
+
       // REJECTION: Reverse moves and prompt player to fulfill tile requirements
       setReceiverAcceptance(false);
       setTileRejected(true);
@@ -1595,6 +1621,31 @@ const App: React.FC = () => {
         // No challengers, finalize the play
         finalizeTilePlay(false, null);
       }
+    }
+  };
+
+  /**
+   * Handle perfect tile modal - proceed to challenge phase
+   */
+  const handlePerfectTileContinue = () => {
+    if (!playedTile) return;
+
+    setShowPerfectTileModal(false);
+    setReceiverAcceptance(true);
+
+    // Determine challenge order (clockwise from tile player, excluding giver and receiver)
+    const order = getChallengeOrder(playedTile.playerId, playerCount, playedTile.receivingPlayerId);
+    setChallengeOrder(order);
+
+    // If there are challengers, move to first challenger
+    if (order.length > 0) {
+      const firstChallengerIndex = players.findIndex(p => p.id === order[0]);
+      setCurrentPlayerIndex(firstChallengerIndex);
+      setCurrentChallengerIndex(0);
+      setGameState('PENDING_CHALLENGE');
+    } else {
+      // No challengers, finalize the play
+      finalizeTilePlay(false, null);
     }
   };
 
@@ -2188,6 +2239,28 @@ const App: React.FC = () => {
       </ErrorBoundary>
 
       {/* Custom Alert Modal */}
+      {showPerfectTileModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+          <div className="bg-gray-800 border-2 border-green-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
+            <div className="mb-4">
+              <div className="text-6xl text-green-400 mb-2">✓</div>
+            </div>
+            <h2 className="text-3xl font-bold mb-3 text-green-400">
+              Perfect Tile Play
+            </h2>
+            <p className="text-slate-300 mb-6 text-lg">
+              The tile requirements have been fulfilled perfectly. You cannot reject this tile. Other players may now challenge the play.
+            </p>
+            <button
+              onClick={handlePerfectTileContinue}
+              className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
       {alertModal.isOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
           <div className="bg-gray-800 border-2 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8" style={{
