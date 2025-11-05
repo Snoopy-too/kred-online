@@ -12,6 +12,7 @@ export interface Player {
   hand: Tile[];
   keptTiles: Tile[];
   bureaucracyTiles: Tile[];
+  credibility: number;
 }
 
 export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLAYED' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE' | 'CORRECTION_REQUIRED';
@@ -1868,6 +1869,7 @@ export function initializePlayers(playerCount: number): Player[] {
     hand: [],
     keptTiles: [],
     bureaucracyTiles: [],
+    credibility: 3,
   }));
 
   // Deal all available tiles
@@ -2591,4 +2593,53 @@ export function validateSingleMove(
         reason: 'Unknown move type',
       };
   }
+}
+
+/**
+ * Deducts credibility from a player (minimum 0)
+ */
+export function deductCredibility(players: Player[], playerId: number): Player[] {
+  return players.map(p =>
+    p.id === playerId
+      ? { ...p, credibility: Math.max(0, p.credibility - 1) }
+      : p
+  );
+}
+
+/**
+ * Calculates which players should lose credibility based on the rejection reason
+ * @param reason - 'rejected' | 'challenged_failed' | 'challenge_unsuccessful'
+ * @returns Function that takes players and returns updated players with credibility deducted
+ */
+export function handleCredibilityLoss(
+  reason: 'tile_rejected_by_receiver' | 'tile_failed_challenge' | 'unsuccessful_challenge' | 'did_not_reject_when_challenged',
+  tilePlayerId: number,
+  challengerId?: number,
+  receiverId?: number
+): (players: Player[]) => Player[] {
+  return (players: Player[]) => {
+    switch (reason) {
+      case 'tile_rejected_by_receiver':
+        // Tile player loses 1 credibility when receiving player rejects their tile
+        // (and tile didn't meet requirements perfectly)
+        return deductCredibility(players, tilePlayerId);
+
+      case 'tile_failed_challenge':
+        // Tile player loses 1 credibility when another player successfully challenges
+        // (tile didn't meet requirements perfectly)
+        return deductCredibility(players, tilePlayerId);
+
+      case 'unsuccessful_challenge':
+        // Challenger loses 1 credibility when they challenge but tile was perfect
+        return challengerId ? deductCredibility(players, challengerId) : players;
+
+      case 'did_not_reject_when_challenged':
+        // Receiver loses 1 credibility if they don't reject a tile that fails the challenge
+        // (was played to them, didn't reject, another player challenged and succeeded)
+        return receiverId ? deductCredibility(players, receiverId) : players;
+
+      default:
+        return players;
+    }
+  };
 }

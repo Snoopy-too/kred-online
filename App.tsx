@@ -33,6 +33,7 @@ import {
   getTileRequirements,
   validateSingleMove,
   areSeatsAdjacent,
+  handleCredibilityLoss,
 } from './game';
 
 // --- Helper Components ---
@@ -634,12 +635,16 @@ const CampaignScreen: React.FC<{
               </div>
             ))}
 
-            {/* Credibility placeholders */}
+            {/* Credibility display */}
             {(() => {
               const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
               return credibilityLocations.map((location) => {
+                const player = players.find(p => p.id === location.ownerId);
+                const credibilityValue = player?.credibility ?? 3;
                 const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
                 const finalRotation = (location.rotation || 0) + adjustment;
+                const credibilityImage = `/images/${credibilityValue}_credibility.svg`;
+
                 return (
                   <div
                     key={`credibility_${location.ownerId}`}
@@ -651,7 +656,7 @@ const CampaignScreen: React.FC<{
                     }}
                   >
                     <img
-                      src="/images/3_credibility.svg"
+                      src={credibilityImage}
                       alt={`Credibility for Player ${location.ownerId}`}
                       className="w-full h-full object-contain"
                     />
@@ -1701,6 +1706,9 @@ const App: React.FC = () => {
         );
       }
 
+      // Tile player loses 1 credibility when tile is rejected by receiver
+      setPlayers(prev => handleCredibilityLoss('tile_rejected_by_receiver', playedTile.playerId)(prev));
+
       // Switch back to tile player for correction
       const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
       if (playerIndex !== -1) {
@@ -1782,9 +1790,13 @@ const App: React.FC = () => {
 
       if (isTilePerfect) {
         // Challenge is INVALID - player played perfectly
-        const challengerName = players.find(p => p.id === challengeOrder[currentChallengerIndex])?.name || 'Player';
+        const challengerId = challengeOrder[currentChallengerIndex];
+        const challengerName = players.find(p => p.id === challengerId)?.name || 'Player';
         const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
         setChallengeResultMessage(`Challenge Failed: ${challengedPlayerName} played the tile perfectly.`);
+
+        // Challenger loses 1 credibility for unsuccessful challenge
+        setPlayers(prev => handleCredibilityLoss('unsuccessful_challenge', playedTile.playerId, challengerId)(prev));
 
         // Schedule auto-dismiss after 5 seconds and advance to next challenger or finalize
         setTimeout(() => {
@@ -1807,6 +1819,9 @@ const App: React.FC = () => {
         // Challenge is VALID - player did NOT meet requirements perfectly
         const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
         setChallengeResultMessage(`Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`);
+
+        // Tile player loses 1 credibility when challenge succeeds
+        setPlayers(prev => handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(prev));
 
         // Schedule auto-dismiss after 5 seconds and proceed with correction flow
         setTimeout(() => {
