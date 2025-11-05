@@ -1227,12 +1227,12 @@ export const BANK_SPACES_BY_PLAYER_COUNT: { [key: number]: BankSpace[] } = {
 
 // Credibility locations - one per player to display credibility currency
 const THREE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
-  // Player 1: 21.18/15.35, facing 50.75/43.90
-  { ownerId: 1, position: { left: 21.18, top: 15.35 }, rotation: 55.00 },
-  // Player 2: 89.72/33.16, facing 50.75/43.90
-  { ownerId: 2, position: { left: 89.72, top: 33.16 }, rotation: 189.00 },
-  // Player 3: 40.45/83.68, facing 50.75/43.90
-  { ownerId: 3, position: { left: 40.45, top: 83.68 }, rotation: 320.00 },
+  // Player 1: 21.18/15.35, rotation: -35.0°
+  { ownerId: 1, position: { left: 21.18, top: 15.35 }, rotation: -35.00 },
+  // Player 2: 90.30/33.16, rotation: 75.0°
+  { ownerId: 2, position: { left: 90.30, top: 33.16 }, rotation: 75.00 },
+  // Player 3: 40.45/83.68, rotation: 200.0°
+  { ownerId: 3, position: { left: 40.45, top: 83.68 }, rotation: 200.00 },
 ];
 
 const FOUR_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
