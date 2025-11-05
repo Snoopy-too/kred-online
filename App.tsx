@@ -1520,9 +1520,9 @@ const App: React.FC = () => {
       // ACCEPTANCE: Move to challenge phase
       setReceiverAcceptance(true);
 
-      // Determine challenge order (clockwise from tile player)
+      // Determine challenge order (clockwise from tile player, excluding giver and receiver)
       const tilePlayerIndex = players.findIndex(p => p.id === playedTile.playerId);
-      const order = getChallengeOrder(playedTile.playerId, playerCount);
+      const order = getChallengeOrder(playedTile.playerId, playerCount, playedTile.receivingPlayerId);
       setChallengeOrder(order);
 
       // If there are challengers, move to first challenger

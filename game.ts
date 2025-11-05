@@ -1906,15 +1906,16 @@ export function createGameStateSnapshot(
  */
 export function getChallengeOrder(
   tilePlayerId: number,
-  playerCount: number
+  playerCount: number,
+  receivingPlayerId?: number
 ): number[] {
   const challengeOrder: number[] = [];
 
   // Start from the next player clockwise from the tile player
   for (let i = 1; i < playerCount; i++) {
     const playerId = ((tilePlayerId - 1 + i) % playerCount) + 1;
-    // Skip the receiving player (which is the tile player + 1, wrapping around)
-    if (playerId !== tilePlayerId) {
+    // Skip the tile player (giver) and the receiving player (only players not involved can challenge)
+    if (playerId !== tilePlayerId && playerId !== receivingPlayerId) {
       challengeOrder.push(playerId);
     }
   }
