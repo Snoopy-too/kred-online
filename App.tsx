@@ -1301,7 +1301,11 @@ const App: React.FC = () => {
 
         // If Marks in community, Heels and Pawns cannot move
         if (marksInCommunity) {
-          console.warn(`Cannot move ${movingPiece.name} from community while Marks occupy the community`);
+          showAlert(
+            'Cannot Move This Piece',
+            'To move a Pawn, Heels need to be gone. To move Heels, Marks need to be gone.',
+            'warning'
+          );
           return;
         }
 
@@ -1312,7 +1316,11 @@ const App: React.FC = () => {
           );
           // Pawns cannot move if Heels in community
           if (heelsInCommunity) {
-            console.warn(`Cannot move ${movingPiece.name} from community while Heels occupy the community`);
+            showAlert(
+              'Cannot Move This Piece',
+              'To move a Pawn, Heels need to be gone. To move Heels, Marks need to be gone.',
+              'warning'
+            );
             return;
           }
         }
