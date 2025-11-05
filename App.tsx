@@ -5,6 +5,7 @@ import {
   BOARD_IMAGE_URLS,
   initializePlayers,
   initializePieces,
+  initializeCampaignPieces,
   PIECE_COUNTS_BY_PLAYER_COUNT,
   PIECE_TYPES,
   Tile,
@@ -1428,28 +1429,8 @@ const App: React.FC = () => {
       if (playersWithPassedHands[0].hand.length === 0) {
         setGameState('CAMPAIGN');
 
-        // Create pieces from default positions
-        const defaultPositions = DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT[playerCount] || [];
-        console.log('Creating initial pieces from', defaultPositions.length, 'default positions for', playerCount, 'players');
-        const initialPieces: Piece[] = defaultPositions.map((piece, index) => {
-          // Find the location ID for this position
-          const locationId = getLocationIdFromPosition(piece.position, playerCount) || 'community_default';
-          const pieceType = PIECE_TYPES[piece.name.toUpperCase()];
-          if (!pieceType) {
-            console.error(`Unknown piece type: ${piece.name}`);
-          }
-          return {
-            id: `piece_${index}`,
-            name: piece.name,
-            displayName: piece.displayName,
-            imageUrl: pieceType?.imageUrl || '',
-            position: piece.position,
-            rotation: calculatePieceRotation(piece.position, playerCount, locationId),
-            locationId,
-          };
-        });
-
-        console.log('Initial pieces created:', initialPieces.length);
+        // Initialize pieces for campaign: Marks at seats 1,3,5 + Heels/Pawns in community
+        const initialPieces = initializeCampaignPieces(playerCount);
         setPieces(initialPieces);
         setPiecesAtTurnStart(initialPieces);
 

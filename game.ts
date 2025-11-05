@@ -1846,6 +1846,108 @@ export function initializePieces(playerCount: number): Piece[] {
 }
 
 /**
+ * Initializes all pieces for campaign start after draft phase.
+ * Places Marks at player seats 1, 3, 5 and distributes Heels/Pawns in community.
+ * @param playerCount The number of players in the game.
+ * @returns An array of all Piece objects for campaign start
+ */
+export function initializeCampaignPieces(playerCount: number): Piece[] {
+  const allPieces: Piece[] = [];
+  const dropLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount];
+  if (!dropLocations) return [];
+
+  const markInfo = PIECE_TYPES.MARK;
+  const heelInfo = PIECE_TYPES.HEEL;
+  const pawnInfo = PIECE_TYPES.PAWN;
+  const seatsToPlace = [1, 3, 5];
+
+  let markCounter = 1;
+  let heelCounter = 1;
+  let pawnCounter = 1;
+
+  // Step 1: Place Marks at seats 1, 3, 5 for each player
+  for (let playerId = 1; playerId <= playerCount; playerId++) {
+    for (const seatNum of seatsToPlace) {
+      const seatId = `p${playerId}_seat${seatNum}`;
+      const location = dropLocations.find(loc => loc.id === seatId);
+
+      if (location) {
+        const newPiece: Piece = {
+          id: `campaign_mark_${markCounter}`,
+          name: markInfo.name,
+          displayName: `M${markCounter}`,
+          imageUrl: markInfo.imageUrl,
+          position: location.position,
+          rotation: calculatePieceRotation(location.position, playerCount, seatId),
+          locationId: seatId,
+        };
+        allPieces.push(newPiece);
+        markCounter++;
+      }
+    }
+  }
+
+  // Step 2: Get community drop locations
+  const communityLocations = dropLocations.filter(loc => loc.id.startsWith('community'));
+
+  // Step 3: Place additional Marks in community (for 4-player: 16-12=4 additional Marks)
+  const additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
+  for (let i = 0; i < additionalMarkCount && i < communityLocations.length; i++) {
+    const location = communityLocations[i];
+    const newPiece: Piece = {
+      id: `campaign_mark_${markCounter}`,
+      name: markInfo.name,
+      displayName: `M${markCounter}`,
+      imageUrl: markInfo.imageUrl,
+      position: location.position,
+      rotation: calculatePieceRotation(location.position, playerCount, location.id),
+      locationId: location.id,
+    };
+    allPieces.push(newPiece);
+    markCounter++;
+  }
+
+  // Step 4: Place Heels in community
+  const heelCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
+  const heelsStartIndex = additionalMarkCount;
+  for (let i = 0; i < heelCount && (heelsStartIndex + i) < communityLocations.length; i++) {
+    const location = communityLocations[heelsStartIndex + i];
+    const newPiece: Piece = {
+      id: `campaign_heel_${heelCounter}`,
+      name: heelInfo.name,
+      displayName: `H${heelCounter}`,
+      imageUrl: heelInfo.imageUrl,
+      position: location.position,
+      rotation: calculatePieceRotation(location.position, playerCount, location.id),
+      locationId: location.id,
+    };
+    allPieces.push(newPiece);
+    heelCounter++;
+  }
+
+  // Step 5: Place Pawns in community
+  const pawnCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].PAWN;
+  const pawnsStartIndex = heelsStartIndex + heelCount;
+  for (let i = 0; i < pawnCount && (pawnsStartIndex + i) < communityLocations.length; i++) {
+    const location = communityLocations[pawnsStartIndex + i];
+    const newPiece: Piece = {
+      id: `campaign_pawn_${pawnCounter}`,
+      name: pawnInfo.name,
+      displayName: `P${pawnCounter}`,
+      imageUrl: pawnInfo.imageUrl,
+      position: location.position,
+      rotation: calculatePieceRotation(location.position, playerCount, location.id),
+      locationId: location.id,
+    };
+    allPieces.push(newPiece);
+    pawnCounter++;
+  }
+
+  console.log(`Campaign pieces initialized: ${allPieces.length} total (${playerCount}-player mode)`);
+  return allPieces;
+}
+
+/**
  * Creates the initial set of players with shuffled, dealt hands.
  * @param playerCount The number of players in the game.
  * @returns An array of Player objects.
