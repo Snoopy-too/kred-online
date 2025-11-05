@@ -857,14 +857,12 @@ const CampaignScreen: React.FC<{
 
       {/* Receiver Decision Modal (when not privately viewing) */}
       {isMyTurnForDecision && gameState === 'PENDING_ACCEPTANCE' && !isPrivatelyViewing && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4" aria-modal="true" role="dialog">
-          <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full">
+        <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 p-4">
+          <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full pointer-events-auto">
             <h2 className="text-3xl font-bold text-cyan-300 mb-2">Your Decision</h2>
-            <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId} has played a tile for you. What will you do?`}</p>
+            <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId} has played a tile to you. You can either accept or reject it.`}</p>
+            <p className="text-slate-400 text-sm mb-4">Click on the tile to view it</p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <button onClick={onTogglePrivateView} className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-500 transition-colors shadow-md w-full sm:w-auto">
-                Privately View
-              </button>
               <button onClick={() => playedTile ? onReceiverAcceptanceDecision(false) : onReceiverDecision('reject')} className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md w-full sm:w-auto">
                 Reject Tile
               </button>
@@ -874,24 +872,6 @@ const CampaignScreen: React.FC<{
             </div>
           </div>
         </div>
-      )}
-      
-      {/* Receiver Private View Action Bar */}
-      {isMyTurnForDecision && gameState === 'PENDING_ACCEPTANCE' && isPrivatelyViewing && (
-          <div className="fixed bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-t-2 border-purple-500 p-4 z-50 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 shadow-lg">
-              <p className="text-purple-300 font-semibold text-lg whitespace-nowrap">You are privately viewing the tile.</p>
-              <div className="flex items-center flex-wrap justify-center gap-4">
-                  <button onClick={onTogglePrivateView} className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-500 transition-colors shadow-md">
-                      Hide Tile
-                  </button>
-                  <button onClick={() => playedTile ? onReceiverAcceptanceDecision(false) : onReceiverDecision('reject')} className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md">
-                      Reject Tile
-                  </button>
-                  <button onClick={() => playedTile ? onReceiverAcceptanceDecision(true) : onReceiverDecision('accept')} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md">
-                      Accept Tile
-                  </button>
-              </div>
-          </div>
       )}
 
       {/* Bystander Challenge Modal */}
