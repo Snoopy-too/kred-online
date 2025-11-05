@@ -564,7 +564,11 @@ const CampaignScreen: React.FC<{
 
               // NEW RULE: Giver and receiver can toggle to see the tile face-up by clicking
               const isGiverOrReceiver = isPlacer || (isPlayedTile && currentPlayerId === playedTile.receivingPlayerId);
-              const canGiverReceiverToggleView = isTilePlayedButNotYetAccepted && isGiverOrReceiver;
+              const currentPlayer = players.find(p => p.id === currentPlayerId);
+              const currentPlayerCredibility = currentPlayer?.credibility ?? 3;
+              // Players with 0 credibility cannot view received tiles
+              const receiverCanViewTile = currentPlayerCredibility > 0;
+              const canGiverReceiverToggleView = isTilePlayedButNotYetAccepted && isGiverOrReceiver && (isPlacer || receiverCanViewTile);
               const showGiverReceiverView = canGiverReceiverToggleView && giveReceiverViewingTileId === boardTile.id;
 
               // CORRECTION_REQUIRED: Show tile face-up for placer to see requirements
@@ -1029,12 +1033,33 @@ const CampaignScreen: React.FC<{
         <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 p-4">
           <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full pointer-events-auto">
             <h2 className="text-3xl font-bold text-cyan-300 mb-2">Your Decision</h2>
-            <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId} has played a tile to you. You can either accept or reject it.`}</p>
+            {(() => {
+              const currentPlayer = players.find(p => p.id === currentPlayerId);
+              const hasZeroCredibility = (currentPlayer?.credibility ?? 3) === 0;
+              if (hasZeroCredibility) {
+                return <p className="text-red-400 font-semibold mb-4">⚠️ You have 0 Credibility - You must accept this tile!</p>;
+              }
+              return <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId} has played a tile to you. You can either accept or reject it.`}</p>;
+            })()}
             <p className="text-slate-400 text-sm mb-4">Click on the tile to view it</p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <button onClick={() => playedTile ? onReceiverAcceptanceDecision(false) : onReceiverDecision('reject')} className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md w-full sm:w-auto">
-                Reject Tile
-              </button>
+              {(() => {
+                const currentPlayer = players.find(p => p.id === currentPlayerId);
+                const hasZeroCredibility = (currentPlayer?.credibility ?? 3) === 0;
+                return (
+                  <button
+                    onClick={() => playedTile ? onReceiverAcceptanceDecision(false) : onReceiverDecision('reject')}
+                    disabled={hasZeroCredibility}
+                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md w-full sm:w-auto ${
+                      hasZeroCredibility
+                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
+                        : 'bg-red-700 text-white hover:bg-red-600'
+                    }`}
+                  >
+                    Reject Tile
+                  </button>
+                );
+              })()}
               <button onClick={() => playedTile ? onReceiverAcceptanceDecision(true) : onReceiverDecision('accept')} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md w-full sm:w-auto">
                 Accept Tile
               </button>
@@ -1048,11 +1073,32 @@ const CampaignScreen: React.FC<{
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4" aria-modal="true" role="dialog">
           <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full">
             <h2 className="text-3xl font-bold text-cyan-300 mb-2">Challenge or Pass?</h2>
-            <p className="text-slate-300 mb-6">{`Player ${playedTile?.receivingPlayerId || tileTransaction?.receiverId} accepted the tile from Player ${playedTile?.playerId || tileTransaction?.placerId}.`}</p>
+            {(() => {
+              const currentPlayer = players.find(p => p.id === currentPlayerId);
+              const hasZeroCredibility = (currentPlayer?.credibility ?? 3) === 0;
+              if (hasZeroCredibility) {
+                return <p className="text-red-400 font-semibold mb-4">⚠️ You have 0 Credibility - You can only Pass!</p>;
+              }
+              return <p className="text-slate-300 mb-6">{`Player ${playedTile?.receivingPlayerId || tileTransaction?.receiverId} accepted the tile from Player ${playedTile?.playerId || tileTransaction?.placerId}.`}</p>;
+            })()}
             <div className="flex justify-center items-center gap-4">
-              <button onClick={() => playedTile ? onChallengerDecision(true) : onBystanderDecision('challenge')} className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors shadow-md">
-                Challenge
-              </button>
+              {(() => {
+                const currentPlayer = players.find(p => p.id === currentPlayerId);
+                const hasZeroCredibility = (currentPlayer?.credibility ?? 3) === 0;
+                return (
+                  <button
+                    onClick={() => playedTile ? onChallengerDecision(true) : onBystanderDecision('challenge')}
+                    disabled={hasZeroCredibility}
+                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md ${
+                      hasZeroCredibility
+                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
+                        : 'bg-red-600 text-white hover:bg-red-500'
+                    }`}
+                  >
+                    Challenge
+                  </button>
+                );
+              })()}
               <button onClick={() => playedTile ? onChallengerDecision(false) : onBystanderDecision('pass')} className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md">
                 Pass
               </button>
