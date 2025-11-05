@@ -1236,27 +1236,27 @@ const THREE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
 ];
 
 const FOUR_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
-  // Player 1: 15.97/29.64, facing 50/50
-  { ownerId: 1, position: { left: 15.97, top: 29.64 }, rotation: 56.00 },
-  // Player 2: 82.95/18.65, facing 50/50
-  { ownerId: 2, position: { left: 82.95, top: 18.65 }, rotation: 186.00 },
-  // Player 3: 84.62/82.16, facing 50/50
-  { ownerId: 3, position: { left: 84.62, top: 82.16 }, rotation: 316.00 },
-  // Player 4: 17.53/83.04, facing 50/50
-  { ownerId: 4, position: { left: 17.53, top: 83.04 }, rotation: 126.00 },
+  // Player 1: 15.97/20.64, rotation: -34.0°
+  { ownerId: 1, position: { left: 15.97, top: 20.64 }, rotation: -34.00 },
+  // Player 2: 82.95/18.65, rotation: 51.0°
+  { ownerId: 2, position: { left: 82.95, top: 18.65 }, rotation: 51.00 },
+  // Player 3: 84.62/82.16, rotation: 136.0°
+  { ownerId: 3, position: { left: 84.62, top: 82.16 }, rotation: 136.00 },
+  // Player 4: 17.53/83.04, rotation: -129.0°
+  { ownerId: 4, position: { left: 17.53, top: 83.04 }, rotation: -129.00 },
 ];
 
 const FIVE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
-  // Player 1: 7.22/63.80, facing 47/47
-  { ownerId: 1, position: { left: 7.22, top: 63.80 }, rotation: 44.00 },
-  // Player 2: 18.06/16.34, facing 47/47
-  { ownerId: 2, position: { left: 18.06, top: 16.34 }, rotation: 135.00 },
-  // Player 3: 69.62/11.07, facing 47/47
-  { ownerId: 3, position: { left: 69.62, top: 11.07 }, rotation: 225.00 },
-  // Player 4: 91.28/55.40, facing 47/47
-  { ownerId: 4, position: { left: 91.28, top: 55.40 }, rotation: 314.00 },
-  // Player 5: 52.95/88.41, facing 47/47
-  { ownerId: 5, position: { left: 52.95, top: 88.41 }, rotation: 44.00 },
+  // Player 1: 8.11/63.80, rotation: 224.0°
+  { ownerId: 1, position: { left: 8.11, top: 63.80 }, rotation: 224.00 },
+  // Player 2: 18.06/16.34, rotation: -45.0°
+  { ownerId: 2, position: { left: 18.06, top: 16.34 }, rotation: -45.00 },
+  // Player 3: 69.62/11.07, rotation: 15.0°
+  { ownerId: 3, position: { left: 69.62, top: 11.07 }, rotation: 15.00 },
+  // Player 4: 91.28/55.40, rotation: 74.0°
+  { ownerId: 4, position: { left: 91.28, top: 55.40 }, rotation: 74.00 },
+  // Player 5: 52.95/88.41, rotation: 164.0°
+  { ownerId: 5, position: { left: 52.95, top: 88.41 }, rotation: 164.00 },
 ];
 
 export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: { [key: number]: BankSpace[] } = {
