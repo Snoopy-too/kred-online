@@ -1681,48 +1681,48 @@ const App: React.FC = () => {
         const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
         setChallengeResultMessage(`Challenge Failed: ${challengedPlayerName} played the tile perfectly.`);
 
-        // Schedule auto-dismiss after 5 seconds
+        // Schedule auto-dismiss after 5 seconds and advance to next challenger or finalize
         setTimeout(() => {
           setChallengeResultMessage('');
-        }, 5000);
 
-        // Move to next challenger or finalize
-        const nextChallengerIndex = currentChallengerIndex + 1;
-        if (nextChallengerIndex >= challengeOrder.length) {
-          // No more challengers, finalize
-          finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
-        } else {
-          // Move to next challenger
-          const nextChallengerId = challengeOrder[nextChallengerIndex];
-          const nextChallengerIndex_PlayerIndex = players.findIndex(p => p.id === nextChallengerId);
-          setCurrentChallengerIndex(nextChallengerIndex);
-          setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
-        }
+          // Move to next challenger or finalize
+          const nextChallengerIndex = currentChallengerIndex + 1;
+          if (nextChallengerIndex >= challengeOrder.length) {
+            // No more challengers, finalize
+            finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
+          } else {
+            // Move to next challenger
+            const nextChallengerId = challengeOrder[nextChallengerIndex];
+            const nextChallengerIndex_PlayerIndex = players.findIndex(p => p.id === nextChallengerId);
+            setCurrentChallengerIndex(nextChallengerIndex);
+            setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
+          }
+        }, 5000);
       } else {
         // Challenge is VALID - player did NOT meet requirements perfectly
         const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
         setChallengeResultMessage(`Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`);
 
-        // Schedule auto-dismiss after 5 seconds
+        // Schedule auto-dismiss after 5 seconds and proceed with correction flow
         setTimeout(() => {
           setChallengeResultMessage('');
+
+          // Reverse moves and prompt correction
+          setTileRejected(true);
+
+          // Restore original pieces (remove any moves made)
+          setPieces(playedTile.originalPieces.map(p => ({ ...p })));
+          // Keep the board tile visible in the receiving space (don't restore full board state)
+          // The BoardTile will remain showing the white back
+
+          // Switch to tile player for correction
+          const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+          if (playerIndex !== -1) {
+            setCurrentPlayerIndex(playerIndex);
+            setGameState('CORRECTION_REQUIRED');
+            setMovesThisTurn([]);
+          }
         }, 5000);
-
-        // Reverse moves and prompt correction
-        setTileRejected(true);
-
-        // Restore original pieces (remove any moves made)
-        setPieces(playedTile.originalPieces.map(p => ({ ...p })));
-        // Keep the board tile visible in the receiving space (don't restore full board state)
-        // The BoardTile will remain showing the white back
-
-        // Switch to tile player for correction
-        const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
-        if (playerIndex !== -1) {
-          setCurrentPlayerIndex(playerIndex);
-          setGameState('CORRECTION_REQUIRED');
-          setMovesThisTurn([]);
-        }
       }
     } else {
       // PASS: Move to next challenger or finalize
