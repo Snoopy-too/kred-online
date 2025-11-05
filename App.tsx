@@ -168,6 +168,7 @@ const CampaignScreen: React.FC<{
   showChallengeRevealModal: boolean;
   challengedTile: Tile | null;
   placerViewingTileId: string | null;
+  giveReceiverViewingTileId: string | null;
   gameLog: string[];
   onNewGame: () => void;
   onPieceMove: (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => void;
@@ -180,6 +181,7 @@ const CampaignScreen: React.FC<{
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
+  onSetGiveReceiverViewingTileId: (tileId: string | null) => void;
   playedTile?: any;
   receiverAcceptance?: boolean | null;
   onReceiverAcceptanceDecision?: (accepted: boolean) => void;
@@ -202,7 +204,7 @@ const CampaignScreen: React.FC<{
   } | null;
   onCloseMoveCheckResult?: () => void;
   onCheckMove?: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -551,25 +553,40 @@ const CampaignScreen: React.FC<{
               const canPlacerClickToView = isPlacer && isTransactionalTile && gameState === 'CAMPAIGN';
               const showPlacerPrivateView = placerViewingTileId === boardTile.id;
 
-              const isRevealed = isPubliclyRevealed || showReceiverPrivateView || showPlacerPrivateView;
+              // NEW RULE: Giver and receiver can toggle to see the tile face-up by clicking
+              const isGiverOrReceiver = isPlacer || (isPlayedTile && currentPlayerId === playedTile.receivingPlayerId);
+              const canGiverReceiverToggleView = isTilePlayedButNotYetAccepted && isGiverOrReceiver;
+              const showGiverReceiverView = canGiverReceiverToggleView && giveReceiverViewingTileId === boardTile.id;
 
-              // During tile play workflow, only show white back until acceptance/rejection
-              const shouldShowWhiteBack = isTilePlayedButNotYetAccepted && !showReceiverPrivateView;
+              const isRevealed = isPubliclyRevealed || showReceiverPrivateView || showPlacerPrivateView || showGiverReceiverView;
+
+              // During tile play workflow, show white back unless it's being viewed by giver/receiver
+              const shouldShowWhiteBack = isTilePlayedButNotYetAccepted && !showGiverReceiverView;
+
+              const handleTileClick = () => {
+                if (canPlacerClickToView) {
+                  onPlacerViewTile(boardTile.id);
+                } else if (canGiverReceiverToggleView) {
+                  onSetGiveReceiverViewingTileId(giveReceiverViewingTileId === boardTile.id ? null : boardTile.id);
+                }
+              };
+
+              const isTileClickable = canPlacerClickToView || canGiverReceiverToggleView;
 
               return (
                 <div
                   key={boardTile.id}
                   draggable={isTestMode && !isTransactionalTile}
                   onDragStart={(isTestMode && !isTransactionalTile) ? (e) => handleDragStartBoardTile(e, boardTile.id) : undefined}
-                  onClick={canPlacerClickToView ? () => onPlacerViewTile(boardTile.id) : undefined}
+                  onClick={isTileClickable ? handleTileClick : undefined}
                   className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed && !shouldShowWhiteBack ? '' : 'bg-stone-100 p-1'}` }
                   style={{
                     top: `${boardTile.position.top}%`,
                     left: `${boardTile.position.left}%`,
                     transform: `translate(-50%, -50%) rotate(${boardTile.rotation || 0}deg)`,
-                    cursor: canPlacerClickToView ? 'pointer' : 'default'
+                    cursor: isTileClickable ? 'pointer' : 'default'
                   }}
-                  aria-label={canPlacerClickToView ? "Click to view the tile you just played" : "A placed, face-down tile"}
+                  aria-label={isTileClickable ? "Click to toggle tile visibility" : "A placed, face-down tile"}
                 >
                   {shouldShowWhiteBack ? (
                     // Show white back for tile in play
@@ -1084,6 +1101,7 @@ const App: React.FC = () => {
   const [showChallengeRevealModal, setShowChallengeRevealModal] = useState(false);
   const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
   const [placerViewingTileId, setPlacerViewingTileId] = useState<string | null>(null);
+  const [giveReceiverViewingTileId, setGiveReceiverViewingTileId] = useState<string | null>(null);
 
   // State for Game Log
   const [gameLog, setGameLog] = useState<string[]>([]);
@@ -1156,6 +1174,7 @@ const App: React.FC = () => {
     setTileRejected(false);
     setShowMoveCheckResult(false);
     setMoveCheckResult(null);
+    setGiveReceiverViewingTileId(null);
   };
   
   const handleSelectTile = (selectedTile: Tile) => {
@@ -1618,6 +1637,7 @@ const App: React.FC = () => {
     setTileRejected(false);
     setGameState('CAMPAIGN');
     setHasPlayedTileThisTurn(false);
+    setGiveReceiverViewingTileId(null);
   };
 
   /**
@@ -1662,6 +1682,7 @@ const App: React.FC = () => {
     setTileRejected(false);
     setGameState('CAMPAIGN');
     setHasPlayedTileThisTurn(false);
+    setGiveReceiverViewingTileId(null);
   };
 
   const handleCheckMove = () => {
@@ -1962,6 +1983,7 @@ const App: React.FC = () => {
             showChallengeRevealModal={showChallengeRevealModal}
             challengedTile={challengedTile}
             placerViewingTileId={placerViewingTileId}
+            giveReceiverViewingTileId={giveReceiverViewingTileId}
             gameLog={gameLog}
             boardRotationEnabled={boardRotationEnabled}
             setBoardRotationEnabled={setBoardRotationEnabled}
@@ -1976,6 +1998,7 @@ const App: React.FC = () => {
             onTogglePrivateView={handleTogglePrivateView}
             onContinueAfterChallenge={handleContinueAfterChallenge}
             onPlacerViewTile={handlePlacerViewTile}
+            onSetGiveReceiverViewingTileId={setGiveReceiverViewingTileId}
             playedTile={playedTile}
             receiverAcceptance={receiverAcceptance}
             onReceiverAcceptanceDecision={handleReceiverAcceptanceDecision}
