@@ -563,7 +563,10 @@ const CampaignScreen: React.FC<{
               const canGiverReceiverToggleView = isTilePlayedButNotYetAccepted && isGiverOrReceiver;
               const showGiverReceiverView = canGiverReceiverToggleView && giveReceiverViewingTileId === boardTile.id;
 
-              const isRevealed = isPubliclyRevealed || showReceiverPrivateView || showPlacerPrivateView || showGiverReceiverView;
+              // CORRECTION_REQUIRED: Show tile face-up for placer to see requirements
+              const showCorrectionView = isPlayedTile && gameState === 'CORRECTION_REQUIRED' && isPlacer;
+
+              const isRevealed = isPubliclyRevealed || showReceiverPrivateView || showPlacerPrivateView || showGiverReceiverView || showCorrectionView;
 
               // During tile play workflow, show white back unless it's being viewed by giver/receiver
               const shouldShowWhiteBack = isTilePlayedButNotYetAccepted && !showGiverReceiverView;
@@ -671,8 +674,12 @@ const CampaignScreen: React.FC<{
 
           <div className="w-full max-w-5xl mt-8 relative z-50">
             <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Player {currentPlayerId}'s Hand</h2>
-            <p className="text-center text-slate-400 mb-4">
-              {hasPlayedTileThisTurn ? "You have played a tile this turn." : "Drag a tile to another player's receiving area on the board."}
+            <p className={`text-center mb-4 ${gameState === 'CORRECTION_REQUIRED' ? 'text-yellow-400 font-semibold' : 'text-slate-400'}`}>
+              {gameState === 'CORRECTION_REQUIRED'
+                ? "Your tile was rejected. The tile requirements are shown above. Move your pieces to fulfill them, then click End Turn."
+                : hasPlayedTileThisTurn
+                ? "You have played a tile this turn."
+                : "Drag a tile to another player's receiving area on the board."}
             </p>
             <div className="flex flex-wrap justify-center gap-2 p-4 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
               {currentPlayer?.keptTiles.map(tile => (
@@ -753,7 +760,7 @@ const CampaignScreen: React.FC<{
                 </div>
 
                 {/* Check Move Button */}
-                {playedTile && gameState === 'TILE_PLAYED' && (
+                {playedTile && (gameState === 'TILE_PLAYED' || gameState === 'CORRECTION_REQUIRED') && (
                   <div className="bg-gray-700 rounded-lg p-4">
                     <button
                       onClick={() => onCheckMove?.()}
@@ -761,7 +768,7 @@ const CampaignScreen: React.FC<{
                     >
                       ✓ Check Move
                     </button>
-                    <p className="text-xs text-slate-400 mt-2">Validate if the moves satisfy the tile requirements.</p>
+                    <p className="text-xs text-slate-400 mt-2">{gameState === 'CORRECTION_REQUIRED' ? 'Validate if corrections satisfy the tile requirements.' : 'Validate if the moves satisfy the tile requirements.'}</p>
                   </div>
                 )}
               </div>
@@ -1375,15 +1382,7 @@ const App: React.FC = () => {
   const handleEndTurn = () => {
     // NEW WORKFLOW: Handle correction of rejected/challenged tile
     if (gameState === 'CORRECTION_REQUIRED' && playedTile) {
-      // Validate that tile player has now met the requirements
-      const tileRequirements = validateTileRequirements(playedTile.tileId, movesThisTurn);
-
-      if (!tileRequirements.isMet) {
-        alert(`Incomplete: Still missing ${tileRequirements.missingMoves.join(', ')} move(s)`);
-        return;
-      }
-
-      // Correction is complete - finalize the tile play
+      // Use handleCorrectionComplete which calculates moves from actual piece positions
       handleCorrectionComplete();
       return;
     }
@@ -1702,32 +1701,90 @@ const App: React.FC = () => {
   const handleCorrectionComplete = () => {
     if (!playedTile) return;
 
+    // Use the same calculation logic as Check Move button
+    const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+
     // Validate that tile player has now met the requirements
-    const tileRequirements = validateTileRequirements(playedTile.tileId, movesThisTurn);
+    const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+
+    console.log('=== handleCorrectionComplete DEBUG ===');
+    console.log('Tile ID:', playedTile.tileId);
+    console.log('Tile Player ID:', playedTile.playerId);
+    console.log('Number of original pieces:', playedTile.originalPieces.length);
+    console.log('Number of current pieces:', pieces.length);
+    console.log('Sample original piece:', playedTile.originalPieces[0]);
+    console.log('Sample current piece:', pieces[0]);
+    console.log('Calculated moves:', calculatedMoves);
+    console.log('Tile requirements:', tileRequirements);
+    console.log('======================================');
 
     if (!tileRequirements.isMet) {
       alert(`Incomplete: Still missing ${tileRequirements.missingMoves.join(', ')} move(s)`);
       return;
     }
 
-    // Update played tile with corrected moves
-    setPlayedTile(prev => prev ? { ...prev, movesPerformed: movesThisTurn } : null);
+    // Create updated tile with corrected moves
+    const updatedPlayedTile = { ...playedTile, movesPerformed: calculatedMoves };
 
-    // Move to receiving player for their turn
-    const receiverIndex = players.findIndex(p => p.id === playedTile.receivingPlayerId);
-    if (receiverIndex !== -1) {
-      setCurrentPlayerIndex(receiverIndex);
+    // Get bank spaces for the receiving player
+    const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+    const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === updatedPlayedTile.receivingPlayerId);
+
+    // Find the next available bank space (accounting for already banked tiles)
+    const usedBankIndices = new Set(
+      bankedTiles
+        .filter(bt => bt.ownerId === updatedPlayedTile.receivingPlayerId)
+        .map(bt => playerBankSpaces.findIndex(bs => bs.position.left === bt.position.left && bs.position.top === bt.position.top))
+    );
+
+    let nextBankIndex = 0;
+    for (let i = 0; i < playerBankSpaces.length; i++) {
+      if (!usedBankIndices.has(i)) {
+        nextBankIndex = i;
+        break;
+      }
     }
 
-    // Receiving player gets the tile
-    const tile = { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` };
+    // Create the banked tile (face-up because it was rejected)
+    if (nextBankIndex < playerBankSpaces.length) {
+      const bankSpace = playerBankSpaces[nextBankIndex];
+      const newBankedTile: BoardTile & { faceUp: boolean } = {
+        id: `bank_${updatedPlayedTile.receivingPlayerId}_${nextBankIndex}_${Date.now()}`,
+        tile: { id: parseInt(updatedPlayedTile.tileId), url: `https://montoyahome.com/kred/${updatedPlayedTile.tileId}.svg` },
+        position: bankSpace.position,
+        rotation: bankSpace.rotation,
+        placerId: updatedPlayedTile.playerId,
+        ownerId: updatedPlayedTile.receivingPlayerId,
+        faceUp: true, // Always face-up for rejected tiles
+      };
+
+      setBankedTiles(prev => [...prev, newBankedTile]);
+    }
+
+    // Remove from board tiles
+    setBoardTiles(prev =>
+      prev.filter(bt => !(
+        bt.tile.id.toString().padStart(2, '0') === updatedPlayedTile.tileId &&
+        bt.placerId === updatedPlayedTile.playerId &&
+        bt.ownerId === updatedPlayedTile.receivingPlayerId
+      ))
+    );
+
+    // Receiving player gets the tile in their bureaucracy
+    const tile = { id: parseInt(updatedPlayedTile.tileId), url: `https://montoyahome.com/kred/${updatedPlayedTile.tileId}.svg` };
     setPlayers(prev =>
       prev.map(p =>
-        p.id === playedTile.receivingPlayerId
+        p.id === updatedPlayedTile.receivingPlayerId
           ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
           : p
       )
     );
+
+    // Move to receiving player for their turn
+    const receiverIndex = players.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
+    if (receiverIndex !== -1) {
+      setCurrentPlayerIndex(receiverIndex);
+    }
 
     // Reset state
     setPlayedTile(null);
@@ -1741,22 +1798,29 @@ const App: React.FC = () => {
     setGiveReceiverViewingTileId(null);
   };
 
-  const handleCheckMove = () => {
-    if (!playedTile) return;
-
-    // Calculate actual moves by comparing current piece positions to initial positions
-    // Only count a move if:
-    // 1. Piece moved from initial position to a DIFFERENT location
-    // 2. Final location is: a seat, rostrum, office (not community)
-    // 3. OR: piece started in a seat and ended in community
+  /**
+   * Helper function to calculate moves by comparing current pieces to original pieces
+   */
+  const calculateMoves = (originalPieces: Piece[], currentPieces: Piece[], tilePlayerId: number): any[] => {
     const calculatedMoves: any[] = [];
 
-    for (const currentPiece of pieces) {
-      const initialPiece = playedTile.originalPieces.find(p => p.id === currentPiece.id);
-      if (!initialPiece) continue; // New piece (shouldn't happen in normal gameplay)
+    console.log('calculateMoves called with:', {
+      originalPiecesCount: originalPieces.length,
+      currentPiecesCount: currentPieces.length,
+      tilePlayerId
+    });
+
+    for (const currentPiece of currentPieces) {
+      const initialPiece = originalPieces.find(p => p.id === currentPiece.id);
+      if (!initialPiece) {
+        console.log('No initial piece found for:', currentPiece.id);
+        continue;
+      }
 
       const initialLocId = initialPiece.locationId;
       const finalLocId = currentPiece.locationId;
+
+      console.log(`Piece ${currentPiece.id}: ${initialLocId} → ${finalLocId}`);
 
       // Skip if piece didn't move
       if (initialLocId === finalLocId) continue;
@@ -1818,7 +1882,7 @@ const App: React.FC = () => {
 
       if (isCommunity(initialLocId) && isSeat(finalLocId)) {
         const ownerPlayer = getPlayerFromLocation(finalLocId);
-        moveType = ownerPlayer === playedTile.playerId ? 'ADVANCE' : 'ASSIST';
+        moveType = ownerPlayer === tilePlayerId ? 'ADVANCE' : 'ASSIST';
       } else if (isSeat(initialLocId) && isRostrum(finalLocId)) {
         moveType = 'ADVANCE';
       } else if (isRostrum(initialLocId) && isOffice(finalLocId)) {
@@ -1830,11 +1894,11 @@ const App: React.FC = () => {
       } else if (isSeat(initialLocId) && isCommunity(finalLocId)) {
         // Determine if this is REMOVE or WITHDRAW based on piece ownership
         const fromPlayer = getPlayerFromLocation(initialLocId);
-        if (fromPlayer === playedTile.playerId) {
+        if (fromPlayer === tilePlayerId) {
           moveType = 'WITHDRAW';
         } else {
           // Check if the piece is a Mark or Heel (REMOVE only for these pieces)
-          const movingPiece = pieces.find(p => p.id === currentPiece.id);
+          const movingPiece = currentPieces.find(p => p.id === currentPiece.id);
           if (movingPiece) {
             const pieceName = movingPiece.name.toLowerCase();
             moveType = (pieceName === 'mark' || pieceName === 'heel') ? 'REMOVE' : 'UNKNOWN';
@@ -1846,7 +1910,7 @@ const App: React.FC = () => {
         const fromPlayer = getPlayerFromLocation(initialLocId);
         // Check if seats are adjacent using the helper function from game.ts
         if (initialLocId && finalLocId && areSeatsAdjacent(initialLocId, finalLocId, playerCount)) {
-          if (fromPlayer === playedTile.playerId) {
+          if (fromPlayer === tilePlayerId) {
             moveType = 'ORGANIZE';
           } else {
             moveType = 'INFLUENCE';
@@ -1857,7 +1921,7 @@ const App: React.FC = () => {
         }
       } else if (isRostrum(initialLocId) && isRostrum(finalLocId)) {
         const fromPlayer = getPlayerFromLocation(initialLocId);
-        moveType = fromPlayer === playedTile.playerId ? 'ORGANIZE' : 'INFLUENCE';
+        moveType = fromPlayer === tilePlayerId ? 'ORGANIZE' : 'INFLUENCE';
       }
 
       // Determine category
@@ -1878,6 +1942,14 @@ const App: React.FC = () => {
         timestamp: Date.now(),
       });
     }
+
+    return calculatedMoves;
+  };
+
+  const handleCheckMove = () => {
+    if (!playedTile) return;
+
+    const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
 
     // Validate the calculated moves
     const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
