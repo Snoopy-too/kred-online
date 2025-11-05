@@ -17,6 +17,7 @@ import {
   TILE_SPACES_BY_PLAYER_COUNT,
   TileReceivingSpace,
   BANK_SPACES_BY_PLAYER_COUNT,
+  CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
   BankSpace,
   PLAYER_PERSPECTIVE_ROTATIONS,
   formatLocationId,
@@ -207,7 +208,9 @@ const CampaignScreen: React.FC<{
   } | null;
   onCloseMoveCheckResult?: () => void;
   onCheckMove?: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove }) => {
+  credibilityRotationAdjustments: { [playerId: number]: number };
+  setCredibilityRotationAdjustments: (adjustments: { [playerId: number]: number }) => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -631,6 +634,32 @@ const CampaignScreen: React.FC<{
               </div>
             ))}
 
+            {/* Credibility placeholders */}
+            {(() => {
+              const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+              return credibilityLocations.map((location) => {
+                const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
+                const finalRotation = (location.rotation || 0) + adjustment;
+                return (
+                  <div
+                    key={`credibility_${location.ownerId}`}
+                    className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
+                    style={{
+                      top: `${location.position.top}%`,
+                      left: `${location.position.left}%`,
+                      transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
+                    }}
+                  >
+                    <img
+                      src="/images/3_credibility.svg"
+                      alt={`Credibility for Player ${location.ownerId}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                );
+              });
+            })()}
+
             {pieces.map((piece) => {
               let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
@@ -771,6 +800,81 @@ const CampaignScreen: React.FC<{
                     <p className="text-xs text-slate-400 mt-2">{gameState === 'CORRECTION_REQUIRED' ? 'Validate if corrections satisfy the tile requirements.' : 'Validate if the moves satisfy the tile requirements.'}</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Credibility Rotation Adjuster (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8 bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-slate-200 mb-4">Credibility Rotation Adjuster</h3>
+                <div className="space-y-4">
+                  {Array.from({ length: playerCount }, (_, i) => i + 1).map((playerId) => {
+                    const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+                    const baseRotation = credibilityLocations.find(loc => loc.ownerId === playerId)?.rotation || 0;
+                    const adjustment = credibilityRotationAdjustments[playerId] || 0;
+                    const finalRotation = baseRotation + adjustment;
+
+                    return (
+                      <div key={`cred-adj-${playerId}`} className="bg-gray-800 rounded-lg p-3 border border-gray-600">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-slate-200 font-semibold">Player {playerId}</span>
+                          <span className="text-xs text-slate-400">
+                            Base: <span className="text-cyan-400">{baseRotation.toFixed(1)}°</span> |
+                            Adjustment: <span className="text-yellow-400">{adjustment > 0 ? '+' : ''}{adjustment}°</span> |
+                            Final: <span className="text-green-400">{finalRotation.toFixed(1)}°</span>
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) - 15
+                            }))}
+                            className="px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
+                          >
+                            -15°
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) - 1
+                            }))}
+                            className="px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-500 transition-colors"
+                          >
+                            -1°
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: 0
+                            }))}
+                            className="px-2 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-500 transition-colors"
+                          >
+                            Reset
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) + 1
+                            }))}
+                            className="px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-500 transition-colors"
+                          >
+                            +1°
+                          </button>
+                          <button
+                            onClick={() => setCredibilityRotationAdjustments(prev => ({
+                              ...prev,
+                              [playerId]: (prev[playerId] || 0) + 15
+                            }))}
+                            className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-500 transition-colors"
+                          >
+                            +15°
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -1102,6 +1206,7 @@ const App: React.FC = () => {
   const [isTestMode, setIsTestMode] = useState(false);
   const [dummyTile, setDummyTile] = useState<{ position: { top: number; left: number }; rotation: number } | null>(null);
   const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
+  const [credibilityRotationAdjustments, setCredibilityRotationAdjustments] = useState<{ [playerId: number]: number }>({});
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
   const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
   const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
@@ -2267,6 +2372,8 @@ const App: React.FC = () => {
             moveCheckResult={moveCheckResult}
             onCloseMoveCheckResult={() => setShowMoveCheckResult(false)}
             onCheckMove={handleCheckMove}
+            credibilityRotationAdjustments={credibilityRotationAdjustments}
+            setCredibilityRotationAdjustments={setCredibilityRotationAdjustments}
           />
         );
       case 'PLAYER_SELECTION':
