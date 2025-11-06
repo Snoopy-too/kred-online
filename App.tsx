@@ -222,7 +222,12 @@ const CampaignScreen: React.FC<{
   setIsPieceTrackerExpanded: (expanded: boolean) => void;
   boardTiltAngle: number;
   setBoardTiltAngle: (angle: number) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, boardTiltAngle, setBoardTiltAngle }) => {
+  showPerfectTileModal: boolean;
+  setShowPerfectTileModal: (show: boolean) => void;
+  showBonusMoveModal: boolean;
+  bonusMovePlayerId: number | null;
+  onBonusMoveComplete: () => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, boardTiltAngle, setBoardTiltAngle, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -824,6 +829,32 @@ const CampaignScreen: React.FC<{
               )}
             </div>
 
+            {/* Bonus Move Notification */}
+            {showBonusMoveModal && bonusMovePlayerId !== null && (
+              <div className="mt-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 shadow-2xl border-2 border-green-400 animate-pulse">
+                <h2 className="text-3xl font-extrabold text-white mb-3 text-center">🎉 BONUS MOVE!</h2>
+                <p className="text-green-100 mb-3 text-center font-semibold">
+                  Player {bonusMovePlayerId}, you already had 3 Credibility!
+                </p>
+                <div className="bg-green-800/50 rounded-lg p-4 mb-4">
+                  <p className="text-green-100 text-sm mb-2">
+                    You correctly rejected an imperfect tile. Take a bonus <span className="text-yellow-300 font-bold">ADVANCE</span> move:
+                  </p>
+                  <ul className="text-green-200 text-xs space-y-1 list-disc list-inside">
+                    <li>From Community to Seat</li>
+                    <li>From Seat to Rostrum</li>
+                    <li>From Rostrum to Office</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={onBonusMoveComplete}
+                  className="w-full px-6 py-3 bg-white text-green-700 font-bold text-lg rounded-lg hover:bg-green-50 transition-colors shadow-lg hover:shadow-xl"
+                >
+                  ✓ Continue Game
+                </button>
+              </div>
+            )}
+
             {/* Test Mode Controls */}
             {isTestMode && (
               <div className="mt-8 space-y-4">
@@ -1014,6 +1045,13 @@ const CampaignScreen: React.FC<{
                       <li>Perfect plays cannot be rejected - receiver must accept</li>
                     </ul>
                   </div>
+                  <div className="bg-gray-800 rounded p-2 border-l-4 border-green-500">
+                    <p className="font-semibold text-green-400 mb-1">Gain Credibility:</p>
+                    <ul className="list-disc list-inside space-y-1 text-slate-400">
+                      <li>If you reject a tile that was not played perfectly, gain up to 2 credibility points (max 3 total)</li>
+                      <li>If you already have 3 credibility when rejecting, the game pauses and you may take an "Advance" move, then click Continue to resume</li>
+                    </ul>
+                  </div>
                   <div className="bg-gray-800 rounded p-2 border-l-4 border-yellow-500">
                     <p className="font-semibold text-yellow-400 mb-1">When Credibility = 0:</p>
                     <ul className="list-disc list-inside space-y-1 text-slate-400">
@@ -1136,8 +1174,9 @@ const CampaignScreen: React.FC<{
         </div>
       )}
 
+
       {/* Receiver Decision Modal (when not privately viewing) */}
-      {isMyTurnForDecision && gameState === 'PENDING_ACCEPTANCE' && !isPrivatelyViewing && (
+      {isMyTurnForDecision && gameState === 'PENDING_ACCEPTANCE' && !isPrivatelyViewing && !showBonusMoveModal && receiverAcceptance === null && (
         <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 p-4">
           <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full pointer-events-auto">
             <h2 className="text-3xl font-bold text-cyan-300 mb-2">Your Decision</h2>
@@ -1419,7 +1458,7 @@ const App: React.FC = () => {
   const [isPieceTrackerExpanded, setIsPieceTrackerExpanded] = useState(false);
 
   // State for board tilt angle
-  const [boardTiltAngle, setBoardTiltAngle] = useState(-15);
+  const [boardTiltAngle, setBoardTiltAngle] = useState(0);
 
   // State for new tile play workflow
   const [playedTile, setPlayedTile] = useState<{
@@ -1435,6 +1474,8 @@ const App: React.FC = () => {
   const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
   const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
   const [tileRejected, setTileRejected] = useState(false);
+  const [showBonusMoveModal, setShowBonusMoveModal] = useState(false);
+  const [bonusMovePlayerId, setBonusMovePlayerId] = useState<number | null>(null);
   const [showMoveCheckResult, setShowMoveCheckResult] = useState(false);
   const [moveCheckResult, setMoveCheckResult] = useState<{
     isMet: boolean;
@@ -1678,6 +1719,54 @@ const App: React.FC = () => {
     addGameLog(`${playerName} lost 1 credibility: ${reason}`);
   };
 
+  const handleCredibilityGain = (playerId: number, amount: number): { newPlayers: Player[]; hadMaxCredibility: boolean } => {
+    const player = players.find(p => p.id === playerId);
+    if (!player) return { newPlayers: players, hadMaxCredibility: false };
+
+    const currentCredibility = player.credibility ?? 3;
+    const hadMaxCredibility = currentCredibility >= 3;
+
+    if (hadMaxCredibility) {
+      // Player already has max credibility, don't add more
+      return { newPlayers: players, hadMaxCredibility: true };
+    }
+
+    const newCredibility = Math.min(3, currentCredibility + amount);
+    const actualGain = newCredibility - currentCredibility;
+
+    const newPlayers = players.map(p =>
+      p.id === playerId ? { ...p, credibility: newCredibility } : p
+    );
+
+    if (actualGain > 0) {
+      const playerName = player.name || `Player ${playerId}`;
+      addGameLog(`${playerName} gained ${actualGain} credibility: Correctly rejected imperfect tile`);
+    }
+
+    return { newPlayers, hadMaxCredibility: false };
+  };
+
+  const handleBonusMoveComplete = () => {
+    if (!playedTile) return;
+
+    // Log the bonus move
+    const player = players.find(p => p.id === bonusMovePlayerId);
+    const playerName = player?.name || `Player ${bonusMovePlayerId}`;
+    addGameLog(`${playerName} took a bonus Advance move (already had 3 credibility)`);
+
+    // Close the modal
+    setShowBonusMoveModal(false);
+    setBonusMovePlayerId(null);
+
+    // Now switch back to tile player for correction
+    const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+    if (playerIndex !== -1) {
+      setCurrentPlayerIndex(playerIndex);
+      setGameState('CORRECTION_REQUIRED');
+      setMovesThisTurn([]);
+    }
+  };
+
   const advanceTurnNormally = (startingPlayerId?: number) => {
     if (playerCount === 0) {
       console.error("Cannot advance turn: playerCount is 0.");
@@ -1891,12 +1980,25 @@ const App: React.FC = () => {
       setPlayers(prev => handleCredibilityLoss('tile_rejected_by_receiver', playedTile.playerId)(prev));
       addCredibilityLossLog(playedTile.playerId, "Tile was rejected by Player " + playedTile.receivingPlayerId);
 
-      // Switch back to tile player for correction
-      const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
-      if (playerIndex !== -1) {
-        setCurrentPlayerIndex(playerIndex);
-        setGameState('CORRECTION_REQUIRED');
-        setMovesThisTurn([]);
+      // Receiver gains up to 2 credibility for correctly rejecting
+      const credibilityResult = handleCredibilityGain(playedTile.receivingPlayerId, 2);
+
+      if (credibilityResult.hadMaxCredibility) {
+        // Player had 3 credibility, show bonus move modal
+        setBonusMovePlayerId(playedTile.receivingPlayerId);
+        setShowBonusMoveModal(true);
+        // Don't switch to tile player yet - wait for bonus move to complete
+      } else {
+        // Update players with credibility gain
+        setPlayers(credibilityResult.newPlayers);
+
+        // Switch back to tile player for correction
+        const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+        if (playerIndex !== -1) {
+          setCurrentPlayerIndex(playerIndex);
+          setGameState('CORRECTION_REQUIRED');
+          setMovesThisTurn([]);
+        }
       }
     } else {
       // ACCEPTANCE: Move to challenge phase
@@ -2592,6 +2694,11 @@ const App: React.FC = () => {
             setIsPieceTrackerExpanded={setIsPieceTrackerExpanded}
             boardTiltAngle={boardTiltAngle}
             setBoardTiltAngle={setBoardTiltAngle}
+            showPerfectTileModal={showPerfectTileModal}
+            setShowPerfectTileModal={setShowPerfectTileModal}
+            showBonusMoveModal={showBonusMoveModal}
+            bonusMovePlayerId={bonusMovePlayerId}
+            onBonusMoveComplete={handleBonusMoveComplete}
           />
         );
       case 'PLAYER_SELECTION':
