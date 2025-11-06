@@ -714,7 +714,16 @@ const CampaignScreen: React.FC<{
           </div>
 
           <div className="w-full max-w-5xl mt-8 relative z-50">
-            <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Player {currentPlayerId}'s Hand</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-slate-200">Player {currentPlayerId}'s Hand</h2>
+              <button
+                onClick={onEndTurn}
+                disabled={(gameState !== 'CAMPAIGN' && gameState !== 'TILE_PLAYED' && gameState !== 'CORRECTION_REQUIRED') || (gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn)}
+                className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                End Turn
+              </button>
+            </div>
             <p className={`text-center mb-4 ${gameState === 'CORRECTION_REQUIRED' ? 'text-yellow-400 font-semibold' : 'text-slate-400'}`}>
               {gameState === 'CORRECTION_REQUIRED'
                 ? "Your tile was rejected. The tile requirements are shown above. Move your pieces to fulfill them, then click End Turn."
@@ -766,6 +775,11 @@ const CampaignScreen: React.FC<{
         {/* Right Column: Supply & Log */}
         <div className="w-full lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
           <div className="lg:sticky lg:top-8 flex flex-col gap-8">
+            {/* New Game Button */}
+            <button onClick={onNewGame} className="w-full px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-md">
+              New Game
+            </button>
+
             {/* Game Log */}
             <div>
               <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Game Log</h2>
@@ -912,6 +926,13 @@ const CampaignScreen: React.FC<{
                       <li>Perfect plays cannot be rejected - receiver must accept</li>
                     </ul>
                   </div>
+                  <div className="bg-gray-800 rounded p-2 border-l-4 border-yellow-500">
+                    <p className="font-semibold text-yellow-400 mb-1">When Credibility = 0:</p>
+                    <ul className="list-disc list-inside space-y-1 text-slate-400">
+                      <li>You do not get the option to challenge any moves</li>
+                      <li>You are UNABLE to view tiles played to you</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             )}
@@ -1001,18 +1022,6 @@ const CampaignScreen: React.FC<{
         </div>
       </div>
 
-      <div className="flex items-center space-x-4 mt-8">
-        <button
-          onClick={onEndTurn}
-          disabled={(gameState !== 'CAMPAIGN' && gameState !== 'TILE_PLAYED' && gameState !== 'CORRECTION_REQUIRED') || (gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn)}
-          className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
-        >
-          End Turn
-        </button>
-        <button onClick={onNewGame} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-md">
-          New Game
-        </button>
-      </div>
 
       {/* --- Overlays --- */}
       {showChallengeRevealModal && challengedTile && (
@@ -1552,6 +1561,16 @@ const App: React.FC = () => {
       return logs;
   };
 
+  const addGameLog = (message: string) => {
+    setGameLog(prev => [...prev, message]);
+  };
+
+  const addCredibilityLossLog = (playerId: number, reason: string) => {
+    const player = players.find(p => p.id === playerId);
+    const playerName = player?.name || `Player ${playerId}`;
+    addGameLog(`${playerName} lost 1 credibility: ${reason}`);
+  };
+
   const advanceTurnNormally = (startingPlayerId?: number) => {
     if (playerCount === 0) {
       console.error("Cannot advance turn: playerCount is 0.");
@@ -1763,6 +1782,7 @@ const App: React.FC = () => {
 
       // Tile player loses 1 credibility when tile is rejected by receiver
       setPlayers(prev => handleCredibilityLoss('tile_rejected_by_receiver', playedTile.playerId)(prev));
+      addCredibilityLossLog(playedTile.playerId, "Tile was rejected by Player " + playedTile.receivingPlayerId);
 
       // Switch back to tile player for correction
       const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
@@ -1852,6 +1872,7 @@ const App: React.FC = () => {
 
         // Challenger loses 1 credibility for unsuccessful challenge
         setPlayers(prev => handleCredibilityLoss('unsuccessful_challenge', playedTile.playerId, challengerId)(prev));
+        addCredibilityLossLog(challengerId, "Unsuccessful challenge - tile was played perfectly");
 
         // Schedule auto-dismiss after 5 seconds and advance to next challenger or finalize
         setTimeout(() => {
@@ -1877,6 +1898,13 @@ const App: React.FC = () => {
 
         // Tile player loses 1 credibility when challenge succeeds
         setPlayers(prev => handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(prev));
+        addCredibilityLossLog(playedTile.playerId, "Challenge succeeded - tile did not meet requirements");
+
+        // Receiver also loses 1 credibility if they accepted a tile that was successfully challenged
+        if (receiverAcceptance === true) {
+          setPlayers(prev => handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(prev));
+          addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
+        }
 
         // Schedule auto-dismiss after 5 seconds and proceed with correction flow
         setTimeout(() => {
@@ -1921,6 +1949,13 @@ const App: React.FC = () => {
    */
   const finalizeTilePlay = (wasChallenged: boolean, challengerId: number | null) => {
     if (!playedTile) return;
+
+    // Log the move that stands
+    const receiverName = players.find(p => p.id === playedTile.receivingPlayerId)?.name || `Player ${playedTile.receivingPlayerId}`;
+    const placerName = players.find(p => p.id === playedTile.playerId)?.name || `Player ${playedTile.playerId}`;
+    if (!tileRejected) {
+      addGameLog(`Move stands: ${placerName}'s tile accepted by ${receiverName}` + (wasChallenged ? " (no successful challenges)" : ""));
+    }
 
     // Determine if tile was rejected (face up) or accepted (face down)
     const tileWasRejected = tileRejected;
