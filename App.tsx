@@ -220,7 +220,9 @@ const CampaignScreen: React.FC<{
   setIsCredibilityRulesExpanded: (expanded: boolean) => void;
   isPieceTrackerExpanded: boolean;
   setIsPieceTrackerExpanded: (expanded: boolean) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded }) => {
+  boardTiltAngle: number;
+  setBoardTiltAngle: (angle: number) => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, boardTiltAngle, setBoardTiltAngle }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -459,7 +461,13 @@ const CampaignScreen: React.FC<{
       <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
         
         {/* Main Content (Board, Hand, etc.) */}
-        <div className="flex-1 flex flex-col items-center min-w-0">
+        <div
+          className="flex-1 flex flex-col items-center min-w-0"
+          style={{
+            perspective: '1200px',
+            perspectiveOrigin: '50% 100%'
+          }}
+        >
           <div className="w-full max-w-5xl text-center mb-4 relative z-50">
             <div className="inline-block bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-cyan-300 tracking-wide">
@@ -474,7 +482,11 @@ const CampaignScreen: React.FC<{
             onClick={(e) => { if (e.target === e.currentTarget) { onRevealTile(null); }}}
             onMouseMove={handleMouseMoveOnBoard}
             onMouseLeave={handleMouseLeaveBoard}
-            style={{ transform: `rotate(${boardRotation}deg)` }}
+            style={{
+              transform: `rotate(${boardRotation}deg)${boardRotationEnabled || !isTestMode ? ` rotateX(${boardTiltAngle}deg)` : ''}`,
+              transformStyle: 'preserve-3d',
+              transformOrigin: 'center center'
+            }}
           >
             <img
               src={BOARD_IMAGE_URLS[playerCount]}
@@ -828,6 +840,51 @@ const CampaignScreen: React.FC<{
                     <span className="text-xs text-slate-400 ml-auto">{boardRotationEnabled ? '(ON)' : '(OFF)'}</span>
                   </label>
                   <p className="text-xs text-slate-400 mt-2">When ON, the board rotates to show each player's perspective. When OFF, the board stays fixed.</p>
+                </div>
+
+                {/* Board Tilt Controller */}
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h3 className="text-slate-200 font-semibold mb-3">Board Tilt Angle</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-400">Current Tilt:</span>
+                      <span className="text-cyan-400 font-mono">{boardTiltAngle}°</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-45"
+                      max="0"
+                      step="1"
+                      value={boardTiltAngle}
+                      onChange={(e) => setBoardTiltAngle(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>-45° (Max)</span>
+                      <span>0° (Flat)</span>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => setBoardTiltAngle(-45)}
+                        className="px-3 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-500 transition-colors"
+                      >
+                        Max Tilt
+                      </button>
+                      <button
+                        onClick={() => setBoardTiltAngle(-15)}
+                        className="px-3 py-1 bg-cyan-600 text-white text-xs font-semibold rounded hover:bg-cyan-500 transition-colors"
+                      >
+                        Default
+                      </button>
+                      <button
+                        onClick={() => setBoardTiltAngle(0)}
+                        className="px-3 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-500 transition-colors"
+                      >
+                        Flat
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-3">Adjust the 3D perspective tilt of the game board. More negative = steeper tilt toward you.</p>
                 </div>
 
                 {/* Check Move Button */}
@@ -1360,6 +1417,9 @@ const App: React.FC = () => {
   const [isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded] = useState(false);
   const [isCredibilityRulesExpanded, setIsCredibilityRulesExpanded] = useState(false);
   const [isPieceTrackerExpanded, setIsPieceTrackerExpanded] = useState(false);
+
+  // State for board tilt angle
+  const [boardTiltAngle, setBoardTiltAngle] = useState(-15);
 
   // State for new tile play workflow
   const [playedTile, setPlayedTile] = useState<{
@@ -2530,6 +2590,8 @@ const App: React.FC = () => {
             setIsCredibilityRulesExpanded={setIsCredibilityRulesExpanded}
             isPieceTrackerExpanded={isPieceTrackerExpanded}
             setIsPieceTrackerExpanded={setIsPieceTrackerExpanded}
+            boardTiltAngle={boardTiltAngle}
+            setBoardTiltAngle={setBoardTiltAngle}
           />
         );
       case 'PLAYER_SELECTION':
