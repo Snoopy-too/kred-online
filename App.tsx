@@ -1845,6 +1845,9 @@ const App: React.FC = () => {
     setChallengedTile(null);
     setPlacerViewingTileId(null);
 
+    // Set piece state snapshot for the start of this new turn
+    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+
     // Clear piece movement tracking for new turn
     setMovedPiecesThisTurn(new Set());
     // Clear pending community pieces (acceptance/challenge phase is complete)
@@ -2297,6 +2300,14 @@ const App: React.FC = () => {
     setGameState('CAMPAIGN');
     setHasPlayedTileThisTurn(false);
     setGiveReceiverViewingTileId(null);
+
+    // Set piece state snapshot for the start of this new turn
+    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+
+    // Clear piece movement tracking for new turn
+    setMovedPiecesThisTurn(new Set());
+    // Clear pending community pieces
+    setPendingCommunityPieces(new Set());
   };
 
   /**
