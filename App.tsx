@@ -1700,6 +1700,29 @@ const App: React.FC = () => {
     // Restore pieces to turn start state
     setPieces(piecesAtTurnStart.map(p => ({ ...p })));
 
+    // If a tile was played, return it to player's hand and remove from board
+    if (playedTile) {
+      const tileId = parseInt(playedTile.tileId);
+      const tile = { id: tileId, url: `./images/${playedTile.tileId}.svg` };
+
+      // Add tile back to player's hand
+      setPlayers(prev => prev.map(p =>
+        p.id === playedTile.playerId
+          ? { ...p, keptTiles: [...p.keptTiles, tile] }
+          : p
+      ));
+
+      // Remove tile from board
+      setBoardTiles(prev => prev.filter(bt =>
+        !(bt.placerId === playedTile.playerId && bt.ownerId === playedTile.receivingPlayerId)
+      ));
+
+      // Clear the played tile state
+      setPlayedTile(null);
+      setGameState('CAMPAIGN');
+      setHasPlayedTileThisTurn(false);
+    }
+
     // Clear tracking sets
     setMovedPiecesThisTurn(new Set());
     setPendingCommunityPieces(new Set());
