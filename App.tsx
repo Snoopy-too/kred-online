@@ -228,7 +228,8 @@ const CampaignScreen: React.FC<{
   onBonusMoveComplete: () => void;
   movedPiecesThisTurn: Set<string>;
   onResetTurn: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn }) => {
+  onResetBonusMove: () => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetBonusMove }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -755,7 +756,7 @@ const CampaignScreen: React.FC<{
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-slate-200">Player {currentPlayerId}'s Hand</h2>
               <div className="flex gap-2">
-                {(gameState === 'TILE_PLAYED' || movedPiecesThisTurn.size > 0) && gameState !== 'CORRECTION_REQUIRED' && (
+                {(gameState === 'TILE_PLAYED' || movedPiecesThisTurn.size > 0) && gameState !== 'CORRECTION_REQUIRED' && !showBonusMoveModal && (
                   <button
                     onClick={onResetTurn}
                     className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
@@ -869,12 +870,20 @@ const CampaignScreen: React.FC<{
                     <li>From Rostrum to Office</li>
                   </ul>
                 </div>
-                <button
-                  onClick={onBonusMoveComplete}
-                  className="w-full px-6 py-3 bg-white text-green-700 font-bold text-lg rounded-lg hover:bg-green-50 transition-colors shadow-lg hover:shadow-xl"
-                >
-                  ✓ Continue Game
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={onResetBonusMove}
+                    className="w-full px-6 py-2 bg-amber-600 text-white font-semibold text-base rounded-lg hover:bg-amber-500 transition-colors shadow-md"
+                  >
+                    Reset Piece
+                  </button>
+                  <button
+                    onClick={onBonusMoveComplete}
+                    className="w-full px-6 py-3 bg-white text-green-700 font-bold text-lg rounded-lg hover:bg-green-50 transition-colors shadow-lg hover:shadow-xl"
+                  >
+                    ✓ Continue Game
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1480,6 +1489,7 @@ const App: React.FC = () => {
   const [tileRejected, setTileRejected] = useState(false);
   const [showBonusMoveModal, setShowBonusMoveModal] = useState(false);
   const [bonusMovePlayerId, setBonusMovePlayerId] = useState<number | null>(null);
+  const [piecesBeforeBonusMove, setPiecesBeforeBonusMove] = useState<Piece[]>([]);
   const [showMoveCheckResult, setShowMoveCheckResult] = useState(false);
   const [moveCheckResult, setMoveCheckResult] = useState<{
     isMet: boolean;
@@ -1722,6 +1732,19 @@ const App: React.FC = () => {
       setGameState('CAMPAIGN');
       setHasPlayedTileThisTurn(false);
     }
+
+    // Clear tracking sets
+    setMovedPiecesThisTurn(new Set());
+    setPendingCommunityPieces(new Set());
+
+    // Clear any last dropped state
+    setLastDroppedPosition(null);
+    setLastDroppedPieceId(null);
+  };
+
+  const handleResetBonusMove = () => {
+    // Reset pieces to state before bonus move started
+    setPieces(piecesBeforeBonusMove.map(p => ({ ...p })));
 
     // Clear tracking sets
     setMovedPiecesThisTurn(new Set());
@@ -2050,6 +2073,10 @@ const App: React.FC = () => {
       // Keep the board tile visible in the receiving space (don't restore full board state)
       // The BoardTile will remain showing the white back
 
+      // Clear piece movement tracking - fresh start for correction
+      setMovedPiecesThisTurn(new Set());
+      setPendingCommunityPieces(new Set());
+
       // Add tile to receiving player's bureaucracy tiles for tracking
       const receivingPlayer = players.find(p => p.id === playedTile.receivingPlayerId);
       if (receivingPlayer) {
@@ -2073,6 +2100,11 @@ const App: React.FC = () => {
         // Player had 3 credibility, show bonus move modal
         setBonusMovePlayerId(playedTile.receivingPlayerId);
         setShowBonusMoveModal(true);
+
+        // Capture the reverted piece state for bonus move reset
+        // Use playedTile.originalPieces because setPieces is async and pieces hasn't updated yet
+        setPiecesBeforeBonusMove(playedTile.originalPieces.map(p => ({ ...p })));
+
         // Don't switch to tile player yet - wait for bonus move to complete
       } else {
         // Update players with credibility gain
@@ -2201,6 +2233,10 @@ const App: React.FC = () => {
           setTileRejected(true);
           // Restore original pieces (remove any moves made)
           setPieces(playedTile.originalPieces.map(p => ({ ...p })));
+
+          // Clear piece movement tracking - fresh start for correction
+          setMovedPiecesThisTurn(new Set());
+          setPendingCommunityPieces(new Set());
         }
 
         // Schedule auto-dismiss of challenge message after 5 seconds
@@ -2801,6 +2837,7 @@ const App: React.FC = () => {
             onBonusMoveComplete={handleBonusMoveComplete}
             movedPiecesThisTurn={movedPiecesThisTurn}
             onResetTurn={handleResetTurn}
+            onResetBonusMove={handleResetBonusMove}
           />
         );
       case 'PLAYER_SELECTION':
