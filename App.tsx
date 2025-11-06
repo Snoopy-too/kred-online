@@ -1936,11 +1936,21 @@ const App: React.FC = () => {
   const finalizeTilePlay = (wasChallenged: boolean, challengerId: number | null) => {
     if (!playedTile) return;
 
-    // Log the move that stands
-    const receiverName = players.find(p => p.id === playedTile.receivingPlayerId)?.name || `Player ${playedTile.receivingPlayerId}`;
-    const placerName = players.find(p => p.id === playedTile.playerId)?.name || `Player ${playedTile.playerId}`;
-    if (!tileRejected) {
-      addGameLog(`Move stands: ${placerName}'s tile accepted by ${receiverName}` + (wasChallenged ? " (no successful challenges)" : ""));
+    // Log the standing moves (the actual piece movements that were validated)
+    if (!tileRejected && playedTile.originalPieces) {
+      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+
+      // Log each standing move
+      for (const move of calculatedMoves) {
+        const fromLoc = move.fromLocationId ? formatLocationId(move.fromLocationId) : 'supply';
+        const toLoc = move.toLocationId ? formatLocationId(move.toLocationId) : 'supply';
+
+        // Get the piece name from the current pieces
+        const movedPiece = pieces.find(p => p.id === move.pieceId);
+        const pieceName = movedPiece?.name || 'piece';
+
+        addGameLog(`Standing Move: Player ${playedTile.playerId} moves ${pieceName} from ${fromLoc} to ${toLoc}`);
+      }
     }
 
     // Determine if tile was rejected (face up) or accepted (face down)
