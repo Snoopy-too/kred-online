@@ -755,7 +755,7 @@ const CampaignScreen: React.FC<{
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-slate-200">Player {currentPlayerId}'s Hand</h2>
               <div className="flex gap-2">
-                {(gameState === 'TILE_PLAYED' || movedPiecesThisTurn.size > 0) && (
+                {(gameState === 'TILE_PLAYED' || movedPiecesThisTurn.size > 0) && gameState !== 'CORRECTION_REQUIRED' && (
                   <button
                     onClick={onResetTurn}
                     className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
@@ -2434,6 +2434,14 @@ const App: React.FC = () => {
     setGameState('CAMPAIGN');
     setHasPlayedTileThisTurn(false);
     setGiveReceiverViewingTileId(null);
+
+    // Set piece state snapshot for the start of this new turn
+    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+
+    // Clear piece movement tracking for new turn
+    setMovedPiecesThisTurn(new Set());
+    // Clear pending community pieces
+    setPendingCommunityPieces(new Set());
   };
 
   /**
