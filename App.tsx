@@ -226,7 +226,9 @@ const CampaignScreen: React.FC<{
   showBonusMoveModal: boolean;
   bonusMovePlayerId: number | null;
   onBonusMoveComplete: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, boardTiltAngle, setBoardTiltAngle, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete }) => {
+  movedPiecesThisTurn: Set<string>;
+  onResetTurn: () => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -719,8 +721,11 @@ const CampaignScreen: React.FC<{
               const isInCommunity = isPositionInCommunityCircle(piece.position);
               const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
+              // Check if this piece has been moved this turn
+              const hasMoved = movedPiecesThisTurn.has(piece.id);
+
               return (
-                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`, cursor: 'grab' }} aria-hidden="true" />
+                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved ? 'ring-4 ring-amber-400 ring-opacity-70 rounded-full' : ''}`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`, cursor: 'grab', filter: hasMoved ? 'brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))' : undefined }} aria-hidden="true" />
               );
             })}
 
@@ -749,13 +754,23 @@ const CampaignScreen: React.FC<{
           <div className="w-full max-w-5xl mt-8 relative z-50">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-slate-200">Player {currentPlayerId}'s Hand</h2>
-              <button
-                onClick={onEndTurn}
-                disabled={(gameState !== 'CAMPAIGN' && gameState !== 'TILE_PLAYED' && gameState !== 'CORRECTION_REQUIRED') || (gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn)}
-                className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                End Turn
-              </button>
+              <div className="flex gap-2">
+                {gameState === 'TILE_PLAYED' && (
+                  <button
+                    onClick={onResetTurn}
+                    className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
+                  >
+                    Reset Turn
+                  </button>
+                )}
+                <button
+                  onClick={onEndTurn}
+                  disabled={(gameState !== 'CAMPAIGN' && gameState !== 'TILE_PLAYED' && gameState !== 'CORRECTION_REQUIRED') || (gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn)}
+                  className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  End Turn
+                </button>
+              </div>
             </div>
             <p className={`text-center mb-4 ${gameState === 'CORRECTION_REQUIRED' ? 'text-yellow-400 font-semibold' : 'text-slate-400'}`}>
               {gameState === 'CORRECTION_REQUIRED'
@@ -1508,6 +1523,12 @@ const App: React.FC = () => {
     });
   };
 
+  // State for tracking moved pieces this turn (one move per piece restriction)
+  const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(new Set());
+
+  // State for tracking pieces moved to community that are "pending" until acceptance/challenge resolved
+  const [pendingCommunityPieces, setPendingCommunityPieces] = useState<Set<string>>(new Set());
+
   const closeAlert = () => {
     setAlertModal(prev => ({ ...prev, isOpen: false }));
   };
@@ -1519,6 +1540,8 @@ const App: React.FC = () => {
     setCurrentPlayerIndex(0);
     setDraftRound(1);
     setIsTestMode(testMode);
+    setMovedPiecesThisTurn(new Set());
+    setPendingCommunityPieces(new Set());
   };
 
   const handleNewGame = () => {
@@ -1543,6 +1566,8 @@ const App: React.FC = () => {
     // Reset new tile play workflow states
     setPlayedTile(null);
     setMovesThisTurn([]);
+    setMovedPiecesThisTurn(new Set());
+    setPendingCommunityPieces(new Set());
     setReceiverAcceptance(null);
     setChallengeOrder([]);
     setCurrentChallengerIndex(0);
@@ -1599,6 +1624,16 @@ const App: React.FC = () => {
   };
   
   const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
+    // Check if this piece has already been moved this turn
+    if (movedPiecesThisTurn.has(pieceId)) {
+      showAlert(
+        'Piece Already Moved',
+        'Pieces may only be moved once per turn! If you want to move this piece somewhere else, click the Reset Turn button.',
+        'warning'
+      );
+      return;
+    }
+
     // Check community movement restrictions before allowing the move
     const movingPiece = pieces.find(p => p.id === pieceId);
     if (movingPiece && movingPiece.locationId?.includes('community') && locationId && !locationId.includes('community')) {
@@ -1607,9 +1642,11 @@ const App: React.FC = () => {
 
       // Marks can always move from community
       if (pieceName !== 'mark') {
-        // Check if Marks are in community
+        // Check if Marks are in community (excluding pending pieces)
         const marksInCommunity = pieces.some(p =>
-          p.locationId?.includes('community') && p.name.toLowerCase() === 'mark'
+          p.locationId?.includes('community') &&
+          p.name.toLowerCase() === 'mark' &&
+          !pendingCommunityPieces.has(p.id)
         );
 
         // If Marks in community, Heels and Pawns cannot move
@@ -1622,10 +1659,12 @@ const App: React.FC = () => {
           return;
         }
 
-        // If moving a Pawn, check if Heels are in community
+        // If moving a Pawn, check if Heels are in community (excluding pending pieces)
         if (pieceName === 'pawn') {
           const heelsInCommunity = pieces.some(p =>
-            p.locationId?.includes('community') && p.name.toLowerCase() === 'heel'
+            p.locationId?.includes('community') &&
+            p.name.toLowerCase() === 'heel' &&
+            !pendingCommunityPieces.has(p.id)
           );
           // Pawns cannot move if Heels in community
           if (heelsInCommunity) {
@@ -1647,6 +1686,27 @@ const App: React.FC = () => {
     // Simply update the piece position and location
     // Move validation will be calculated when Check Move is clicked
     setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p));
+
+    // Track that this piece has been moved this turn
+    setMovedPiecesThisTurn(prev => new Set(prev).add(pieceId));
+
+    // If piece is moved to community, mark it as "pending" until acceptance/challenge resolved
+    if (locationId && locationId.includes('community')) {
+      setPendingCommunityPieces(prev => new Set(prev).add(pieceId));
+    }
+  };
+
+  const handleResetTurn = () => {
+    // Restore pieces to turn start state
+    setPieces(piecesAtTurnStart.map(p => ({ ...p })));
+
+    // Clear tracking sets
+    setMovedPiecesThisTurn(new Set());
+    setPendingCommunityPieces(new Set());
+
+    // Clear any last dropped state
+    setLastDroppedPosition(null);
+    setLastDroppedPieceId(null);
   };
 
   const handleBoardTileMove = (boardTileId: string, newPosition: { top: number; left: number }) => {
@@ -1784,6 +1844,11 @@ const App: React.FC = () => {
     setIsPrivatelyViewing(false);
     setChallengedTile(null);
     setPlacerViewingTileId(null);
+
+    // Clear piece movement tracking for new turn
+    setMovedPiecesThisTurn(new Set());
+    // Clear pending community pieces (acceptance/challenge phase is complete)
+    setPendingCommunityPieces(new Set());
   };
 
   const handleEndTurn = () => {
@@ -1901,6 +1966,13 @@ const App: React.FC = () => {
     setGameState('TILE_PLAYED');
     setMovesThisTurn([]);
     setHasPlayedTileThisTurn(true);
+
+    // Save current piece state as turn start (for Reset button)
+    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+
+    // Clear piece movement tracking for this tile play
+    setMovedPiecesThisTurn(new Set());
+    setPendingCommunityPieces(new Set());
   };
   
   const handleRevealTile = (tileId: string | null) => { setRevealedTileId(tileId); };
@@ -2686,6 +2758,8 @@ const App: React.FC = () => {
             showBonusMoveModal={showBonusMoveModal}
             bonusMovePlayerId={bonusMovePlayerId}
             onBonusMoveComplete={handleBonusMoveComplete}
+            movedPiecesThisTurn={movedPiecesThisTurn}
+            onResetTurn={handleResetTurn}
           />
         );
       case 'PLAYER_SELECTION':

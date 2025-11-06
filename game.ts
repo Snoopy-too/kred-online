@@ -2363,25 +2363,30 @@ export function getAdjacentSeats(seatId: string, playerCount: number): string[] 
  * - If Marks occupy community: Heels and Pawns cannot be moved from community
  * - If Heels occupy community: Pawns cannot be moved from community
  * - Marks can always be moved from community
+ * - Pending pieces (moved to community but not yet accepted) are ignored in the check
  */
-function canMoveFromCommunity(piece: Piece, pieces: Piece[]): boolean {
+function canMoveFromCommunity(piece: Piece, pieces: Piece[], pendingCommunityPieceIds?: Set<string>): boolean {
   const pieceName = piece.name.toLowerCase();
 
   // Marks can always be moved from community
   if (pieceName === 'mark') return true;
 
-  // Check if any Marks exist in community
+  // Check if any Marks exist in community (excluding pending pieces)
   const marksInCommunity = pieces.some(p =>
-    p.locationId?.includes('community') && p.name.toLowerCase() === 'mark'
+    p.locationId?.includes('community') &&
+    p.name.toLowerCase() === 'mark' &&
+    (!pendingCommunityPieceIds || !pendingCommunityPieceIds.has(p.id))
   );
 
   // If Marks in community, Heels and Pawns cannot move
   if (marksInCommunity) return false;
 
-  // If moving a Pawn, check if Heels are in community
+  // If moving a Pawn, check if Heels are in community (excluding pending pieces)
   if (pieceName === 'pawn') {
     const heelsInCommunity = pieces.some(p =>
-      p.locationId?.includes('community') && p.name.toLowerCase() === 'heel'
+      p.locationId?.includes('community') &&
+      p.name.toLowerCase() === 'heel' &&
+      (!pendingCommunityPieceIds || !pendingCommunityPieceIds.has(p.id))
     );
     // Pawns can only move if no Heels in community
     return !heelsInCommunity;
