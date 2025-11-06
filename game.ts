@@ -1267,9 +1267,9 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: { [key: number]: BankSpace[]
 };
 
 export const PIECE_TYPES: { [key: string]: GamePieceInfo } = {
-  MARK: { name: 'Mark', imageUrl: 'https://montoyahome.com/kred/mark-transparent_bg.png' },
-  HEEL: { name: 'Heel', imageUrl: 'https://montoyahome.com/kred/heel-transparent_bg.png' },
-  PAWN: { name: 'Pawn', imageUrl: 'https://montoyahome.com/kred/pawn-transparent_bg.png' },
+  MARK: { name: 'Mark', imageUrl: './images/mark-transparent_bg.png' },
+  HEEL: { name: 'Heel', imageUrl: './images/heel-transparent_bg.png' },
+  PAWN: { name: 'Pawn', imageUrl: './images/pawn-transparent_bg.png' },
 };
 
 export const PIECE_COUNTS_BY_PLAYER_COUNT: {
@@ -1298,15 +1298,15 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
 export const PLAYER_OPTIONS = [3, 4, 5];
 
 export const BOARD_IMAGE_URLS: { [key: number]: string } = {
-  3: 'https://montoyahome.com/kred/3player_board.jpg',
-  4: 'https://montoyahome.com/kred/4player_board.jpg',
-  5: 'https://montoyahome.com/kred/5player_board.jpg',
+  3: './images/3player_board.jpg',
+  4: './images/4player_board.jpg',
+  5: './images/5player_board.jpg',
 };
 
 const TOTAL_TILES = 24;
 export const TILE_IMAGE_URLS = Array.from({ length: TOTAL_TILES }, (_, i) => {
   const num = String(i + 1).padStart(2, '0');
-  return `https://montoyahome.com/kred/${num}.svg`;
+  return `./images/${num}.svg`;
 });
 
 

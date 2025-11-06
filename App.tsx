@@ -48,8 +48,8 @@ const PlayerSelectionScreen: React.FC<{
   return (
     <main className="min-h-screen w-full bg-sky-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-slate-800">
       <div className="text-center mb-12">
-        <img 
-            src="https://montoyahome.com/kred/logo.png" 
+        <img
+            src="./images/logo.png"
             alt="Kred Logo" 
             className="w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto"
             style={{ filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.15))' }}
@@ -901,6 +901,7 @@ const CampaignScreen: React.FC<{
                       <li>You play a tile that doesn't perfectly meet requirements AND receiving player rejects it</li>
                       <li>You play a tile that doesn't perfectly meet requirements AND another player successfully challenges it</li>
                       <li>You unsuccessfully challenge another player's move (they played perfectly)</li>
+                      <li>Another player successfully challenges on a tile that you accepted</li>
                     </ul>
                   </div>
                   <div className="bg-gray-800 rounded p-2 border-l-4 border-blue-500">
@@ -1754,7 +1755,7 @@ const App: React.FC = () => {
         setPlayers(prev =>
           prev.map(p =>
             p.id === receivingPlayer.id
-              ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` }] }
+              ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` }] }
               : p
           )
         );
@@ -1949,7 +1950,7 @@ const App: React.FC = () => {
       const bankSpace = playerBankSpaces[nextBankIndex];
       const newBankedTile: BoardTile & { faceUp: boolean } = {
         id: `bank_${playedTile.receivingPlayerId}_${nextBankIndex}_${Date.now()}`,
-        tile: { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` },
+        tile: { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` },
         position: bankSpace.position,
         rotation: bankSpace.rotation,
         placerId: playedTile.playerId,
@@ -1970,7 +1971,7 @@ const App: React.FC = () => {
     );
 
     // Receiving player keeps the tile in their bureaucracy
-    const tile = { id: parseInt(playedTile.tileId), url: `https://montoyahome.com/kred/${playedTile.tileId}.svg` };
+    const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
 
     setPlayers(prev =>
       prev.map(p =>
@@ -2053,7 +2054,7 @@ const App: React.FC = () => {
       const bankSpace = playerBankSpaces[nextBankIndex];
       const newBankedTile: BoardTile & { faceUp: boolean } = {
         id: `bank_${updatedPlayedTile.receivingPlayerId}_${nextBankIndex}_${Date.now()}`,
-        tile: { id: parseInt(updatedPlayedTile.tileId), url: `https://montoyahome.com/kred/${updatedPlayedTile.tileId}.svg` },
+        tile: { id: parseInt(updatedPlayedTile.tileId), url: `./images/${updatedPlayedTile.tileId}.svg` },
         position: bankSpace.position,
         rotation: bankSpace.rotation,
         placerId: updatedPlayedTile.playerId,
@@ -2074,7 +2075,7 @@ const App: React.FC = () => {
     );
 
     // Receiving player gets the tile in their bureaucracy
-    const tile = { id: parseInt(updatedPlayedTile.tileId), url: `https://montoyahome.com/kred/${updatedPlayedTile.tileId}.svg` };
+    const tile = { id: parseInt(updatedPlayedTile.tileId), url: `./images/${updatedPlayedTile.tileId}.svg` };
     setPlayers(prev =>
       prev.map(p =>
         p.id === updatedPlayedTile.receivingPlayerId
