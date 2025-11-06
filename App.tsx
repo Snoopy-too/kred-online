@@ -212,7 +212,15 @@ const CampaignScreen: React.FC<{
   onCheckMove?: () => void;
   credibilityRotationAdjustments: { [playerId: number]: number };
   setCredibilityRotationAdjustments: (adjustments: { [playerId: number]: number }) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments }) => {
+  isGameLogExpanded: boolean;
+  setIsGameLogExpanded: (expanded: boolean) => void;
+  isCredibilityAdjusterExpanded: boolean;
+  setIsCredibilityAdjusterExpanded: (expanded: boolean) => void;
+  isCredibilityRulesExpanded: boolean;
+  setIsCredibilityRulesExpanded: (expanded: boolean) => void;
+  isPieceTrackerExpanded: boolean;
+  setIsPieceTrackerExpanded: (expanded: boolean) => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -782,18 +790,26 @@ const CampaignScreen: React.FC<{
 
             {/* Game Log */}
             <div>
-              <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Game Log</h2>
-              <div ref={logContainerRef} className="h-64 bg-gray-800/50 rounded-lg border border-gray-700 p-4 overflow-y-auto text-sm">
-                {gameLog.length === 0 ? (
-                  <p className="text-slate-400 text-center italic m-auto">No actions logged yet.</p>
-                ) : (
-                  gameLog.map((entry, index) => (
-                    <p key={index} className={`text-slate-300 mb-2 ${entry.startsWith('---') ? 'font-bold text-cyan-300 mt-2 border-t border-gray-600 pt-2' : ''}`}>
-                      {entry}
-                    </p>
-                  ))
-                )}
-              </div>
+              <button
+                onClick={() => setIsGameLogExpanded(!isGameLogExpanded)}
+                className="w-full text-left mb-4 flex items-center justify-between"
+              >
+                <h2 className="text-2xl font-bold text-slate-200">Game Log</h2>
+                <span className="text-slate-400 text-xl">{isGameLogExpanded ? '▼' : '▶'}</span>
+              </button>
+              {isGameLogExpanded && (
+                <div ref={logContainerRef} className="h-64 bg-gray-800/50 rounded-lg border border-gray-700 p-4 overflow-y-auto text-sm">
+                  {gameLog.length === 0 ? (
+                    <p className="text-slate-400 text-center italic m-auto">No actions logged yet.</p>
+                  ) : (
+                    gameLog.map((entry, index) => (
+                      <p key={index} className={`text-slate-300 mb-2 ${entry.startsWith('---') ? 'font-bold text-cyan-300 mt-2 border-t border-gray-600 pt-2' : ''}`}>
+                        {entry}
+                      </p>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Test Mode Controls */}
@@ -832,7 +848,14 @@ const CampaignScreen: React.FC<{
             {/* Credibility Rotation Adjuster (Test Mode Only) */}
             {isTestMode && (
               <div className="mt-8 bg-gray-700 rounded-lg p-4">
-                <h3 className="text-lg font-bold text-slate-200 mb-4">Credibility Rotation Adjuster</h3>
+                <button
+                  onClick={() => setIsCredibilityAdjusterExpanded(!isCredibilityAdjusterExpanded)}
+                  className="w-full text-left flex items-center justify-between mb-4"
+                >
+                  <h3 className="text-lg font-bold text-slate-200">Credibility Rotation Adjuster</h3>
+                  <span className="text-slate-400 text-xl">{isCredibilityAdjusterExpanded ? '▼' : '▶'}</span>
+                </button>
+                {isCredibilityAdjusterExpanded && (
                 <div className="space-y-4">
                   {Array.from({ length: playerCount }, (_, i) => i + 1).map((playerId) => {
                     const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
@@ -901,13 +924,21 @@ const CampaignScreen: React.FC<{
                     );
                   })}
                 </div>
+                )}
               </div>
             )}
 
             {/* Credibility Rules Info */}
             {isTestMode && (
               <div className="mt-8 bg-gray-700 rounded-lg p-4">
-                <h3 className="text-lg font-bold text-slate-200 mb-4">Credibility System Rules</h3>
+                <button
+                  onClick={() => setIsCredibilityRulesExpanded(!isCredibilityRulesExpanded)}
+                  className="w-full text-left flex items-center justify-between mb-4"
+                >
+                  <h3 className="text-lg font-bold text-slate-200">Credibility System Rules</h3>
+                  <span className="text-slate-400 text-xl">{isCredibilityRulesExpanded ? '▼' : '▶'}</span>
+                </button>
+                {isCredibilityRulesExpanded && (
                 <div className="space-y-3 text-xs text-slate-300">
                   <div className="bg-gray-800 rounded p-2 border-l-4 border-red-500">
                     <p className="font-semibold text-red-400 mb-1">Lose 1 Credibility if:</p>
@@ -934,6 +965,7 @@ const CampaignScreen: React.FC<{
                     </ul>
                   </div>
                 </div>
+                )}
               </div>
             )}
 
@@ -1000,7 +1032,14 @@ const CampaignScreen: React.FC<{
 
             {isTestMode && (
               <div className="mt-8">
-                <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">Piece Tracker</h2>
+                <button
+                  onClick={() => setIsPieceTrackerExpanded(!isPieceTrackerExpanded)}
+                  className="w-full text-left mb-4 flex items-center justify-between"
+                >
+                  <h2 className="text-2xl font-bold text-slate-200">Piece Tracker</h2>
+                  <span className="text-slate-400 text-xl">{isPieceTrackerExpanded ? '▼' : '▶'}</span>
+                </button>
+                {isPieceTrackerExpanded && (
                 <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 max-h-96 overflow-y-auto text-xs">
                   {pieces.length === 0 ? (
                     <p className="text-slate-400 text-center italic">No pieces on board</p>
@@ -1016,6 +1055,7 @@ const CampaignScreen: React.FC<{
                     </div>
                   )}
                 </div>
+                )}
               </div>
             )}
           </div>
@@ -1315,6 +1355,12 @@ const App: React.FC = () => {
   const [gameLog, setGameLog] = useState<string[]>([]);
   const [piecesAtTurnStart, setPiecesAtTurnStart] = useState<Piece[]>([]);
 
+  // State for collapsible test mode modules
+  const [isGameLogExpanded, setIsGameLogExpanded] = useState(true);
+  const [isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded] = useState(false);
+  const [isCredibilityRulesExpanded, setIsCredibilityRulesExpanded] = useState(false);
+  const [isPieceTrackerExpanded, setIsPieceTrackerExpanded] = useState(false);
+
   // State for new tile play workflow
   const [playedTile, setPlayedTile] = useState<{
     tileId: string;
@@ -1565,8 +1611,9 @@ const App: React.FC = () => {
     setGameLog(prev => [...prev, message]);
   };
 
-  const addCredibilityLossLog = (playerId: number, reason: string) => {
-    const player = players.find(p => p.id === playerId);
+  const addCredibilityLossLog = (playerId: number, reason: string, currentPlayers?: Player[]) => {
+    const playersToUse = currentPlayers || players;
+    const player = playersToUse.find(p => p.id === playerId);
     const playerName = player?.name || `Player ${playerId}`;
     addGameLog(`${playerName} lost 1 credibility: ${reason}`);
   };
@@ -2475,6 +2522,14 @@ const App: React.FC = () => {
             onCheckMove={handleCheckMove}
             credibilityRotationAdjustments={credibilityRotationAdjustments}
             setCredibilityRotationAdjustments={setCredibilityRotationAdjustments}
+            isGameLogExpanded={isGameLogExpanded}
+            setIsGameLogExpanded={setIsGameLogExpanded}
+            isCredibilityAdjusterExpanded={isCredibilityAdjusterExpanded}
+            setIsCredibilityAdjusterExpanded={setIsCredibilityAdjusterExpanded}
+            isCredibilityRulesExpanded={isCredibilityRulesExpanded}
+            setIsCredibilityRulesExpanded={setIsCredibilityRulesExpanded}
+            isPieceTrackerExpanded={isPieceTrackerExpanded}
+            setIsPieceTrackerExpanded={setIsPieceTrackerExpanded}
           />
         );
       case 'PLAYER_SELECTION':
