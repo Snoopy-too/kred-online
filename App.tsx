@@ -238,7 +238,7 @@ const CampaignScreen: React.FC<{
 
   useEffect(() => {
     if (logContainerRef.current) {
-        logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+        logContainerRef.current.scrollTop = 0;
     }
   }, [gameLog]);
 
@@ -814,8 +814,8 @@ const CampaignScreen: React.FC<{
                   {gameLog.length === 0 ? (
                     <p className="text-slate-400 text-center italic m-auto">No actions logged yet.</p>
                   ) : (
-                    gameLog.map((entry, index) => (
-                      <p key={index} className={`text-slate-300 mb-2 ${entry.startsWith('---') ? 'font-bold text-cyan-300 mt-2 border-t border-gray-600 pt-2' : ''}`}>
+                    [...gameLog].reverse().map((entry, index) => (
+                      <p key={gameLog.length - 1 - index} className={`text-slate-300 mb-2 ${entry.startsWith('---') ? 'font-bold text-cyan-300 mt-2 border-b border-gray-600 pb-2' : ''}`}>
                         {entry}
                       </p>
                     ))
