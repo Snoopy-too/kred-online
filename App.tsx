@@ -1874,22 +1874,13 @@ const App: React.FC = () => {
         setPlayers(prev => handleCredibilityLoss('unsuccessful_challenge', playedTile.playerId, challengerId)(prev));
         addCredibilityLossLog(challengerId, "Unsuccessful challenge - tile was played perfectly");
 
-        // Schedule auto-dismiss after 5 seconds and advance to next challenger or finalize
+        // A challenge was made (even though unsuccessful), so no more challenges allowed
+        // Finalize the tile play immediately
+        finalizeTilePlay(true, challengerId);
+
+        // Schedule auto-dismiss of challenge message after 5 seconds
         setTimeout(() => {
           setChallengeResultMessage('');
-
-          // Move to next challenger or finalize
-          const nextChallengerIndex = currentChallengerIndex + 1;
-          if (nextChallengerIndex >= challengeOrder.length) {
-            // No more challengers, finalize
-            finalizeTilePlay(true, challengeOrder[currentChallengerIndex]);
-          } else {
-            // Move to next challenger
-            const nextChallengerId = challengeOrder[nextChallengerIndex];
-            const nextChallengerIndex_PlayerIndex = players.findIndex(p => p.id === nextChallengerId);
-            setCurrentChallengerIndex(nextChallengerIndex);
-            setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
-          }
         }, 5000);
       } else {
         // Challenge is VALID - player did NOT meet requirements perfectly
@@ -1906,25 +1897,20 @@ const App: React.FC = () => {
           addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
         }
 
-        // Schedule auto-dismiss after 5 seconds and proceed with correction flow
-        setTimeout(() => {
-          setChallengeResultMessage('');
-
-          // Reverse moves and prompt correction
+        // Immediately switch game state to CORRECTION_REQUIRED to prevent other challengers from acting
+        const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+        if (playerIndex !== -1) {
+          setCurrentPlayerIndex(playerIndex);
+          setGameState('CORRECTION_REQUIRED');
+          setMovesThisTurn([]);
           setTileRejected(true);
-
           // Restore original pieces (remove any moves made)
           setPieces(playedTile.originalPieces.map(p => ({ ...p })));
-          // Keep the board tile visible in the receiving space (don't restore full board state)
-          // The BoardTile will remain showing the white back
+        }
 
-          // Switch to tile player for correction
-          const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
-          if (playerIndex !== -1) {
-            setCurrentPlayerIndex(playerIndex);
-            setGameState('CORRECTION_REQUIRED');
-            setMovesThisTurn([]);
-          }
+        // Schedule auto-dismiss of challenge message after 5 seconds
+        setTimeout(() => {
+          setChallengeResultMessage('');
         }, 5000);
       }
     } else {
