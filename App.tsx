@@ -18,6 +18,7 @@ import {
   TILE_SPACES_BY_PLAYER_COUNT,
   TileReceivingSpace,
   BANK_SPACES_BY_PLAYER_COUNT,
+  TILE_KREDCOIN_VALUES,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
   BankSpace,
   PLAYER_PERSPECTIVE_ROTATIONS,
@@ -246,6 +247,15 @@ const CampaignScreen: React.FC<{
         logContainerRef.current.scrollTop = 0;
     }
   }, [gameLog]);
+
+  // Calculate Kredcoin for a player (only face-down tiles in bank count)
+  const calculatePlayerKredcoin = (playerId: number): number => {
+    const playerBankedTiles = bankedTiles.filter(bt => bt.ownerId === playerId && !bt.faceUp);
+    return playerBankedTiles.reduce((total, bankedTile) => {
+      const tileValue = TILE_KREDCOIN_VALUES[bankedTile.tile.id] || 0;
+      return total + tileValue;
+    }, 0);
+  };
 
   const handleMouseMoveOnBoard = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isTestMode) return;
@@ -1061,6 +1071,35 @@ const CampaignScreen: React.FC<{
                   </div>
                 </div>
                 )}
+              </div>
+            )}
+
+            {/* Kredcoin Tracker (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8 bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-amber-400 mb-4 text-center">₭⟠ Kredcoin Tracker</h3>
+                <p className="text-xs text-slate-400 mb-4 text-center italic">Hidden in normal play • Only face-down banked tiles count</p>
+                <div className="space-y-3">
+                  {players.map(player => {
+                    const kredcoin = calculatePlayerKredcoin(player.id);
+                    const playerBankedTiles = bankedTiles.filter(bt => bt.ownerId === player.id);
+                    const faceDownCount = playerBankedTiles.filter(bt => !bt.faceUp).length;
+                    const faceUpCount = playerBankedTiles.filter(bt => bt.faceUp).length;
+
+                    return (
+                      <div key={`kredcoin-${player.id}`} className="bg-gray-800 rounded-lg p-3 border border-amber-600/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-200 font-semibold">Player {player.id}</span>
+                          <span className="text-2xl font-bold text-amber-400">₭⟠ {kredcoin}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 flex justify-between">
+                          <span>Face-down: {faceDownCount}</span>
+                          <span className="text-red-400">Face-up (excluded): {faceUpCount}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
