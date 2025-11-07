@@ -3225,8 +3225,25 @@ export function determineMoveType(
     return DefinedMoveType.REMOVE;
   }
 
-  // ADVANCE: seat -> rostrum (own)
-  if (fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes(`p${playerId}_rostrum`)) {
+  // INFLUENCE: opponent's rostrum -> own rostrum
+  if (fromLocationId.includes('_rostrum') && !fromLocationId.includes(`p${playerId}_`) && toLocationId.includes(`p${playerId}_rostrum`)) {
+    return DefinedMoveType.INFLUENCE;
+  }
+
+  // ASSIST: community -> opponent's seat
+  if (fromLocationId.includes('community') && toLocationId.includes('_seat') && !toLocationId.includes(`p${playerId}_`)) {
+    return DefinedMoveType.ASSIST;
+  }
+
+  // ADVANCE has multiple options:
+  // A: community -> own seat
+  // B: own seat -> own rostrum
+  // C: own rostrum1 -> own office
+  if (
+    (fromLocationId.includes('community') && toLocationId.includes(`p${playerId}_seat`)) ||
+    (fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes(`p${playerId}_rostrum`)) ||
+    (fromLocationId === `p${playerId}_rostrum1` && toLocationId === `p${playerId}_office`)
+  ) {
     return DefinedMoveType.ADVANCE;
   }
 
@@ -3235,19 +3252,12 @@ export function determineMoveType(
     return DefinedMoveType.WITHDRAW;
   }
 
-  // ORGANIZE: rostrum -> office (own)
-  if (fromLocationId.includes(`p${playerId}_rostrum`) && toLocationId.includes(`p${playerId}_office`)) {
+  // ORGANIZE: rostrum -> adjacent rostrum (own), or seat -> adjacent seat (own)
+  if (
+    (fromLocationId.includes(`p${playerId}_rostrum`) && toLocationId.includes(`p${playerId}_rostrum`)) ||
+    (fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes(`p${playerId}_seat`))
+  ) {
     return DefinedMoveType.ORGANIZE;
-  }
-
-  // INFLUENCE: adjacent rostrum -> own rostrum
-  if (fromLocationId.includes('_rostrum') && !fromLocationId.includes(`p${playerId}_`) && toLocationId.includes(`p${playerId}_rostrum`)) {
-    return DefinedMoveType.INFLUENCE;
-  }
-
-  // ASSIST: community -> own seat
-  if (fromLocationId.includes('community') && toLocationId.includes(`p${playerId}_seat`)) {
-    return DefinedMoveType.ASSIST;
   }
 
   return null;

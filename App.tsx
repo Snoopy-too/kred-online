@@ -216,6 +216,11 @@ const BureaucracyScreen: React.FC<{
   onPiecePromote: (pieceId: string) => void;
   onClearValidationError: () => void;
   onResetAction: () => void;
+  onCheckMove: () => void;
+  showMoveCheckResult: boolean;
+  moveCheckResult: { isValid: boolean; reason: string } | null;
+  onCloseMoveCheckResult: () => void;
+  isTestMode: boolean;
   BOARD_IMAGE_URLS: { [key: number]: string };
   credibilityRotationAdjustments: { [playerId: number]: number };
 }> = ({
@@ -238,6 +243,11 @@ const BureaucracyScreen: React.FC<{
   onPiecePromote,
   onClearValidationError,
   onResetAction,
+  onCheckMove,
+  showMoveCheckResult,
+  moveCheckResult,
+  onCloseMoveCheckResult,
+  isTestMode,
   BOARD_IMAGE_URLS,
   credibilityRotationAdjustments,
 }) => {
@@ -673,8 +683,51 @@ const BureaucracyScreen: React.FC<{
               </span>
             </label>
           </div>
+
+          {/* Check Move Button (Test Mode Only) */}
+          {isTestMode && !showPurchaseMenu && currentPurchase && currentPurchase.item.type === 'MOVE' && (
+            <div className="bg-gray-700 rounded-lg p-4">
+              <button
+                onClick={onCheckMove}
+                className="w-full px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-lg"
+              >
+                ✓ Check Move
+              </button>
+              <p className="text-xs text-slate-400 mt-2">Validate if the move matches your selected action type.</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Move Check Result Modal */}
+      {showMoveCheckResult && moveCheckResult && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+          <div className="bg-gray-800 border-2 border-gray-700 p-8 rounded-xl text-center shadow-2xl max-w-lg w-full">
+            <div className="mb-8">
+              {moveCheckResult.isValid ? (
+                <div className="text-center">
+                  <div className="text-9xl text-green-500 font-bold mb-4">✓</div>
+                  <h2 className="text-4xl font-bold text-green-400 mb-2">Valid Move!</h2>
+                  <p className="text-lg text-green-300">The move matches the selected action type.</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="text-9xl text-red-500 font-bold mb-4">✕</div>
+                  <h2 className="text-4xl font-bold text-red-400 mb-2">Invalid Move</h2>
+                  <p className="text-lg text-red-300">{moveCheckResult.reason}</p>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={onCloseMoveCheckResult}
+              className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
@@ -2073,6 +2126,8 @@ const App: React.FC = () => {
   const [bureaucracyValidationError, setBureaucracyValidationError] = useState<string | null>(null);
   const [bureaucracyMoves, setBureaucracyMoves] = useState<TrackedMove[]>([]);
   const [bureaucracySnapshot, setBureaucracySnapshot] = useState<{ pieces: Piece[]; boardTiles: BoardTile[] } | null>(null);
+  const [showBureaucracyMoveCheckResult, setShowBureaucracyMoveCheckResult] = useState(false);
+  const [bureaucracyMoveCheckResult, setBureaucracyMoveCheckResult] = useState<{ isValid: boolean; reason: string } | null>(null);
 
   // State for tracking pieces moved to community that are "pending" until acceptance/challenge resolved
   const [pendingCommunityPieces, setPendingCommunityPieces] = useState<Set<string>>(new Set());
@@ -3515,19 +3570,49 @@ const App: React.FC = () => {
         }
       }
     } else if (currentBureaucracyPurchase.item.type === 'MOVE') {
-      // Validate the move using same logic as Campaign mode
-      const validation = validatePurchasedMove(
-        currentBureaucracyPurchase.item.moveType!,
-        bureaucracyMoves,
-        currentPlayerId,
-        pieces,
-        playerCount
-      );
-
-      if (!validation.isValid) {
-        validationMessage = validation.reason;
+      // Use the same calculateMoves logic as Campaign phase
+      const snapshot = bureaucracySnapshot;
+      if (!snapshot) {
+        validationMessage = 'No snapshot available for validation';
       } else {
-        isValid = true;
+        const calculatedMoves = calculateMoves(snapshot.pieces, pieces, currentPlayerId);
+
+        // Validate each move with proper piece state (same as Campaign)
+        // We need to validate using the piece state BEFORE the move, not after
+        let allMovesValid = true;
+        for (let i = 0; i < calculatedMoves.length; i++) {
+          const move = calculatedMoves[i];
+
+          // Build piece state after all previous moves but before this move
+          let piecesForValidation = snapshot.pieces.map(p => ({ ...p }));
+          for (let j = 0; j < i; j++) {
+            const prevMove = calculatedMoves[j];
+            piecesForValidation = piecesForValidation.map(p =>
+              p.id === prevMove.pieceId
+                ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+                : p
+            );
+          }
+
+          const validation = validateSingleMove(move, currentPlayerId, piecesForValidation, playerCount);
+          if (!validation.isValid) {
+            allMovesValid = false;
+            validationMessage = `${move.moveType} move validation failed: ${validation.reason}`;
+            break;
+          }
+        }
+
+        if (allMovesValid) {
+          // Check that at least one move matches the purchased type
+          const expectedMoveType = currentBureaucracyPurchase.item.moveType!;
+          const hasMatchingMove = calculatedMoves.some(m => m.moveType === expectedMoveType);
+
+          if (!hasMatchingMove) {
+            validationMessage = `Expected a ${expectedMoveType} move, but none was found`;
+          } else {
+            isValid = true;
+          }
+        }
       }
     }
 
@@ -3659,6 +3744,70 @@ const App: React.FC = () => {
     setBureaucracyValidationError(null);
   };
 
+  const handleCheckBureaucracyMove = () => {
+    if (!currentBureaucracyPurchase || currentBureaucracyPurchase.item.type !== 'MOVE') return;
+    if (!bureaucracySnapshot) return;
+
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const moveType = currentBureaucracyPurchase.item.moveType!;
+
+    // Use the same calculateMoves logic as Campaign phase
+    const calculatedMoves = calculateMoves(bureaucracySnapshot.pieces, pieces, currentPlayerId);
+
+    // Validate each move with proper piece state (same as Campaign)
+    let allMovesValid = true;
+    let failureReason = '';
+
+    for (let i = 0; i < calculatedMoves.length; i++) {
+      const move = calculatedMoves[i];
+
+      // Build piece state after all previous moves but before this move
+      let piecesForValidation = bureaucracySnapshot.pieces.map(p => ({ ...p }));
+      for (let j = 0; j < i; j++) {
+        const prevMove = calculatedMoves[j];
+        piecesForValidation = piecesForValidation.map(p =>
+          p.id === prevMove.pieceId
+            ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+            : p
+        );
+      }
+
+      const validation = validateSingleMove(move, currentPlayerId, piecesForValidation, playerCount);
+      if (!validation.isValid) {
+        allMovesValid = false;
+        failureReason = `${move.moveType} move validation failed: ${validation.reason}`;
+        break;
+      }
+    }
+
+    if (allMovesValid) {
+      // Check that at least one move matches the purchased type
+      const hasMatchingMove = calculatedMoves.some(m => m.moveType === moveType);
+      if (!hasMatchingMove) {
+        setBureaucracyMoveCheckResult({
+          isValid: false,
+          reason: `Expected a ${moveType} move, but none was found`
+        });
+      } else {
+        setBureaucracyMoveCheckResult({
+          isValid: true,
+          reason: 'Move is valid!'
+        });
+      }
+    } else {
+      setBureaucracyMoveCheckResult({
+        isValid: false,
+        reason: failureReason
+      });
+    }
+
+    setShowBureaucracyMoveCheckResult(true);
+  };
+
+  const handleCloseBureaucracyMoveCheckResult = () => {
+    setShowBureaucracyMoveCheckResult(false);
+  };
+
   const handleBureaucracyPieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
     // Track the move
     const piece = pieces.find(p => p.id === pieceId);
@@ -3733,6 +3882,11 @@ const App: React.FC = () => {
             onPiecePromote={handleBureaucracyPiecePromote}
             onClearValidationError={handleClearBureaucracyValidationError}
             onResetAction={handleResetBureaucracyAction}
+            onCheckMove={handleCheckBureaucracyMove}
+            showMoveCheckResult={showBureaucracyMoveCheckResult}
+            moveCheckResult={bureaucracyMoveCheckResult}
+            onCloseMoveCheckResult={handleCloseBureaucracyMoveCheckResult}
+            isTestMode={isTestMode}
             BOARD_IMAGE_URLS={BOARD_IMAGE_URLS}
             credibilityRotationAdjustments={credibilityRotationAdjustments}
           />
