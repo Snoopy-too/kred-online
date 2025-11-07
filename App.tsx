@@ -367,18 +367,17 @@ const BureaucracyScreen: React.FC<{
                     key={`credibility_${location.ownerId}`}
                     className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
                     style={{
-                      left: `${location.position.left}%`,
+                      width: '5.283rem',
+                      height: '5.283rem',
                       top: `${location.position.top}%`,
-                      transform: `translate(-50%, -50%) rotate(${finalRotation - boardRotation}deg)`,
-                      width: '8%',
-                      height: '8%',
+                      left: `${location.position.left}%`,
+                      transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
                     }}
                   >
                     <img
                       src={credibilityImage}
-                      alt={`Player ${location.ownerId} Credibility: ${credibilityValue}`}
+                      alt={`Credibility for Player ${location.ownerId}`}
                       className="w-full h-full object-contain"
-                      draggable={false}
                     />
                   </div>
                 );
