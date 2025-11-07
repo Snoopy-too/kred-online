@@ -1380,11 +1380,25 @@ export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     description: 'Promote a piece in the Office from Mark to Heel OR Heel to Pawn'
   },
   {
-    id: 'move_air',
+    id: 'move_assist',
     type: 'MOVE',
     moveType: 'ASSIST',
     price: 15,
-    description: '1 Assist, Remove or Influence'
+    description: 'Assist'
+  },
+  {
+    id: 'move_remove',
+    type: 'MOVE',
+    moveType: 'REMOVE',
+    price: 15,
+    description: 'Remove'
+  },
+  {
+    id: 'move_influence',
+    type: 'MOVE',
+    moveType: 'INFLUENCE',
+    price: 15,
+    description: 'Influence'
   },
   {
     id: 'promote_rostrum',
@@ -1394,11 +1408,25 @@ export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     description: 'Promote a piece in a Rostrum from Mark to Heel OR Heel to Pawn'
   },
   {
-    id: 'move_awo',
+    id: 'move_advance',
     type: 'MOVE',
     moveType: 'ADVANCE',
     price: 9,
-    description: '1 Advance, Withdraw or Organize'
+    description: '1 Advance'
+  },
+  {
+    id: 'move_withdraw',
+    type: 'MOVE',
+    moveType: 'WITHDRAW',
+    price: 9,
+    description: 'Withdraw'
+  },
+  {
+    id: 'move_organize',
+    type: 'MOVE',
+    moveType: 'ORGANIZE',
+    price: 9,
+    description: 'Organize'
   },
   {
     id: 'promote_seat',
@@ -1418,13 +1446,6 @@ export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
 // Bureaucracy menu for 5 player mode
 export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
   {
-    id: 'promote_rostrum',
-    type: 'PROMOTION',
-    promotionLocation: 'ROSTRUM',
-    price: 18,
-    description: 'Promote a piece in a Rostrum from Mark to Heel OR Heel to Pawn'
-  },
-  {
     id: 'promote_office',
     type: 'PROMOTION',
     promotionLocation: 'OFFICE',
@@ -1432,18 +1453,53 @@ export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     description: 'Promote a piece in the Office from Mark to Heel OR Heel to Pawn'
   },
   {
-    id: 'move_air',
+    id: 'move_assist',
     type: 'MOVE',
     moveType: 'ASSIST',
     price: 10,
-    description: '1 Assist, Remove or Influence'
+    description: 'Assist'
   },
   {
-    id: 'move_awo',
+    id: 'move_remove',
+    type: 'MOVE',
+    moveType: 'REMOVE',
+    price: 10,
+    description: 'Remove'
+  },
+  {
+    id: 'move_influence',
+    type: 'MOVE',
+    moveType: 'INFLUENCE',
+    price: 10,
+    description: 'Influence'
+  },
+  {
+    id: 'promote_rostrum',
+    type: 'PROMOTION',
+    promotionLocation: 'ROSTRUM',
+    price: 8,
+    description: 'Promote a piece in a Rostrum from Mark to Heel OR Heel to Pawn'
+  },
+  {
+    id: 'move_advance',
     type: 'MOVE',
     moveType: 'ADVANCE',
     price: 6,
-    description: '1 Advance, Withdraw or Organize'
+    description: 'Advance'
+  },
+  {
+    id: 'move_withdraw',
+    type: 'MOVE',
+    moveType: 'WITHDRAW',
+    price: 6,
+    description: 'Withdraw'
+  },
+  {
+    id: 'move_organize',
+    type: 'MOVE',
+    moveType: 'ORGANIZE',
+    price: 6,
+    description: 'Organize'
   },
   {
     id: 'promote_seat',
@@ -3155,13 +3211,57 @@ export function checkBureaucracyWinCondition(
 }
 
 /**
+ * Determines the move type based on from/to locations
+ */
+export function determineMoveType(
+  fromLocationId: string | undefined,
+  toLocationId: string | undefined,
+  playerId: number
+): DefinedMoveType | null {
+  if (!fromLocationId || !toLocationId) return null;
+
+  // REMOVE: opponent's seat -> community
+  if (fromLocationId.includes('_seat') && !fromLocationId.includes(`p${playerId}_`) && toLocationId.includes('community')) {
+    return DefinedMoveType.REMOVE;
+  }
+
+  // ADVANCE: seat -> rostrum (own)
+  if (fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes(`p${playerId}_rostrum`)) {
+    return DefinedMoveType.ADVANCE;
+  }
+
+  // WITHDRAW: rostrum -> seat (own)
+  if (fromLocationId.includes(`p${playerId}_rostrum`) && toLocationId.includes(`p${playerId}_seat`)) {
+    return DefinedMoveType.WITHDRAW;
+  }
+
+  // ORGANIZE: rostrum -> office (own)
+  if (fromLocationId.includes(`p${playerId}_rostrum`) && toLocationId.includes(`p${playerId}_office`)) {
+    return DefinedMoveType.ORGANIZE;
+  }
+
+  // INFLUENCE: adjacent rostrum -> own rostrum
+  if (fromLocationId.includes('_rostrum') && !fromLocationId.includes(`p${playerId}_`) && toLocationId.includes(`p${playerId}_rostrum`)) {
+    return DefinedMoveType.INFLUENCE;
+  }
+
+  // ASSIST: community -> own seat
+  if (fromLocationId.includes('community') && toLocationId.includes(`p${playerId}_seat`)) {
+    return DefinedMoveType.ASSIST;
+  }
+
+  return null;
+}
+
+/**
  * Validates that purchased moves were performed correctly
  */
 export function validatePurchasedMove(
   moveType: BureaucracyMoveType,
   trackedMoves: TrackedMove[],
   playerId: number,
-  pieces: Piece[]
+  pieces: Piece[],
+  playerCount: number
 ): { isValid: boolean; reason: string } {
   if (trackedMoves.length === 0) {
     return { isValid: false, reason: 'No moves were performed' };
@@ -3202,10 +3302,10 @@ export function validatePurchasedMove(
     };
   }
 
-  // Validate each move
+  // Validate each move using the same logic as Campaign mode
   for (const move of trackedMoves) {
     if (move.moveType === expectedMoveType) {
-      const validation = validateSingleMove(move, playerId, pieces);
+      const validation = validateSingleMove(move, playerId, pieces, playerCount);
       if (!validation.isValid) {
         return { isValid: false, reason: validation.reason };
       }

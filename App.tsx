@@ -47,6 +47,7 @@ import {
   validatePromotion,
   performPromotion,
   validatePurchasedMove,
+  determineMoveType,
   checkBureaucracyWinCondition,
 } from './game';
 
@@ -213,6 +214,8 @@ const BureaucracyScreen: React.FC<{
   onFinishTurn: () => void;
   onPieceMove: (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => void;
   onPiecePromote: (pieceId: string) => void;
+  onClearValidationError: () => void;
+  onResetAction: () => void;
   BOARD_IMAGE_URLS: { [key: number]: string };
   credibilityRotationAdjustments: { [playerId: number]: number };
 }> = ({
@@ -233,6 +236,8 @@ const BureaucracyScreen: React.FC<{
   onFinishTurn,
   onPieceMove,
   onPiecePromote,
+  onClearValidationError,
+  onResetAction,
   BOARD_IMAGE_URLS,
   credibilityRotationAdjustments,
 }) => {
@@ -243,6 +248,109 @@ const BureaucracyScreen: React.FC<{
   const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
   const isPromotionPurchase = currentPurchase?.item.type === 'PROMOTION';
   const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
+
+  // Drag and drop state
+  const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string } | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string } | null>(null);
+
+  // Drag handlers
+  const handleDragStartPiece = (e: React.DragEvent<HTMLDivElement>, pieceId: string) => {
+    e.dataTransfer.setData("pieceId", pieceId);
+    e.dataTransfer.effectAllowed = 'move';
+    const piece = pieces.find(p => p.id === pieceId);
+    if (piece) {
+      setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl });
+    }
+  };
+
+  const handleDragEndPiece = () => {
+    setDraggedPieceInfo(null);
+    setDropIndicator(null);
+  };
+
+  const handleDragOverBoard = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!draggedPieceInfo) {
+      if (dropIndicator) setDropIndicator(null);
+      return;
+    }
+
+    const boardRect = e.currentTarget.getBoundingClientRect();
+    const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+    const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+
+    let left = rawLeft;
+    let top = rawTop;
+    if (boardRotation !== 0) {
+      const angleRad = -boardRotation * (Math.PI / 180);
+      const centerX = 50;
+      const centerY = 50;
+      const translatedX = rawLeft - centerX;
+      const translatedY = rawTop - centerY;
+      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      left = rotatedX + centerX;
+      top = rotatedY + centerY;
+    }
+
+    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
+
+    if (snappedLocation) {
+      const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
+      if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
+        setDropIndicator({
+          position: snappedLocation.position,
+          rotation: newRotation,
+          name: draggedPieceInfo.name,
+          imageUrl: draggedPieceInfo.imageUrl
+        });
+      }
+    } else {
+      if (dropIndicator) setDropIndicator(null);
+    }
+  };
+
+  const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDropIndicator(null);
+    const pieceId = e.dataTransfer.getData("pieceId");
+
+    const boardRect = e.currentTarget.getBoundingClientRect();
+    const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+    const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+
+    let left = rawLeft;
+    let top = rawTop;
+    if (boardRotation !== 0) {
+      const angleRad = -boardRotation * (Math.PI / 180);
+      const centerX = 50;
+      const centerY = 50;
+      const translatedX = rawLeft - centerX;
+      const translatedY = rawTop - centerY;
+      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      left = rotatedX + centerX;
+      top = rotatedY + centerY;
+    }
+
+    // Regular piece placement with snapping
+    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
+
+    if (snappedLocation && pieceId) {
+      onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
+    }
+  };
+
+  const handleMouseLeaveBoard = () => {
+    setDropIndicator(null);
+  };
+
+  let indicatorSizeClass = '';
+  if (dropIndicator) {
+    if (dropIndicator.name === 'Heel') indicatorSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
+    else if (dropIndicator.name === 'Pawn') indicatorSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+    else indicatorSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
+  }
 
   return (
     <main className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center p-4 font-sans text-slate-100">
@@ -267,12 +375,20 @@ const BureaucracyScreen: React.FC<{
           <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
             <h2 className="text-2xl font-bold text-white mb-4">Invalid Action</h2>
             <p className="text-red-100 mb-6">{validationError}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition-colors"
-            >
-              Try Again
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={onResetAction}
+                className="flex-1 px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded transition-colors"
+              >
+                Reset Pieces
+              </button>
+              <button
+                onClick={onClearValidationError}
+                className="flex-1 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -284,6 +400,9 @@ const BureaucracyScreen: React.FC<{
           <div
             className="absolute inset-0 w-full h-full transition-transform duration-500"
             style={{ transform: `rotate(${boardRotation}deg)` }}
+            onDragOver={handleDragOverBoard}
+            onDrop={handleDropOnBoard}
+            onMouseLeave={handleMouseLeaveBoard}
           >
             <img
               src={BOARD_IMAGE_URLS[playerCount]}
@@ -292,43 +411,86 @@ const BureaucracyScreen: React.FC<{
               draggable={false}
             />
 
+            {/* Drop indicator */}
+            {dropIndicator && (
+              <>
+                {/* Soft green glow indicator showing snap location */}
+                <div
+                  className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
+                  style={{
+                    top: `${dropIndicator.position.top}%`,
+                    left: `${dropIndicator.position.left}%`,
+                    width: '80px',
+                    height: '80px',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                    boxShadow: '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                    border: '2px solid rgba(34, 197, 94, 0.6)',
+                  }}
+                  aria-hidden="true"
+                />
+                {/* Drop indicator piece preview */}
+                <div
+                  className={`${indicatorSizeClass} absolute pointer-events-none transition-all duration-100 ease-in-out`}
+                  style={{
+                    top: `${dropIndicator.position.top}%`,
+                    left: `${dropIndicator.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
+                    filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
+                    opacity: 0.7,
+                  }}
+                  aria-hidden="true"
+                >
+                  <img src={dropIndicator.imageUrl} alt="" className="w-full h-full object-contain" />
+                </div>
+              </>
+            )}
+
             {/* Render pieces */}
-            {pieces.map((piece) => (
-              <div
-                key={piece.id}
-                className={`absolute ${isPromotionPurchase ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-move'}`}
-                style={{
-                  left: `${piece.position.left}%`,
-                  top: `${piece.position.top}%`,
-                  transform: `translate(-50%, -50%) rotate(${piece.rotation - boardRotation}deg)`,
-                  width: '4%',
-                  height: '4%',
-                }}
-                draggable={!showPurchaseMenu && !isPromotionPurchase}
-                onClick={() => {
-                  if (isPromotionPurchase) {
-                    onPiecePromote(piece.id);
-                  }
-                }}
-                onDragEnd={(e) => {
-                  if (!showPurchaseMenu && !isPromotionPurchase) {
-                    const boardRect = e.currentTarget.parentElement?.getBoundingClientRect();
-                    if (boardRect) {
-                      const left = ((e.clientX - boardRect.left) / boardRect.width) * 100;
-                      const top = ((e.clientY - boardRect.top) / boardRect.height) * 100;
-                      onPieceMove(piece.id, { left, top });
-                    }
-                  }
-                }}
-              >
+            {pieces.map((piece) => {
+              let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
+              if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
+              if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+
+              // Apply 15% size reduction for 3-player mode
+              const scaleMultiplier = playerCount === 3 ? 0.85 : 1;
+              const baseScale = 0.798;
+              const finalScale = baseScale * scaleMultiplier;
+
+              // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
+              const isInCommunity = isPositionInCommunityCircle(piece.position);
+              const communityCounterRotation = isInCommunity ? -boardRotation : 0;
+
+              const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
+
+              return (
                 <img
+                  key={piece.id}
                   src={piece.imageUrl}
                   alt={piece.name}
-                  className="w-full h-full object-contain"
-                  draggable={false}
+                  draggable={isDraggable}
+                  onDragStart={(e) => {
+                    if (isDraggable) {
+                      handleDragStartPiece(e, piece.id);
+                    }
+                  }}
+                  onDragEnd={handleDragEndPiece}
+                  onClick={() => {
+                    if (isPromotionPurchase) {
+                      onPiecePromote(piece.id);
+                    }
+                  }}
+                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab' : 'cursor-not-allowed'}`}
+                  style={{
+                    position: 'absolute',
+                    top: `${piece.position.top}%`,
+                    left: `${piece.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`,
+                  }}
+                  aria-hidden="true"
                 />
-              </div>
-            ))}
+              );
+            })}
 
             {/* Render board tiles */}
             {boardTiles.map((boardTile) => (
@@ -360,11 +522,11 @@ const BureaucracyScreen: React.FC<{
                 const credibilityValue = player?.credibility ?? 3;
                 const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
                 const finalRotation = (location.rotation || 0) + adjustment;
-                const credibilityImage = `/images/${credibilityValue}_credibility.svg`;
+                const credibilityImage = `./images/${credibilityValue}_credibility.svg`;
 
                 return (
                   <div
-                    key={`credibility_${location.ownerId}`}
+                    key={`credibility_${location.ownerId}_${credibilityValue}`}
                     className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
                     style={{
                       width: '5.283rem',
@@ -453,7 +615,13 @@ const BureaucracyScreen: React.FC<{
                   <>Your credibility has been restored</>
                 )}
               </p>
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={onResetAction}
+                  className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                >
+                  Reset
+                </button>
                 <button
                   onClick={onDoneWithAction}
                   className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg"
@@ -1044,11 +1212,11 @@ const CampaignScreen: React.FC<{
                 const credibilityValue = player?.credibility ?? 3;
                 const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
                 const finalRotation = (location.rotation || 0) + adjustment;
-                const credibilityImage = `/images/${credibilityValue}_credibility.svg`;
+                const credibilityImage = `./images/${credibilityValue}_credibility.svg`;
 
                 return (
                   <div
-                    key={`credibility_${location.ownerId}`}
+                    key={`credibility_${location.ownerId}_${credibilityValue}`}
                     className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
                     style={{
                       width: '5.283rem',
@@ -3347,12 +3515,13 @@ const App: React.FC = () => {
         }
       }
     } else if (currentBureaucracyPurchase.item.type === 'MOVE') {
-      // Validate the move
+      // Validate the move using same logic as Campaign mode
       const validation = validatePurchasedMove(
         currentBureaucracyPurchase.item.moveType!,
         bureaucracyMoves,
         currentPlayerId,
-        pieces
+        pieces,
+        playerCount
       );
 
       if (!validation.isValid) {
@@ -3474,14 +3643,34 @@ const App: React.FC = () => {
     }
   };
 
+  const handleClearBureaucracyValidationError = () => {
+    setBureaucracyValidationError(null);
+  };
+
+  const handleResetBureaucracyAction = () => {
+    // Reset to snapshot if available
+    if (bureaucracySnapshot) {
+      setPieces(bureaucracySnapshot.pieces);
+      setBoardTiles(bureaucracySnapshot.boardTiles);
+    }
+    // Clear moves
+    setBureaucracyMoves([]);
+    // Clear validation error
+    setBureaucracyValidationError(null);
+  };
+
   const handleBureaucracyPieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
     // Track the move
     const piece = pieces.find(p => p.id === pieceId);
     if (!piece) return;
 
+    // Determine the move type based on from/to locations
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const moveType = determineMoveType(piece.locationId, locationId, currentPlayerId);
+
     const move: TrackedMove = {
-      moveType: 0, // Will be determined during validation
-      category: 'M', // Will be determined during validation
+      moveType: moveType || 0,
+      category: 'M',
       pieceId,
       fromPosition: piece.position,
       fromLocationId: piece.locationId,
@@ -3492,10 +3681,11 @@ const App: React.FC = () => {
 
     setBureaucracyMoves([...bureaucracyMoves, move]);
 
-    // Update piece position
+    // Update piece position and rotation
+    const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
     setPieces(pieces.map(p =>
       p.id === pieceId
-        ? { ...p, position: newPosition, locationId }
+        ? { ...p, position: newPosition, rotation: newRotation, locationId }
         : p
     ));
   };
@@ -3541,6 +3731,8 @@ const App: React.FC = () => {
             onFinishTurn={handleFinishBureaucracyTurn}
             onPieceMove={handleBureaucracyPieceMove}
             onPiecePromote={handleBureaucracyPiecePromote}
+            onClearValidationError={handleClearBureaucracyValidationError}
+            onResetAction={handleResetBureaucracyAction}
             BOARD_IMAGE_URLS={BOARD_IMAGE_URLS}
             credibilityRotationAdjustments={credibilityRotationAdjustments}
           />
