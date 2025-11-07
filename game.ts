@@ -1341,7 +1341,7 @@ export const TILE_IMAGE_URLS = Array.from({ length: TOTAL_TILES }, (_, i) => {
   return `./images/${num}.svg`;
 });
 
-// Kredcoin values for each tile (₭⟠)
+// Kredcoin values for each tile (₭-)
 export const TILE_KREDCOIN_VALUES: { [key: number]: number } = {
   1: 1,
   2: 2,

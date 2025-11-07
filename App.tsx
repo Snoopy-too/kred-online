@@ -374,7 +374,7 @@ const BureaucracyScreen: React.FC<{
         </p>
         <div className="mt-2 text-lg">
           <span className="text-yellow-400 font-bold">
-            Kredcoin: ₭⟠{playerState?.remainingKredcoin || 0}
+            Kredcoin: ₭-{playerState?.remainingKredcoin || 0}
           </span>
         </div>
       </div>
@@ -567,7 +567,67 @@ const BureaucracyScreen: React.FC<{
                 Actions
               </h2>
               <div className="space-y-3">
-                {menu.map((item) => {
+                {/* Move items in two rows of three */}
+                {menu.some(item => item.type === 'MOVE') && (
+                  <>
+                    {/* First row: Assist, Remove, Influence */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {menu.filter(item => item.type === 'MOVE' && ['ASSIST', 'REMOVE', 'INFLUENCE'].includes(item.moveType || '')).map((item) => {
+                        const canAfford = affordableItems.some(ai => ai.id === item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => canAfford && onSelectMenuItem(item)}
+                            disabled={!canAfford}
+                            className={`p-2 rounded-lg border-2 transition-all ${
+                              canAfford
+                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <span className="font-bold text-sm block mb-1">
+                                {item.moveType}
+                              </span>
+                              <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                ₭-{item.price}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Second row: Advance, Withdraw, Organize */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {menu.filter(item => item.type === 'MOVE' && ['ADVANCE', 'WITHDRAW', 'ORGANIZE'].includes(item.moveType || '')).map((item) => {
+                        const canAfford = affordableItems.some(ai => ai.id === item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => canAfford && onSelectMenuItem(item)}
+                            disabled={!canAfford}
+                            className={`p-2 rounded-lg border-2 transition-all ${
+                              canAfford
+                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <span className="font-bold text-sm block mb-1">
+                                {item.moveType}
+                              </span>
+                              <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                ₭-{item.price}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                {/* Non-move items (Promotion, Credibility) remain full width */}
+                {menu.filter(item => item.type !== 'MOVE').map((item) => {
                   const canAfford = affordableItems.some(ai => ai.id === item.id);
                   return (
                     <button
@@ -583,11 +643,10 @@ const BureaucracyScreen: React.FC<{
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-lg">
                           {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
-                          {item.type === 'MOVE' && item.moveType}
                           {item.type === 'CREDIBILITY' && 'Restore Credibility'}
                         </span>
                         <span className={`text-xl font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
-                          ₭⟠{item.price}
+                          ₭-{item.price}
                         </span>
                       </div>
                       {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
@@ -1635,7 +1694,7 @@ const CampaignScreen: React.FC<{
             {/* Kredcoin Tracker (Test Mode Only) */}
             {isTestMode && (
               <div className="mt-8 bg-gray-700 rounded-lg p-4">
-                <h3 className="text-lg font-bold text-amber-400 mb-4 text-center">₭⟠ Kredcoin Tracker</h3>
+                <h3 className="text-lg font-bold text-amber-400 mb-4 text-center">₭- Kredcoin Tracker</h3>
                 <p className="text-xs text-slate-400 mb-4 text-center italic">Hidden in normal play • Only face-down banked tiles count</p>
                 <div className="space-y-3">
                   {players.map(player => {
@@ -1648,7 +1707,7 @@ const CampaignScreen: React.FC<{
                       <div key={`kredcoin-${player.id}`} className="bg-gray-800 rounded-lg p-3 border border-amber-600/30">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-slate-200 font-semibold">Player {player.id}</span>
-                          <span className="text-2xl font-bold text-amber-400">₭⟠ {kredcoin}</span>
+                          <span className="text-2xl font-bold text-amber-400">₭- {kredcoin}</span>
                         </div>
                         <div className="text-xs text-slate-400 flex justify-between">
                           <span>Face-down: {faceDownCount}</span>
@@ -3678,7 +3737,7 @@ const App: React.FC = () => {
     // Confirm if they still have kredcoin
     if (affordableItems.length > 0) {
       const confirm = window.confirm(
-        `Are you sure you want to finish? You still have ₭⟠${playerState?.remainingKredcoin} left.`
+        `Are you sure you want to finish? You still have ₭-${playerState?.remainingKredcoin} left.`
       );
       if (!confirm) return;
     }
