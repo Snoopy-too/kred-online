@@ -214,6 +214,7 @@ const BureaucracyScreen: React.FC<{
   onPieceMove: (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => void;
   onPiecePromote: (pieceId: string) => void;
   BOARD_IMAGE_URLS: { [key: number]: string };
+  credibilityRotationAdjustments: { [playerId: number]: number };
 }> = ({
   players,
   pieces,
@@ -233,6 +234,7 @@ const BureaucracyScreen: React.FC<{
   onPieceMove,
   onPiecePromote,
   BOARD_IMAGE_URLS,
+  credibilityRotationAdjustments,
 }) => {
   const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
   const currentPlayer = players.find(p => p.id === currentPlayerId);
@@ -275,197 +277,236 @@ const BureaucracyScreen: React.FC<{
         </div>
       )}
 
-      {/* Purchase Menu */}
-      {showPurchaseMenu && (
-        <div className="w-full max-w-2xl mb-6 bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
-          <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
-            Purchase Menu
-          </h2>
-          <div className="space-y-3">
-            {menu.map((item) => {
-              const canAfford = affordableItems.some(ai => ai.id === item.id);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => canAfford && onSelectMenuItem(item)}
-                  disabled={!canAfford}
-                  className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                    canAfford
-                      ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                      : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-bold text-lg">
-                      {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
-                      {item.type === 'MOVE' && `${item.moveType} Move`}
-                      {item.type === 'CREDIBILITY' && 'Restore Credibility'}
-                    </span>
-                    <span className={`text-xl font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
-                      ₭⟠{item.price}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-300">{item.description}</p>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={onFinishTurn}
-              className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors shadow-lg"
-            >
-              Finish Turn
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Main Content: Board and Menu Side by Side */}
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start justify-center">
+        {/* Game Board */}
+        <div className="relative w-full lg:w-2/3 aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
+          <div
+            className="absolute inset-0 w-full h-full transition-transform duration-500"
+            style={{ transform: `rotate(${boardRotation}deg)` }}
+          >
+            <img
+              src={BOARD_IMAGE_URLS[playerCount]}
+              alt={`${playerCount}-player board`}
+              className="absolute inset-0 w-full h-full object-contain"
+              draggable={false}
+            />
 
-      {/* Action in Progress */}
-      {!showPurchaseMenu && currentPurchase && (
-        <div className="w-full max-w-2xl mb-6 bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
-          <h2 className="text-2xl font-bold text-center mb-4 text-blue-300">
-            Perform Your Action
-          </h2>
-          <p className="text-center text-lg mb-6">
-            {currentPurchase.item.type === 'PROMOTION' && (
-              <>Promote a {currentPurchase.item.promotionLocation === 'OFFICE' ? 'piece in your Office' :
-                currentPurchase.item.promotionLocation === 'ROSTRUM' ? 'piece in one of your Rostrums' :
-                'piece in one of your Seats'}</>
-            )}
-            {currentPurchase.item.type === 'MOVE' && (
-              <>Perform a {currentPurchase.item.moveType} move</>
-            )}
-            {currentPurchase.item.type === 'CREDIBILITY' && (
-              <>Your credibility has been restored</>
-            )}
-          </p>
-          <div className="flex justify-center">
-            <button
-              onClick={onDoneWithAction}
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Game Board */}
-      <div className="relative w-full max-w-6xl aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
-        <div
-          className="absolute inset-0 w-full h-full transition-transform duration-500"
-          style={{ transform: `rotate(${boardRotation}deg)` }}
-        >
-          <img
-            src={BOARD_IMAGE_URLS[playerCount]}
-            alt={`${playerCount}-player board`}
-            className="absolute inset-0 w-full h-full object-contain"
-            draggable={false}
-          />
-
-          {/* Render pieces */}
-          {pieces.map((piece) => (
-            <div
-              key={piece.id}
-              className={`absolute ${isPromotionPurchase ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-move'}`}
-              style={{
-                left: `${piece.position.left}%`,
-                top: `${piece.position.top}%`,
-                transform: `translate(-50%, -50%) rotate(${piece.rotation - boardRotation}deg)`,
-                width: '4%',
-                height: '4%',
-              }}
-              draggable={!showPurchaseMenu && !isPromotionPurchase}
-              onClick={() => {
-                if (isPromotionPurchase) {
-                  onPiecePromote(piece.id);
-                }
-              }}
-              onDragEnd={(e) => {
-                if (!showPurchaseMenu && !isPromotionPurchase) {
-                  const boardRect = e.currentTarget.parentElement?.getBoundingClientRect();
-                  if (boardRect) {
-                    const left = ((e.clientX - boardRect.left) / boardRect.width) * 100;
-                    const top = ((e.clientY - boardRect.top) / boardRect.height) * 100;
-                    onPieceMove(piece.id, { left, top });
-                  }
-                }
-              }}
-            >
-              <img
-                src={piece.imageUrl}
-                alt={piece.name}
-                className="w-full h-full object-contain"
-                draggable={false}
-              />
-            </div>
-          ))}
-
-          {/* Render board tiles */}
-          {boardTiles.map((boardTile) => (
-            <div
-              key={boardTile.id}
-              className="absolute pointer-events-none"
-              style={{
-                left: `${boardTile.position.left}%`,
-                top: `${boardTile.position.top}%`,
-                transform: `translate(-50%, -50%) rotate(${boardTile.rotation - boardRotation}deg)`,
-                width: '3%',
-                height: '6%',
-              }}
-            >
-              <img
-                src={boardTile.tile.url}
-                alt={`Tile ${boardTile.tile.id}`}
-                className="w-full h-full object-contain"
-                draggable={false}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Turn Progress */}
-      <div className="mt-6 w-full max-w-2xl bg-gray-800/70 rounded-lg p-4">
-        <h3 className="text-lg font-bold text-center mb-3 text-yellow-400">Turn Order</h3>
-        <div className="flex justify-center gap-4 flex-wrap">
-          {turnOrder.map((playerId, index) => {
-            const pState = bureaucracyStates.find(s => s.playerId === playerId);
-            const isCurrentPlayer = index === currentBureaucracyPlayerIndex;
-            const isComplete = pState?.turnComplete;
-
-            return (
+            {/* Render pieces */}
+            {pieces.map((piece) => (
               <div
-                key={playerId}
-                className={`px-4 py-2 rounded-lg border-2 ${
-                  isCurrentPlayer
-                    ? 'bg-yellow-600 border-yellow-400 text-white font-bold'
-                    : isComplete
-                    ? 'bg-green-800 border-green-600 text-green-200'
-                    : 'bg-gray-700 border-gray-500 text-gray-300'
-                }`}
+                key={piece.id}
+                className={`absolute ${isPromotionPurchase ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-move'}`}
+                style={{
+                  left: `${piece.position.left}%`,
+                  top: `${piece.position.top}%`,
+                  transform: `translate(-50%, -50%) rotate(${piece.rotation - boardRotation}deg)`,
+                  width: '4%',
+                  height: '4%',
+                }}
+                draggable={!showPurchaseMenu && !isPromotionPurchase}
+                onClick={() => {
+                  if (isPromotionPurchase) {
+                    onPiecePromote(piece.id);
+                  }
+                }}
+                onDragEnd={(e) => {
+                  if (!showPurchaseMenu && !isPromotionPurchase) {
+                    const boardRect = e.currentTarget.parentElement?.getBoundingClientRect();
+                    if (boardRect) {
+                      const left = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+                      const top = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+                      onPieceMove(piece.id, { left, top });
+                    }
+                  }
+                }}
               >
-                Player {playerId} {isComplete && '✓'}
+                <img
+                  src={piece.imageUrl}
+                  alt={piece.name}
+                  className="w-full h-full object-contain"
+                  draggable={false}
+                />
               </div>
-            );
-          })}
-        </div>
-      </div>
+            ))}
 
-      {/* Board Rotation Toggle */}
-      <div className="mt-4 w-full max-w-2xl bg-gray-800/70 rounded-lg p-3">
-        <label className="flex items-center justify-center cursor-pointer">
-          <input
-            type="checkbox"
-            checked={boardRotationEnabled}
-            onChange={(e) => setBoardRotationEnabled(e.target.checked)}
-            className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500 cursor-pointer"
-          />
-          <span className="ml-3 text-slate-200">
-            Board Rotation {boardRotationEnabled ? '(ON)' : '(OFF)'}
-          </span>
-        </label>
+            {/* Render board tiles */}
+            {boardTiles.map((boardTile) => (
+              <div
+                key={boardTile.id}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${boardTile.position.left}%`,
+                  top: `${boardTile.position.top}%`,
+                  transform: `translate(-50%, -50%) rotate(${boardTile.rotation - boardRotation}deg)`,
+                  width: '3%',
+                  height: '6%',
+                }}
+              >
+                <img
+                  src={boardTile.tile.url}
+                  alt={`Tile ${boardTile.tile.id}`}
+                  className="w-full h-full object-contain"
+                  draggable={false}
+                />
+              </div>
+            ))}
+
+            {/* Credibility display */}
+            {(() => {
+              const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+              return credibilityLocations.map((location) => {
+                const player = players.find(p => p.id === location.ownerId);
+                const credibilityValue = player?.credibility ?? 3;
+                const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
+                const finalRotation = (location.rotation || 0) + adjustment;
+                const credibilityImage = `/images/${credibilityValue}_credibility.svg`;
+
+                return (
+                  <div
+                    key={`credibility_${location.ownerId}`}
+                    className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
+                    style={{
+                      left: `${location.position.left}%`,
+                      top: `${location.position.top}%`,
+                      transform: `translate(-50%, -50%) rotate(${finalRotation - boardRotation}deg)`,
+                      width: '8%',
+                      height: '8%',
+                    }}
+                  >
+                    <img
+                      src={credibilityImage}
+                      alt={`Player ${location.ownerId} Credibility: ${credibilityValue}`}
+                      className="w-full h-full object-contain"
+                      draggable={false}
+                    />
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+
+        {/* Right Side Panel: Purchase Menu and Controls */}
+        <div className="w-full lg:w-1/3 flex flex-col gap-4">
+          {/* Purchase Menu */}
+          {showPurchaseMenu && (
+            <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
+              <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
+                Purchase Menu
+              </h2>
+              <div className="space-y-3">
+                {menu.map((item) => {
+                  const canAfford = affordableItems.some(ai => ai.id === item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => canAfford && onSelectMenuItem(item)}
+                      disabled={!canAfford}
+                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                        canAfford
+                          ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                          : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-lg">
+                          {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
+                          {item.type === 'MOVE' && `${item.moveType} Move`}
+                          {item.type === 'CREDIBILITY' && 'Restore Credibility'}
+                        </span>
+                        <span className={`text-xl font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                          ₭⟠{item.price}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-300">{item.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={onFinishTurn}
+                  className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                >
+                  Finish Turn
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Action in Progress */}
+          {!showPurchaseMenu && currentPurchase && (
+            <div className="bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
+              <h2 className="text-2xl font-bold text-center mb-4 text-blue-300">
+                Perform Your Action
+              </h2>
+              <p className="text-center text-lg mb-6">
+                {currentPurchase.item.type === 'PROMOTION' && (
+                  <>Promote a {currentPurchase.item.promotionLocation === 'OFFICE' ? 'piece in your Office' :
+                    currentPurchase.item.promotionLocation === 'ROSTRUM' ? 'piece in one of your Rostrums' :
+                    'piece in one of your Seats'}</>
+                )}
+                {currentPurchase.item.type === 'MOVE' && (
+                  <>Perform a {currentPurchase.item.moveType} move</>
+                )}
+                {currentPurchase.item.type === 'CREDIBILITY' && (
+                  <>Your credibility has been restored</>
+                )}
+              </p>
+              <div className="flex justify-center">
+                <button
+                  onClick={onDoneWithAction}
+                  className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Turn Progress */}
+          <div className="bg-gray-800/70 rounded-lg p-4">
+            <h3 className="text-lg font-bold text-center mb-3 text-yellow-400">Turn Order</h3>
+            <div className="flex justify-center gap-4 flex-wrap">
+              {turnOrder.map((playerId, index) => {
+                const pState = bureaucracyStates.find(s => s.playerId === playerId);
+                const isCurrentPlayer = index === currentBureaucracyPlayerIndex;
+                const isComplete = pState?.turnComplete;
+
+                return (
+                  <div
+                    key={playerId}
+                    className={`px-4 py-2 rounded-lg border-2 ${
+                      isCurrentPlayer
+                        ? 'bg-yellow-600 border-yellow-400 text-white font-bold'
+                        : isComplete
+                        ? 'bg-green-800 border-green-600 text-green-200'
+                        : 'bg-gray-700 border-gray-500 text-gray-300'
+                    }`}
+                  >
+                    Player {playerId} {isComplete && '✓'}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Board Rotation Toggle */}
+          <div className="bg-gray-800/70 rounded-lg p-3">
+            <label className="flex items-center justify-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={boardRotationEnabled}
+                onChange={(e) => setBoardRotationEnabled(e.target.checked)}
+                className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500 cursor-pointer"
+              />
+              <span className="ml-3 text-slate-200">
+                Board Rotation {boardRotationEnabled ? '(ON)' : '(OFF)'}
+              </span>
+            </label>
+          </div>
+        </div>
       </div>
     </main>
   );
@@ -3502,6 +3543,7 @@ const App: React.FC = () => {
             onPieceMove={handleBureaucracyPieceMove}
             onPiecePromote={handleBureaucracyPiecePromote}
             BOARD_IMAGE_URLS={BOARD_IMAGE_URLS}
+            credibilityRotationAdjustments={credibilityRotationAdjustments}
           />
         );
       case 'CAMPAIGN':
