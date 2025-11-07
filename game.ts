@@ -1384,21 +1384,21 @@ export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     type: 'MOVE',
     moveType: 'ASSIST',
     price: 15,
-    description: 'Assist'
+    description: ''
   },
   {
     id: 'move_remove',
     type: 'MOVE',
     moveType: 'REMOVE',
     price: 15,
-    description: 'Remove'
+    description: ''
   },
   {
     id: 'move_influence',
     type: 'MOVE',
     moveType: 'INFLUENCE',
     price: 15,
-    description: 'Influence'
+    description: ''
   },
   {
     id: 'promote_rostrum',
@@ -1412,21 +1412,21 @@ export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     type: 'MOVE',
     moveType: 'ADVANCE',
     price: 9,
-    description: '1 Advance'
+    description: ''
   },
   {
     id: 'move_withdraw',
     type: 'MOVE',
     moveType: 'WITHDRAW',
     price: 9,
-    description: 'Withdraw'
+    description: ''
   },
   {
     id: 'move_organize',
     type: 'MOVE',
     moveType: 'ORGANIZE',
     price: 9,
-    description: 'Organize'
+    description: ''
   },
   {
     id: 'promote_seat',
@@ -1439,7 +1439,7 @@ export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     id: 'credibility',
     type: 'CREDIBILITY',
     price: 3,
-    description: 'Restore one point to your Credibility'
+    description: 'Restore one notch to your Credibility'
   }
 ];
 
@@ -1457,21 +1457,21 @@ export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     type: 'MOVE',
     moveType: 'ASSIST',
     price: 10,
-    description: 'Assist'
+    description: ''
   },
   {
     id: 'move_remove',
     type: 'MOVE',
     moveType: 'REMOVE',
     price: 10,
-    description: 'Remove'
+    description: ''
   },
   {
     id: 'move_influence',
     type: 'MOVE',
     moveType: 'INFLUENCE',
     price: 10,
-    description: 'Influence'
+    description: ''
   },
   {
     id: 'promote_rostrum',
@@ -1485,21 +1485,21 @@ export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     type: 'MOVE',
     moveType: 'ADVANCE',
     price: 6,
-    description: 'Advance'
+    description: ''
   },
   {
     id: 'move_withdraw',
     type: 'MOVE',
     moveType: 'WITHDRAW',
     price: 6,
-    description: 'Withdraw'
+    description: ''
   },
   {
     id: 'move_organize',
     type: 'MOVE',
     moveType: 'ORGANIZE',
     price: 6,
-    description: 'Organize'
+    description: ''
   },
   {
     id: 'promote_seat',
@@ -1512,7 +1512,7 @@ export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
     id: 'credibility',
     type: 'CREDIBILITY',
     price: 2,
-    description: 'Restore one point to your Credibility'
+    description: 'Restore one notch to your Credibility'
   }
 ];
 

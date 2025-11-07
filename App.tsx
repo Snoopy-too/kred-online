@@ -560,11 +560,11 @@ const BureaucracyScreen: React.FC<{
 
         {/* Right Side Panel: Purchase Menu and Controls */}
         <div className="w-full lg:w-1/3 flex flex-col gap-4">
-          {/* Purchase Menu */}
+          {/* Actions Menu */}
           {showPurchaseMenu && (
             <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
               <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
-                Purchase Menu
+                Actions
               </h2>
               <div className="space-y-3">
                 {menu.map((item) => {
@@ -583,14 +583,14 @@ const BureaucracyScreen: React.FC<{
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-lg">
                           {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
-                          {item.type === 'MOVE' && `${item.moveType} Move`}
+                          {item.type === 'MOVE' && item.moveType}
                           {item.type === 'CREDIBILITY' && 'Restore Credibility'}
                         </span>
                         <span className={`text-xl font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
                           ₭⟠{item.price}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-300">{item.description}</p>
+                      {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
                     </button>
                   );
                 })}
