@@ -15,7 +15,7 @@ export interface Player {
   credibility: number;
 }
 
-export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLAYED' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE' | 'CORRECTION_REQUIRED';
+export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLAYED' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE' | 'CORRECTION_REQUIRED' | 'BUREAUCRACY';
 
 // --- Game Piece Definitions ---
 
@@ -91,6 +91,38 @@ export interface ChallengeState {
   status: 'PENDING' | 'CHALLENGED' | 'RESOLVED';
   challengedByPlayerId?: number;
   acceptedByReceivingPlayer: boolean;
+}
+
+// Bureaucracy Phase Types
+export type BureaucracyItemType = 'MOVE' | 'PROMOTION' | 'CREDIBILITY';
+export type BureaucracyMoveType = 'ADVANCE' | 'WITHDRAW' | 'ORGANIZE' | 'ASSIST' | 'REMOVE' | 'INFLUENCE';
+export type PromotionLocationType = 'OFFICE' | 'ROSTRUM' | 'SEAT';
+
+export interface BureaucracyMenuItem {
+  id: string;
+  type: BureaucracyItemType;
+  moveType?: BureaucracyMoveType;
+  promotionLocation?: PromotionLocationType;
+  price: number;
+  description: string;
+}
+
+export interface BureaucracyPurchase {
+  playerId: number;
+  item: BureaucracyMenuItem;
+  pieceId?: string;
+  fromLocationId?: string;
+  toLocationId?: string;
+  timestamp: number;
+  completed: boolean;
+}
+
+export interface BureaucracyPlayerState {
+  playerId: number;
+  initialKredcoin: number;
+  remainingKredcoin: number;
+  turnComplete: boolean;
+  purchases: BureaucracyPurchase[];
 }
 
 // These are the ONLY valid drop locations for pieces.
@@ -1337,6 +1369,96 @@ export const TILE_KREDCOIN_VALUES: { [key: number]: number } = {
   24: 9,
   // Blank tile (if needed) = 0
 };
+
+// Bureaucracy menu for 3 and 4 player modes
+export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
+  {
+    id: 'promote_office',
+    type: 'PROMOTION',
+    promotionLocation: 'OFFICE',
+    price: 18,
+    description: 'Promote a piece in the Office from Mark to Heel OR Heel to Pawn'
+  },
+  {
+    id: 'move_air',
+    type: 'MOVE',
+    moveType: 'ASSIST',
+    price: 15,
+    description: '1 Assist, Remove or Influence'
+  },
+  {
+    id: 'promote_rostrum',
+    type: 'PROMOTION',
+    promotionLocation: 'ROSTRUM',
+    price: 12,
+    description: 'Promote a piece in a Rostrum from Mark to Heel OR Heel to Pawn'
+  },
+  {
+    id: 'move_awo',
+    type: 'MOVE',
+    moveType: 'ADVANCE',
+    price: 9,
+    description: '1 Advance, Withdraw or Organize'
+  },
+  {
+    id: 'promote_seat',
+    type: 'PROMOTION',
+    promotionLocation: 'SEAT',
+    price: 6,
+    description: 'Promote a piece in a Seat from Mark to Heel OR Heel to Pawn'
+  },
+  {
+    id: 'credibility',
+    type: 'CREDIBILITY',
+    price: 3,
+    description: 'Restore one point to your Credibility'
+  }
+];
+
+// Bureaucracy menu for 5 player mode
+export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
+  {
+    id: 'promote_rostrum',
+    type: 'PROMOTION',
+    promotionLocation: 'ROSTRUM',
+    price: 18,
+    description: 'Promote a piece in a Rostrum from Mark to Heel OR Heel to Pawn'
+  },
+  {
+    id: 'promote_office',
+    type: 'PROMOTION',
+    promotionLocation: 'OFFICE',
+    price: 12,
+    description: 'Promote a piece in the Office from Mark to Heel OR Heel to Pawn'
+  },
+  {
+    id: 'move_air',
+    type: 'MOVE',
+    moveType: 'ASSIST',
+    price: 10,
+    description: '1 Assist, Remove or Influence'
+  },
+  {
+    id: 'move_awo',
+    type: 'MOVE',
+    moveType: 'ADVANCE',
+    price: 6,
+    description: '1 Advance, Withdraw or Organize'
+  },
+  {
+    id: 'promote_seat',
+    type: 'PROMOTION',
+    promotionLocation: 'SEAT',
+    price: 4,
+    description: 'Promote a piece in a Seat from Mark to Heel OR Heel to Pawn'
+  },
+  {
+    id: 'credibility',
+    type: 'CREDIBILITY',
+    price: 2,
+    description: 'Restore one point to your Credibility'
+  }
+];
 
 
 // --- Utility Functions ---
@@ -2778,4 +2900,317 @@ export function handleCredibilityLoss(
         return players;
     }
   };
+}
+
+// ============================================================================
+// BUREAUCRACY PHASE FUNCTIONS
+// ============================================================================
+
+/**
+ * Calculates the total Kredcoin value for a player based on their bureaucracy tiles
+ */
+export function calculatePlayerKredcoin(player: Player): number {
+  return player.bureaucracyTiles.reduce((total, tile) => {
+    return total + (TILE_KREDCOIN_VALUES[tile.id] || 0);
+  }, 0);
+}
+
+/**
+ * Determines the turn order for Bureaucracy phase based on Kredcoin amounts
+ * Returns player IDs sorted by Kredcoin (descending)
+ */
+export function getBureaucracyTurnOrder(players: Player[]): number[] {
+  const playerKredcoin = players.map(p => ({
+    id: p.id,
+    kredcoin: calculatePlayerKredcoin(p)
+  }));
+
+  // Sort by kredcoin descending, then by player id ascending (for tie-breaking)
+  playerKredcoin.sort((a, b) => {
+    if (b.kredcoin !== a.kredcoin) {
+      return b.kredcoin - a.kredcoin;
+    }
+    return a.id - b.id;
+  });
+
+  return playerKredcoin.map(pk => pk.id);
+}
+
+/**
+ * Gets the Bureaucracy menu for a specific player count
+ */
+export function getBureaucracyMenu(playerCount: number): BureaucracyMenuItem[] {
+  if (playerCount === 5) {
+    return FIVE_PLAYER_BUREAUCRACY_MENU;
+  }
+  return THREE_FOUR_PLAYER_BUREAUCRACY_MENU;
+}
+
+/**
+ * Filters menu items that the player can afford
+ */
+export function getAvailablePurchases(
+  menu: BureaucracyMenuItem[],
+  remainingKredcoin: number
+): BureaucracyMenuItem[] {
+  return menu.filter(item => item.price <= remainingKredcoin);
+}
+
+/**
+ * Validates that a promotion was performed correctly
+ */
+export function validatePromotion(
+  pieces: Piece[],
+  pieceId: string,
+  expectedLocationType: PromotionLocationType,
+  playerId: number,
+  beforePieces: Piece[]
+): { isValid: boolean; reason: string } {
+  const pieceBefore = beforePieces.find(p => p.id === pieceId);
+  const pieceAfter = pieces.find(p => p.id === pieceId);
+
+  if (!pieceBefore) {
+    return { isValid: false, reason: 'Original piece not found' };
+  }
+
+  if (!pieceAfter) {
+    return { isValid: false, reason: 'Piece not found after promotion' };
+  }
+
+  // Check if piece was originally in the correct player's domain and location type
+  if (!pieceBefore.locationId) {
+    return { isValid: false, reason: 'Piece was not in a valid location' };
+  }
+
+  const locationPattern = new RegExp(`^p${playerId}_(office|rostrum\\d+|seat\\d+)$`);
+  const match = pieceBefore.locationId.match(locationPattern);
+
+  if (!match) {
+    return { isValid: false, reason: `Piece must be in Player ${playerId}'s domain` };
+  }
+
+  const actualLocationType = match[1];
+
+  if (expectedLocationType === 'OFFICE' && actualLocationType !== 'office') {
+    return { isValid: false, reason: 'Piece must be in the Office for this promotion' };
+  }
+
+  if (expectedLocationType === 'ROSTRUM' && !actualLocationType.startsWith('rostrum')) {
+    return { isValid: false, reason: 'Piece must be in a Rostrum for this promotion' };
+  }
+
+  if (expectedLocationType === 'SEAT' && !actualLocationType.startsWith('seat')) {
+    return { isValid: false, reason: 'Piece must be in a Seat for this promotion' };
+  }
+
+  // Check that the piece type was valid (Mark or Heel only)
+  if (pieceBefore.name !== 'Mark' && pieceBefore.name !== 'Heel') {
+    return { isValid: false, reason: 'Only Marks and Heels can be promoted' };
+  }
+
+  // Check that piece is now in community
+  if (!pieceAfter.locationId || !pieceAfter.locationId.startsWith('community')) {
+    return { isValid: false, reason: 'Promoted piece must move to community' };
+  }
+
+  // Check that a higher-tier piece now occupies the original location
+  const targetPieceType = pieceBefore.name === 'Mark' ? 'Heel' : 'Pawn';
+  const newPieceInLocation = pieces.find(p =>
+    p.locationId === pieceBefore.locationId &&
+    p.name === targetPieceType
+  );
+
+  if (!newPieceInLocation) {
+    return {
+      isValid: false,
+      reason: `A ${targetPieceType} from the community must now occupy the promoted piece's location`
+    };
+  }
+
+  return { isValid: true, reason: 'Valid promotion' };
+}
+
+/**
+ * Performs a promotion by swapping with a piece from the community
+ * Returns updated pieces array with the swap performed
+ */
+export function performPromotion(pieces: Piece[], pieceId: string): {
+  pieces: Piece[];
+  success: boolean;
+  reason?: string;
+} {
+  const pieceToPromote = pieces.find(p => p.id === pieceId);
+
+  if (!pieceToPromote) {
+    return { pieces, success: false, reason: 'Piece not found' };
+  }
+
+  // Determine what piece type we need from community
+  let targetPieceType: string;
+  if (pieceToPromote.name === 'Mark') {
+    targetPieceType = 'Heel';
+  } else if (pieceToPromote.name === 'Heel') {
+    targetPieceType = 'Pawn';
+  } else {
+    return { pieces, success: false, reason: 'Pawns cannot be promoted further' };
+  }
+
+  // Find a piece of target type in the community
+  const communityPiece = pieces.find(p =>
+    p.name === targetPieceType &&
+    p.locationId &&
+    p.locationId.startsWith('community')
+  );
+
+  if (!communityPiece) {
+    return {
+      pieces,
+      success: false,
+      reason: `No ${targetPieceType} available in community for promotion`
+    };
+  }
+
+  // Store the locations before swap
+  const promotedPieceLocation = pieceToPromote.locationId;
+  const communityPieceLocation = communityPiece.locationId;
+
+  // Perform the swap
+  const updatedPieces = pieces.map(piece => {
+    if (piece.id === pieceId) {
+      // Move promoted piece to community with demoted type
+      return {
+        ...piece,
+        locationId: communityPieceLocation,
+        position: communityPiece.position,
+        rotation: communityPiece.rotation
+      };
+    } else if (piece.id === communityPiece.id) {
+      // Move community piece to the promoted location
+      return {
+        ...piece,
+        locationId: promotedPieceLocation,
+        position: pieceToPromote.position,
+        rotation: pieceToPromote.rotation
+      };
+    }
+    return piece;
+  });
+
+  return { pieces: updatedPieces, success: true };
+}
+
+/**
+ * Checks if a player has achieved the win condition
+ */
+export function checkPlayerWinCondition(playerId: number, pieces: Piece[]): boolean {
+  // Check Office: must have a Pawn
+  const officeLocation = `p${playerId}_office`;
+  const officePiece = pieces.find(p => p.locationId === officeLocation);
+  if (!officePiece || officePiece.name !== 'Pawn') {
+    return false;
+  }
+
+  // Check Rostrums: both must have Heels
+  const rostrum1Location = `p${playerId}_rostrum1`;
+  const rostrum2Location = `p${playerId}_rostrum2`;
+  const rostrum1Piece = pieces.find(p => p.locationId === rostrum1Location);
+  const rostrum2Piece = pieces.find(p => p.locationId === rostrum2Location);
+
+  if (!rostrum1Piece || rostrum1Piece.name !== 'Heel') {
+    return false;
+  }
+  if (!rostrum2Piece || rostrum2Piece.name !== 'Heel') {
+    return false;
+  }
+
+  // Check all 6 seats: all must be occupied
+  for (let i = 1; i <= 6; i++) {
+    const seatLocation = `p${playerId}_seat${i}`;
+    const seatPiece = pieces.find(p => p.locationId === seatLocation);
+    if (!seatPiece) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Checks for win condition at the end of Bureaucracy phase
+ * Returns array of winning player IDs (can be multiple for a draw)
+ */
+export function checkBureaucracyWinCondition(
+  players: Player[],
+  pieces: Piece[]
+): number[] {
+  const winners: number[] = [];
+
+  for (const player of players) {
+    if (checkPlayerWinCondition(player.id, pieces)) {
+      winners.push(player.id);
+    }
+  }
+
+  return winners;
+}
+
+/**
+ * Validates that purchased moves were performed correctly
+ */
+export function validatePurchasedMove(
+  moveType: BureaucracyMoveType,
+  trackedMoves: TrackedMove[],
+  playerId: number,
+  pieces: Piece[]
+): { isValid: boolean; reason: string } {
+  if (trackedMoves.length === 0) {
+    return { isValid: false, reason: 'No moves were performed' };
+  }
+
+  // Map bureaucracy move types to defined move types
+  let expectedMoveType: DefinedMoveType;
+  switch (moveType) {
+    case 'ADVANCE':
+      expectedMoveType = DefinedMoveType.ADVANCE;
+      break;
+    case 'WITHDRAW':
+      expectedMoveType = DefinedMoveType.WITHDRAW;
+      break;
+    case 'ORGANIZE':
+      expectedMoveType = DefinedMoveType.ORGANIZE;
+      break;
+    case 'ASSIST':
+      expectedMoveType = DefinedMoveType.ASSIST;
+      break;
+    case 'REMOVE':
+      expectedMoveType = DefinedMoveType.REMOVE;
+      break;
+    case 'INFLUENCE':
+      expectedMoveType = DefinedMoveType.INFLUENCE;
+      break;
+    default:
+      return { isValid: false, reason: 'Unknown move type' };
+  }
+
+  // Check if at least one move matches the expected type
+  const hasMatchingMove = trackedMoves.some(move => move.moveType === expectedMoveType);
+
+  if (!hasMatchingMove) {
+    return {
+      isValid: false,
+      reason: `Expected a ${moveType} move, but none was found`
+    };
+  }
+
+  // Validate each move
+  for (const move of trackedMoves) {
+    if (move.moveType === expectedMoveType) {
+      const validation = validateSingleMove(move, playerId, pieces);
+      if (!validation.isValid) {
+        return { isValid: false, reason: validation.reason };
+      }
+    }
+  }
+
+  return { isValid: true, reason: 'Valid move' };
 }

@@ -36,22 +36,36 @@ import {
   validateSingleMove,
   areSeatsAdjacent,
   handleCredibilityLoss,
+  BureaucracyMenuItem,
+  BureaucracyPurchase,
+  BureaucracyPlayerState,
+  BureaucracyMoveType,
+  calculatePlayerKredcoin,
+  getBureaucracyTurnOrder,
+  getBureaucracyMenu,
+  getAvailablePurchases,
+  validatePromotion,
+  performPromotion,
+  validatePurchasedMove,
+  checkBureaucracyWinCondition,
 } from './game';
 
 // --- Helper Components ---
 
 const PlayerSelectionScreen: React.FC<{
-  onStartGame: (playerCount: number, isTestMode: boolean) => void;
+  onStartGame: (playerCount: number, isTestMode: boolean, skipDraft: boolean, skipCampaign: boolean) => void;
 }> = ({ onStartGame }) => {
   const [playerCount, setPlayerCount] = useState<number>(4);
   const [isTestMode, setIsTestMode] = useState(true);
+  const [skipDraft, setSkipDraft] = useState(false);
+  const [skipCampaign, setSkipCampaign] = useState(false);
 
   return (
     <main className="min-h-screen w-full bg-sky-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-slate-800">
       <div className="text-center mb-12">
         <img
             src="./images/logo.png"
-            alt="Kred Logo" 
+            alt="Kred Logo"
             className="w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto"
             style={{ filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.15))' }}
         />
@@ -59,7 +73,7 @@ const PlayerSelectionScreen: React.FC<{
           You can't trust anyone!
         </p>
       </div>
-      
+
       <div className="text-center">
         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700">
           Select Players
@@ -84,20 +98,50 @@ const PlayerSelectionScreen: React.FC<{
           </button>
         ))}
       </div>
-       <div className="flex items-center my-6">
-        <input
-          id="test-mode-checkbox"
-          type="checkbox"
-          checked={isTestMode}
-          onChange={(e) => setIsTestMode(e.target.checked)}
-          className="h-5 w-5 rounded bg-white border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-        />
-        <label htmlFor="test-mode-checkbox" className="ml-3 text-slate-600 cursor-pointer">
-          Test Mode (Single user plays for everyone)
-        </label>
+      <div className="flex flex-col gap-3 my-6">
+        <div className="flex items-center">
+          <input
+            id="test-mode-checkbox"
+            type="checkbox"
+            checked={isTestMode}
+            onChange={(e) => setIsTestMode(e.target.checked)}
+            className="h-5 w-5 rounded bg-white border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+          />
+          <label htmlFor="test-mode-checkbox" className="ml-3 text-slate-600 cursor-pointer">
+            Test Mode (Single user plays for everyone)
+          </label>
+        </div>
+        {isTestMode && (
+          <>
+            <div className="flex items-center ml-6">
+              <input
+                id="skip-draft-checkbox"
+                type="checkbox"
+                checked={skipDraft}
+                onChange={(e) => setSkipDraft(e.target.checked)}
+                className="h-5 w-5 rounded bg-white border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+              />
+              <label htmlFor="skip-draft-checkbox" className="ml-3 text-slate-600 cursor-pointer">
+                Skip Draft Phase (Random tile distribution)
+              </label>
+            </div>
+            <div className="flex items-center ml-6">
+              <input
+                id="skip-campaign-checkbox"
+                type="checkbox"
+                checked={skipCampaign}
+                onChange={(e) => setSkipCampaign(e.target.checked)}
+                className="h-5 w-5 rounded bg-white border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+              />
+              <label htmlFor="skip-campaign-checkbox" className="ml-3 text-slate-600 cursor-pointer">
+                Skip Campaign Phase (Go directly to Bureaucracy)
+              </label>
+            </div>
+          </>
+        )}
       </div>
-      <button 
-        onClick={() => onStartGame(playerCount, isTestMode)}
+      <button
+        onClick={() => onStartGame(playerCount, isTestMode, skipDraft, skipCampaign)}
         className="px-8 py-3 bg-green-600 text-white font-bold text-lg rounded-lg hover:bg-green-500 transition-colors shadow-md hover:shadow-lg"
       >
         Start Game
@@ -146,6 +190,282 @@ const DraftingScreen: React.FC<{
             </button>
           ))}
         </div>
+      </div>
+    </main>
+  );
+};
+
+const BureaucracyScreen: React.FC<{
+  players: Player[];
+  pieces: Piece[];
+  boardTiles: BoardTile[];
+  playerCount: number;
+  currentBureaucracyPlayerIndex: number;
+  bureaucracyStates: BureaucracyPlayerState[];
+  currentPurchase: BureaucracyPurchase | null;
+  showPurchaseMenu: boolean;
+  validationError: string | null;
+  turnOrder: number[];
+  boardRotationEnabled: boolean;
+  setBoardRotationEnabled: (enabled: boolean) => void;
+  onSelectMenuItem: (item: BureaucracyMenuItem) => void;
+  onDoneWithAction: () => void;
+  onFinishTurn: () => void;
+  onPieceMove: (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => void;
+  onPiecePromote: (pieceId: string) => void;
+  BOARD_IMAGE_URLS: { [key: number]: string };
+}> = ({
+  players,
+  pieces,
+  boardTiles,
+  playerCount,
+  currentBureaucracyPlayerIndex,
+  bureaucracyStates,
+  currentPurchase,
+  showPurchaseMenu,
+  validationError,
+  turnOrder,
+  boardRotationEnabled,
+  setBoardRotationEnabled,
+  onSelectMenuItem,
+  onDoneWithAction,
+  onFinishTurn,
+  onPieceMove,
+  onPiecePromote,
+  BOARD_IMAGE_URLS,
+}) => {
+  const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
+  const currentPlayer = players.find(p => p.id === currentPlayerId);
+  const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+  const menu = getBureaucracyMenu(playerCount);
+  const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
+  const isPromotionPurchase = currentPurchase?.item.type === 'PROMOTION';
+  const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
+
+  return (
+    <main className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center p-4 font-sans text-slate-100">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
+          Bureaucracy Phase
+        </h1>
+        <p className="text-2xl text-slate-200 mt-2">
+          Player {currentPlayerId}'s Turn
+        </p>
+        <div className="mt-2 text-lg">
+          <span className="text-yellow-400 font-bold">
+            Kredcoin: ₭⟠{playerState?.remainingKredcoin || 0}
+          </span>
+        </div>
+      </div>
+
+      {/* Validation Error Modal */}
+      {validationError && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
+            <h2 className="text-2xl font-bold text-white mb-4">Invalid Action</h2>
+            <p className="text-red-100 mb-6">{validationError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Purchase Menu */}
+      {showPurchaseMenu && (
+        <div className="w-full max-w-2xl mb-6 bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
+          <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
+            Purchase Menu
+          </h2>
+          <div className="space-y-3">
+            {menu.map((item) => {
+              const canAfford = affordableItems.some(ai => ai.id === item.id);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => canAfford && onSelectMenuItem(item)}
+                  disabled={!canAfford}
+                  className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                    canAfford
+                      ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                      : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-bold text-lg">
+                      {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
+                      {item.type === 'MOVE' && `${item.moveType} Move`}
+                      {item.type === 'CREDIBILITY' && 'Restore Credibility'}
+                    </span>
+                    <span className={`text-xl font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                      ₭⟠{item.price}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-300">{item.description}</p>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={onFinishTurn}
+              className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+            >
+              Finish Turn
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Action in Progress */}
+      {!showPurchaseMenu && currentPurchase && (
+        <div className="w-full max-w-2xl mb-6 bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
+          <h2 className="text-2xl font-bold text-center mb-4 text-blue-300">
+            Perform Your Action
+          </h2>
+          <p className="text-center text-lg mb-6">
+            {currentPurchase.item.type === 'PROMOTION' && (
+              <>Promote a {currentPurchase.item.promotionLocation === 'OFFICE' ? 'piece in your Office' :
+                currentPurchase.item.promotionLocation === 'ROSTRUM' ? 'piece in one of your Rostrums' :
+                'piece in one of your Seats'}</>
+            )}
+            {currentPurchase.item.type === 'MOVE' && (
+              <>Perform a {currentPurchase.item.moveType} move</>
+            )}
+            {currentPurchase.item.type === 'CREDIBILITY' && (
+              <>Your credibility has been restored</>
+            )}
+          </p>
+          <div className="flex justify-center">
+            <button
+              onClick={onDoneWithAction}
+              className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Game Board */}
+      <div className="relative w-full max-w-6xl aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
+        <div
+          className="absolute inset-0 w-full h-full transition-transform duration-500"
+          style={{ transform: `rotate(${boardRotation}deg)` }}
+        >
+          <img
+            src={BOARD_IMAGE_URLS[playerCount]}
+            alt={`${playerCount}-player board`}
+            className="absolute inset-0 w-full h-full object-contain"
+            draggable={false}
+          />
+
+          {/* Render pieces */}
+          {pieces.map((piece) => (
+            <div
+              key={piece.id}
+              className={`absolute ${isPromotionPurchase ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-move'}`}
+              style={{
+                left: `${piece.position.left}%`,
+                top: `${piece.position.top}%`,
+                transform: `translate(-50%, -50%) rotate(${piece.rotation - boardRotation}deg)`,
+                width: '4%',
+                height: '4%',
+              }}
+              draggable={!showPurchaseMenu && !isPromotionPurchase}
+              onClick={() => {
+                if (isPromotionPurchase) {
+                  onPiecePromote(piece.id);
+                }
+              }}
+              onDragEnd={(e) => {
+                if (!showPurchaseMenu && !isPromotionPurchase) {
+                  const boardRect = e.currentTarget.parentElement?.getBoundingClientRect();
+                  if (boardRect) {
+                    const left = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+                    const top = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+                    onPieceMove(piece.id, { left, top });
+                  }
+                }
+              }}
+            >
+              <img
+                src={piece.imageUrl}
+                alt={piece.name}
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            </div>
+          ))}
+
+          {/* Render board tiles */}
+          {boardTiles.map((boardTile) => (
+            <div
+              key={boardTile.id}
+              className="absolute pointer-events-none"
+              style={{
+                left: `${boardTile.position.left}%`,
+                top: `${boardTile.position.top}%`,
+                transform: `translate(-50%, -50%) rotate(${boardTile.rotation - boardRotation}deg)`,
+                width: '3%',
+                height: '6%',
+              }}
+            >
+              <img
+                src={boardTile.tile.url}
+                alt={`Tile ${boardTile.tile.id}`}
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Turn Progress */}
+      <div className="mt-6 w-full max-w-2xl bg-gray-800/70 rounded-lg p-4">
+        <h3 className="text-lg font-bold text-center mb-3 text-yellow-400">Turn Order</h3>
+        <div className="flex justify-center gap-4 flex-wrap">
+          {turnOrder.map((playerId, index) => {
+            const pState = bureaucracyStates.find(s => s.playerId === playerId);
+            const isCurrentPlayer = index === currentBureaucracyPlayerIndex;
+            const isComplete = pState?.turnComplete;
+
+            return (
+              <div
+                key={playerId}
+                className={`px-4 py-2 rounded-lg border-2 ${
+                  isCurrentPlayer
+                    ? 'bg-yellow-600 border-yellow-400 text-white font-bold'
+                    : isComplete
+                    ? 'bg-green-800 border-green-600 text-green-200'
+                    : 'bg-gray-700 border-gray-500 text-gray-300'
+                }`}
+              >
+                Player {playerId} {isComplete && '✓'}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Board Rotation Toggle */}
+      <div className="mt-4 w-full max-w-2xl bg-gray-800/70 rounded-lg p-3">
+        <label className="flex items-center justify-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={boardRotationEnabled}
+            onChange={(e) => setBoardRotationEnabled(e.target.checked)}
+            className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500 cursor-pointer"
+          />
+          <span className="ml-3 text-slate-200">
+            Board Rotation {boardRotationEnabled ? '(ON)' : '(OFF)'}
+          </span>
+        </label>
       </div>
     </main>
   );
@@ -1536,6 +1856,16 @@ const App: React.FC = () => {
   // State for tracking moved pieces this turn (one move per piece restriction)
   const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(new Set());
 
+  // Bureaucracy Phase State
+  const [bureaucracyStates, setBureaucracyStates] = useState<BureaucracyPlayerState[]>([]);
+  const [bureaucracyTurnOrder, setBureaucracyTurnOrder] = useState<number[]>([]);
+  const [currentBureaucracyPlayerIndex, setCurrentBureaucracyPlayerIndex] = useState(0);
+  const [currentBureaucracyPurchase, setCurrentBureaucracyPurchase] = useState<BureaucracyPurchase | null>(null);
+  const [showBureaucracyMenu, setShowBureaucracyMenu] = useState(true);
+  const [bureaucracyValidationError, setBureaucracyValidationError] = useState<string | null>(null);
+  const [bureaucracyMoves, setBureaucracyMoves] = useState<TrackedMove[]>([]);
+  const [bureaucracySnapshot, setBureaucracySnapshot] = useState<{ pieces: Piece[]; boardTiles: BoardTile[] } | null>(null);
+
   // State for tracking pieces moved to community that are "pending" until acceptance/challenge resolved
   const [pendingCommunityPieces, setPendingCommunityPieces] = useState<Set<string>>(new Set());
 
@@ -1543,15 +1873,111 @@ const App: React.FC = () => {
     setAlertModal(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleStartGame = (count: number, testMode: boolean) => {
+  const handleStartGame = (count: number, testMode: boolean, skipDraft: boolean, skipCampaign: boolean) => {
     setPlayerCount(count);
-    setPlayers(initializePlayers(count));
-    setGameState('DRAFTING');
-    setCurrentPlayerIndex(0);
-    setDraftRound(1);
     setIsTestMode(testMode);
     setMovedPiecesThisTurn(new Set());
     setPendingCommunityPieces(new Set());
+
+    const initialPlayers = initializePlayers(count);
+
+    if (skipDraft && skipCampaign) {
+      // Skip both phases - distribute tiles randomly and move to bureaucracy tiles
+      const allTiles: Tile[] = [];
+      for (let i = 1; i <= 24; i++) {
+        allTiles.push({
+          id: i,
+          url: `./images/${String(i).padStart(2, '0')}.svg`
+        });
+      }
+
+      // Shuffle tiles
+      const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
+
+      // Calculate tiles per player for bank
+      const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[count] || [];
+      const tilesPerPlayer = bankSpaces.length / count;
+
+      // Distribute tiles to each player's bureaucracy tiles
+      const playersWithTiles = initialPlayers.map((player, index) => {
+        const startIdx = index * tilesPerPlayer;
+        const playerTiles = shuffledTiles.slice(startIdx, startIdx + tilesPerPlayer);
+        return {
+          ...player,
+          hand: [],
+          keptTiles: [],
+          bureaucracyTiles: playerTiles
+        };
+      });
+
+      setPlayers(playersWithTiles);
+
+      // Initialize campaign pieces
+      const campaignPieces = initializeCampaignPieces(count);
+      setPieces(campaignPieces);
+
+      // Initialize Bureaucracy phase
+      const turnOrder = getBureaucracyTurnOrder(playersWithTiles);
+      const initialStates: BureaucracyPlayerState[] = playersWithTiles.map(p => ({
+        playerId: p.id,
+        initialKredcoin: calculatePlayerKredcoin(p),
+        remainingKredcoin: calculatePlayerKredcoin(p),
+        turnComplete: false,
+        purchases: []
+      }));
+
+      setBureaucracyTurnOrder(turnOrder);
+      setBureaucracyStates(initialStates);
+      setCurrentBureaucracyPlayerIndex(0);
+      setShowBureaucracyMenu(true);
+      setGameState('BUREAUCRACY');
+      setCurrentPlayerIndex(0);
+
+    } else if (skipDraft) {
+      // Skip draft phase only - distribute tiles randomly to hand
+      const allTiles: Tile[] = [];
+      for (let i = 1; i <= 24; i++) {
+        allTiles.push({
+          id: i,
+          url: `./images/${String(i).padStart(2, '0')}.svg`
+        });
+      }
+
+      // Shuffle tiles
+      const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
+
+      // Determine hand size based on player count
+      const handSize = count === 3 ? 8 : count === 4 ? 6 : 4; // 3p=8, 4p=6, 5p=4
+
+      // Distribute tiles to each player's hand
+      const playersWithTiles = initialPlayers.map((player, index) => {
+        const startIdx = index * handSize;
+        const playerTiles = shuffledTiles.slice(startIdx, startIdx + handSize);
+        return {
+          ...player,
+          hand: playerTiles,
+          keptTiles: playerTiles,
+          bureaucracyTiles: []
+        };
+      });
+
+      setPlayers(playersWithTiles);
+
+      // Initialize campaign pieces and start campaign
+      const campaignPieces = initializeCampaignPieces(count);
+      setPieces(campaignPieces);
+      setPiecesAtTurnStart(campaignPieces.map(p => ({ ...p })));
+
+      setGameState('CAMPAIGN');
+      setCurrentPlayerIndex(0);
+
+    } else {
+      // Normal game flow - start with drafting
+      setPlayers(initialPlayers);
+      setGameState('DRAFTING');
+      setCurrentPlayerIndex(0);
+      setDraftRound(1);
+    }
   };
 
   const handleNewGame = () => {
@@ -2335,16 +2761,50 @@ const App: React.FC = () => {
     // Receiving player keeps the tile in their bureaucracy
     const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
 
-    setPlayers(prev =>
-      prev.map(p =>
-        p.id === playedTile.receivingPlayerId
-          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
-          : p
-      )
+    const updatedPlayers = players.map(p =>
+      p.id === playedTile.receivingPlayerId
+        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+        : p
     );
 
+    setPlayers(updatedPlayers);
+
+    // Check if all players have filled their banks (trigger Bureaucracy phase)
+    const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+    const tilesPerPlayer = allBankSpaces.length / playerCount;
+    const allBanksFull = updatedPlayers.every(p => p.bureaucracyTiles.length >= tilesPerPlayer);
+
+    if (allBanksFull) {
+      // Initialize Bureaucracy phase
+      const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
+      const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(p => ({
+        playerId: p.id,
+        initialKredcoin: calculatePlayerKredcoin(p),
+        remainingKredcoin: calculatePlayerKredcoin(p),
+        turnComplete: false,
+        purchases: []
+      }));
+
+      setBureaucracyTurnOrder(turnOrder);
+      setBureaucracyStates(initialStates);
+      setCurrentBureaucracyPlayerIndex(0);
+      setShowBureaucracyMenu(true);
+      setGameState('BUREAUCRACY');
+
+      // Reset tile play state
+      setPlayedTile(null);
+      setMovesThisTurn([]);
+      setReceiverAcceptance(null);
+      setChallengeOrder([]);
+      setCurrentChallengerIndex(0);
+      setTileRejected(false);
+      setHasPlayedTileThisTurn(false);
+      setGiveReceiverViewingTileId(null);
+      return; // Don't continue with campaign reset
+    }
+
     // Next player is the receiving player
-    const receiverIndex = players.findIndex(p => p.id === playedTile.receivingPlayerId);
+    const receiverIndex = updatedPlayers.findIndex(p => p.id === playedTile.receivingPlayerId);
     if (receiverIndex !== -1) {
       setCurrentPlayerIndex(receiverIndex);
     }
@@ -2755,11 +3215,295 @@ const App: React.FC = () => {
       setChallengedTile(null);
   }
 
+  // ============================================================================
+  // BUREAUCRACY PHASE HANDLERS
+  // ============================================================================
+
+  const handleSelectBureaucracyMenuItem = (item: BureaucracyMenuItem) => {
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+
+    if (!playerState || playerState.remainingKredcoin < item.price) {
+      setBureaucracyValidationError('Insufficient Kredcoin for this purchase');
+      return;
+    }
+
+    // Create the purchase
+    const purchase: BureaucracyPurchase = {
+      playerId: currentPlayerId,
+      item,
+      timestamp: Date.now(),
+      completed: false
+    };
+
+    setCurrentBureaucracyPurchase(purchase);
+    setShowBureaucracyMenu(false);
+    setBureaucracyMoves([]);
+
+    // Take snapshot of game state before action
+    setBureaucracySnapshot(createGameStateSnapshot(pieces, boardTiles));
+
+    // If credibility purchase, apply it immediately
+    if (item.type === 'CREDIBILITY') {
+      setPlayers(players.map(p =>
+        p.id === currentPlayerId
+          ? { ...p, credibility: Math.min(10, p.credibility + 1) }
+          : p
+      ));
+    }
+  };
+
+  const handleDoneWithBureaucracyAction = () => {
+    if (!currentBureaucracyPurchase) return;
+
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    if (!playerState) return;
+
+    // Validate the action
+    let isValid = false;
+    let validationMessage = '';
+
+    if (currentBureaucracyPurchase.item.type === 'CREDIBILITY') {
+      // Credibility restore is always valid (already applied)
+      isValid = true;
+    } else if (currentBureaucracyPurchase.item.type === 'PROMOTION') {
+      // Find which piece was swapped to community (should now be in community)
+      const snapshot = bureaucracySnapshot;
+      if (!snapshot) {
+        validationMessage = 'No snapshot available for validation';
+      } else {
+        // Find pieces that moved to community
+        const piecesMovedToCommunity = snapshot.pieces.filter(originalPiece => {
+          const currentPiece = pieces.find(p => p.id === originalPiece.id);
+          return (
+            currentPiece &&
+            originalPiece.locationId &&
+            !originalPiece.locationId.startsWith('community') &&
+            currentPiece.locationId &&
+            currentPiece.locationId.startsWith('community')
+          );
+        });
+
+        if (piecesMovedToCommunity.length === 0) {
+          validationMessage = 'No promotion was performed. Please click a piece to promote it.';
+        } else if (piecesMovedToCommunity.length > 1) {
+          validationMessage = 'Only one promotion can be performed per purchase.';
+        } else {
+          const promotedPieceId = piecesMovedToCommunity[0].id;
+          const validation = validatePromotion(
+            pieces,
+            promotedPieceId,
+            currentBureaucracyPurchase.item.promotionLocation!,
+            currentPlayerId,
+            snapshot.pieces
+          );
+
+          if (!validation.isValid) {
+            validationMessage = validation.reason;
+          } else {
+            isValid = true;
+          }
+        }
+      }
+    } else if (currentBureaucracyPurchase.item.type === 'MOVE') {
+      // Validate the move
+      const validation = validatePurchasedMove(
+        currentBureaucracyPurchase.item.moveType!,
+        bureaucracyMoves,
+        currentPlayerId,
+        pieces
+      );
+
+      if (!validation.isValid) {
+        validationMessage = validation.reason;
+      } else {
+        isValid = true;
+      }
+    }
+
+    if (!isValid) {
+      // Revert to snapshot
+      if (bureaucracySnapshot) {
+        setPieces(bureaucracySnapshot.pieces);
+        setBoardTiles(bureaucracySnapshot.boardTiles);
+      }
+      setBureaucracyValidationError(validationMessage);
+      setShowBureaucracyMenu(true);
+      setCurrentBureaucracyPurchase(null);
+      setBureaucracyMoves([]);
+      return;
+    }
+
+    // Purchase successful - deduct kredcoin
+    const updatedStates = bureaucracyStates.map(s => {
+      if (s.playerId === currentPlayerId) {
+        return {
+          ...s,
+          remainingKredcoin: s.remainingKredcoin - currentBureaucracyPurchase.item.price,
+          purchases: [...s.purchases, { ...currentBureaucracyPurchase, completed: true }]
+        };
+      }
+      return s;
+    });
+
+    setBureaucracyStates(updatedStates);
+    setCurrentBureaucracyPurchase(null);
+    setShowBureaucracyMenu(true);
+    setBureaucracyMoves([]);
+
+    // Deduct tiles from bureaucracyTiles
+    const updatedPlayers = players.map(p => {
+      if (p.id === currentPlayerId) {
+        let remainingPrice = currentBureaucracyPurchase.item.price;
+        const newBureaucracyTiles = [...p.bureaucracyTiles];
+
+        // Remove tiles to cover the price
+        while (remainingPrice > 0 && newBureaucracyTiles.length > 0) {
+          const tile = newBureaucracyTiles[newBureaucracyTiles.length - 1];
+          const tileValue = TILE_KREDCOIN_VALUES[tile.id] || 0;
+
+          newBureaucracyTiles.pop();
+          remainingPrice -= tileValue;
+        }
+
+        return { ...p, bureaucracyTiles: newBureaucracyTiles };
+      }
+      return p;
+    });
+
+    setPlayers(updatedPlayers);
+  };
+
+  const handleFinishBureaucracyTurn = () => {
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    const menu = getBureaucracyMenu(playerCount);
+    const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
+
+    // Confirm if they still have kredcoin
+    if (affordableItems.length > 0) {
+      const confirm = window.confirm(
+        `Are you sure you want to finish? You still have ₭⟠${playerState?.remainingKredcoin} left.`
+      );
+      if (!confirm) return;
+    }
+
+    // Mark turn as complete
+    const updatedStates = bureaucracyStates.map(s =>
+      s.playerId === currentPlayerId
+        ? { ...s, turnComplete: true }
+        : s
+    );
+    setBureaucracyStates(updatedStates);
+
+    // Move to next player
+    const nextIndex = currentBureaucracyPlayerIndex + 1;
+
+    if (nextIndex >= bureaucracyTurnOrder.length) {
+      // All players have finished - check win condition
+      const winners = checkBureaucracyWinCondition(players, pieces);
+
+      if (winners.length > 0) {
+        if (winners.length === 1) {
+          alert(`Player ${winners[0]} has won the game!`);
+        } else {
+          alert(`The game is a draw! Winners: ${winners.join(', ')}`);
+        }
+        // Could add a game over state here
+        return;
+      }
+
+      // No winner - transition back to campaign
+      // Move bureaucracy tiles to hand
+      const updatedPlayers = players.map(p => ({
+        ...p,
+        hand: [...p.hand, ...p.bureaucracyTiles],
+        bureaucracyTiles: []
+      }));
+
+      setPlayers(updatedPlayers);
+      setGameState('CAMPAIGN');
+      setBureaucracyStates([]);
+      setBureaucracyTurnOrder([]);
+      setCurrentBureaucracyPlayerIndex(0);
+      setShowBureaucracyMenu(true);
+    } else {
+      setCurrentBureaucracyPlayerIndex(nextIndex);
+      setShowBureaucracyMenu(true);
+    }
+  };
+
+  const handleBureaucracyPieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
+    // Track the move
+    const piece = pieces.find(p => p.id === pieceId);
+    if (!piece) return;
+
+    const move: TrackedMove = {
+      moveType: 0, // Will be determined during validation
+      category: 'M', // Will be determined during validation
+      pieceId,
+      fromPosition: piece.position,
+      fromLocationId: piece.locationId,
+      toPosition: newPosition,
+      toLocationId: locationId,
+      timestamp: Date.now()
+    };
+
+    setBureaucracyMoves([...bureaucracyMoves, move]);
+
+    // Update piece position
+    setPieces(pieces.map(p =>
+      p.id === pieceId
+        ? { ...p, position: newPosition, locationId }
+        : p
+    ));
+  };
+
+  const handleBureaucracyPiecePromote = (pieceId: string) => {
+    if (!currentBureaucracyPurchase || currentBureaucracyPurchase.item.type !== 'PROMOTION') {
+      return;
+    }
+
+    // Perform the promotion (swap with community)
+    const result = performPromotion(pieces, pieceId);
+
+    if (!result.success) {
+      setBureaucracyValidationError(result.reason || 'Promotion failed');
+      return;
+    }
+
+    setPieces(result.pieces);
+  };
+
   const renderGameState = () => {
     console.log('renderGameState called with gameState:', gameState, 'playerCount:', playerCount, 'players:', players.length, 'currentPlayerIndex:', currentPlayerIndex);
     switch (gameState) {
       case 'DRAFTING':
         return <DraftingScreen players={players} currentPlayerIndex={currentPlayerIndex} draftRound={draftRound} onSelectTile={handleSelectTile} />;
+      case 'BUREAUCRACY':
+        return (
+          <BureaucracyScreen
+            players={players}
+            pieces={pieces}
+            boardTiles={boardTiles}
+            playerCount={playerCount}
+            currentBureaucracyPlayerIndex={currentBureaucracyPlayerIndex}
+            bureaucracyStates={bureaucracyStates}
+            currentPurchase={currentBureaucracyPurchase}
+            showPurchaseMenu={showBureaucracyMenu}
+            validationError={bureaucracyValidationError}
+            turnOrder={bureaucracyTurnOrder}
+            boardRotationEnabled={boardRotationEnabled}
+            setBoardRotationEnabled={setBoardRotationEnabled}
+            onSelectMenuItem={handleSelectBureaucracyMenuItem}
+            onDoneWithAction={handleDoneWithBureaucracyAction}
+            onFinishTurn={handleFinishBureaucracyTurn}
+            onPieceMove={handleBureaucracyPieceMove}
+            onPiecePromote={handleBureaucracyPiecePromote}
+            BOARD_IMAGE_URLS={BOARD_IMAGE_URLS}
+          />
+        );
       case 'CAMPAIGN':
       case 'TILE_PLAYED':
       case 'PENDING_ACCEPTANCE':
