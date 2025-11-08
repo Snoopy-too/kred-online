@@ -3288,6 +3288,29 @@ const App: React.FC = () => {
       return;
     }
 
+    // Check for extra moves in correction phase - NOT ALLOWED during correction
+    const requiredMoveTypes = tileRequirements.requiredMoves;
+    const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+    const extraMoves: string[] = [];
+
+    for (const moveType of performedMoveTypes) {
+      if (!requiredMoveTypes.includes(moveType)) {
+        extraMoves.push(moveType);
+      }
+    }
+
+    const uniqueExtraMoves = [...new Set(extraMoves)];
+
+    // During correction phase, reject if there are any extra moves
+    if (uniqueExtraMoves.length > 0) {
+      showAlert(
+        'Extra Moves Not Allowed',
+        `You made extra moves that weren't required: ${uniqueExtraMoves.join(', ')}. Remove these moves and try again.`,
+        'error'
+      );
+      return;
+    }
+
     // Create updated tile with corrected moves
     const updatedPlayedTile = { ...playedTile, movesPerformed: calculatedMoves };
 
