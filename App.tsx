@@ -2846,7 +2846,7 @@ const App: React.FC = () => {
       playerId: currentPlayer.id,
       receivingPlayerId: targetSpace.ownerId,
       movesPerformed: [],
-      originalPieces: piecesAtTurnStart.map(p => ({ ...p })),
+      originalPieces: pieces.map(p => ({ ...p })),
       originalBoardTiles: boardTiles.map(t => ({ ...t })),
     });
 
@@ -2866,8 +2866,8 @@ const App: React.FC = () => {
     setHasPlayedTileThisTurn(true);
 
     // Clear piece movement tracking for this tile play
-    // NOTE: Don't reset piecesAtTurnStart here - it needs to stay as the snapshot
-    // from the actual turn start so calculateMoves can detect all moves made this turn
+    // NOTE: playedTile.originalPieces captures the current piece state at tile placement time
+    // This serves as the baseline for calculating moves during this specific tile play
     setMovedPiecesThisTurn(new Set());
     setPendingCommunityPieces(new Set());
   };
