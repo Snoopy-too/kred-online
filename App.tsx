@@ -876,8 +876,9 @@ const CampaignScreen: React.FC<{
   onBonusMoveComplete: () => void;
   movedPiecesThisTurn: Set<string>;
   onResetTurn: () => void;
+  onResetPiecesCorrection: () => void;
   onResetBonusMove: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetBonusMove }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -1417,6 +1418,14 @@ const CampaignScreen: React.FC<{
                     className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
                   >
                     Reset Turn
+                  </button>
+                )}
+                {gameState === 'CORRECTION_REQUIRED' && playedTile && (
+                  <button
+                    onClick={onResetPiecesCorrection}
+                    className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
+                  >
+                    Reset Pieces
                   </button>
                 )}
                 <button
@@ -2517,6 +2526,21 @@ const App: React.FC = () => {
     }
 
     // Clear tracking sets
+    setMovedPiecesThisTurn(new Set());
+    setPendingCommunityPieces(new Set());
+
+    // Clear any last dropped state
+    setLastDroppedPosition(null);
+    setLastDroppedPieceId(null);
+  };
+
+  const handleResetPiecesCorrection = () => {
+    // Reset pieces to correction start state while keeping tile in play
+    if (piecesAtCorrectionStart.length > 0) {
+      setPieces(piecesAtCorrectionStart.map(p => ({ ...p })));
+    }
+
+    // Clear movement tracking for fresh correction attempt
     setMovedPiecesThisTurn(new Set());
     setPendingCommunityPieces(new Set());
 
@@ -4131,6 +4155,7 @@ const App: React.FC = () => {
             onBonusMoveComplete={handleBonusMoveComplete}
             movedPiecesThisTurn={movedPiecesThisTurn}
             onResetTurn={handleResetTurn}
+            onResetPiecesCorrection={handleResetPiecesCorrection}
             onResetBonusMove={handleResetBonusMove}
           />
         );
