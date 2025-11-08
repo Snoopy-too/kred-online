@@ -2849,8 +2849,8 @@ const App: React.FC = () => {
       playerId: currentPlayer.id,
       receivingPlayerId: targetSpace.ownerId,
       movesPerformed: [],
-      originalPieces: pieces.map(p => ({ ...p })),
-      originalBoardTiles: boardTiles.map(t => ({ ...t })),
+      originalPieces: piecesAtTurnStart.map(p => ({ ...p })),
+      originalBoardTiles: boardTiles.map(t => ({ ...p })),
     });
 
     // Add the board tile to display in the receiving space
@@ -2869,10 +2869,15 @@ const App: React.FC = () => {
     setHasPlayedTileThisTurn(true);
 
     // Clear piece movement tracking for this tile play
-    // NOTE: playedTile.originalPieces captures the current piece state at tile placement time
-    // This serves as the baseline for calculating moves during this specific tile play
+    // NOTE: playedTile.originalPieces captures piecesAtTurnStart (beginning of turn)
+    // This allows moves to be detected whether they happen before or after tile placement
     setMovedPiecesThisTurn(new Set());
     setPendingCommunityPieces(new Set());
+
+    // Clear any stale correction/bonus move state from previous tile plays
+    setBonusMoveWasCompleted(false);
+    setPiecesAtCorrectionStart([]);
+    setPiecesBeforeBonusMove([]);
   };
   
   const handleRevealTile = (tileId: string | null) => { setRevealedTileId(tileId); };
@@ -3388,6 +3393,7 @@ const App: React.FC = () => {
     }
 
     // Check for extra moves in correction phase - NOT ALLOWED during correction
+    // EXCEPTION: If tile player must perform penalty WITHDRAW, allow one extra WITHDRAW
     const requiredMoveTypes = tileRequirements.requiredMoves;
     const performedMoveTypes = calculatedMoves.map(m => m.moveType);
     const extraMoves: string[] = [];
@@ -3400,11 +3406,18 @@ const App: React.FC = () => {
 
     const uniqueExtraMoves = [...new Set(extraMoves)];
 
-    // During correction phase, reject if there are any extra moves
-    if (uniqueExtraMoves.length > 0) {
+    // If tile player must perform penalty WITHDRAW, allow exactly one extra WITHDRAW
+    let allowedExtraMoves = uniqueExtraMoves;
+    if (tilePlayerMustWithdraw) {
+      // Remove WITHDRAW from extra moves list if it's the penalty WITHDRAW
+      allowedExtraMoves = uniqueExtraMoves.filter(m => m !== 'WITHDRAW');
+    }
+
+    // During correction phase, reject if there are any extra moves (after accounting for penalty WITHDRAW)
+    if (allowedExtraMoves.length > 0) {
       showAlert(
         'Extra Moves Not Allowed',
-        `You made extra moves that weren't required: ${uniqueExtraMoves.join(', ')}. Remove these moves and try again.`,
+        `You made extra moves that weren't required: ${allowedExtraMoves.join(', ')}. Remove these moves and try again.`,
         'error'
       );
       return;
