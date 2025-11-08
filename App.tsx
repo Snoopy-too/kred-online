@@ -1245,7 +1245,7 @@ const CampaignScreen: React.FC<{
                 boardTile.placerId === playedTile.playerId &&
                 boardTile.ownerId === playedTile.receivingPlayerId
               );
-              const isTilePlayedButNotYetAccepted = isPlayedTile && (gameState === 'TILE_PLAYED' || gameState === 'PENDING_ACCEPTANCE');
+              const isTilePlayedButNotYetAccepted = isPlayedTile && (gameState === 'TILE_PLAYED' || gameState === 'PENDING_ACCEPTANCE' || gameState === 'CORRECTION_REQUIRED');
 
               // Receiver's private view logic (during PENDING_ACCEPTANCE)
               const showReceiverPrivateView = isPrivatelyViewing && isTransactionalTile && isReceiver;
@@ -1284,8 +1284,8 @@ const CampaignScreen: React.FC<{
               return (
                 <div
                   key={boardTile.id}
-                  draggable={isTestMode && !isTransactionalTile}
-                  onDragStart={(isTestMode && !isTransactionalTile) ? (e) => handleDragStartBoardTile(e, boardTile.id) : undefined}
+                  draggable={isTestMode && !isTransactionalTile && !isPlayedTile}
+                  onDragStart={(isTestMode && !isTransactionalTile && !isPlayedTile) ? (e) => handleDragStartBoardTile(e, boardTile.id) : undefined}
                   onClick={isTileClickable ? handleTileClick : undefined}
                   className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed && !shouldShowWhiteBack ? '' : 'bg-stone-100 p-1'}` }
                   style={{
@@ -2144,7 +2144,9 @@ const App: React.FC = () => {
   const [tileRejected, setTileRejected] = useState(false);
   const [showBonusMoveModal, setShowBonusMoveModal] = useState(false);
   const [bonusMovePlayerId, setBonusMovePlayerId] = useState<number | null>(null);
+  const [bonusMoveWasCompleted, setBonusMoveWasCompleted] = useState(false);
   const [piecesBeforeBonusMove, setPiecesBeforeBonusMove] = useState<Piece[]>([]);
+  const [piecesAtCorrectionStart, setPiecesAtCorrectionStart] = useState<Piece[]>([]);
   const [showMoveCheckResult, setShowMoveCheckResult] = useState(false);
   const [moveCheckResult, setMoveCheckResult] = useState<{
     isMet: boolean;
@@ -2630,9 +2632,13 @@ const App: React.FC = () => {
     const playerName = player?.name || `Player ${bonusMovePlayerId}`;
     addGameLog(`${playerName} took a bonus Advance move (already had 3 credibility)`);
 
-    // Close the modal
+    // Close the modal and mark that bonus move was completed
     setShowBonusMoveModal(false);
     setBonusMovePlayerId(null);
+    setBonusMoveWasCompleted(true);
+
+    // Capture the current pieces state as baseline for correction phase (after bonus move)
+    setPiecesAtCorrectionStart(pieces.map(p => ({ ...p })));
 
     // Now switch back to tile player for correction
     const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
@@ -2850,7 +2856,10 @@ const App: React.FC = () => {
       setTileRejected(true);
 
       // Restore original pieces (remove any moves made)
-      setPieces(playedTile.originalPieces.map(p => ({ ...p })));
+      const revertedPieces = playedTile.originalPieces.map(p => ({ ...p }));
+      setPieces(revertedPieces);
+      // Capture the reverted pieces as the baseline for correction move calculations
+      setPiecesAtCorrectionStart(revertedPieces);
       // Keep the board tile visible in the receiving space (don't restore full board state)
       // The BoardTile will remain showing the white back
 
@@ -2884,7 +2893,7 @@ const App: React.FC = () => {
 
         // Capture the reverted piece state for bonus move reset
         // Use playedTile.originalPieces because setPieces is async and pieces hasn't updated yet
-        setPiecesBeforeBonusMove(playedTile.originalPieces.map(p => ({ ...p })));
+        setPiecesBeforeBonusMove(revertedPieces);
 
         // Don't switch to tile player yet - wait for bonus move to complete
       } else {
@@ -3202,6 +3211,8 @@ const App: React.FC = () => {
     setGameState('CAMPAIGN');
     setHasPlayedTileThisTurn(false);
     setGiveReceiverViewingTileId(null);
+    setBonusMoveWasCompleted(false);
+    setPiecesAtCorrectionStart([]);
 
     // Set piece state snapshot for the start of this new turn
     setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
@@ -3218,8 +3229,21 @@ const App: React.FC = () => {
   const handleCorrectionComplete = () => {
     if (!playedTile) return;
 
+    // Determine the baseline pieces for move calculation
+    let piecesForCalculation = pieces;
+    let baselinePieces = playedTile.originalPieces;
+
+    // If correction baseline was captured, use it
+    if (piecesAtCorrectionStart.length > 0) {
+      baselinePieces = piecesAtCorrectionStart;
+    }
+    // If a bonus move was completed, use the pieces before the bonus move to avoid counting bonus moves as extra moves
+    else if (bonusMoveWasCompleted) {
+      piecesForCalculation = piecesBeforeBonusMove;
+    }
+
     // Use the same calculation logic as Check Move button
-    const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+    const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
 
     // Validate that tile player has now met the requirements
     const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
@@ -3480,7 +3504,20 @@ const App: React.FC = () => {
   const handleCheckMove = () => {
     if (!playedTile) return;
 
-    const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+    // Determine the baseline pieces for move calculation
+    let piecesForCalculation = pieces;
+    let baselinePieces = playedTile.originalPieces;
+
+    // If in correction phase, use the pieces captured at correction start as both baseline and current
+    if (gameState === 'CORRECTION_REQUIRED' && piecesAtCorrectionStart.length > 0) {
+      baselinePieces = piecesAtCorrectionStart;
+    }
+    // If a bonus move was completed, use the pieces before the bonus move to avoid counting bonus moves as extra moves
+    else if (bonusMoveWasCompleted) {
+      piecesForCalculation = piecesBeforeBonusMove;
+    }
+
+    const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
 
     // Validate the calculated moves
     const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
