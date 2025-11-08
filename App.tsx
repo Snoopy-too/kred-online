@@ -2227,6 +2227,9 @@ const App: React.FC = () => {
   // State for tracking pieces moved to community that are "pending" until acceptance/challenge resolved
   const [pendingCommunityPieces, setPendingCommunityPieces] = useState<Set<string>>(new Set());
 
+  // State for phase transition message
+  const [showBureaucracyTransition, setShowBureaucracyTransition] = useState(false);
+
   const closeAlert = () => {
     setAlertModal(prev => ({ ...prev, isOpen: false }));
   };
@@ -3257,31 +3260,40 @@ const App: React.FC = () => {
     });
 
     if (allBanksFull) {
-      // Initialize Bureaucracy phase
-      const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
-      const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(p => ({
-        playerId: p.id,
-        initialKredcoin: calculatePlayerKredcoin(p),
-        remainingKredcoin: calculatePlayerKredcoin(p),
-        turnComplete: false,
-        purchases: []
-      }));
+      // Show "Bureaucracy!" transition message for 3 seconds before starting bureaucracy phase
+      setShowBureaucracyTransition(true);
 
-      setBureaucracyTurnOrder(turnOrder);
-      setBureaucracyStates(initialStates);
-      setCurrentBureaucracyPlayerIndex(0);
-      setShowBureaucracyMenu(true);
-      setGameState('BUREAUCRACY');
+      setTimeout(() => {
+        // Initialize Bureaucracy phase
+        const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
+        const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(p => ({
+          playerId: p.id,
+          initialKredcoin: calculatePlayerKredcoin(p),
+          remainingKredcoin: calculatePlayerKredcoin(p),
+          turnComplete: false,
+          purchases: []
+        }));
 
-      // Reset tile play state
-      setPlayedTile(null);
-      setMovesThisTurn([]);
-      setReceiverAcceptance(null);
-      setChallengeOrder([]);
-      setCurrentChallengerIndex(0);
-      setTileRejected(false);
-      setHasPlayedTileThisTurn(false);
-      setGiveReceiverViewingTileId(null);
+        setBureaucracyTurnOrder(turnOrder);
+        setBureaucracyStates(initialStates);
+        setCurrentBureaucracyPlayerIndex(0);
+        setShowBureaucracyMenu(true);
+        setGameState('BUREAUCRACY');
+
+        // Reset tile play state
+        setPlayedTile(null);
+        setMovesThisTurn([]);
+        setReceiverAcceptance(null);
+        setChallengeOrder([]);
+        setCurrentChallengerIndex(0);
+        setTileRejected(false);
+        setHasPlayedTileThisTurn(false);
+        setGiveReceiverViewingTileId(null);
+
+        // Hide transition message
+        setShowBureaucracyTransition(false);
+      }, 3000);
+
       return; // Don't continue with campaign reset
     }
 
@@ -4400,6 +4412,24 @@ const App: React.FC = () => {
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bureaucracy Phase Transition Message */}
+      {showBureaucracyTransition && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] transition-opacity duration-500" aria-live="polite" role="status">
+          <div className="text-center animate-pulse">
+            <h1 className="text-8xl sm:text-9xl font-black text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] mb-4" style={{
+              textShadow: '0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.3)',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              letterSpacing: '0.05em'
+            }}>
+              BUREAUCRACY!
+            </h1>
+            <p className="text-2xl text-yellow-200 font-semibold">
+              Prepare for the bureaucracy phase...
+            </p>
           </div>
         </div>
       )}
