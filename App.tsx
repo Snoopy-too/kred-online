@@ -48,6 +48,7 @@ import {
   performPromotion,
   validatePurchasedMove,
   determineMoveType,
+  validateMoveType,
   checkBureaucracyWinCondition,
   validatePieceMovement,
 } from './game';
@@ -2389,6 +2390,7 @@ const App: React.FC = () => {
         setPieces(initialPieces);
         setPiecesAtTurnStart(initialPieces);
 
+        // Player with tile 03.svg goes first in Campaign
         const startingTileId = 3;
         const startingPlayerIndex = playersWithPassedHands.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
         console.log('startingPlayerIndex:', startingPlayerIndex, 'playersWithPassedHands:', playersWithPassedHands);
@@ -2478,6 +2480,30 @@ const App: React.FC = () => {
             );
             return;
           }
+        }
+      }
+    }
+
+    // Check if the move would result in an illegal (UNKNOWN) move type
+    if (locationId && movingPiece.locationId) {
+      const currentPlayer = players[currentPlayerIndex];
+      if (currentPlayer) {
+        const moveType = validateMoveType(
+          movingPiece.locationId,
+          locationId,
+          currentPlayer.id,
+          movingPiece,
+          pieces,
+          playerCount
+        );
+
+        if (moveType === 'UNKNOWN') {
+          showAlert(
+            'Illegal Move',
+            `Cannot move from ${formatLocationId(movingPiece.locationId)} to ${formatLocationId(locationId)}. This move violates game rules.`,
+            'error'
+          );
+          return;
         }
       }
     }
@@ -3929,6 +3955,14 @@ const App: React.FC = () => {
       }));
 
       setPlayers(updatedPlayers);
+
+      // Player with tile 03.svg goes first when returning to Campaign
+      const startingTileId = 3;
+      const startingPlayerIndex = updatedPlayers.findIndex(p => p.hand && p.hand.some(t => t.id === startingTileId));
+      if (startingPlayerIndex !== -1) {
+        setCurrentPlayerIndex(startingPlayerIndex);
+      }
+
       setGameState('CAMPAIGN');
       setBureaucracyStates([]);
       setBureaucracyTurnOrder([]);

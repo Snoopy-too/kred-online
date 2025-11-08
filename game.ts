@@ -1920,6 +1920,80 @@ export function validatePieceMovement(
 }
 
 /**
+ * Validates if a piece movement is legal and returns the move type.
+ * Returns the move type or 'UNKNOWN' if the move is illegal.
+ */
+export function validateMoveType(
+  fromLocationId: string | undefined,
+  toLocationId: string | undefined,
+  movingPlayerId: number,
+  currentPiece: Piece,
+  allPieces: Piece[],
+  playerCount: number
+): string {
+  if (!fromLocationId || !toLocationId) return 'UNKNOWN';
+
+  const isCommunity = (loc?: string) => loc?.includes('community');
+  const isSeat = (loc?: string) => loc?.includes('_seat');
+  const isRostrum = (loc?: string) => loc?.includes('_rostrum');
+  const isOffice = (loc?: string) => loc?.includes('_office');
+  const getPlayerFromLocation = (loc?: string): number | null => {
+    const match = loc?.match(/p(\d+)_/);
+    return match ? parseInt(match[1]) : null;
+  };
+
+  // Rule 1: Community → Seat/Rostrum/Office = ADVANCE or ASSIST
+  if (isCommunity(fromLocationId) && (isSeat(toLocationId) || isRostrum(toLocationId) || isOffice(toLocationId))) {
+    const ownerPlayer = getPlayerFromLocation(toLocationId);
+    return ownerPlayer === movingPlayerId ? 'ADVANCE' : 'ASSIST';
+  }
+  // Rule 2: Seat → Community = WITHDRAW
+  else if (isSeat(fromLocationId) && isCommunity(toLocationId)) {
+    return 'WITHDRAW';
+  }
+  // Rule 3: Seat → Seat = ORGANIZE or INFLUENCE (only if adjacent)
+  else if (isSeat(fromLocationId) && isSeat(toLocationId)) {
+    if (areSeatsAdjacent(fromLocationId, toLocationId, playerCount)) {
+      const fromPlayer = getPlayerFromLocation(fromLocationId);
+      return fromPlayer === movingPlayerId ? 'ORGANIZE' : 'INFLUENCE';
+    }
+    return 'UNKNOWN'; // Non-adjacent seat moves are illegal
+  }
+  // Rule 4: Seat → Rostrum = ADVANCE
+  else if (isSeat(fromLocationId) && isRostrum(toLocationId)) {
+    return 'ADVANCE';
+  }
+  // Rule 5: Rostrum → Seat = WITHDRAW
+  else if (isRostrum(fromLocationId) && isSeat(toLocationId)) {
+    return 'WITHDRAW';
+  }
+  // Rule 6: Rostrum → Office = ADVANCE
+  else if (isRostrum(fromLocationId) && isOffice(toLocationId)) {
+    return 'ADVANCE';
+  }
+  // Rule 7: Rostrum → Community = WITHDRAW
+  else if (isRostrum(fromLocationId) && isCommunity(toLocationId)) {
+    return 'WITHDRAW';
+  }
+  // Rule 8: Rostrum → Rostrum = ORGANIZE or INFLUENCE
+  else if (isRostrum(fromLocationId) && isRostrum(toLocationId)) {
+    const fromPlayer = getPlayerFromLocation(fromLocationId);
+    return fromPlayer === movingPlayerId ? 'ORGANIZE' : 'INFLUENCE';
+  }
+  // Rule 9: Office → Rostrum = WITHDRAW
+  else if (isOffice(fromLocationId) && isRostrum(toLocationId)) {
+    return 'WITHDRAW';
+  }
+  // Rule 10: Office → Community = WITHDRAW
+  else if (isOffice(fromLocationId) && isCommunity(toLocationId)) {
+    return 'WITHDRAW';
+  }
+
+  // All other moves are illegal
+  return 'UNKNOWN';
+}
+
+/**
  * Checks if two rostrums are adjacent (connected).
  * @param rostrum1 The first rostrum ID.
  * @param rostrum2 The second rostrum ID.
