@@ -2830,6 +2830,20 @@ const App: React.FC = () => {
       }
     }
 
+    // Check if target player's bank is full
+    const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+    const tilesPerPlayer = allBankSpaces.length / playerCount;
+    const targetPlayer = players.find(p => p.id === targetSpace.ownerId);
+
+    if (targetPlayer && targetPlayer.bureaucracyTiles.length >= tilesPerPlayer) {
+      showAlert(
+        'Bank Full',
+        `Player ${targetSpace.ownerId}'s bank is full. You cannot play a tile to them. Choose a different player.`,
+        'warning'
+      );
+      return;
+    }
+
     // Initialize the tile play state (NEW WORKFLOW)
     const tileIdStr = tileId.toString().padStart(2, '0');
     const boardTileId = `boardtile_${Date.now()}`;
@@ -2850,7 +2864,7 @@ const App: React.FC = () => {
       receivingPlayerId: targetSpace.ownerId,
       movesPerformed: [],
       originalPieces: piecesAtTurnStart.map(p => ({ ...p })),
-      originalBoardTiles: boardTiles.map(t => ({ ...p })),
+      originalBoardTiles: boardTiles.map(t => ({ ...t })),
     });
 
     // Add the board tile to display in the receiving space
@@ -3199,7 +3213,7 @@ const App: React.FC = () => {
         .map(bt => playerBankSpaces.findIndex(bs => bs.position.left === bt.position.left && bs.position.top === bt.position.top))
     );
 
-    let nextBankIndex = 0;
+    let nextBankIndex = -1; // Start with invalid index
     for (let i = 0; i < playerBankSpaces.length; i++) {
       if (!usedBankIndices.has(i)) {
         nextBankIndex = i;
@@ -3207,8 +3221,16 @@ const App: React.FC = () => {
       }
     }
 
-    // Create the banked tile
-    if (nextBankIndex < playerBankSpaces.length) {
+    console.log('[finalizeTilePlay] Bank check:', {
+      receiverId: playedTile.receivingPlayerId,
+      nextBankIndex,
+      playerBankSpacesLength: playerBankSpaces.length,
+      usedBankIndices: Array.from(usedBankIndices),
+      bankedTilesForPlayer: bankedTiles.filter(bt => bt.ownerId === playedTile.receivingPlayerId).length
+    });
+
+    // Create the banked tile - only if there's space in the bank
+    if (nextBankIndex >= 0 && nextBankIndex < playerBankSpaces.length) {
       const bankSpace = playerBankSpaces[nextBankIndex];
       const newBankedTile: BoardTile & { faceUp: boolean } = {
         id: `bank_${playedTile.receivingPlayerId}_${nextBankIndex}_${Date.now()}`,
@@ -3223,16 +3245,7 @@ const App: React.FC = () => {
       setBankedTiles(prev => [...prev, newBankedTile]);
     }
 
-    // Remove from board tiles
-    setBoardTiles(prev =>
-      prev.filter(bt => !(
-        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
-        bt.placerId === playedTile.playerId &&
-        bt.ownerId === playedTile.receivingPlayerId
-      ))
-    );
-
-    // Receiving player keeps the tile in their bureaucracy
+    // Receiving player keeps the tile in their bureaucracy (always, even if bank display is full)
     const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
 
     // Use functional setState to preserve any previous state updates (like credibility loss)
@@ -3246,6 +3259,15 @@ const App: React.FC = () => {
       );
       return updatedPlayers;
     });
+
+    // Remove from board tiles
+    setBoardTiles(prev =>
+      prev.filter(bt => !(
+        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
+        bt.placerId === playedTile.playerId &&
+        bt.ownerId === playedTile.receivingPlayerId
+      ))
+    );
 
     // Check if all players have filled their banks (trigger Bureaucracy phase)
     const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
