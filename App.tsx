@@ -3374,16 +3374,35 @@ const App: React.FC = () => {
     }
 
     // If tile player has 0 credibility and must perform a WITHDRAW, check that they did
+    // The WITHDRAW must be IN ADDITION to the required moves (not replacing a required move)
+    // EXCEPTION: If the player's domain is empty, skip the WITHDRAW requirement
     if (tilePlayerMustWithdraw) {
-      const hasWithdraw = calculatedMoves.some(m => m.moveType === 'WITHDRAW');
-      if (!hasWithdraw) {
-        showAlert(
-          'Mandatory WITHDRAW Required',
-          'You must perform a WITHDRAW move during correction. Add a WITHDRAW move to proceed.',
-          'error'
-        );
-        return;
+      const withdrawMoves = calculatedMoves.filter(m => m.moveType === 'WITHDRAW');
+
+      // Count how many WITHDRAW moves are in the required moves
+      const requiredWithdrawCount = requiredMoveTypes.filter(m => m === 'WITHDRAW').length;
+
+      // Check if player's domain is empty (no pieces in seats, rostrums, or offices)
+      const tilePlayer = players.find(p => p.id === playedTile.playerId);
+      const playerDomainEmpty = tilePlayer && pieces.every(p => {
+        if (!p.locationId) return true; // piece not in domain
+        const locationPrefix = `p${tilePlayer.id}_`;
+        return !p.locationId.startsWith(locationPrefix);
+      });
+
+      // If domain is not empty, require the additional WITHDRAW move
+      if (!playerDomainEmpty) {
+        // Check if there's at least one MORE WITHDRAW move than required
+        if (withdrawMoves.length <= requiredWithdrawCount) {
+          showAlert(
+            'Mandatory WITHDRAW Required',
+            'You must perform an ADDITIONAL WITHDRAW move beyond the tile requirements. Add another WITHDRAW move to proceed.',
+            'error'
+          );
+          return;
+        }
       }
+      // If domain is empty, they're exempt from the WITHDRAW requirement (can't withdraw from an empty domain)
     }
 
     // Create updated tile with corrected moves
