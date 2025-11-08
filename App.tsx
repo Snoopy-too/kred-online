@@ -1869,7 +1869,14 @@ const CampaignScreen: React.FC<{
               }
               return <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId} has played a tile to you. You can either accept or reject it.`}</p>;
             })()}
-            <p className="text-slate-400 text-sm mb-4">Click on the tile to view it</p>
+            {(() => {
+              const currentPlayer = players.find(p => p.id === currentPlayerId);
+              const hasZeroCredibility = (currentPlayer?.credibility ?? 3) === 0;
+              if (hasZeroCredibility) {
+                return <p className="text-red-400 text-sm mb-4 font-semibold">You may not view tiles</p>;
+              }
+              return <p className="text-slate-400 text-sm mb-4">Click on the tile to view it</p>;
+            })()}
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
               {(() => {
                 const currentPlayer = players.find(p => p.id === currentPlayerId);
