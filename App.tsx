@@ -2895,7 +2895,7 @@ const App: React.FC = () => {
         playedTile.tileId,
         calculatedMoves,
         playedTile.playerId,
-        piecesAtTurnStart,
+        playedTile.originalPieces,
         pieces,
         players,
         playerCount
@@ -3049,7 +3049,7 @@ const App: React.FC = () => {
         playedTile.tileId,
         calculatedMoves,
         playedTile.playerId,
-        piecesAtTurnStart,
+        playedTile.originalPieces,
         pieces,
         players,
         playerCount
@@ -3353,7 +3353,7 @@ const App: React.FC = () => {
       playedTile.tileId,
       calculatedMoves,
       playedTile.playerId,
-      piecesAtTurnStart,
+      baselinePieces,
       piecesForCalculation,
       players,
       playerCount
@@ -3690,7 +3690,7 @@ const App: React.FC = () => {
       playedTile.tileId,
       calculatedMoves,
       playedTile.playerId,
-      piecesAtTurnStart,
+      baselinePieces,
       piecesForCalculation,
       players,
       playerCount
