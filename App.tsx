@@ -2409,7 +2409,8 @@ const App: React.FC = () => {
   
   const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
     // Check if this piece has already been moved this turn
-    if (movedPiecesThisTurn.has(pieceId)) {
+    // This includes pieces that have been moved to community (pending community pieces)
+    if (movedPiecesThisTurn.has(pieceId) || pendingCommunityPieces.has(pieceId)) {
       showAlert(
         'Piece Already Moved',
         'Pieces may only be moved once per turn! If you want to move this piece somewhere else, click the Reset Turn button.',
@@ -2754,7 +2755,8 @@ const App: React.FC = () => {
     }
 
     // Set piece state for the start of the next turn.
-    setPiecesAtTurnStart(pieces);
+    // IMPORTANT: Use deep copy (.map with spread) not reference to avoid mutations affecting baseline
+    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
 
     if (hasPlayedTileThisTurn && tileTransaction) {
       const receiverIndex = players.findIndex(p => p.id === tileTransaction.receiverId);
