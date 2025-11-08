@@ -1833,14 +1833,41 @@ export function validatePieceMovement(
   const currentPlayerId = currentLocationId ? getPlayerIdFromLocationId(currentLocationId) : null;
   const isOwnPiece = currentPlayerId === movingPlayerId || movingPlayerId === targetPlayerId;
 
-  // --- RULE 3 & 4: Protected Movement - Opponents cannot move between player-owned locations ---
-  if (currentPlayerId && currentPlayerId !== movingPlayerId) {
-    // Trying to move an opponent's piece FROM their seat, rostrum, or office
-    if (currentLocationId?.includes('seat') || currentLocationId?.includes('rostrum') || currentLocationId?.includes('office')) {
-      return {
-        isAllowed: false,
-        reason: `Cannot move opponent's piece from ${formatLocationId(currentLocationId)}`,
-      };
+  // --- RULE: Players may NOT move pieces between hierarchy levels within a domain ---
+  // For OPPONENT domains: Block seat ↔ rostrum, rostrum ↔ office, seat ↔ office
+  // For OWN domain: Block rostrum1 ↔ rostrum2 (lateral rostrum movement)
+  if (currentPlayerId && targetPlayerId && currentPlayerId === targetPlayerId) {
+    const sourceIsSeat = currentLocationId?.includes('seat');
+    const sourceIsRostrum = currentLocationId?.includes('rostrum');
+    const sourceIsOffice = currentLocationId?.includes('office');
+    const targetIsSeat = targetLocationId.includes('seat');
+    const targetIsRostrum = targetLocationId.includes('rostrum');
+    const targetIsOffice = targetLocationId.includes('office');
+
+    // RULE 1: Block opponent hierarchy movements (vertical hierarchy changes)
+    if (currentPlayerId !== movingPlayerId) {
+      const crossingHierarchy =
+        (sourceIsSeat && (targetIsRostrum || targetIsOffice)) ||
+        (sourceIsRostrum && (targetIsSeat || targetIsOffice)) ||
+        (sourceIsOffice && (targetIsSeat || targetIsRostrum));
+
+      if (crossingHierarchy) {
+        return {
+          isAllowed: false,
+          reason: `Cannot move opponent's piece between hierarchy levels (from ${formatLocationId(currentLocationId)} to ${formatLocationId(targetLocationId)})`,
+        };
+      }
+    }
+
+    // RULE 2: Block own rostrum-to-rostrum movements (lateral at same level)
+    if (currentPlayerId === movingPlayerId && sourceIsRostrum && targetIsRostrum) {
+      // Check if moving between rostrum1 and rostrum2
+      if (currentLocationId !== targetLocationId) {
+        return {
+          isAllowed: false,
+          reason: `Cannot move piece between your own rostrums (from ${formatLocationId(currentLocationId)} to ${formatLocationId(targetLocationId)})`,
+        };
+      }
     }
   }
 
@@ -1888,14 +1915,7 @@ export function validatePieceMovement(
     return { isAllowed: true, reason: 'Both rostrums are filled' };
   }
 
-  // --- Moving to opponent's SEAT ---
-  if (targetLocationId.includes('seat') && targetPlayerId !== movingPlayerId) {
-    return {
-      isAllowed: false,
-      reason: `Cannot move a piece to opponent's seat`,
-    };
-  }
-
+  // All other moves are valid
   return { isAllowed: true, reason: 'Move is valid' };
 }
 

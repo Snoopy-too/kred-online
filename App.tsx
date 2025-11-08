@@ -49,6 +49,7 @@ import {
   validatePurchasedMove,
   determineMoveType,
   checkBureaucracyWinCondition,
+  validatePieceMovement,
 } from './game';
 
 // --- Helper Components ---
@@ -260,8 +261,8 @@ const BureaucracyScreen: React.FC<{
   const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
 
   // Drag and drop state
-  const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string } | null>(null);
-  const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string } | null>(null);
+  const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string; pieceId: string; locationId?: string } | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string; isValid?: boolean } | null>(null);
 
   // Drag handlers
   const handleDragStartPiece = (e: React.DragEvent<HTMLDivElement>, pieceId: string) => {
@@ -269,7 +270,7 @@ const BureaucracyScreen: React.FC<{
     e.dataTransfer.effectAllowed = 'move';
     const piece = pieces.find(p => p.id === pieceId);
     if (piece) {
-      setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl });
+      setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl, pieceId: piece.id, locationId: piece.locationId });
     }
   };
 
@@ -307,12 +308,17 @@ const BureaucracyScreen: React.FC<{
 
     if (snappedLocation) {
       const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
+
+      // Validate if the move is allowed
+      const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, currentPlayerId, pieces);
+
       if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
         setDropIndicator({
           position: snappedLocation.position,
           rotation: newRotation,
           name: draggedPieceInfo.name,
-          imageUrl: draggedPieceInfo.imageUrl
+          imageUrl: draggedPieceInfo.imageUrl,
+          isValid: validation.isAllowed
         });
       }
     } else {
@@ -424,7 +430,7 @@ const BureaucracyScreen: React.FC<{
             {/* Drop indicator */}
             {dropIndicator && (
               <>
-                {/* Soft green glow indicator showing snap location */}
+                {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
                 <div
                   className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
                   style={{
@@ -433,9 +439,11 @@ const BureaucracyScreen: React.FC<{
                     width: '80px',
                     height: '80px',
                     transform: 'translate(-50%, -50%)',
-                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
-                    boxShadow: '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
-                    border: '2px solid rgba(34, 197, 94, 0.6)',
+                    backgroundColor: dropIndicator.isValid === false ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
+                    boxShadow: dropIndicator.isValid === false
+                      ? '0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)'
+                      : '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                    border: dropIndicator.isValid === false ? '2px solid rgba(239, 68, 68, 0.6)' : '2px solid rgba(34, 197, 94, 0.6)',
                   }}
                   aria-hidden="true"
                 />
@@ -873,8 +881,8 @@ const CampaignScreen: React.FC<{
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
-  const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string } | null>(null);
-  const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string } | null>(null);
+  const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string; pieceId: string; locationId?: string } | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string; isValid?: boolean } | null>(null);
   const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
   
   const tileSpaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
@@ -950,12 +958,17 @@ const CampaignScreen: React.FC<{
 
     if (snappedLocation) {
         const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
+
+        // Validate if the move is allowed
+        const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, currentPlayerId, pieces);
+
         if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
              setDropIndicator({
                 position: snappedLocation.position,
                 rotation: newRotation,
                 name: draggedPieceInfo.name,
-                imageUrl: draggedPieceInfo.imageUrl
+                imageUrl: draggedPieceInfo.imageUrl,
+                isValid: validation.isAllowed
             });
         }
     } else {
@@ -1040,7 +1053,7 @@ const CampaignScreen: React.FC<{
     e.dataTransfer.effectAllowed = 'move';
     const piece = pieces.find(p => p.id === pieceId);
     if (piece) {
-        setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl });
+        setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl, pieceId: piece.id, locationId: piece.locationId });
     }
   };
 
@@ -1170,7 +1183,7 @@ const CampaignScreen: React.FC<{
             
             {dropIndicator && (
               <>
-                {/* Soft green glow indicator showing snap location */}
+                {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
                 <div
                   className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
                   style={{
@@ -1179,9 +1192,11 @@ const CampaignScreen: React.FC<{
                     width: '80px',
                     height: '80px',
                     transform: 'translate(-50%, -50%)',
-                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
-                    boxShadow: '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
-                    border: '2px solid rgba(34, 197, 94, 0.6)',
+                    backgroundColor: dropIndicator.isValid === false ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
+                    boxShadow: dropIndicator.isValid === false
+                      ? '0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)'
+                      : '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                    border: dropIndicator.isValid === false ? '2px solid rgba(239, 68, 68, 0.6)' : '2px solid rgba(34, 197, 94, 0.6)',
                   }}
                   aria-hidden="true"
                 />
@@ -2392,8 +2407,26 @@ const App: React.FC = () => {
       return;
     }
 
-    // Check community movement restrictions before allowing the move
     const movingPiece = pieces.find(p => p.id === pieceId);
+    if (!movingPiece) return;
+
+    // Check if player is trying to move opponent's piece within opponent's domain
+    if (locationId) {
+      const currentPlayer = players[currentPlayerIndex];
+      if (!currentPlayer) return;
+
+      const validation = validatePieceMovement(pieceId, movingPiece.locationId, locationId, currentPlayer.id, pieces);
+      if (!validation.isAllowed) {
+        showAlert(
+          'Invalid Move',
+          validation.reason,
+          'error'
+        );
+        return;
+      }
+    }
+
+    // Check community movement restrictions before allowing the move
     if (movingPiece && movingPiece.locationId?.includes('community') && locationId && !locationId.includes('community')) {
       // Piece is moving FROM community, check restrictions
       const pieceName = movingPiece.name.toLowerCase();
@@ -3083,18 +3116,34 @@ const App: React.FC = () => {
     // Receiving player keeps the tile in their bureaucracy
     const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
 
-    const updatedPlayers = players.map(p =>
-      p.id === playedTile.receivingPlayerId
-        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
-        : p
-    );
-
-    setPlayers(updatedPlayers);
+    // Use functional setState to preserve any previous state updates (like credibility loss)
+    // We need to capture the updated players to check if bureaucracy should start
+    let updatedPlayers: Player[] = [];
+    setPlayers(prev => {
+      updatedPlayers = prev.map(p =>
+        p.id === playedTile.receivingPlayerId
+          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+          : p
+      );
+      return updatedPlayers;
+    });
 
     // Check if all players have filled their banks (trigger Bureaucracy phase)
     const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
     const tilesPerPlayer = allBankSpaces.length / playerCount;
-    const allBanksFull = updatedPlayers.every(p => p.bureaucracyTiles.length >= tilesPerPlayer);
+
+    // Ensure we have valid player data before checking
+    const allBanksFull = updatedPlayers.length > 0 && updatedPlayers.every(p => p.bureaucracyTiles.length >= tilesPerPlayer);
+
+    // Debug logging
+    console.log('[finalizeTilePlay] Bureaucracy check:', {
+      wasChallenged,
+      challengerId,
+      updatedPlayersCount: updatedPlayers.length,
+      tilesPerPlayer,
+      playerTileCounts: updatedPlayers.map(p => `P${p.id}:${p.bureaucracyTiles.length}`).join(', '),
+      allBanksFull
+    });
 
     if (allBanksFull) {
       // Initialize Bureaucracy phase
