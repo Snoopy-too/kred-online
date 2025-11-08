@@ -3174,19 +3174,31 @@ const App: React.FC = () => {
       return; // Don't continue with campaign reset
     }
 
-    // Next player is the receiving player
-    const receiverIndex = updatedPlayers.findIndex(p => p.id === playedTile.receivingPlayerId);
-    if (receiverIndex !== -1) {
-      setCurrentPlayerIndex(receiverIndex);
-    }
-
-    // Reset all tile play state
-    setPlayedTile(null);
-    setMovesThisTurn([]);
-    setReceiverAcceptance(null);
+    // Reset challenge state FIRST before setting turn
     setChallengeOrder([]);
     setCurrentChallengerIndex(0);
+    setReceiverAcceptance(null);
     setTileRejected(false);
+
+    // Next player is the receiving player
+    // Use the players state to find the correct index
+    setPlayers(prev => {
+      const receiverIndex = prev.findIndex(p => p.id === playedTile.receivingPlayerId);
+      console.log('[finalizeTilePlay] Setting turn to receiver:', {
+        receivingPlayerId: playedTile.receivingPlayerId,
+        receiverIndex,
+        wasChallenged,
+        challengerId
+      });
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+      }
+      return prev; // Don't modify players, just use the callback to access latest state
+    });
+
+    // Reset remaining tile play state
+    setPlayedTile(null);
+    setMovesThisTurn([]);
     setGameState('CAMPAIGN');
     setHasPlayedTileThisTurn(false);
     setGiveReceiverViewingTileId(null);
@@ -3277,27 +3289,33 @@ const App: React.FC = () => {
 
     // Receiving player gets the tile in their bureaucracy
     const tile = { id: parseInt(updatedPlayedTile.tileId), url: `./images/${updatedPlayedTile.tileId}.svg` };
-    setPlayers(prev =>
-      prev.map(p =>
+
+    // Reset challenge state FIRST before setting turn
+    setChallengeOrder([]);
+    setCurrentChallengerIndex(0);
+    setReceiverAcceptance(null);
+    setTileRejected(false);
+
+    // Update players and set turn to receiver using latest state
+    setPlayers(prev => {
+      const updatedPlayers = prev.map(p =>
         p.id === updatedPlayedTile.receivingPlayerId
           ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
           : p
-      )
-    );
+      );
 
-    // Move to receiving player for their turn
-    const receiverIndex = players.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
-    if (receiverIndex !== -1) {
-      setCurrentPlayerIndex(receiverIndex);
-    }
+      // Move to receiving player for their turn
+      const receiverIndex = updatedPlayers.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+      }
 
-    // Reset state
+      return updatedPlayers;
+    });
+
+    // Reset remaining state
     setPlayedTile(null);
     setMovesThisTurn([]);
-    setReceiverAcceptance(null);
-    setChallengeOrder([]);
-    setCurrentChallengerIndex(0);
-    setTileRejected(false);
     setGameState('CAMPAIGN');
     setHasPlayedTileThisTurn(false);
     setGiveReceiverViewingTileId(null);
