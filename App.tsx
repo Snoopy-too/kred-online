@@ -30,6 +30,7 @@ import {
   PlayedTileState,
   validateMovesForTilePlay,
   validateTileRequirements,
+  validateTileRequirementsWithImpossibleMoveExceptions,
   createGameStateSnapshot,
   getChallengeOrder,
   getTileRequirements,
@@ -2890,7 +2891,15 @@ const App: React.FC = () => {
     if (!accepted) {
       // Check if tile is perfect using same logic as Check Move
       const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
-      const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+      const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
+        playedTile.tileId,
+        calculatedMoves,
+        playedTile.playerId,
+        piecesAtTurnStart,
+        pieces,
+        players,
+        playerCount
+      );
 
       // Check for extra moves
       const requiredMoveTypes = tileRequirements.requiredMoves;
@@ -3036,7 +3045,15 @@ const App: React.FC = () => {
     if (challenge) {
       // CHALLENGED: Use exact same logic as Check Move to verify if tile player met requirements perfectly
       const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
-      const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+      const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
+        playedTile.tileId,
+        calculatedMoves,
+        playedTile.playerId,
+        piecesAtTurnStart,
+        pieces,
+        players,
+        playerCount
+      );
 
       // Check if there are extra moves beyond what's required
       const requiredMoveTypes = tileRequirements.requiredMoves;
@@ -3332,7 +3349,15 @@ const App: React.FC = () => {
     const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
 
     // Validate that tile player has now met the requirements
-    const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+    const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
+      playedTile.tileId,
+      calculatedMoves,
+      playedTile.playerId,
+      piecesAtTurnStart,
+      piecesForCalculation,
+      players,
+      playerCount
+    );
 
     console.log('=== handleCorrectionComplete DEBUG ===');
     console.log('Tile ID:', playedTile.tileId);
@@ -3661,7 +3686,15 @@ const App: React.FC = () => {
     const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
 
     // Validate the calculated moves
-    const tileRequirements = validateTileRequirements(playedTile.tileId, calculatedMoves);
+    const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
+      playedTile.tileId,
+      calculatedMoves,
+      playedTile.playerId,
+      piecesAtTurnStart,
+      piecesForCalculation,
+      players,
+      playerCount
+    );
 
     const moveValidations = calculatedMoves.map((move, index) => {
       // Build piece state after all previous moves

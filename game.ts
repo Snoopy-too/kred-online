@@ -2465,6 +2465,84 @@ export function validateTileRequirements(
 }
 
 /**
+ * Validates tile requirements considering impossible moves.
+ * If a required move cannot be performed due to external conditions (empty domain, all seats full),
+ * that requirement is automatically considered fulfilled.
+ */
+export function validateTileRequirementsWithImpossibleMoveExceptions(
+  tileId: string,
+  movesPerformed: TrackedMove[],
+  tilePlayerId: number,
+  piecesAtTurnStart: Piece[],
+  currentPieces: Piece[],
+  allPlayers: Player[],
+  playerCount: number
+): {
+  isMet: boolean;
+  requiredMoves: DefinedMoveType[];
+  performedMoves: DefinedMoveType[];
+  missingMoves: DefinedMoveType[];
+  impossibleMoves: DefinedMoveType[];
+} {
+  const requirements = getTileRequirements(tileId);
+  const performedMoveTypes = movesPerformed.map((m) => m.moveType);
+
+  // Check which moves are actually impossible
+  const impossibleMoves: DefinedMoveType[] = [];
+
+  // Check for WITHDRAW impossibility: domain empty at turn start
+  if (requirements.requiredMoves.includes(DefinedMoveType.WITHDRAW)) {
+    const domainWasEmptyAtTurnStart = piecesAtTurnStart.every(p => {
+      if (!p.locationId) return true;
+      const locationPrefix = `p${tilePlayerId}_`;
+      return !p.locationId.startsWith(locationPrefix);
+    });
+
+    if (domainWasEmptyAtTurnStart && !performedMoveTypes.includes(DefinedMoveType.WITHDRAW)) {
+      impossibleMoves.push(DefinedMoveType.WITHDRAW);
+    }
+  }
+
+  // Check for ASSIST impossibility: all opponent seats are full
+  if (requirements.requiredMoves.includes(DefinedMoveType.ASSIST)) {
+    let allOpponentSeatsAreFull = true;
+
+    // Check each opponent's seats
+    for (const otherPlayer of allPlayers) {
+      if (otherPlayer.id !== tilePlayerId) {
+        // Count vacant seats for this opponent
+        const opponentSeats = currentPieces.filter(p =>
+          p.locationId && p.locationId.includes(`p${otherPlayer.id}_seat`)
+        );
+        const maxSeats = 6; // Assuming 6 seats per player
+
+        if (opponentSeats.length < maxSeats) {
+          allOpponentSeatsAreFull = false;
+          break;
+        }
+      }
+    }
+
+    if (allOpponentSeatsAreFull && !performedMoveTypes.includes(DefinedMoveType.ASSIST)) {
+      impossibleMoves.push(DefinedMoveType.ASSIST);
+    }
+  }
+
+  // Calculate missing moves, excluding impossible ones
+  const missingMoves = requirements.requiredMoves.filter(
+    (required) => !performedMoveTypes.includes(required) && !impossibleMoves.includes(required)
+  );
+
+  return {
+    isMet: missingMoves.length === 0,
+    requiredMoves: requirements.requiredMoves,
+    performedMoves: performedMoveTypes,
+    missingMoves: missingMoves,
+    impossibleMoves: impossibleMoves,
+  };
+}
+
+/**
  * Creates a snapshot of the current game state for later restoration.
  * @param pieces Current pieces on board
  * @param boardTiles Current board tiles
