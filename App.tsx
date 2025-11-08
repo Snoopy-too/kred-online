@@ -2176,6 +2176,7 @@ const App: React.FC = () => {
 
   const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
   const [challengeResultMessage, setChallengeResultMessage] = useState<string | null>(null);
+  const [tilePlayerMustWithdraw, setTilePlayerMustWithdraw] = useState(false);
 
   // State for custom alert modals
   const [alertModal, setAlertModal] = useState<{
@@ -2360,6 +2361,7 @@ const App: React.FC = () => {
     setShowMoveCheckResult(false);
     setMoveCheckResult(null);
     setGiveReceiverViewingTileId(null);
+    setTilePlayerMustWithdraw(false);
   };
   
   const handleSelectTile = (selectedTile: Tile) => {
@@ -2907,6 +2909,17 @@ const App: React.FC = () => {
       setReceiverAcceptance(false);
       setTileRejected(true);
 
+      // Check if tile player has 0 credibility - if so, they MUST perform a WITHDRAW during correction
+      const tilePlayer = players.find(p => p.id === playedTile.playerId);
+      const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
+      const movesMeetRequirements = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+
+      if (playerHasZeroCredibility && !movesMeetRequirements) {
+        setTilePlayerMustWithdraw(true);
+      } else {
+        setTilePlayerMustWithdraw(false);
+      }
+
       // Restore original pieces (remove any moves made)
       const revertedPieces = playedTile.originalPieces.map(p => ({ ...p }));
       setPieces(revertedPieces);
@@ -3066,6 +3079,16 @@ const App: React.FC = () => {
           addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
         }
 
+        // Check if tile player has 0 credibility - if so, they MUST perform a WITHDRAW during correction
+        const tilePlayer = players.find(p => p.id === playedTile.playerId);
+        const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
+
+        if (playerHasZeroCredibility && !isTilePerfect) {
+          setTilePlayerMustWithdraw(true);
+        } else {
+          setTilePlayerMustWithdraw(false);
+        }
+
         // Immediately switch game state to CORRECTION_REQUIRED to prevent other challengers from acting
         const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
         if (playerIndex !== -1) {
@@ -3074,7 +3097,10 @@ const App: React.FC = () => {
           setMovesThisTurn([]);
           setTileRejected(true);
           // Restore original pieces (remove any moves made)
-          setPieces(playedTile.originalPieces.map(p => ({ ...p })));
+          const revertedPieces = playedTile.originalPieces.map(p => ({ ...p }));
+          setPieces(revertedPieces);
+          // Capture the reverted pieces as the baseline for correction move calculations
+          setPiecesAtCorrectionStart(revertedPieces);
 
           // Clear piece movement tracking - fresh start for correction
           setMovedPiecesThisTurn(new Set());
@@ -3265,6 +3291,7 @@ const App: React.FC = () => {
     setGiveReceiverViewingTileId(null);
     setBonusMoveWasCompleted(false);
     setPiecesAtCorrectionStart([]);
+    setTilePlayerMustWithdraw(false);
 
     // Set piece state snapshot for the start of this new turn
     setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
@@ -3337,6 +3364,19 @@ const App: React.FC = () => {
         'error'
       );
       return;
+    }
+
+    // If tile player has 0 credibility and must perform a WITHDRAW, check that they did
+    if (tilePlayerMustWithdraw) {
+      const hasWithdraw = calculatedMoves.some(m => m.moveType === 'WITHDRAW');
+      if (!hasWithdraw) {
+        showAlert(
+          'Mandatory WITHDRAW Required',
+          'You must perform a WITHDRAW move during correction. Add a WITHDRAW move to proceed.',
+          'error'
+        );
+        return;
+      }
     }
 
     // Create updated tile with corrected moves
