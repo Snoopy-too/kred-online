@@ -2333,8 +2333,16 @@ const App: React.FC = () => {
       setPieces(campaignPieces);
       setPiecesAtTurnStart(campaignPieces.map(p => ({ ...p })));
 
+      // Player with tile 03 goes first
+      const startingTileId = 3;
+      const startingPlayerIndex = playersWithTiles.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
+      if (startingPlayerIndex !== -1) {
+        setCurrentPlayerIndex(startingPlayerIndex);
+      } else {
+        setCurrentPlayerIndex(0);
+      }
+
       setGameState('CAMPAIGN');
-      setCurrentPlayerIndex(0);
 
     } else {
       // Normal game flow - start with drafting
