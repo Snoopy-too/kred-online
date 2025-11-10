@@ -64,6 +64,13 @@ const PlayerSelectionScreen: React.FC<{
   const [skipDraft, setSkipDraft] = useState(false);
   const [skipCampaign, setSkipCampaign] = useState(false);
 
+  // Auto-uncheck skipCampaign when skipDraft is unchecked
+  React.useEffect(() => {
+    if (!skipDraft && skipCampaign) {
+      setSkipCampaign(false);
+    }
+  }, [skipDraft, skipCampaign]);
+
   return (
     <main className="min-h-screen w-full bg-sky-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-slate-800">
       <div className="text-center mb-12">
@@ -134,10 +141,11 @@ const PlayerSelectionScreen: React.FC<{
                 id="skip-campaign-checkbox"
                 type="checkbox"
                 checked={skipCampaign}
+                disabled={!skipDraft}
                 onChange={(e) => setSkipCampaign(e.target.checked)}
-                className="h-5 w-5 rounded bg-white border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                className={`h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 ${!skipDraft ? 'opacity-50 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
               />
-              <label htmlFor="skip-campaign-checkbox" className="ml-3 text-slate-600 cursor-pointer">
+              <label htmlFor="skip-campaign-checkbox" className={`ml-3 ${!skipDraft ? 'text-slate-400 cursor-not-allowed' : 'text-slate-600 cursor-pointer'}`}>
                 Skip Campaign Phase (Go directly to Bureaucracy)
               </label>
             </div>
