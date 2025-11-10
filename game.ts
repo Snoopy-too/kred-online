@@ -1325,8 +1325,8 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
     PAWN: 4,
   },
   5: {
-    MARK: 20,
-    HEEL: 15,
+    MARK: 18,
+    HEEL: 17,
     PAWN: 5,
   },
 };
@@ -2214,8 +2214,47 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
         heelCounter++;
       }
     }
+  } else if (playerCount === 5) {
+    // 5-player: Heels at seats 1, 5 and Mark at seat 3 for each player
+    for (let playerId = 1; playerId <= playerCount; playerId++) {
+      // Place Mark at seat 3
+      const seat3Id = `p${playerId}_seat3`;
+      const seat3Location = dropLocations.find(loc => loc.id === seat3Id);
+      if (seat3Location) {
+        const newPiece: Piece = {
+          id: `campaign_mark_${markCounter}`,
+          name: markInfo.name,
+          displayName: `M${markCounter}`,
+          imageUrl: markInfo.imageUrl,
+          position: seat3Location.position,
+          rotation: calculatePieceRotation(seat3Location.position, playerCount, seat3Id),
+          locationId: seat3Id,
+        };
+        allPieces.push(newPiece);
+        markCounter++;
+      }
+
+      // Place Heels at seats 1 and 5
+      for (const seatNum of [1, 5]) {
+        const seatId = `p${playerId}_seat${seatNum}`;
+        const location = dropLocations.find(loc => loc.id === seatId);
+        if (location) {
+          const newPiece: Piece = {
+            id: `campaign_heel_${heelCounter}`,
+            name: heelInfo.name,
+            displayName: `H${heelCounter}`,
+            imageUrl: heelInfo.imageUrl,
+            position: location.position,
+            rotation: calculatePieceRotation(location.position, playerCount, seatId),
+            locationId: seatId,
+          };
+          allPieces.push(newPiece);
+          heelCounter++;
+        }
+      }
+    }
   } else {
-    // 3-player and 5-player: Marks at seats 1, 3, 5 for each player
+    // 3-player: Marks at seats 1, 3, 5 for each player
     const seatsToPlace = [1, 3, 5];
     for (let playerId = 1; playerId <= playerCount; playerId++) {
       for (const seatNum of seatsToPlace) {
@@ -2245,10 +2284,13 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 3: Place additional Marks in community
   let additionalMarkCount: number;
   if (playerCount === 4) {
-    // 4-player: 15 total - 8 in seats = 7 in community
+    // 4-player: 14 total - 8 in seats = 6 in community
     additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 2);
+  } else if (playerCount === 5) {
+    // 5-player: 18 total - 5 in seats = 13 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - playerCount;
   } else {
-    // 3-player and 5-player: total - 3 per player in seats
+    // 3-player: 12 total - 9 in seats = 3 in community
     additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
   }
 
@@ -2270,10 +2312,13 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 4: Place Heels in community
   let heelCountInCommunity: number;
   if (playerCount === 4) {
-    // 4-player: 12 total - 4 in seats = 8 in community
+    // 4-player: 13 total - 4 in seats = 9 in community
     heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - playerCount;
+  } else if (playerCount === 5) {
+    // 5-player: 17 total - 10 in seats = 7 in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - (playerCount * 2);
   } else {
-    // 3-player and 5-player: all heels in community
+    // 3-player: all 9 heels in community
     heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
   }
   const heelsStartIndex = additionalMarkCount;
