@@ -393,18 +393,12 @@ const BureaucracyScreen: React.FC<{
           <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
             <h2 className="text-2xl font-bold text-white mb-4">Invalid Action</h2>
             <p className="text-red-100 mb-6">{validationError}</p>
-            <div className="flex gap-3">
+            <div className="flex justify-center">
               <button
                 onClick={onResetAction}
-                className="flex-1 px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded transition-colors"
+                className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded transition-colors"
               >
                 Reset Pieces
-              </button>
-              <button
-                onClick={onClearValidationError}
-                className="flex-1 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition-colors"
-              >
-                Dismiss
               </button>
             </div>
           </div>

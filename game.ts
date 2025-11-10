@@ -3040,7 +3040,7 @@ export function validateSingleMove(
     case DefinedMoveType.ADVANCE:
       return {
         isValid: validateAdvanceMove(move, playerId, pieces),
-        reason: 'ADVANCE move validation',
+        reason: 'This ADVANCE move is not available until support seats/rostrums are full',
       };
 
     case DefinedMoveType.WITHDRAW:
