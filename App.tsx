@@ -2761,15 +2761,18 @@ const App: React.FC = () => {
 
     // NEW WORKFLOW: If a tile has been played, move to acceptance phase
     if (playedTile && gameState === 'TILE_PLAYED') {
+      // Calculate moves from piece positions
+      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+
       // Validate moves performed (max 2 moves: 1 O and 1 M)
-      const movesValidation = validateMovesForTilePlay(movesThisTurn);
+      const movesValidation = validateMovesForTilePlay(calculatedMoves);
       if (!movesValidation.isValid) {
-        showAlert('Invalid Moves', movesValidation.error, 'error');
+        showAlert('Invalid Moves', movesValidation.error || 'Invalid move combination', 'error');
         return;
       }
 
       // Store moves and move to acceptance phase
-      setPlayedTile(prev => prev ? { ...prev, movesPerformed: movesThisTurn } : null);
+      setPlayedTile(prev => prev ? { ...prev, movesPerformed: calculatedMoves } : null);
       setReceiverAcceptance(null); // Reset for acceptance decision
       setGameState('PENDING_ACCEPTANCE');
 
