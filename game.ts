@@ -1320,8 +1320,8 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
     PAWN: 3,
   },
   4: {
-    MARK: 15,
-    HEEL: 12,
+    MARK: 14,
+    HEEL: 13,
     PAWN: 4,
   },
   5: {
