@@ -272,7 +272,7 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p2_seat3', position: { left: 38.06, top: 32.07 } },
     { id: 'p2_seat4', position: { left: 34.60, top: 34.12 } },
     { id: 'p2_seat5', position: { left: 32.85, top: 37.70 } },
-    { id: 'p2_seat6', position: { left: 30.44, top: 40.95 } },
+    { id: 'p2_seat6', position: { left: 29.56, top: 40.64 } },
     // Player 3 Seats
     { id: 'p3_seat1', position: { left: 64.67, top: 39.10 } },
     { id: 'p3_seat2', position: { left: 62.59, top: 35.96 } },
