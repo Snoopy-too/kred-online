@@ -3126,12 +3126,11 @@ const App: React.FC = () => {
         const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
         setChallengeResultMessage(`Challenge Failed: ${challengedPlayerName} played the tile perfectly.`);
 
-        // Challenger loses 1 credibility for unsuccessful challenge
-        setPlayers(prev => handleCredibilityLoss('unsuccessful_challenge', playedTile.playerId, challengerId)(prev));
+        // Challenger loses 1 credibility for unsuccessful challenge (applied in finalizeTilePlay)
         addCredibilityLossLog(challengerId, "Unsuccessful challenge - tile was played perfectly");
 
         // A challenge was made (even though unsuccessful), so no more challenges allowed
-        // Finalize the tile play immediately
+        // Finalize the tile play immediately (credibility loss applied there)
         finalizeTilePlay(true, challengerId);
 
         // Schedule auto-dismiss of challenge message after 5 seconds
@@ -3277,11 +3276,21 @@ const App: React.FC = () => {
     const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
 
     // Calculate the updated players array directly from current state
-    const updatedPlayers = players.map(p =>
+    let updatedPlayers = players.map(p =>
       p.id === playedTile.receivingPlayerId
         ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
         : p
     );
+
+    // Apply credibility loss for unsuccessful challenge
+    // If wasChallenged=true and challengerId is set, the challenge was unsuccessful
+    if (wasChallenged && challengerId !== null) {
+      updatedPlayers = updatedPlayers.map(p =>
+        p.id === challengerId
+          ? { ...p, credibility: Math.max(0, p.credibility - 1) }
+          : p
+      );
+    }
 
     // Check if all players have filled their banks (trigger Bureaucracy phase)
     const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
