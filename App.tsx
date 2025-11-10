@@ -4161,22 +4161,27 @@ const App: React.FC = () => {
         return;
       }
 
-      // No winner - transition back to drafting for next round
-      // Bureaucracy tiles become the hand for the next drafting phase
+      // No winner - transition back to campaign for next round
+      // Bureaucracy tiles become the hand (keptTiles) for the next campaign phase
       const updatedPlayers = players.map(p => ({
         ...p,
-        hand: [...p.bureaucracyTiles],
-        keptTiles: [],
+        hand: [],
+        keptTiles: [...p.bureaucracyTiles],
         bureaucracyTiles: []
       }));
 
       setPlayers(updatedPlayers);
 
-      // Start at player 1 for new drafting phase
-      setCurrentPlayerIndex(0);
+      // Player with tile 03 goes first in the new campaign round
+      const startingTileId = 3;
+      const startingPlayerIndex = updatedPlayers.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
+      if (startingPlayerIndex !== -1) {
+        setCurrentPlayerIndex(startingPlayerIndex);
+      } else {
+        setCurrentPlayerIndex(0);
+      }
 
-      setGameState('DRAFTING');
-      setDraftRound(1);
+      setGameState('CAMPAIGN');
       setBureaucracyStates([]);
       setBureaucracyTurnOrder([]);
       setCurrentBureaucracyPlayerIndex(0);
