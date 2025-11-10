@@ -391,8 +391,7 @@ const BureaucracyScreen: React.FC<{
       {validationError && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
-            <h2 className="text-2xl font-bold text-white mb-4">Invalid Action</h2>
-            <p className="text-red-100 mb-6">{validationError}</p>
+            <h2 className="text-2xl font-bold text-white mb-6">Invalid Action</h2>
             <div className="flex justify-center">
               <button
                 onClick={onResetAction}
@@ -633,13 +632,15 @@ const BureaucracyScreen: React.FC<{
                 {/* Non-move items (Promotion, Credibility) remain full width */}
                 {menu.filter(item => item.type !== 'MOVE').map((item) => {
                   const canAfford = affordableItems.some(ai => ai.id === item.id);
+                  const isCredibilityAtMax = item.type === 'CREDIBILITY' && currentPlayer && currentPlayer.credibility >= 3;
+                  const isEnabled = canAfford && !isCredibilityAtMax;
                   return (
                     <button
                       key={item.id}
-                      onClick={() => canAfford && onSelectMenuItem(item)}
-                      disabled={!canAfford}
+                      onClick={() => isEnabled && onSelectMenuItem(item)}
+                      disabled={!isEnabled}
                       className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                        canAfford
+                        isEnabled
                           ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
                           : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
                       }`}
@@ -649,7 +650,7 @@ const BureaucracyScreen: React.FC<{
                           {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
                           {item.type === 'CREDIBILITY' && 'Restore Credibility'}
                         </span>
-                        <span className={`text-xl font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                        <span className={`text-xl font-bold ${isEnabled ? 'text-yellow-400' : 'text-gray-600'}`}>
                           ₭-{item.price}
                         </span>
                       </div>
@@ -4160,24 +4161,22 @@ const App: React.FC = () => {
         return;
       }
 
-      // No winner - transition back to campaign
-      // Move bureaucracy tiles to hand
+      // No winner - transition back to drafting for next round
+      // Bureaucracy tiles become the hand for the next drafting phase
       const updatedPlayers = players.map(p => ({
         ...p,
-        hand: [...p.hand, ...p.bureaucracyTiles],
+        hand: [...p.bureaucracyTiles],
+        keptTiles: [],
         bureaucracyTiles: []
       }));
 
       setPlayers(updatedPlayers);
 
-      // Player with tile 03.svg goes first when returning to Campaign
-      const startingTileId = 3;
-      const startingPlayerIndex = updatedPlayers.findIndex(p => p.hand && p.hand.some(t => t.id === startingTileId));
-      if (startingPlayerIndex !== -1) {
-        setCurrentPlayerIndex(startingPlayerIndex);
-      }
+      // Start at player 1 for new drafting phase
+      setCurrentPlayerIndex(0);
 
-      setGameState('CAMPAIGN');
+      setGameState('DRAFTING');
+      setDraftRound(1);
       setBureaucracyStates([]);
       setBureaucracyTurnOrder([]);
       setCurrentBureaucracyPlayerIndex(0);
