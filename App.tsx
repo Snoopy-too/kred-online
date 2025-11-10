@@ -4172,6 +4172,9 @@ const App: React.FC = () => {
 
       setPlayers(updatedPlayers);
 
+      // Clear bank spaces for the new round
+      setBankedTiles([]);
+
       // Player with tile 03 goes first in the new campaign round
       const startingTileId = 3;
       const startingPlayerIndex = updatedPlayers.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
