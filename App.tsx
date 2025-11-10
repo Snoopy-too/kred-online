@@ -3532,6 +3532,18 @@ const App: React.FC = () => {
     // Create updated tile with corrected moves
     const updatedPlayedTile = { ...playedTile, movesPerformed: calculatedMoves };
 
+    // Log the standing moves (corrected moves that are now final)
+    for (const move of calculatedMoves) {
+      const fromLoc = move.fromLocationId ? formatLocationId(move.fromLocationId) : 'supply';
+      const toLoc = move.toLocationId ? formatLocationId(move.toLocationId) : 'supply';
+
+      // Get the piece name from the current pieces
+      const movedPiece = pieces.find(p => p.id === move.pieceId);
+      const pieceName = movedPiece?.name || 'piece';
+
+      addGameLog(`Standing Move: Player ${playedTile.playerId} moves ${pieceName} from ${fromLoc} to ${toLoc}`);
+    }
+
     // Get bank spaces for the receiving player
     const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
     const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === updatedPlayedTile.receivingPlayerId);
