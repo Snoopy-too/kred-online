@@ -2844,6 +2844,36 @@ const App: React.FC = () => {
       return;
     }
 
+    // NEW VALIDATION: Campaign phase tile rules
+    const totalTilesPlayed = players.reduce((sum, p) => sum + p.bureaucracyTiles.length, 0);
+    const totalTiles = allBankSpaces.length; // 24 for 3/4p, 25 for 5p
+    const isLastTile = (totalTilesPlayed === totalTiles - 1);
+
+    if (isLastTile) {
+      // Final tile: Can ONLY be played to the player with one remaining bank space
+      if (!targetPlayer || targetPlayer.bureaucracyTiles.length !== tilesPerPlayer - 1) {
+        const eligiblePlayer = players.find(p => p.bureaucracyTiles.length === tilesPerPlayer - 1);
+        showAlert(
+          'Invalid Final Tile Placement',
+          eligiblePlayer
+            ? `This is the final tile of the campaign phase. It can only be played to Player ${eligiblePlayer.id}, who has one remaining bank space.`
+            : 'This is the final tile of the campaign phase, but no player has exactly one remaining bank space.',
+          'warning'
+        );
+        return;
+      }
+    } else {
+      // Non-final tiles: MUST be played to a player who has at least 1 tile in their hand
+      if (!targetPlayer || targetPlayer.keptTiles.length === 0) {
+        showAlert(
+          'Invalid Tile Placement',
+          `You must play to a player who has at least 1 tile in their hand. Player ${targetSpace.ownerId} has no tiles left.`,
+          'warning'
+        );
+        return;
+      }
+    }
+
     // Initialize the tile play state (NEW WORKFLOW)
     const tileIdStr = tileId.toString().padStart(2, '0');
     const boardTileId = `boardtile_${Date.now()}`;
@@ -3534,8 +3564,10 @@ const App: React.FC = () => {
     setTileRejected(false);
 
     // Update players and set turn to receiver using latest state
+    // Capture the updated players to check if bureaucracy should start
+    let updatedPlayers: Player[] = [];
     setPlayers(prev => {
-      const updatedPlayers = prev.map(p =>
+      updatedPlayers = prev.map(p =>
         p.id === updatedPlayedTile.receivingPlayerId
           ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
           : p
@@ -3549,6 +3581,49 @@ const App: React.FC = () => {
 
       return updatedPlayers;
     });
+
+    // Check if all players have filled their banks (trigger Bureaucracy phase)
+    const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+    const tilesPerPlayer = allBankSpaces.length / playerCount;
+    const allBanksFull = updatedPlayers.length > 0 && updatedPlayers.every(p => p.bureaucracyTiles.length >= tilesPerPlayer);
+
+    if (allBanksFull) {
+      // Show "Bureaucracy!" transition message for 3 seconds before starting bureaucracy phase
+      setShowBureaucracyTransition(true);
+
+      setTimeout(() => {
+        // Initialize Bureaucracy phase
+        const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
+        const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(p => ({
+          playerId: p.id,
+          initialKredcoin: calculatePlayerKredcoin(p),
+          remainingKredcoin: calculatePlayerKredcoin(p),
+          turnComplete: false,
+          purchases: []
+        }));
+
+        setBureaucracyTurnOrder(turnOrder);
+        setBureaucracyStates(initialStates);
+        setCurrentBureaucracyPlayerIndex(0);
+        setShowBureaucracyMenu(true);
+        setGameState('BUREAUCRACY');
+
+        // Reset tile play state
+        setPlayedTile(null);
+        setMovesThisTurn([]);
+        setReceiverAcceptance(null);
+        setChallengeOrder([]);
+        setCurrentChallengerIndex(0);
+        setTileRejected(false);
+        setHasPlayedTileThisTurn(false);
+        setGiveReceiverViewingTileId(null);
+
+        // Hide transition message
+        setShowBureaucracyTransition(false);
+      }, 3000);
+
+      return; // Don't continue with campaign reset
+    }
 
     // Reset remaining state
     setPlayedTile(null);
