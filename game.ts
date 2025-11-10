@@ -1313,7 +1313,7 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
     PAWN: 3,
   },
   4: {
-    MARK: 16,
+    MARK: 15,
     HEEL: 12,
     PAWN: 4,
   },
@@ -2160,30 +2160,74 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   const markInfo = PIECE_TYPES.MARK;
   const heelInfo = PIECE_TYPES.HEEL;
   const pawnInfo = PIECE_TYPES.PAWN;
-  const seatsToPlace = [1, 3, 5];
 
   let markCounter = 1;
   let heelCounter = 1;
   let pawnCounter = 1;
 
-  // Step 1: Place Marks at seats 1, 3, 5 for each player
-  for (let playerId = 1; playerId <= playerCount; playerId++) {
-    for (const seatNum of seatsToPlace) {
-      const seatId = `p${playerId}_seat${seatNum}`;
-      const location = dropLocations.find(loc => loc.id === seatId);
+  // Step 1: Place pieces in seats based on player count
+  if (playerCount === 4) {
+    // 4-player: Marks at seats 2, 4 and Heel at seat 6 for each player
+    for (let playerId = 1; playerId <= playerCount; playerId++) {
+      // Place Marks at seats 2, 4
+      for (const seatNum of [2, 4]) {
+        const seatId = `p${playerId}_seat${seatNum}`;
+        const location = dropLocations.find(loc => loc.id === seatId);
 
-      if (location) {
+        if (location) {
+          const newPiece: Piece = {
+            id: `campaign_mark_${markCounter}`,
+            name: markInfo.name,
+            displayName: `M${markCounter}`,
+            imageUrl: markInfo.imageUrl,
+            position: location.position,
+            rotation: calculatePieceRotation(location.position, playerCount, seatId),
+            locationId: seatId,
+          };
+          allPieces.push(newPiece);
+          markCounter++;
+        }
+      }
+
+      // Place Heel at seat 6
+      const seat6Id = `p${playerId}_seat6`;
+      const seat6Location = dropLocations.find(loc => loc.id === seat6Id);
+
+      if (seat6Location) {
         const newPiece: Piece = {
-          id: `campaign_mark_${markCounter}`,
-          name: markInfo.name,
-          displayName: `M${markCounter}`,
-          imageUrl: markInfo.imageUrl,
-          position: location.position,
-          rotation: calculatePieceRotation(location.position, playerCount, seatId),
-          locationId: seatId,
+          id: `campaign_heel_${heelCounter}`,
+          name: heelInfo.name,
+          displayName: `H${heelCounter}`,
+          imageUrl: heelInfo.imageUrl,
+          position: seat6Location.position,
+          rotation: calculatePieceRotation(seat6Location.position, playerCount, seat6Id),
+          locationId: seat6Id,
         };
         allPieces.push(newPiece);
-        markCounter++;
+        heelCounter++;
+      }
+    }
+  } else {
+    // 3-player and 5-player: Marks at seats 1, 3, 5 for each player
+    const seatsToPlace = [1, 3, 5];
+    for (let playerId = 1; playerId <= playerCount; playerId++) {
+      for (const seatNum of seatsToPlace) {
+        const seatId = `p${playerId}_seat${seatNum}`;
+        const location = dropLocations.find(loc => loc.id === seatId);
+
+        if (location) {
+          const newPiece: Piece = {
+            id: `campaign_mark_${markCounter}`,
+            name: markInfo.name,
+            displayName: `M${markCounter}`,
+            imageUrl: markInfo.imageUrl,
+            position: location.position,
+            rotation: calculatePieceRotation(location.position, playerCount, seatId),
+            locationId: seatId,
+          };
+          allPieces.push(newPiece);
+          markCounter++;
+        }
       }
     }
   }
@@ -2191,8 +2235,16 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 2: Get community drop locations
   const communityLocations = dropLocations.filter(loc => loc.id.startsWith('community'));
 
-  // Step 3: Place additional Marks in community (for 4-player: 16-12=4 additional Marks)
-  const additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
+  // Step 3: Place additional Marks in community
+  let additionalMarkCount: number;
+  if (playerCount === 4) {
+    // 4-player: 15 total - 8 in seats = 7 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 2);
+  } else {
+    // 3-player and 5-player: total - 3 per player in seats
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
+  }
+
   for (let i = 0; i < additionalMarkCount && i < communityLocations.length; i++) {
     const location = communityLocations[i];
     const newPiece: Piece = {
@@ -2209,9 +2261,16 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   }
 
   // Step 4: Place Heels in community
-  const heelCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
+  let heelCountInCommunity: number;
+  if (playerCount === 4) {
+    // 4-player: 12 total - 4 in seats = 8 in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - playerCount;
+  } else {
+    // 3-player and 5-player: all heels in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
+  }
   const heelsStartIndex = additionalMarkCount;
-  for (let i = 0; i < heelCount && (heelsStartIndex + i) < communityLocations.length; i++) {
+  for (let i = 0; i < heelCountInCommunity && (heelsStartIndex + i) < communityLocations.length; i++) {
     const location = communityLocations[heelsStartIndex + i];
     const newPiece: Piece = {
       id: `campaign_heel_${heelCounter}`,
@@ -2228,7 +2287,7 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
 
   // Step 5: Place Pawns in community
   const pawnCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].PAWN;
-  const pawnsStartIndex = heelsStartIndex + heelCount;
+  const pawnsStartIndex = heelsStartIndex + heelCountInCommunity;
   for (let i = 0; i < pawnCount && (pawnsStartIndex + i) < communityLocations.length; i++) {
     const location = communityLocations[pawnsStartIndex + i];
     const newPiece: Piece = {
