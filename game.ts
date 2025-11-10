@@ -260,7 +260,7 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
 
 const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     // Player 1 Seats (pushed 2% outward from center for better spacing)
-    { id: 'p1_seat1', position: { left: 30.36, top: 44.20 } },
+    { id: 'p1_seat1', position: { left: 29.48, top: 44.06 } },
     { id: 'p1_seat2', position: { left: 29.40, top: 47.67 } },
     { id: 'p1_seat3', position: { left: 29.52, top: 51.79 } },
     { id: 'p1_seat4', position: { left: 31.25, top: 54.83 } },
