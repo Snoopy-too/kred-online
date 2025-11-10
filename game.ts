@@ -1556,15 +1556,6 @@ export function calculatePieceRotation(position: { top: number; left: number }, 
     return 0;
   }
 
-  // Special case for 5-player: certain seats are visually within the community circle
-  // and should have 0 rotation to match the community piece appearance
-  if (playerCount === 5 && locationId) {
-    const communitySeats = ['p4_seat1', 'p5_seat5'];
-    if (communitySeats.includes(locationId)) {
-      return 0;
-    }
-  }
-
   const boardCenter = BOARD_CENTERS[playerCount] || { left: 50, top: 50 };
   const dx = position.left - boardCenter.left;
   const dy = position.top - boardCenter.top;
