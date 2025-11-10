@@ -465,8 +465,8 @@ const BureaucracyScreen: React.FC<{
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
               if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
 
-              // Apply 15% size reduction for 3-player mode
-              const scaleMultiplier = playerCount === 3 ? 0.85 : 1;
+              // Apply size reduction for different player counts
+              const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.90 : 1;
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
@@ -1366,8 +1366,8 @@ const CampaignScreen: React.FC<{
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
               if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
 
-              // Apply 15% size reduction for 3-player mode
-              const scaleMultiplier = playerCount === 3 ? 0.85 : 1;
+              // Apply size reduction for different player counts
+              const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.90 : 1;
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
