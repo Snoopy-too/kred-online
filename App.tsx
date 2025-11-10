@@ -2256,6 +2256,14 @@ const App: React.FC = () => {
         });
       }
 
+      // Add blank tile for 5-player mode
+      if (count === 5) {
+        allTiles.push({
+          id: 25,
+          url: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'/%3e`,
+        });
+      }
+
       // Shuffle tiles
       const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
 
@@ -2305,6 +2313,14 @@ const App: React.FC = () => {
         allTiles.push({
           id: i,
           url: `./images/${String(i).padStart(2, '0')}.svg`
+        });
+      }
+
+      // Add blank tile for 5-player mode
+      if (count === 5) {
+        allTiles.push({
+          id: 25,
+          url: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'/%3e`,
         });
       }
 
