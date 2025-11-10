@@ -3278,25 +3278,11 @@ const App: React.FC = () => {
     // Receiving player keeps the tile in their bureaucracy (always, even if bank display is full)
     const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
 
-    // Use functional setState to preserve any previous state updates (like credibility loss)
-    // We need to capture the updated players to check if bureaucracy should start
-    let updatedPlayers: Player[] = [];
-    setPlayers(prev => {
-      updatedPlayers = prev.map(p =>
-        p.id === playedTile.receivingPlayerId
-          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
-          : p
-      );
-      return updatedPlayers;
-    });
-
-    // Remove from board tiles
-    setBoardTiles(prev =>
-      prev.filter(bt => !(
-        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
-        bt.placerId === playedTile.playerId &&
-        bt.ownerId === playedTile.receivingPlayerId
-      ))
+    // Calculate the updated players array directly from current state
+    const updatedPlayers = players.map(p =>
+      p.id === playedTile.receivingPlayerId
+        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+        : p
     );
 
     // Check if all players have filled their banks (trigger Bureaucracy phase)
@@ -3315,6 +3301,18 @@ const App: React.FC = () => {
       playerTileCounts: updatedPlayers.map(p => `P${p.id}:${p.bureaucracyTiles.length}`).join(', '),
       allBanksFull
     });
+
+    // Update the players state
+    setPlayers(updatedPlayers);
+
+    // Remove from board tiles
+    setBoardTiles(prev =>
+      prev.filter(bt => !(
+        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
+        bt.placerId === playedTile.playerId &&
+        bt.ownerId === playedTile.receivingPlayerId
+      ))
+    );
 
     if (allBanksFull) {
       // Show "Bureaucracy!" transition message for 3 seconds before starting bureaucracy phase
@@ -3564,23 +3562,21 @@ const App: React.FC = () => {
     setTileRejected(false);
 
     // Update players and set turn to receiver using latest state
-    // Capture the updated players to check if bureaucracy should start
-    let updatedPlayers: Player[] = [];
-    setPlayers(prev => {
-      updatedPlayers = prev.map(p =>
-        p.id === updatedPlayedTile.receivingPlayerId
-          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
-          : p
-      );
+    // Calculate the updated players array directly from current state
+    const updatedPlayers = players.map(p =>
+      p.id === updatedPlayedTile.receivingPlayerId
+        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+        : p
+    );
 
-      // Move to receiving player for their turn
-      const receiverIndex = updatedPlayers.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
-      if (receiverIndex !== -1) {
-        setCurrentPlayerIndex(receiverIndex);
-      }
+    // Move to receiving player for their turn
+    const receiverIndex = updatedPlayers.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
+    if (receiverIndex !== -1) {
+      setCurrentPlayerIndex(receiverIndex);
+    }
 
-      return updatedPlayers;
-    });
+    // Update the players state
+    setPlayers(updatedPlayers);
 
     // Check if all players have filled their banks (trigger Bureaucracy phase)
     const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
