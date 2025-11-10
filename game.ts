@@ -2424,11 +2424,11 @@ export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
   const mMoveCount = movesPerformed.filter((m) => m.category === 'M').length;
 
   if (oMoveCount > 1) {
-    return { isValid: false, error: 'Maximum 1 "O" move allowed' };
+    return { isValid: false, error: 'You may NOT perform 2 actions of the same category' };
   }
 
   if (mMoveCount > 1) {
-    return { isValid: false, error: 'Maximum 1 "M" move allowed' };
+    return { isValid: false, error: 'You may NOT perform 2 actions of the same category' };
   }
 
   return { isValid: true };
