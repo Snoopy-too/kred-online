@@ -2225,6 +2225,15 @@ const App: React.FC = () => {
   // State for phase transition message
   const [showBureaucracyTransition, setShowBureaucracyTransition] = useState(false);
 
+  // State for finish turn confirmation
+  const [showFinishTurnConfirm, setShowFinishTurnConfirm] = useState<{
+    isOpen: boolean;
+    remainingKredcoin: number;
+  }>({
+    isOpen: false,
+    remainingKredcoin: 0,
+  });
+
   const closeAlert = () => {
     setAlertModal(prev => ({ ...prev, isOpen: false }));
   };
@@ -4131,19 +4140,8 @@ const App: React.FC = () => {
     setPlayers(updatedPlayers);
   };
 
-  const handleFinishBureaucracyTurn = () => {
+  const completeBureaucracyTurn = () => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
-    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
-    const menu = getBureaucracyMenu(playerCount);
-    const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
-
-    // Confirm if they still have kredcoin
-    if (affordableItems.length > 0) {
-      const confirm = window.confirm(
-        `Are you sure you want to finish? You still have ₭-${playerState?.remainingKredcoin} left.`
-      );
-      if (!confirm) return;
-    }
 
     // Mark turn as complete
     const updatedStates = bureaucracyStates.map(s =>
@@ -4202,6 +4200,34 @@ const App: React.FC = () => {
       setCurrentBureaucracyPlayerIndex(nextIndex);
       setShowBureaucracyMenu(true);
     }
+  };
+
+  const handleFinishBureaucracyTurn = () => {
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    const menu = getBureaucracyMenu(playerCount);
+    const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
+
+    // Confirm if they still have kredcoin
+    if (affordableItems.length > 0) {
+      setShowFinishTurnConfirm({
+        isOpen: true,
+        remainingKredcoin: playerState?.remainingKredcoin || 0,
+      });
+      return;
+    }
+
+    // No confirmation needed, complete turn directly
+    completeBureaucracyTurn();
+  };
+
+  const handleConfirmFinishTurn = () => {
+    setShowFinishTurnConfirm({ isOpen: false, remainingKredcoin: 0 });
+    completeBureaucracyTurn();
+  };
+
+  const handleCancelFinishTurn = () => {
+    setShowFinishTurnConfirm({ isOpen: false, remainingKredcoin: 0 });
   };
 
   const handleClearBureaucracyValidationError = () => {
@@ -4531,6 +4557,37 @@ const App: React.FC = () => {
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Finish Turn Confirmation Modal */}
+      {showFinishTurnConfirm.isOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+          <div className="bg-gray-800 border-2 border-yellow-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
+            <div className="mb-4">
+              <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
+            </div>
+            <h2 className="text-3xl font-bold mb-3 text-yellow-400">
+              Finish Turn?
+            </h2>
+            <p className="text-slate-300 mb-6 text-lg">
+              Are you sure you want to finish? You still have <span className="text-yellow-400 font-bold">₭-{showFinishTurnConfirm.remainingKredcoin}</span> left.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={handleCancelFinishTurn}
+                className="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmFinishTurn}
+                className="px-6 py-3 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors shadow-md"
+              >
+                Yes, Finish
+              </button>
+            </div>
           </div>
         </div>
       )}
