@@ -311,54 +311,54 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p3_office', position: { left: 75.18, top: 29.31 } },
     { id: 'p4_office', position: { left: 72.89, top: 65.24 } },
     { id: 'p5_office', position: { left: 36.22, top: 74.70 } },
-    // Community (40 spaces in organized 5x8 grid)
-    // Row 1 (top: 36.90)
-    { id: 'community1', position: { left: 39.00, top: 36.90 } },
-    { id: 'community2', position: { left: 42.50, top: 36.90 } },
-    { id: 'community3', position: { left: 46.00, top: 36.90 } },
-    { id: 'community4', position: { left: 49.50, top: 36.90 } },
-    { id: 'community5', position: { left: 53.00, top: 36.90 } },
-    { id: 'community6', position: { left: 56.50, top: 36.90 } },
-    { id: 'community7', position: { left: 60.00, top: 36.90 } },
-    // Row 2 (top: 40.90)
-    { id: 'community8', position: { left: 40.75, top: 40.90 } },
-    { id: 'community9', position: { left: 44.25, top: 40.90 } },
-    { id: 'community10', position: { left: 47.75, top: 40.90 } },
-    { id: 'community11', position: { left: 51.25, top: 40.90 } },
-    { id: 'community12', position: { left: 54.75, top: 40.90 } },
-    { id: 'community13', position: { left: 58.25, top: 40.90 } },
-    // Row 3 (top: 44.90)
-    { id: 'community14', position: { left: 39.00, top: 44.90 } },
-    { id: 'community15', position: { left: 42.50, top: 44.90 } },
-    { id: 'community16', position: { left: 46.00, top: 44.90 } },
-    { id: 'community17', position: { left: 49.50, top: 44.90 } },
-    { id: 'community18', position: { left: 53.00, top: 44.90 } },
-    { id: 'community19', position: { left: 56.50, top: 44.90 } },
-    { id: 'community20', position: { left: 60.00, top: 44.90 } },
-    // Row 4 (top: 48.90)
-    { id: 'community21', position: { left: 40.75, top: 48.90 } },
-    { id: 'community22', position: { left: 44.25, top: 48.90 } },
-    { id: 'community23', position: { left: 47.75, top: 48.90 } },
-    { id: 'community24', position: { left: 51.25, top: 48.90 } },
-    { id: 'community25', position: { left: 54.75, top: 48.90 } },
-    { id: 'community26', position: { left: 58.25, top: 48.90 } },
-    // Row 5 (top: 52.90)
-    { id: 'community27', position: { left: 39.00, top: 52.90 } },
-    { id: 'community28', position: { left: 42.50, top: 52.90 } },
-    { id: 'community29', position: { left: 46.00, top: 52.90 } },
-    { id: 'community30', position: { left: 49.50, top: 52.90 } },
-    { id: 'community31', position: { left: 53.00, top: 52.90 } },
-    { id: 'community32', position: { left: 56.50, top: 52.90 } },
-    { id: 'community33', position: { left: 60.00, top: 52.90 } },
-    // Row 6 (top: 56.90)
-    { id: 'community34', position: { left: 40.75, top: 56.90 } },
-    { id: 'community35', position: { left: 44.25, top: 56.90 } },
-    { id: 'community36', position: { left: 47.75, top: 56.90 } },
-    { id: 'community37', position: { left: 51.25, top: 56.90 } },
-    { id: 'community38', position: { left: 54.75, top: 56.90 } },
-    { id: 'community39', position: { left: 58.25, top: 56.90 } },
-    // Extra space (centered)
-    { id: 'community40', position: { left: 49.50, top: 60.40 } },
+    // Community (40 spaces in organized grid - shifted southwest for better centering)
+    // Row 1 (top: 39.40)
+    { id: 'community1', position: { left: 36.50, top: 39.40 } },
+    { id: 'community2', position: { left: 40.00, top: 39.40 } },
+    { id: 'community3', position: { left: 43.50, top: 39.40 } },
+    { id: 'community4', position: { left: 47.00, top: 39.40 } },
+    { id: 'community5', position: { left: 50.50, top: 39.40 } },
+    { id: 'community6', position: { left: 54.00, top: 39.40 } },
+    { id: 'community7', position: { left: 57.50, top: 39.40 } },
+    // Row 2 (top: 43.40)
+    { id: 'community8', position: { left: 38.25, top: 43.40 } },
+    { id: 'community9', position: { left: 41.75, top: 43.40 } },
+    { id: 'community10', position: { left: 45.25, top: 43.40 } },
+    { id: 'community11', position: { left: 48.75, top: 43.40 } },
+    { id: 'community12', position: { left: 52.25, top: 43.40 } },
+    { id: 'community13', position: { left: 55.75, top: 43.40 } },
+    // Row 3 (top: 47.40)
+    { id: 'community14', position: { left: 36.50, top: 47.40 } },
+    { id: 'community15', position: { left: 40.00, top: 47.40 } },
+    { id: 'community16', position: { left: 43.50, top: 47.40 } },
+    { id: 'community17', position: { left: 47.00, top: 47.40 } },
+    { id: 'community18', position: { left: 50.50, top: 47.40 } },
+    { id: 'community19', position: { left: 54.00, top: 47.40 } },
+    { id: 'community20', position: { left: 57.50, top: 47.40 } },
+    // Row 4 (top: 51.40)
+    { id: 'community21', position: { left: 38.25, top: 51.40 } },
+    { id: 'community22', position: { left: 41.75, top: 51.40 } },
+    { id: 'community23', position: { left: 45.25, top: 51.40 } },
+    { id: 'community24', position: { left: 48.75, top: 51.40 } },
+    { id: 'community25', position: { left: 52.25, top: 51.40 } },
+    { id: 'community26', position: { left: 55.75, top: 51.40 } },
+    // Row 5 (top: 55.40)
+    { id: 'community27', position: { left: 36.50, top: 55.40 } },
+    { id: 'community28', position: { left: 40.00, top: 55.40 } },
+    { id: 'community29', position: { left: 43.50, top: 55.40 } },
+    { id: 'community30', position: { left: 47.00, top: 55.40 } },
+    { id: 'community31', position: { left: 50.50, top: 55.40 } },
+    { id: 'community32', position: { left: 54.00, top: 55.40 } },
+    { id: 'community33', position: { left: 57.50, top: 55.40 } },
+    // Row 6 (top: 59.40)
+    { id: 'community34', position: { left: 38.25, top: 59.40 } },
+    { id: 'community35', position: { left: 41.75, top: 59.40 } },
+    { id: 'community36', position: { left: 45.25, top: 59.40 } },
+    { id: 'community37', position: { left: 48.75, top: 59.40 } },
+    { id: 'community38', position: { left: 52.25, top: 59.40 } },
+    { id: 'community39', position: { left: 55.75, top: 59.40 } },
+    // Extra space (centered at bottom)
+    { id: 'community40', position: { left: 47.00, top: 62.90 } },
 ];
 
 export const DROP_LOCATIONS_BY_PLAYER_COUNT: { [playerCount: number]: DropLocation[] } = {
