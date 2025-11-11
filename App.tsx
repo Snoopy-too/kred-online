@@ -1135,7 +1135,7 @@ const CampaignScreen: React.FC<{
   const indicatorScaleStyle = dropIndicator ? { transform: 'scale(0.84)' } : {};
 
   return (
-    <main className="min-h-screen w-full bg-gray-500 flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans">
+    <main className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans">
       <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
         
         {/* Main Content (Board, Hand, etc.) */}
