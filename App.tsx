@@ -820,6 +820,8 @@ const CampaignScreen: React.FC<{
   setDummyTile: (tile: { position: { top: number; left: number }; rotation: number } | null) => void;
   boardRotationEnabled: boolean;
   setBoardRotationEnabled: (enabled: boolean) => void;
+  showGridOverlay: boolean;
+  setShowGridOverlay: (show: boolean) => void;
   hasPlayedTileThisTurn: boolean;
   revealedTileId: string | null;
   tileTransaction: { placerId: number; receiverId: number; boardTileId: string; tile: Tile } | null;
@@ -884,7 +886,7 @@ const CampaignScreen: React.FC<{
   onResetTurn: () => void;
   onResetPiecesCorrection: () => void;
   onResetBonusMove: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove }) => {
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, showGridOverlay, setShowGridOverlay, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -4502,6 +4504,8 @@ const App: React.FC = () => {
             gameLog={gameLog}
             boardRotationEnabled={boardRotationEnabled}
             setBoardRotationEnabled={setBoardRotationEnabled}
+            showGridOverlay={showGridOverlay}
+            setShowGridOverlay={setShowGridOverlay}
             onNewGame={handleNewGame}
             onPieceMove={handlePieceMove}
             onBoardTileMove={handleBoardTileMove}
