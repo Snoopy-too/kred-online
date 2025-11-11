@@ -3465,6 +3465,13 @@ const App: React.FC = () => {
     // Use the same calculation logic as Check Move button
     const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
 
+    // Validate moves performed (max 2 moves: 1 O and 1 M)
+    const movesValidation = validateMovesForTilePlay(calculatedMoves);
+    if (!movesValidation.isValid) {
+      showAlert('Invalid Moves', movesValidation.error || 'Invalid move combination', 'error');
+      return;
+    }
+
     // Validate that tile player has now met the requirements
     const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
       playedTile.tileId,
