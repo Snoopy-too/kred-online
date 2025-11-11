@@ -2408,7 +2408,9 @@ export const DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT: { [key: number]: { name: s
 
 /**
  * Validates that moves performed match the allowed categories during tile play.
- * During tile play, a player may perform up to 2 moves: max 1 "O" and 1 "M" move.
+ * During tile play, a player may perform up to 2 moves with the following restrictions:
+ * - Only allowed combinations: One of (Assist, Remove, Influence) + one of (Advance, Withdraw, Organize)
+ * - Cannot combine moves within the same group
  * @param movesPerformed Array of tracked moves
  * @returns Object with isValid boolean and error message if invalid
  */
@@ -2420,17 +2422,36 @@ export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
     return { isValid: false, error: 'Maximum 2 moves allowed per tile play' };
   }
 
-  const oMoveCount = movesPerformed.filter((m) => m.category === 'O').length;
-  const mMoveCount = movesPerformed.filter((m) => m.category === 'M').length;
-
-  if (oMoveCount > 1) {
-    return { isValid: false, error: 'Maximum 1 "O" move allowed' };
+  // If only 0 or 1 move, it's always valid
+  if (movesPerformed.length <= 1) {
+    return { isValid: true };
   }
 
-  if (mMoveCount > 1) {
-    return { isValid: false, error: 'Maximum 1 "M" move allowed' };
+  // Define move groups
+  const groupA = [DefinedMoveType.ASSIST, DefinedMoveType.REMOVE, DefinedMoveType.INFLUENCE];
+  const groupB = [DefinedMoveType.ADVANCE, DefinedMoveType.WITHDRAW, DefinedMoveType.ORGANIZE];
+
+  const moveTypes = movesPerformed.map(m => m.moveType);
+
+  // Check if both moves are from Group A
+  const bothFromGroupA = moveTypes.every(type => groupA.includes(type as DefinedMoveType));
+  if (bothFromGroupA) {
+    return { isValid: false, error: 'Cannot combine Assist, Remove, and Influence moves together' };
   }
 
+  // Check if both moves are from Group B
+  const bothFromGroupB = moveTypes.every(type => groupB.includes(type as DefinedMoveType));
+  if (bothFromGroupB) {
+    return { isValid: false, error: 'Cannot combine Advance, Withdraw, and Organize moves together' };
+  }
+
+  // Check if moves are the same type (this is allowed - e.g., two ADVANCE moves)
+  const allSameType = moveTypes.every(type => type === moveTypes[0]);
+  if (allSameType) {
+    return { isValid: true };
+  }
+
+  // If we reach here, moves are from different groups, which is valid
   return { isValid: true };
 }
 
