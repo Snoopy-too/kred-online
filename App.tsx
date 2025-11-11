@@ -1172,12 +1172,14 @@ const CampaignScreen: React.FC<{
               className="w-full h-full object-contain drop-shadow-2xl relative z-0"
             />
             {showGridOverlay && (
-              <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`, backgroundSize: '2% 2%', pointerEvents: 'none' }} aria-hidden="true" />
+              <>
+                <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`, backgroundSize: '2% 2%', pointerEvents: 'none' }} aria-hidden="true" />
+                <div className="absolute inset-0 text-white/50 text-[8px] sm:text-xs pointer-events-none z-20" aria-hidden="true">
+                  {Array.from({ length: 9 }).map((_, i) => (<div key={`x-${i}`} className="absolute" style={{ left: `${(i + 1) * 10}%`, top: '0.5%', transform: 'translateX(-50%)' }}>{(i + 1) * 10}</div>))}
+                  {Array.from({ length: 9 }).map((_, i) => (<div key={`y-${i}`} className="absolute" style={{ top: `${(i + 1) * 10}%`, left: '0.5%', transform: 'translateY(-50%)' }}>{(i + 1) * 10}</div>))}
+                </div>
+              </>
             )}
-            <div className="absolute inset-0 text-white/50 text-[8px] sm:text-xs pointer-events-none z-20" aria-hidden="true">
-                {Array.from({ length: 9 }).map((_, i) => (<div key={`x-${i}`} className="absolute" style={{ left: `${(i + 1) * 10}%`, top: '0.5%', transform: 'translateX(-50%)' }}>{(i + 1) * 10}</div>))}
-                {Array.from({ length: 9 }).map((_, i) => (<div key={`y-${i}`} className="absolute" style={{ top: `${(i + 1) * 10}%`, left: '0.5%', transform: 'translateY(-50%)' }}>{(i + 1) * 10}</div>))}
-            </div>
 
             {isTestMode && boardMousePosition && (
               <div 
