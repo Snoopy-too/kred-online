@@ -478,14 +478,9 @@ const BureaucracyScreen: React.FC<{
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
-<<<<<<< HEAD
-              // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
-              const isInCommunity = piece.locationId?.startsWith('community') ?? false;
-=======
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
               // Check both position AND locationId to avoid false positives for seats near the community
               const isInCommunity = piece.locationId?.startsWith('community') || false;
->>>>>>> 77d0d7874db027f713f84d87941b92b0ab8bda3d
               const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
               const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
@@ -1385,14 +1380,9 @@ const CampaignScreen: React.FC<{
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
-<<<<<<< HEAD
-              // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
-              const isInCommunity = piece.locationId?.startsWith('community') ?? false;
-=======
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
               // Check both position AND locationId to avoid false positives for seats near the community
               const isInCommunity = piece.locationId?.startsWith('community') || false;
->>>>>>> 77d0d7874db027f713f84d87941b92b0ab8bda3d
               const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
               // Check if this piece has been moved this turn
