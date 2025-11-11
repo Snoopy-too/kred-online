@@ -2174,10 +2174,10 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
 
   // Step 1: Place pieces in seats based on player count
   if (playerCount === 4) {
-    // 4-player: Marks at seats 2, 4 and Heel at seat 6 for each player
+    // 4-player: Marks at seats 2, 4, 6 for each player
     for (let playerId = 1; playerId <= playerCount; playerId++) {
-      // Place Marks at seats 2, 4
-      for (const seatNum of [2, 4]) {
+      // Place Marks at seats 2, 4, 6
+      for (const seatNum of [2, 4, 6]) {
         const seatId = `p${playerId}_seat${seatNum}`;
         const location = dropLocations.find(loc => loc.id === seatId);
 
@@ -2194,24 +2194,6 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
           allPieces.push(newPiece);
           markCounter++;
         }
-      }
-
-      // Place Heel at seat 6
-      const seat6Id = `p${playerId}_seat6`;
-      const seat6Location = dropLocations.find(loc => loc.id === seat6Id);
-
-      if (seat6Location) {
-        const newPiece: Piece = {
-          id: `campaign_heel_${heelCounter}`,
-          name: heelInfo.name,
-          displayName: `H${heelCounter}`,
-          imageUrl: heelInfo.imageUrl,
-          position: seat6Location.position,
-          rotation: calculatePieceRotation(seat6Location.position, playerCount, seat6Id),
-          locationId: seat6Id,
-        };
-        allPieces.push(newPiece);
-        heelCounter++;
       }
     }
   } else if (playerCount === 5) {
@@ -2284,8 +2266,8 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 3: Place additional Marks in community
   let additionalMarkCount: number;
   if (playerCount === 4) {
-    // 4-player: 14 total - 8 in seats = 6 in community
-    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 2);
+    // 4-player: 14 total - 12 in seats = 2 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
   } else if (playerCount === 5) {
     // 5-player: 18 total - 5 in seats = 13 in community
     additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - playerCount;
@@ -2312,8 +2294,8 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 4: Place Heels in community
   let heelCountInCommunity: number;
   if (playerCount === 4) {
-    // 4-player: 13 total - 4 in seats = 9 in community
-    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - playerCount;
+    // 4-player: 13 total - 0 in seats = 13 in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
   } else if (playerCount === 5) {
     // 5-player: 17 total - 10 in seats = 7 in community
     heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - (playerCount * 2);
