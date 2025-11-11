@@ -2527,21 +2527,32 @@ export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
   isValid: boolean;
   error?: string;
 } {
+  console.log('=== validateMovesForTilePlay ===');
+  console.log('Total moves:', movesPerformed.length);
+  console.log('Moves:', movesPerformed.map(m => ({ moveType: m.moveType, category: m.category })));
+
   if (movesPerformed.length > 2) {
+    console.log('VALIDATION FAILED: More than 2 moves');
     return { isValid: false, error: 'Maximum 2 moves allowed per tile play' };
   }
 
   const oMoveCount = movesPerformed.filter((m) => m.category === 'O').length;
   const mMoveCount = movesPerformed.filter((m) => m.category === 'M').length;
 
+  console.log('O-moves count:', oMoveCount);
+  console.log('M-moves count:', mMoveCount);
+
   if (oMoveCount > 1) {
+    console.log('VALIDATION FAILED: More than 1 O-move');
     return { isValid: false, error: 'You may NOT perform 2 actions of the same category' };
   }
 
   if (mMoveCount > 1) {
+    console.log('VALIDATION FAILED: More than 1 M-move');
     return { isValid: false, error: 'You may NOT perform 2 actions of the same category' };
   }
 
+  console.log('VALIDATION PASSED');
   return { isValid: true };
 }
 
