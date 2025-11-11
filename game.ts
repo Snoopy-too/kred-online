@@ -259,41 +259,41 @@ const FOUR_PLAYER_DROP_LOCATIONS: DropLocation[] = [
 ];
 
 const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
-    // Player 1 Seats
-    { id: 'p1_seat1', position: { left: 30.71, top: 44.26 } },
-    { id: 'p1_seat2', position: { left: 29.76, top: 47.66 } },
-    { id: 'p1_seat3', position: { left: 29.88, top: 51.70 } },
-    { id: 'p1_seat4', position: { left: 31.58, top: 54.68 } },
-    { id: 'p1_seat5', position: { left: 33.62, top: 57.97 } },
-    { id: 'p1_seat6', position: { left: 36.56, top: 60.42 } },
+    // Player 1 Seats (pushed 2% outward from center for better spacing)
+    { id: 'p1_seat1', position: { left: 29.48, top: 44.06 } },
+    { id: 'p1_seat2', position: { left: 29.40, top: 47.67 } },
+    { id: 'p1_seat3', position: { left: 29.52, top: 51.79 } },
+    { id: 'p1_seat4', position: { left: 31.25, top: 54.83 } },
+    { id: 'p1_seat5', position: { left: 33.33, top: 58.19 } },
+    { id: 'p1_seat6', position: { left: 36.33, top: 60.69 } },
     // Player 2 Seats
-    { id: 'p2_seat1', position: { left: 45.27, top: 30.23 } },
-    { id: 'p2_seat2', position: { left: 41.55, top: 31.08 } },
-    { id: 'p2_seat3', position: { left: 38.25, top: 32.36 } },
-    { id: 'p2_seat4', position: { left: 34.86, top: 34.37 } },
-    { id: 'p2_seat5', position: { left: 33.15, top: 37.88 } },
-    { id: 'p2_seat6', position: { left: 30.78, top: 41.07 } },
+    { id: 'p2_seat1', position: { left: 45.22, top: 29.89 } },
+    { id: 'p2_seat2', position: { left: 41.42, top: 30.76 } },
+    { id: 'p2_seat3', position: { left: 38.06, top: 32.07 } },
+    { id: 'p2_seat4', position: { left: 34.60, top: 34.12 } },
+    { id: 'p2_seat5', position: { left: 32.85, top: 37.70 } },
+    { id: 'p2_seat6', position: { left: 29.56, top: 40.64 } },
     // Player 3 Seats
-    { id: 'p3_seat1', position: { left: 64.34, top: 39.26 } },
-    { id: 'p3_seat2', position: { left: 62.30, top: 36.18 } },
-    { id: 'p3_seat3', position: { left: 59.19, top: 32.78 } },
-    { id: 'p3_seat4', position: { left: 56.18, top: 31.51 } },
-    { id: 'p3_seat5', position: { left: 52.71, top: 29.91 } },
-    { id: 'p3_seat6', position: { left: 49.04, top: 29.59 } },
+    { id: 'p3_seat1', position: { left: 64.67, top: 39.10 } },
+    { id: 'p3_seat2', position: { left: 62.59, top: 35.96 } },
+    { id: 'p3_seat3', position: { left: 59.41, top: 32.49 } },
+    { id: 'p3_seat4', position: { left: 56.34, top: 31.20 } },
+    { id: 'p3_seat5', position: { left: 52.80, top: 29.57 } },
+    { id: 'p3_seat6', position: { left: 49.06, top: 29.24 } },
     // Player 4 Seats
-    { id: 'p4_seat1', position: { left: 60.68, top: 59.25 } },
-    { id: 'p4_seat2', position: { left: 62.98, top: 56.48 } },
-    { id: 'p4_seat3', position: { left: 65.04, top: 53.40 } },
-    { id: 'p4_seat4', position: { left: 66.16, top: 50.11 } },
-    { id: 'p4_seat5', position: { left: 66.16, top: 46.07 } },
-    { id: 'p4_seat6', position: { left: 65.36, top: 42.56 } },
+    { id: 'p4_seat1', position: { left: 60.93, top: 59.49 } },
+    { id: 'p4_seat2', position: { left: 63.28, top: 56.67 } },
+    { id: 'p4_seat3', position: { left: 65.38, top: 53.53 } },
+    { id: 'p4_seat4', position: { left: 66.52, top: 50.17 } },
+    { id: 'p4_seat5', position: { left: 66.52, top: 46.05 } },
+    { id: 'p4_seat6', position: { left: 65.71, top: 42.47 } },
     // Player 5 Seats
-    { id: 'p5_seat1', position: { left: 39.51, top: 62.65 } },
-    { id: 'p5_seat2', position: { left: 43.03, top: 63.71 } },
-    { id: 'p5_seat3', position: { left: 46.77, top: 64.88 } },
-    { id: 'p5_seat4', position: { left: 50.74, top: 64.99 } },
-    { id: 'p5_seat5', position: { left: 54.82, top: 63.39 } },
-    { id: 'p5_seat6', position: { left: 58.11, top: 61.59 } },
+    { id: 'p5_seat1', position: { left: 39.34, top: 62.96 } },
+    { id: 'p5_seat2', position: { left: 42.93, top: 64.04 } },
+    { id: 'p5_seat3', position: { left: 46.75, top: 65.24 } },
+    { id: 'p5_seat4', position: { left: 50.80, top: 65.35 } },
+    { id: 'p5_seat5', position: { left: 54.96, top: 63.72 } },
+    { id: 'p5_seat6', position: { left: 58.31, top: 61.88 } },
     // Rostrums
     { id: 'p1_rostrum1', position: { left: 24.89, top: 45.32 } },
     { id: 'p1_rostrum2', position: { left: 31.85, top: 62.83 } },
@@ -311,47 +311,54 @@ const FIVE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
     { id: 'p3_office', position: { left: 75.18, top: 29.31 } },
     { id: 'p4_office', position: { left: 72.89, top: 65.24 } },
     { id: 'p5_office', position: { left: 36.22, top: 74.70 } },
-    // Community (40 spaces based on testing)
-    { id: 'community1', position: { left: 37.34, top: 41.21 } },
-    { id: 'community2', position: { left: 40.36, top: 46.88 } },
-    { id: 'community3', position: { left: 56.20, top: 37.40 } },
-    { id: 'community4', position: { left: 40.68, top: 40.92 } },
-    { id: 'community5', position: { left: 39.01, top: 38.28 } },
-    { id: 'community6', position: { left: 39.11, top: 43.36 } },
-    { id: 'community7', position: { left: 51.30, top: 40.53 } },
-    { id: 'community8', position: { left: 55.36, top: 40.63 } },
-    { id: 'community9', position: { left: 44.22, top: 40.92 } },
-    { id: 'community10', position: { left: 55.26, top: 56.64 } },
-    { id: 'community11', position: { left: 56.30, top: 46.29 } },
-    { id: 'community12', position: { left: 57.24, top: 43.75 } },
-    { id: 'community13', position: { left: 35.89, top: 44.82 } },
-    { id: 'community14', position: { left: 60.05, top: 45.51 } },
-    { id: 'community15', position: { left: 40.89, top: 56.64 } },
-    { id: 'community16', position: { left: 42.50, top: 36.90 } },
-    { id: 'community17', position: { left: 46.00, top: 36.90 } },
-    { id: 'community18', position: { left: 49.50, top: 36.90 } },
-    { id: 'community19', position: { left: 53.00, top: 36.90 } },
-    { id: 'community20', position: { left: 47.80, top: 40.90 } },
-    { id: 'community21', position: { left: 42.50, top: 44.90 } },
-    { id: 'community22', position: { left: 46.00, top: 44.90 } },
-    { id: 'community23', position: { left: 49.50, top: 44.90 } },
-    { id: 'community24', position: { left: 53.00, top: 44.90 } },
-    { id: 'community25', position: { left: 42.50, top: 48.90 } },
-    { id: 'community26', position: { left: 46.00, top: 48.90 } },
-    { id: 'community27', position: { left: 49.50, top: 48.90 } },
-    { id: 'community28', position: { left: 53.00, top: 48.90 } },
-    { id: 'community29', position: { left: 42.50, top: 52.90 } },
-    { id: 'community30', position: { left: 46.00, top: 52.90 } },
-    { id: 'community31', position: { left: 49.50, top: 52.90 } },
-    { id: 'community32', position: { left: 53.00, top: 52.90 } },
-    { id: 'community33', position: { left: 44.30, top: 56.90 } },
-    { id: 'community34', position: { left: 47.80, top: 56.90 } },
-    { id: 'community35', position: { left: 51.30, top: 56.90 } },
-    { id: 'community36', position: { left: 37.90, top: 46.70 } },
-    { id: 'community37', position: { left: 37.80, top: 50.30 } },
-    { id: 'community38', position: { left: 57.40, top: 53.40 } },
-    { id: 'community39', position: { left: 57.80, top: 49.40 } },
-    { id: 'community40', position: { left: 37.90, top: 54.10 } },
+    // Community (40 spaces in organized grid - shifted southwest for better centering)
+    // Row 1 (top: 39.40)
+    { id: 'community1', position: { left: 36.50, top: 39.40 } },
+    { id: 'community2', position: { left: 40.00, top: 39.40 } },
+    { id: 'community3', position: { left: 43.50, top: 39.40 } },
+    { id: 'community4', position: { left: 47.00, top: 39.40 } },
+    { id: 'community5', position: { left: 50.50, top: 39.40 } },
+    { id: 'community6', position: { left: 54.00, top: 39.40 } },
+    { id: 'community7', position: { left: 57.50, top: 39.40 } },
+    // Row 2 (top: 43.40)
+    { id: 'community8', position: { left: 38.25, top: 43.40 } },
+    { id: 'community9', position: { left: 41.75, top: 43.40 } },
+    { id: 'community10', position: { left: 45.25, top: 43.40 } },
+    { id: 'community11', position: { left: 48.75, top: 43.40 } },
+    { id: 'community12', position: { left: 52.25, top: 43.40 } },
+    { id: 'community13', position: { left: 55.75, top: 43.40 } },
+    // Row 3 (top: 47.40)
+    { id: 'community14', position: { left: 36.50, top: 47.40 } },
+    { id: 'community15', position: { left: 40.00, top: 47.40 } },
+    { id: 'community16', position: { left: 43.50, top: 47.40 } },
+    { id: 'community17', position: { left: 47.00, top: 47.40 } },
+    { id: 'community18', position: { left: 50.50, top: 47.40 } },
+    { id: 'community19', position: { left: 54.00, top: 47.40 } },
+    { id: 'community20', position: { left: 57.50, top: 47.40 } },
+    // Row 4 (top: 51.40)
+    { id: 'community21', position: { left: 38.25, top: 51.40 } },
+    { id: 'community22', position: { left: 41.75, top: 51.40 } },
+    { id: 'community23', position: { left: 45.25, top: 51.40 } },
+    { id: 'community24', position: { left: 48.75, top: 51.40 } },
+    { id: 'community25', position: { left: 52.25, top: 51.40 } },
+    { id: 'community26', position: { left: 55.75, top: 51.40 } },
+    // Row 5 (top: 55.40)
+    { id: 'community27', position: { left: 36.50, top: 55.40 } },
+    { id: 'community28', position: { left: 40.00, top: 55.40 } },
+    { id: 'community29', position: { left: 43.50, top: 55.40 } },
+    { id: 'community30', position: { left: 47.00, top: 55.40 } },
+    { id: 'community31', position: { left: 50.50, top: 55.40 } },
+    { id: 'community32', position: { left: 54.00, top: 55.40 } },
+    { id: 'community33', position: { left: 57.50, top: 55.40 } },
+    // Row 6 (top: 59.40)
+    { id: 'community34', position: { left: 38.25, top: 59.40 } },
+    { id: 'community35', position: { left: 41.75, top: 59.40 } },
+    { id: 'community36', position: { left: 45.25, top: 59.40 } },
+    { id: 'community37', position: { left: 48.75, top: 59.40 } },
+    { id: 'community38', position: { left: 52.25, top: 59.40 } },
+    { id: 'community39', position: { left: 55.75, top: 59.40 } },
+    // Extra space (centered at bottom)
+    { id: 'community40', position: { left: 47.00, top: 62.90 } },
 ];
 
 export const DROP_LOCATIONS_BY_PLAYER_COUNT: { [playerCount: number]: DropLocation[] } = {
@@ -1313,13 +1320,17 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
     PAWN: 3,
   },
   4: {
-    MARK: 16,
-    HEEL: 12,
+    MARK: 14,
+    HEEL: 13,
     PAWN: 4,
   },
   5: {
     MARK: 18,
+<<<<<<< HEAD
     HEEL: 15,
+=======
+    HEEL: 17,
+>>>>>>> 77d0d7874db027f713f84d87941b92b0ab8bda3d
     PAWN: 5,
   },
 };
@@ -1522,7 +1533,7 @@ export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
 const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = {
   3: { left: 50.44, top: 44.01 },
   4: { left: 49.94, top: 51.56 },
-  5: { left: 47.79, top: 46.92 },
+  5: { left: 47.97, top: 47.07 },
 };
 
 /**
@@ -2160,30 +2171,113 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   const markInfo = PIECE_TYPES.MARK;
   const heelInfo = PIECE_TYPES.HEEL;
   const pawnInfo = PIECE_TYPES.PAWN;
-  const seatsToPlace = [1, 3, 5];
 
   let markCounter = 1;
   let heelCounter = 1;
   let pawnCounter = 1;
 
-  // Step 1: Place Marks at seats 1, 3, 5 for each player
-  for (let playerId = 1; playerId <= playerCount; playerId++) {
-    for (const seatNum of seatsToPlace) {
-      const seatId = `p${playerId}_seat${seatNum}`;
-      const location = dropLocations.find(loc => loc.id === seatId);
+  // Step 1: Place pieces in seats based on player count
+  if (playerCount === 4) {
+    // 4-player: Marks at seats 2, 4 and Heel at seat 6 for each player
+    for (let playerId = 1; playerId <= playerCount; playerId++) {
+      // Place Marks at seats 2, 4
+      for (const seatNum of [2, 4]) {
+        const seatId = `p${playerId}_seat${seatNum}`;
+        const location = dropLocations.find(loc => loc.id === seatId);
 
-      if (location) {
+        if (location) {
+          const newPiece: Piece = {
+            id: `campaign_mark_${markCounter}`,
+            name: markInfo.name,
+            displayName: `M${markCounter}`,
+            imageUrl: markInfo.imageUrl,
+            position: location.position,
+            rotation: calculatePieceRotation(location.position, playerCount, seatId),
+            locationId: seatId,
+          };
+          allPieces.push(newPiece);
+          markCounter++;
+        }
+      }
+
+      // Place Heel at seat 6
+      const seat6Id = `p${playerId}_seat6`;
+      const seat6Location = dropLocations.find(loc => loc.id === seat6Id);
+
+      if (seat6Location) {
+        const newPiece: Piece = {
+          id: `campaign_heel_${heelCounter}`,
+          name: heelInfo.name,
+          displayName: `H${heelCounter}`,
+          imageUrl: heelInfo.imageUrl,
+          position: seat6Location.position,
+          rotation: calculatePieceRotation(seat6Location.position, playerCount, seat6Id),
+          locationId: seat6Id,
+        };
+        allPieces.push(newPiece);
+        heelCounter++;
+      }
+    }
+  } else if (playerCount === 5) {
+    // 5-player: Heels at seats 1, 5 and Mark at seat 3 for each player
+    for (let playerId = 1; playerId <= playerCount; playerId++) {
+      // Place Mark at seat 3
+      const seat3Id = `p${playerId}_seat3`;
+      const seat3Location = dropLocations.find(loc => loc.id === seat3Id);
+      if (seat3Location) {
         const newPiece: Piece = {
           id: `campaign_mark_${markCounter}`,
           name: markInfo.name,
           displayName: `M${markCounter}`,
           imageUrl: markInfo.imageUrl,
-          position: location.position,
-          rotation: calculatePieceRotation(location.position, playerCount, seatId),
-          locationId: seatId,
+          position: seat3Location.position,
+          rotation: calculatePieceRotation(seat3Location.position, playerCount, seat3Id),
+          locationId: seat3Id,
         };
         allPieces.push(newPiece);
         markCounter++;
+      }
+
+      // Place Heels at seats 1 and 5
+      for (const seatNum of [1, 5]) {
+        const seatId = `p${playerId}_seat${seatNum}`;
+        const location = dropLocations.find(loc => loc.id === seatId);
+        if (location) {
+          const newPiece: Piece = {
+            id: `campaign_heel_${heelCounter}`,
+            name: heelInfo.name,
+            displayName: `H${heelCounter}`,
+            imageUrl: heelInfo.imageUrl,
+            position: location.position,
+            rotation: calculatePieceRotation(location.position, playerCount, seatId),
+            locationId: seatId,
+          };
+          allPieces.push(newPiece);
+          heelCounter++;
+        }
+      }
+    }
+  } else {
+    // 3-player: Marks at seats 1, 3, 5 for each player
+    const seatsToPlace = [1, 3, 5];
+    for (let playerId = 1; playerId <= playerCount; playerId++) {
+      for (const seatNum of seatsToPlace) {
+        const seatId = `p${playerId}_seat${seatNum}`;
+        const location = dropLocations.find(loc => loc.id === seatId);
+
+        if (location) {
+          const newPiece: Piece = {
+            id: `campaign_mark_${markCounter}`,
+            name: markInfo.name,
+            displayName: `M${markCounter}`,
+            imageUrl: markInfo.imageUrl,
+            position: location.position,
+            rotation: calculatePieceRotation(location.position, playerCount, seatId),
+            locationId: seatId,
+          };
+          allPieces.push(newPiece);
+          markCounter++;
+        }
       }
     }
   }
@@ -2191,8 +2285,19 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 2: Get community drop locations
   const communityLocations = dropLocations.filter(loc => loc.id.startsWith('community'));
 
-  // Step 3: Place additional Marks in community (for 4-player: 16-12=4 additional Marks)
-  const additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
+  // Step 3: Place additional Marks in community
+  let additionalMarkCount: number;
+  if (playerCount === 4) {
+    // 4-player: 14 total - 8 in seats = 6 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 2);
+  } else if (playerCount === 5) {
+    // 5-player: 18 total - 5 in seats = 13 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - playerCount;
+  } else {
+    // 3-player: 12 total - 9 in seats = 3 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
+  }
+
   for (let i = 0; i < additionalMarkCount && i < communityLocations.length; i++) {
     const location = communityLocations[i];
     const newPiece: Piece = {
@@ -2209,9 +2314,19 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   }
 
   // Step 4: Place Heels in community
-  const heelCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
+  let heelCountInCommunity: number;
+  if (playerCount === 4) {
+    // 4-player: 13 total - 4 in seats = 9 in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - playerCount;
+  } else if (playerCount === 5) {
+    // 5-player: 17 total - 10 in seats = 7 in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - (playerCount * 2);
+  } else {
+    // 3-player: all 9 heels in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
+  }
   const heelsStartIndex = additionalMarkCount;
-  for (let i = 0; i < heelCount && (heelsStartIndex + i) < communityLocations.length; i++) {
+  for (let i = 0; i < heelCountInCommunity && (heelsStartIndex + i) < communityLocations.length; i++) {
     const location = communityLocations[heelsStartIndex + i];
     const newPiece: Piece = {
       id: `campaign_heel_${heelCounter}`,
@@ -2228,7 +2343,7 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
 
   // Step 5: Place Pawns in community
   const pawnCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].PAWN;
-  const pawnsStartIndex = heelsStartIndex + heelCount;
+  const pawnsStartIndex = heelsStartIndex + heelCountInCommunity;
   for (let i = 0; i < pawnCount && (pawnsStartIndex + i) < communityLocations.length; i++) {
     const location = communityLocations[pawnsStartIndex + i];
     const newPiece: Piece = {
@@ -2422,6 +2537,7 @@ export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
     return { isValid: false, error: 'Maximum 2 moves allowed per tile play' };
   }
 
+<<<<<<< HEAD
   // If only 0 or 1 move, it's always valid
   if (movesPerformed.length <= 1) {
     return { isValid: true };
@@ -2437,6 +2553,17 @@ export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
   const bothFromGroupA = moveTypes.every(type => groupA.includes(type as DefinedMoveType));
   if (bothFromGroupA) {
     return { isValid: false, error: 'Cannot combine Assist, Remove, and Influence moves together' };
+=======
+  const oMoveCount = movesPerformed.filter((m) => m.category === 'O').length;
+  const mMoveCount = movesPerformed.filter((m) => m.category === 'M').length;
+
+  if (oMoveCount > 1) {
+    return { isValid: false, error: 'You may NOT perform 2 actions of the same category' };
+  }
+
+  if (mMoveCount > 1) {
+    return { isValid: false, error: 'You may NOT perform 2 actions of the same category' };
+>>>>>>> 77d0d7874db027f713f84d87941b92b0ab8bda3d
   }
 
   // Check if both moves are from Group B
@@ -3061,7 +3188,7 @@ export function validateSingleMove(
     case DefinedMoveType.ADVANCE:
       return {
         isValid: validateAdvanceMove(move, playerId, pieces),
-        reason: 'ADVANCE move validation',
+        reason: 'This ADVANCE move is not available until support seats/rostrums are full',
       };
 
     case DefinedMoveType.WITHDRAW:

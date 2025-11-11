@@ -64,6 +64,13 @@ const PlayerSelectionScreen: React.FC<{
   const [skipDraft, setSkipDraft] = useState(false);
   const [skipCampaign, setSkipCampaign] = useState(false);
 
+  // Auto-uncheck skipCampaign when skipDraft is unchecked
+  React.useEffect(() => {
+    if (!skipDraft && skipCampaign) {
+      setSkipCampaign(false);
+    }
+  }, [skipDraft, skipCampaign]);
+
   return (
     <main className="min-h-screen w-full bg-sky-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-slate-800">
       <div className="text-center mb-12">
@@ -134,10 +141,11 @@ const PlayerSelectionScreen: React.FC<{
                 id="skip-campaign-checkbox"
                 type="checkbox"
                 checked={skipCampaign}
+                disabled={!skipDraft}
                 onChange={(e) => setSkipCampaign(e.target.checked)}
-                className="h-5 w-5 rounded bg-white border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                className={`h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 ${!skipDraft ? 'opacity-50 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
               />
-              <label htmlFor="skip-campaign-checkbox" className="ml-3 text-slate-600 cursor-pointer">
+              <label htmlFor="skip-campaign-checkbox" className={`ml-3 ${!skipDraft ? 'text-slate-400 cursor-not-allowed' : 'text-slate-600 cursor-pointer'}`}>
                 Skip Campaign Phase (Go directly to Bureaucracy)
               </label>
             </div>
@@ -391,20 +399,13 @@ const BureaucracyScreen: React.FC<{
       {validationError && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
-            <h2 className="text-2xl font-bold text-white mb-4">Invalid Action</h2>
-            <p className="text-red-100 mb-6">{validationError}</p>
-            <div className="flex gap-3">
+            <h2 className="text-2xl font-bold text-white mb-6">Invalid Action</h2>
+            <div className="flex justify-center">
               <button
                 onClick={onResetAction}
-                className="flex-1 px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded transition-colors"
+                className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded transition-colors"
               >
                 Reset Pieces
-              </button>
-              <button
-                onClick={onClearValidationError}
-                className="flex-1 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded transition-colors"
-              >
-                Dismiss
               </button>
             </div>
           </div>
@@ -472,13 +473,19 @@ const BureaucracyScreen: React.FC<{
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
               if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
 
-              // Apply 15% size reduction for 3-player mode
-              const scaleMultiplier = playerCount === 3 ? 0.85 : 1;
+              // Apply size reduction for different player counts
+              const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.90 : 1;
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
+<<<<<<< HEAD
               // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
               const isInCommunity = piece.locationId?.startsWith('community') ?? false;
+=======
+              // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
+              // Check both position AND locationId to avoid false positives for seats near the community
+              const isInCommunity = piece.locationId?.startsWith('community') || false;
+>>>>>>> 77d0d7874db027f713f84d87941b92b0ab8bda3d
               const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
               const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
@@ -639,13 +646,15 @@ const BureaucracyScreen: React.FC<{
                 {/* Non-move items (Promotion, Credibility) remain full width */}
                 {menu.filter(item => item.type !== 'MOVE').map((item) => {
                   const canAfford = affordableItems.some(ai => ai.id === item.id);
+                  const isCredibilityAtMax = item.type === 'CREDIBILITY' && currentPlayer && currentPlayer.credibility >= 3;
+                  const isEnabled = canAfford && !isCredibilityAtMax;
                   return (
                     <button
                       key={item.id}
-                      onClick={() => canAfford && onSelectMenuItem(item)}
-                      disabled={!canAfford}
+                      onClick={() => isEnabled && onSelectMenuItem(item)}
+                      disabled={!isEnabled}
                       className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                        canAfford
+                        isEnabled
                           ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
                           : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
                       }`}
@@ -655,7 +664,7 @@ const BureaucracyScreen: React.FC<{
                           {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
                           {item.type === 'CREDIBILITY' && 'Restore Credibility'}
                         </span>
-                        <span className={`text-xl font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                        <span className={`text-xl font-bold ${isEnabled ? 'text-yellow-400' : 'text-gray-600'}`}>
                           ₭-{item.price}
                         </span>
                       </div>
@@ -1371,13 +1380,19 @@ const CampaignScreen: React.FC<{
               if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
               if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
 
-              // Apply 15% size reduction for 3-player mode
-              const scaleMultiplier = playerCount === 3 ? 0.85 : 1;
+              // Apply size reduction for different player counts
+              const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.90 : 1;
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
+<<<<<<< HEAD
               // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
               const isInCommunity = piece.locationId?.startsWith('community') ?? false;
+=======
+              // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
+              // Check both position AND locationId to avoid false positives for seats near the community
+              const isInCommunity = piece.locationId?.startsWith('community') || false;
+>>>>>>> 77d0d7874db027f713f84d87941b92b0ab8bda3d
               const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
               // Check if this piece has been moved this turn
@@ -2230,6 +2245,15 @@ const App: React.FC = () => {
   // State for phase transition message
   const [showBureaucracyTransition, setShowBureaucracyTransition] = useState(false);
 
+  // State for finish turn confirmation
+  const [showFinishTurnConfirm, setShowFinishTurnConfirm] = useState<{
+    isOpen: boolean;
+    remainingKredcoin: number;
+  }>({
+    isOpen: false,
+    remainingKredcoin: 0,
+  });
+
   const closeAlert = () => {
     setAlertModal(prev => ({ ...prev, isOpen: false }));
   };
@@ -2249,6 +2273,14 @@ const App: React.FC = () => {
         allTiles.push({
           id: i,
           url: `./images/${String(i).padStart(2, '0')}.svg`
+        });
+      }
+
+      // Add blank tile for 5-player mode
+      if (count === 5) {
+        allTiles.push({
+          id: 25,
+          url: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'/%3e`,
         });
       }
 
@@ -2304,6 +2336,14 @@ const App: React.FC = () => {
         });
       }
 
+      // Add blank tile for 5-player mode
+      if (count === 5) {
+        allTiles.push({
+          id: 25,
+          url: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'/%3e`,
+        });
+      }
+
       // Shuffle tiles
       const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
 
@@ -2329,8 +2369,16 @@ const App: React.FC = () => {
       setPieces(campaignPieces);
       setPiecesAtTurnStart(campaignPieces.map(p => ({ ...p })));
 
+      // Player with tile 03 goes first
+      const startingTileId = 3;
+      const startingPlayerIndex = playersWithTiles.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
+      if (startingPlayerIndex !== -1) {
+        setCurrentPlayerIndex(startingPlayerIndex);
+      } else {
+        setCurrentPlayerIndex(0);
+      }
+
       setGameState('CAMPAIGN');
-      setCurrentPlayerIndex(0);
 
     } else {
       // Normal game flow - start with drafting
@@ -2761,15 +2809,18 @@ const App: React.FC = () => {
 
     // NEW WORKFLOW: If a tile has been played, move to acceptance phase
     if (playedTile && gameState === 'TILE_PLAYED') {
+      // Calculate moves from piece positions
+      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+
       // Validate moves performed (max 2 moves: 1 O and 1 M)
-      const movesValidation = validateMovesForTilePlay(movesThisTurn);
+      const movesValidation = validateMovesForTilePlay(calculatedMoves);
       if (!movesValidation.isValid) {
-        showAlert('Invalid Moves', movesValidation.error, 'error');
+        showAlert('Invalid Moves', movesValidation.error || 'Invalid move combination', 'error');
         return;
       }
 
       // Store moves and move to acceptance phase
-      setPlayedTile(prev => prev ? { ...prev, movesPerformed: movesThisTurn } : null);
+      setPlayedTile(prev => prev ? { ...prev, movesPerformed: calculatedMoves } : null);
       setReceiverAcceptance(null); // Reset for acceptance decision
       setGameState('PENDING_ACCEPTANCE');
 
@@ -2842,6 +2893,36 @@ const App: React.FC = () => {
         'warning'
       );
       return;
+    }
+
+    // NEW VALIDATION: Campaign phase tile rules
+    const totalTilesPlayed = players.reduce((sum, p) => sum + p.bureaucracyTiles.length, 0);
+    const totalTiles = allBankSpaces.length; // 24 for 3/4p, 25 for 5p
+    const isLastTile = (totalTilesPlayed === totalTiles - 1);
+
+    if (isLastTile) {
+      // Final tile: Can ONLY be played to the player with one remaining bank space
+      if (!targetPlayer || targetPlayer.bureaucracyTiles.length !== tilesPerPlayer - 1) {
+        const eligiblePlayer = players.find(p => p.bureaucracyTiles.length === tilesPerPlayer - 1);
+        showAlert(
+          'Invalid Final Tile Placement',
+          eligiblePlayer
+            ? `This is the final tile of the campaign phase. It can only be played to Player ${eligiblePlayer.id}, who has one remaining bank space.`
+            : 'This is the final tile of the campaign phase, but no player has exactly one remaining bank space.',
+          'warning'
+        );
+        return;
+      }
+    } else {
+      // Non-final tiles: MUST be played to a player who has at least 1 tile in their hand
+      if (!targetPlayer || targetPlayer.keptTiles.length === 0) {
+        showAlert(
+          'Invalid Tile Placement',
+          `You must play to a player who has at least 1 tile in their hand. Player ${targetSpace.ownerId} has no tiles left.`,
+          'warning'
+        );
+        return;
+      }
     }
 
     // Initialize the tile play state (NEW WORKFLOW)
@@ -3098,12 +3179,11 @@ const App: React.FC = () => {
         const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
         setChallengeResultMessage(`Challenge Failed: ${challengedPlayerName} played the tile perfectly.`);
 
-        // Challenger loses 1 credibility for unsuccessful challenge
-        setPlayers(prev => handleCredibilityLoss('unsuccessful_challenge', playedTile.playerId, challengerId)(prev));
+        // Challenger loses 1 credibility for unsuccessful challenge (applied in finalizeTilePlay)
         addCredibilityLossLog(challengerId, "Unsuccessful challenge - tile was played perfectly");
 
         // A challenge was made (even though unsuccessful), so no more challenges allowed
-        // Finalize the tile play immediately
+        // Finalize the tile play immediately (credibility loss applied there)
         finalizeTilePlay(true, challengerId);
 
         // Schedule auto-dismiss of challenge message after 5 seconds
@@ -3248,26 +3328,22 @@ const App: React.FC = () => {
     // Receiving player keeps the tile in their bureaucracy (always, even if bank display is full)
     const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
 
-    // Use functional setState to preserve any previous state updates (like credibility loss)
-    // We need to capture the updated players to check if bureaucracy should start
-    let updatedPlayers: Player[] = [];
-    setPlayers(prev => {
-      updatedPlayers = prev.map(p =>
-        p.id === playedTile.receivingPlayerId
-          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+    // Calculate the updated players array directly from current state
+    let updatedPlayers = players.map(p =>
+      p.id === playedTile.receivingPlayerId
+        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+        : p
+    );
+
+    // Apply credibility loss for unsuccessful challenge
+    // If wasChallenged=true and challengerId is set, the challenge was unsuccessful
+    if (wasChallenged && challengerId !== null) {
+      updatedPlayers = updatedPlayers.map(p =>
+        p.id === challengerId
+          ? { ...p, credibility: Math.max(0, p.credibility - 1) }
           : p
       );
-      return updatedPlayers;
-    });
-
-    // Remove from board tiles
-    setBoardTiles(prev =>
-      prev.filter(bt => !(
-        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
-        bt.placerId === playedTile.playerId &&
-        bt.ownerId === playedTile.receivingPlayerId
-      ))
-    );
+    }
 
     // Check if all players have filled their banks (trigger Bureaucracy phase)
     const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
@@ -3285,6 +3361,18 @@ const App: React.FC = () => {
       playerTileCounts: updatedPlayers.map(p => `P${p.id}:${p.bureaucracyTiles.length}`).join(', '),
       allBanksFull
     });
+
+    // Update the players state
+    setPlayers(updatedPlayers);
+
+    // Remove from board tiles
+    setBoardTiles(prev =>
+      prev.filter(bt => !(
+        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
+        bt.placerId === playedTile.playerId &&
+        bt.ownerId === playedTile.receivingPlayerId
+      ))
+    );
 
     if (allBanksFull) {
       // Show "Bureaucracy!" transition message for 3 seconds before starting bureaucracy phase
@@ -3387,6 +3475,13 @@ const App: React.FC = () => {
     // Use the same calculation logic as Check Move button
     const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
 
+    // Validate moves performed (max 2 moves: 1 O and 1 M)
+    const movesValidation = validateMovesForTilePlay(calculatedMoves);
+    if (!movesValidation.isValid) {
+      showAlert('Invalid Moves', movesValidation.error || 'Invalid move combination', 'error');
+      return;
+    }
+
     // Validate that tile player has now met the requirements
     const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
       playedTile.tileId,
@@ -3480,6 +3575,18 @@ const App: React.FC = () => {
     // Create updated tile with corrected moves
     const updatedPlayedTile = { ...playedTile, movesPerformed: calculatedMoves };
 
+    // Log the standing moves (corrected moves that are now final)
+    for (const move of calculatedMoves) {
+      const fromLoc = move.fromLocationId ? formatLocationId(move.fromLocationId) : 'supply';
+      const toLoc = move.toLocationId ? formatLocationId(move.toLocationId) : 'supply';
+
+      // Get the piece name from the current pieces
+      const movedPiece = pieces.find(p => p.id === move.pieceId);
+      const pieceName = movedPiece?.name || 'piece';
+
+      addGameLog(`Standing Move: Player ${playedTile.playerId} moves ${pieceName} from ${fromLoc} to ${toLoc}`);
+    }
+
     // Get bank spaces for the receiving player
     const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
     const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === updatedPlayedTile.receivingPlayerId);
@@ -3534,21 +3641,64 @@ const App: React.FC = () => {
     setTileRejected(false);
 
     // Update players and set turn to receiver using latest state
-    setPlayers(prev => {
-      const updatedPlayers = prev.map(p =>
-        p.id === updatedPlayedTile.receivingPlayerId
-          ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
-          : p
-      );
+    // Calculate the updated players array directly from current state
+    const updatedPlayers = players.map(p =>
+      p.id === updatedPlayedTile.receivingPlayerId
+        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+        : p
+    );
 
-      // Move to receiving player for their turn
-      const receiverIndex = updatedPlayers.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
-      if (receiverIndex !== -1) {
-        setCurrentPlayerIndex(receiverIndex);
-      }
+    // Move to receiving player for their turn
+    const receiverIndex = updatedPlayers.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
+    if (receiverIndex !== -1) {
+      setCurrentPlayerIndex(receiverIndex);
+    }
 
-      return updatedPlayers;
-    });
+    // Update the players state
+    setPlayers(updatedPlayers);
+
+    // Check if all players have filled their banks (trigger Bureaucracy phase)
+    const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+    const tilesPerPlayer = allBankSpaces.length / playerCount;
+    const allBanksFull = updatedPlayers.length > 0 && updatedPlayers.every(p => p.bureaucracyTiles.length >= tilesPerPlayer);
+
+    if (allBanksFull) {
+      // Show "Bureaucracy!" transition message for 3 seconds before starting bureaucracy phase
+      setShowBureaucracyTransition(true);
+
+      setTimeout(() => {
+        // Initialize Bureaucracy phase
+        const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
+        const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(p => ({
+          playerId: p.id,
+          initialKredcoin: calculatePlayerKredcoin(p),
+          remainingKredcoin: calculatePlayerKredcoin(p),
+          turnComplete: false,
+          purchases: []
+        }));
+
+        setBureaucracyTurnOrder(turnOrder);
+        setBureaucracyStates(initialStates);
+        setCurrentBureaucracyPlayerIndex(0);
+        setShowBureaucracyMenu(true);
+        setGameState('BUREAUCRACY');
+
+        // Reset tile play state
+        setPlayedTile(null);
+        setMovesThisTurn([]);
+        setReceiverAcceptance(null);
+        setChallengeOrder([]);
+        setCurrentChallengerIndex(0);
+        setTileRejected(false);
+        setHasPlayedTileThisTurn(false);
+        setGiveReceiverViewingTileId(null);
+
+        // Hide transition message
+        setShowBureaucracyTransition(false);
+      }, 3000);
+
+      return; // Don't continue with campaign reset
+    }
 
     // Reset remaining state
     setPlayedTile(null);
@@ -4053,19 +4203,8 @@ const App: React.FC = () => {
     setPlayers(updatedPlayers);
   };
 
-  const handleFinishBureaucracyTurn = () => {
+  const completeBureaucracyTurn = () => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
-    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
-    const menu = getBureaucracyMenu(playerCount);
-    const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
-
-    // Confirm if they still have kredcoin
-    if (affordableItems.length > 0) {
-      const confirm = window.confirm(
-        `Are you sure you want to finish? You still have ₭-${playerState?.remainingKredcoin} left.`
-      );
-      if (!confirm) return;
-    }
 
     // Mark turn as complete
     const updatedStates = bureaucracyStates.map(s =>
@@ -4092,21 +4231,27 @@ const App: React.FC = () => {
         return;
       }
 
-      // No winner - transition back to campaign
-      // Move bureaucracy tiles to hand
+      // No winner - transition back to campaign for next round
+      // Bureaucracy tiles become the hand (keptTiles) for the next campaign phase
       const updatedPlayers = players.map(p => ({
         ...p,
-        hand: [...p.hand, ...p.bureaucracyTiles],
+        hand: [],
+        keptTiles: [...p.bureaucracyTiles],
         bureaucracyTiles: []
       }));
 
       setPlayers(updatedPlayers);
 
-      // Player with tile 03.svg goes first when returning to Campaign
+      // Clear bank spaces for the new round
+      setBankedTiles([]);
+
+      // Player with tile 03 goes first in the new campaign round
       const startingTileId = 3;
-      const startingPlayerIndex = updatedPlayers.findIndex(p => p.hand && p.hand.some(t => t.id === startingTileId));
+      const startingPlayerIndex = updatedPlayers.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
       if (startingPlayerIndex !== -1) {
         setCurrentPlayerIndex(startingPlayerIndex);
+      } else {
+        setCurrentPlayerIndex(0);
       }
 
       setGameState('CAMPAIGN');
@@ -4118,6 +4263,34 @@ const App: React.FC = () => {
       setCurrentBureaucracyPlayerIndex(nextIndex);
       setShowBureaucracyMenu(true);
     }
+  };
+
+  const handleFinishBureaucracyTurn = () => {
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    const menu = getBureaucracyMenu(playerCount);
+    const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
+
+    // Confirm if they still have kredcoin
+    if (affordableItems.length > 0) {
+      setShowFinishTurnConfirm({
+        isOpen: true,
+        remainingKredcoin: playerState?.remainingKredcoin || 0,
+      });
+      return;
+    }
+
+    // No confirmation needed, complete turn directly
+    completeBureaucracyTurn();
+  };
+
+  const handleConfirmFinishTurn = () => {
+    setShowFinishTurnConfirm({ isOpen: false, remainingKredcoin: 0 });
+    completeBureaucracyTurn();
+  };
+
+  const handleCancelFinishTurn = () => {
+    setShowFinishTurnConfirm({ isOpen: false, remainingKredcoin: 0 });
   };
 
   const handleClearBureaucracyValidationError = () => {
@@ -4447,6 +4620,37 @@ const App: React.FC = () => {
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Finish Turn Confirmation Modal */}
+      {showFinishTurnConfirm.isOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+          <div className="bg-gray-800 border-2 border-yellow-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
+            <div className="mb-4">
+              <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
+            </div>
+            <h2 className="text-3xl font-bold mb-3 text-yellow-400">
+              Finish Turn?
+            </h2>
+            <p className="text-slate-300 mb-6 text-lg">
+              Are you sure you want to finish? You still have <span className="text-yellow-400 font-bold">₭-{showFinishTurnConfirm.remainingKredcoin}</span> left.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={handleCancelFinishTurn}
+                className="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmFinishTurn}
+                className="px-6 py-3 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors shadow-md"
+              >
+                Yes, Finish
+              </button>
+            </div>
           </div>
         </div>
       )}
