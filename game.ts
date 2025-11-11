@@ -1313,8 +1313,8 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
     PAWN: 3,
   },
   4: {
-    MARK: 16,
-    HEEL: 12,
+    MARK: 25,
+    HEEL: 2,
     PAWN: 4,
   },
   5: {
@@ -2160,13 +2160,13 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   const markInfo = PIECE_TYPES.MARK;
   const heelInfo = PIECE_TYPES.HEEL;
   const pawnInfo = PIECE_TYPES.PAWN;
-  const seatsToPlace = [1, 3, 5];
+  const seatsToPlace = [2, 4, 6];
 
   let markCounter = 1;
   let heelCounter = 1;
   let pawnCounter = 1;
 
-  // Step 1: Place Marks at seats 1, 3, 5 for each player
+  // Step 1: Place Marks at seats 2, 4, 6 for each player
   for (let playerId = 1; playerId <= playerCount; playerId++) {
     for (const seatNum of seatsToPlace) {
       const seatId = `p${playerId}_seat${seatNum}`;
@@ -2191,7 +2191,7 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 2: Get community drop locations
   const communityLocations = dropLocations.filter(loc => loc.id.startsWith('community'));
 
-  // Step 3: Place additional Marks in community (for 4-player: 16-12=4 additional Marks)
+  // Step 3: Place additional Marks in community (for 4-player: 25-12=13 additional Marks)
   const additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
   for (let i = 0; i < additionalMarkCount && i < communityLocations.length; i++) {
     const location = communityLocations[i];
