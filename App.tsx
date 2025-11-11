@@ -1450,7 +1450,7 @@ const CampaignScreen: React.FC<{
                 </button>
               </div>
             </div>
-            <p className={`text-center mb-4 ${gameState === 'CORRECTION_REQUIRED' ? 'text-yellow-400 font-semibold' : 'text-slate-400'}`}>
+            <p className={`text-center mb-4 ${gameState === 'CORRECTION_REQUIRED' ? 'text-yellow-400 font-semibold' : hasPlayedTileThisTurn ? 'text-slate-400' : 'text-white'}`}>
               {gameState === 'CORRECTION_REQUIRED'
                 ? "Your tile was rejected. The tile requirements are shown above. Move your pieces to fulfill them, then click End Turn."
                 : hasPlayedTileThisTurn
