@@ -2308,7 +2308,7 @@ const App: React.FC = () => {
       const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
 
       // Determine hand size based on player count
-      const handSize = count === 3 ? 8 : count === 4 ? 6 : 4; // 3p=8, 4p=6, 5p=4
+      const handSize = count === 3 ? 8 : count === 4 ? 6 : 5; // 3p=8, 4p=6, 5p=5
 
       // Distribute tiles to each player's hand
       const playersWithTiles = initialPlayers.map((player, index) => {
