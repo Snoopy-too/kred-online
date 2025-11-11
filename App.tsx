@@ -478,7 +478,7 @@ const BureaucracyScreen: React.FC<{
               const finalScale = baseScale * scaleMultiplier;
 
               // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
-              const isInCommunity = isPositionInCommunityCircle(piece.position);
+              const isInCommunity = piece.locationId?.startsWith('community') ?? false;
               const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
               const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
@@ -1377,7 +1377,7 @@ const CampaignScreen: React.FC<{
               const finalScale = baseScale * scaleMultiplier;
 
               // For pieces in the community circle, apply inverse board rotation to counteract the board's perspective rotation
-              const isInCommunity = isPositionInCommunityCircle(piece.position);
+              const isInCommunity = piece.locationId?.startsWith('community') ?? false;
               const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
               // Check if this piece has been moved this turn
