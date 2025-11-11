@@ -1169,7 +1169,9 @@ const CampaignScreen: React.FC<{
               alt={`A ${playerCount}-player game board`}
               className="w-full h-full object-contain drop-shadow-2xl relative z-0"
             />
-            <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`, backgroundSize: '2% 2%', pointerEvents: 'none' }} aria-hidden="true" />
+            {showGridOverlay && (
+              <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`, backgroundSize: '2% 2%', pointerEvents: 'none' }} aria-hidden="true" />
+            )}
             <div className="absolute inset-0 text-white/50 text-[8px] sm:text-xs pointer-events-none z-20" aria-hidden="true">
                 {Array.from({ length: 9 }).map((_, i) => (<div key={`x-${i}`} className="absolute" style={{ left: `${(i + 1) * 10}%`, top: '0.5%', transform: 'translateX(-50%)' }}>{(i + 1) * 10}</div>))}
                 {Array.from({ length: 9 }).map((_, i) => (<div key={`y-${i}`} className="absolute" style={{ top: `${(i + 1) * 10}%`, left: '0.5%', transform: 'translateY(-50%)' }}>{(i + 1) * 10}</div>))}
@@ -1574,6 +1576,21 @@ const CampaignScreen: React.FC<{
                     <span className="text-xs text-slate-400 ml-auto">{boardRotationEnabled ? '(ON)' : '(OFF)'}</span>
                   </label>
                   <p className="text-xs text-slate-400 mt-2">When ON, the board rotates to show each player's perspective. When OFF, the board stays fixed.</p>
+                </div>
+
+                {/* Grid Overlay Toggle */}
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showGridOverlay}
+                      onChange={(e) => setShowGridOverlay(e.target.checked)}
+                      className="w-5 h-5 accent-cyan-500"
+                    />
+                    <span className="text-slate-200 font-semibold">Grid Overlay</span>
+                    <span className="text-xs text-slate-400 ml-auto">{showGridOverlay ? '(ON)' : '(OFF)'}</span>
+                  </label>
+                  <p className="text-xs text-slate-400 mt-2">When ON, displays a 2% grid overlay on the board to help with tile placement. When OFF, the grid is hidden.</p>
                 </div>
 
                 {/* Check Move Button */}
@@ -2125,6 +2142,7 @@ const App: React.FC = () => {
   const [isTestMode, setIsTestMode] = useState(false);
   const [dummyTile, setDummyTile] = useState<{ position: { top: number; left: number }; rotation: number } | null>(null);
   const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
+  const [showGridOverlay, setShowGridOverlay] = useState(true);
   const [credibilityRotationAdjustments, setCredibilityRotationAdjustments] = useState<{ [playerId: number]: number }>({});
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
   const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
