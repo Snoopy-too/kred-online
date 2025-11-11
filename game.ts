@@ -1313,8 +1313,8 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
     PAWN: 3,
   },
   4: {
-    MARK: 25,
-    HEEL: 2,
+    MARK: 14,
+    HEEL: 13,
     PAWN: 4,
   },
   5: {
@@ -2191,7 +2191,7 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 2: Get community drop locations
   const communityLocations = dropLocations.filter(loc => loc.id.startsWith('community'));
 
-  // Step 3: Place additional Marks in community (for 4-player: 25-12=13 additional Marks)
+  // Step 3: Place additional Marks in community (for 4-player: 14-12=2 additional Marks)
   const additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
   for (let i = 0; i < additionalMarkCount && i < communityLocations.length; i++) {
     const location = communityLocations[i];
