@@ -1169,7 +1169,7 @@ const CampaignScreen: React.FC<{
             <img
               src={BOARD_IMAGE_URLS[playerCount]}
               alt={`A ${playerCount}-player game board`}
-              className="w-full h-full object-contain drop-shadow-2xl relative z-0"
+              className="w-full h-full object-contain relative z-0"
             />
             {showGridOverlay && (
               <>
