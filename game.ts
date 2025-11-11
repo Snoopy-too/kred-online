@@ -2197,41 +2197,24 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
       }
     }
   } else if (playerCount === 5) {
-    // 5-player: Heels at seats 1, 5 and Mark at seat 3 for each player
+    // 5-player: Marks at seats 1, 3, 5 for each player
     for (let playerId = 1; playerId <= playerCount; playerId++) {
-      // Place Mark at seat 3
-      const seat3Id = `p${playerId}_seat3`;
-      const seat3Location = dropLocations.find(loc => loc.id === seat3Id);
-      if (seat3Location) {
-        const newPiece: Piece = {
-          id: `campaign_mark_${markCounter}`,
-          name: markInfo.name,
-          displayName: `M${markCounter}`,
-          imageUrl: markInfo.imageUrl,
-          position: seat3Location.position,
-          rotation: calculatePieceRotation(seat3Location.position, playerCount, seat3Id),
-          locationId: seat3Id,
-        };
-        allPieces.push(newPiece);
-        markCounter++;
-      }
-
-      // Place Heels at seats 1 and 5
-      for (const seatNum of [1, 5]) {
+      // Place Marks at seats 1, 3, 5
+      for (const seatNum of [1, 3, 5]) {
         const seatId = `p${playerId}_seat${seatNum}`;
         const location = dropLocations.find(loc => loc.id === seatId);
         if (location) {
           const newPiece: Piece = {
-            id: `campaign_heel_${heelCounter}`,
-            name: heelInfo.name,
-            displayName: `H${heelCounter}`,
-            imageUrl: heelInfo.imageUrl,
+            id: `campaign_mark_${markCounter}`,
+            name: markInfo.name,
+            displayName: `M${markCounter}`,
+            imageUrl: markInfo.imageUrl,
             position: location.position,
             rotation: calculatePieceRotation(location.position, playerCount, seatId),
             locationId: seatId,
           };
           allPieces.push(newPiece);
-          heelCounter++;
+          markCounter++;
         }
       }
     }
@@ -2269,8 +2252,8 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
     // 4-player: 14 total - 12 in seats = 2 in community
     additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
   } else if (playerCount === 5) {
-    // 5-player: 18 total - 5 in seats = 13 in community
-    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - playerCount;
+    // 5-player: 18 total - 15 in seats = 3 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
   } else {
     // 3-player: 12 total - 9 in seats = 3 in community
     additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
@@ -2297,8 +2280,8 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
     // 4-player: 13 total - 0 in seats = 13 in community
     heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
   } else if (playerCount === 5) {
-    // 5-player: 17 total - 10 in seats = 7 in community
-    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL - (playerCount * 2);
+    // 5-player: 17 total - 0 in seats = 17 in community
+    heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
   } else {
     // 3-player: all 9 heels in community
     heelCountInCommunity = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].HEEL;
