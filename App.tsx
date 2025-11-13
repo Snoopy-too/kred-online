@@ -2186,6 +2186,9 @@ const CampaignScreen: React.FC<{
                           return rotationMap?.[takeAdvantageChallengerId] || 0;
                         })()}deg)`
                       }}
+                      onDragOver={handleDragOverBoard}
+                      onDrop={handleDropOnBoard}
+                      onMouseLeave={handleMouseLeaveBoard}
                     >
                       <img
                         src={BOARD_IMAGE_URLS[playerCount]}
@@ -2193,6 +2196,45 @@ const CampaignScreen: React.FC<{
                         className="absolute inset-0 w-full h-full object-contain"
                         draggable={false}
                       />
+
+                      {/* Drop indicator */}
+                      {dropIndicator && (
+                        <>
+                          {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
+                          <div
+                            className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
+                            style={{
+                              top: `${dropIndicator.position.top}%`,
+                              left: `${dropIndicator.position.left}%`,
+                              width: '80px',
+                              height: '80px',
+                              transform: 'translate(-50%, -50%)',
+                              backgroundColor: dropIndicator.isValid === false ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
+                              boxShadow: dropIndicator.isValid === false
+                                ? '0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)'
+                                : '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                              border: dropIndicator.isValid === false ? '2px solid rgba(239, 68, 68, 0.6)' : '2px solid rgba(34, 197, 94, 0.6)',
+                            }}
+                            aria-hidden="true"
+                          />
+                          {/* Drop indicator piece preview */}
+                          <div
+                            className="absolute pointer-events-none transition-all duration-100 ease-in-out"
+                            style={{
+                              top: `${dropIndicator.position.top}%`,
+                              left: `${dropIndicator.position.left}%`,
+                              width: dropIndicator.name === 'Pawn' ? '80px' : dropIndicator.name === 'Heel' ? '64px' : '56px',
+                              height: dropIndicator.name === 'Pawn' ? '80px' : dropIndicator.name === 'Heel' ? '64px' : '56px',
+                              transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
+                              filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
+                              opacity: 0.7,
+                            }}
+                            aria-hidden="true"
+                          >
+                            <img src={dropIndicator.imageUrl} alt="" className="w-full h-full object-contain" />
+                          </div>
+                        </>
+                      )}
 
                       {/* Render pieces */}
                       {pieces.map((piece) => {
