@@ -2217,14 +2217,20 @@ const CampaignScreen: React.FC<{
                             key={piece.id}
                             src={piece.imageUrl}
                             alt={piece.name}
-                            draggable={false}
+                            draggable={isDraggable}
+                            onDragStart={(e) => {
+                              if (isDraggable) {
+                                handleDragStartPiece(e, piece.id);
+                              }
+                            }}
+                            onDragEnd={handleDragEndPiece}
                             onClick={() => {
                               if (isPromotionPurchase) {
                                 onTakeAdvantagePiecePromote(piece.id);
                               }
                             }}
                             className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
-                              isPromotionPurchase ? 'cursor-pointer hover:scale-110' : 'cursor-default'
+                              isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
                             }`}
                             style={{
                               position: 'absolute',
@@ -5178,19 +5184,50 @@ const App: React.FC = () => {
       return { isValid: true };
     }
 
-    // MOVE: Check if the performed move matches the selected move type
+    // MOVE: Check if the performed move matches the selected move type (same validation as Bureaucracy)
     if (item.type === 'MOVE') {
       const requiredMoveType = item.moveType!;
 
-      if (movesThisTurn.length === 0) {
+      // Calculate moves using the same logic as Bureaucracy
+      const calculatedMoves = calculateMoves(takeAdvantagePiecesSnapshot, pieces, takeAdvantageChallengerId!);
+
+      if (calculatedMoves.length === 0) {
         return { isValid: false, error: 'You must perform a move' };
       }
 
-      // Check if any move matches the required type
-      const hasMatchingMove = movesThisTurn.some(move => move === requiredMoveType);
+      // Validate each move with proper piece state (same as Bureaucracy)
+      let allMovesValid = true;
+      for (let i = 0; i < calculatedMoves.length; i++) {
+        const move = calculatedMoves[i];
+
+        // Build piece state after all previous moves but before this move
+        let piecesForValidation = takeAdvantagePiecesSnapshot.map(p => ({ ...p }));
+        for (let j = 0; j < i; j++) {
+          const prevMove = calculatedMoves[j];
+          piecesForValidation = piecesForValidation.map(p =>
+            p.id === prevMove.pieceId
+              ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+              : p
+          );
+        }
+
+        const validation = validateSingleMove(move, takeAdvantageChallengerId!, piecesForValidation, playerCount);
+        if (!validation.isValid) {
+          allMovesValid = false;
+          return { isValid: false, error: `${move.moveType} move validation failed: ${validation.reason}` };
+        }
+      }
+
+      if (!allMovesValid) {
+        return { isValid: false, error: 'Move validation failed' };
+      }
+
+      // Check if at least one move matches the expected type
+      const hasMatchingMove = calculatedMoves.some(m => m.moveType === requiredMoveType);
 
       if (!hasMatchingMove) {
-        return { isValid: false, error: `You must perform a ${requiredMoveType} move` };
+        const performedTypes = calculatedMoves.map(m => m.moveType).join(', ');
+        return { isValid: false, error: `Expected a ${requiredMoveType} move, but you performed: ${performedTypes}` };
       }
 
       return { isValid: true };
@@ -5256,15 +5293,15 @@ const App: React.FC = () => {
     const piece = pieces.find(p => p.id === pieceId);
     if (!piece) return;
 
-    // Check if piece is already promoted
-    if (piece.name !== piece.displayName) {
+    // Check if piece is already promoted (displayName is uppercase)
+    if (piece.displayName === piece.name.toUpperCase()) {
       setTakeAdvantageValidationError('This piece is already promoted');
       setTimeout(() => setTakeAdvantageValidationError(null), 3000);
       return;
     }
 
     // Promote the piece
-    const newDisplayName = piece.name === 'Pawn' ? 'PAWN' : piece.name === 'Heel' ? 'HEEL' : 'MARK';
+    const newDisplayName = piece.name.toUpperCase();
 
     setPieces(prev => prev.map(p =>
       p.id === pieceId
