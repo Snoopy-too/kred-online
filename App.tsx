@@ -1969,6 +1969,158 @@ const CampaignScreen: React.FC<{
         </div>
       )}
 
+      {/* Take Advantage Initial Choice Modal */}
+      {showTakeAdvantageModal && takeAdvantageChallengerId !== null && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border-2 border-green-500 rounded-lg p-8 max-w-lg shadow-2xl">
+            <h2 className="text-3xl font-bold text-green-400 mb-6 text-center">
+              Challenge Successful! 🎯
+            </h2>
+
+            {/* Credibility = 3 Message */}
+            {takeAdvantageChallengerCredibility === 3 ? (
+              <>
+                <p className="text-slate-200 text-lg mb-8 text-center leading-relaxed">
+                  You have full credibility. Would you like to use one of the tiles in your bank to purchase an action?
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={handleTakeAdvantageYes}
+                    className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={handleTakeAdvantageDecline}
+                    className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    No Thanks
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* Credibility < 3 Message */
+              <>
+                <p className="text-slate-200 text-lg mb-8 text-center leading-relaxed">
+                  Would you like to recover 1 notch to your credibility or use a banked tile to purchase a move?
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={handleRecoverCredibility}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Recover Credibility
+                  </button>
+                  <button
+                    onClick={handlePurchaseMove}
+                    className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Purchase Move
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Take Advantage Tile Selection Screen */}
+      {showTakeAdvantageTileSelection && takeAdvantageChallengerId !== null && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gray-800 border-2 border-yellow-500 rounded-lg p-8 max-w-4xl w-full my-8 shadow-2xl">
+            <h2 className="text-3xl font-bold text-yellow-400 mb-4 text-center">
+              Select Tiles from Your Bank
+            </h2>
+            <p className="text-slate-300 text-center mb-2">
+              Choose one or more tiles to use for purchasing an action.
+            </p>
+            <p className="text-slate-400 text-center text-sm mb-6">
+              Click tiles to select/deselect. Selected tiles will be removed from your bank after purchase.
+            </p>
+
+            {/* Current Selection Summary */}
+            <div className="bg-gray-700/50 border border-yellow-500/30 rounded-lg p-4 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-200 font-semibold">
+                  Selected: {selectedTilesForAdvantage.length} tile(s)
+                </span>
+                <span className="text-yellow-400 text-2xl font-bold">
+                  Total: ₭-{totalKredcoinForAdvantage}
+                </span>
+              </div>
+            </div>
+
+            {/* Tile Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+              {players
+                .find(p => p.id === takeAdvantageChallengerId)
+                ?.bureaucracyTiles.map(tile => {
+                  const isSelected = selectedTilesForAdvantage.some(t => t.id === tile.id);
+                  const tileValue = TILE_KREDCOIN_VALUES[tile.id] || 0;
+
+                  return (
+                    <button
+                      key={tile.id}
+                      onClick={() => handleToggleTileSelection(tile)}
+                      className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${
+                        isSelected
+                          ? 'border-yellow-400 ring-4 ring-yellow-400/50 scale-105'
+                          : 'border-gray-300 hover:border-yellow-300'
+                      }`}
+                    >
+                      <img
+                        src={tile.url}
+                        alt={`Tile ${tile.id}`}
+                        className="w-full h-full object-contain"
+                      />
+                      {/* Kredcoin Value Badge */}
+                      <div className={`absolute top-1 right-1 px-2 py-1 rounded text-xs font-bold ${
+                        isSelected ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+                      }`}>
+                        ₭-{tileValue}
+                      </div>
+                      {/* Selection Checkmark */}
+                      {isSelected && (
+                        <div className="absolute top-1 left-1 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center">
+                          <span className="text-white text-sm font-bold">✓</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+
+            {/* No tiles message */}
+            {players.find(p => p.id === takeAdvantageChallengerId)?.bureaucracyTiles.length === 0 && (
+              <p className="text-red-400 text-center text-lg mb-6">
+                You have no tiles in your bank. Cannot purchase an action.
+              </p>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={handleConfirmTileSelection}
+                disabled={selectedTilesForAdvantage.length === 0}
+                className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${
+                  selectedTilesForAdvantage.length === 0
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-500 text-white hover:scale-105'
+                }`}
+              >
+                Continue with {selectedTilesForAdvantage.length} tile(s) (₭-{totalKredcoinForAdvantage})
+              </button>
+              <button
+                onClick={handleCancelTileSelection}
+                className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showWaitingOverlay && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4">
              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 p-6 rounded-xl text-center shadow-2xl">
@@ -2212,6 +2364,18 @@ const App: React.FC = () => {
   const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
   const [challengeResultMessage, setChallengeResultMessage] = useState<string | null>(null);
   const [tilePlayerMustWithdraw, setTilePlayerMustWithdraw] = useState(false);
+
+  // State for Take Advantage (challenge reward)
+  const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
+  const [takeAdvantageChallengerId, setTakeAdvantageChallengerId] = useState<number | null>(null);
+  const [takeAdvantageChallengerCredibility, setTakeAdvantageChallengerCredibility] = useState<number>(0);
+  const [showTakeAdvantageTileSelection, setShowTakeAdvantageTileSelection] = useState(false);
+  const [selectedTilesForAdvantage, setSelectedTilesForAdvantage] = useState<Tile[]>([]);
+  const [totalKredcoinForAdvantage, setTotalKredcoinForAdvantage] = useState(0);
+  const [showTakeAdvantageMenu, setShowTakeAdvantageMenu] = useState(false);
+  const [takeAdvantagePurchase, setTakeAdvantagePurchase] = useState<BureaucracyPurchase | null>(null);
+  const [takeAdvantagePiecesSnapshot, setTakeAdvantagePiecesSnapshot] = useState<Piece[]>([]);
+  const [takeAdvantageValidationError, setTakeAdvantageValidationError] = useState<string | null>(null);
 
   // State for custom alert modals
   const [alertModal, setAlertModal] = useState<{
@@ -3217,33 +3381,28 @@ const App: React.FC = () => {
           addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
         }
 
-        // Check if tile player has 0 credibility - if so, they MUST perform a WITHDRAW during correction
-        const tilePlayer = players.find(p => p.id === playedTile.playerId);
-        const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
+        // NEW: Offer Take Advantage reward to successful challenger
+        const challengerId = challengeOrder[currentChallengerIndex];
+        const challenger = players.find(p => p.id === challengerId);
 
-        if (playerHasZeroCredibility && !isTilePerfect) {
-          setTilePlayerMustWithdraw(true);
-        } else {
-          setTilePlayerMustWithdraw(false);
+        if (challenger) {
+          // Store challenger context
+          setTakeAdvantageChallengerId(challengerId);
+          setTakeAdvantageChallengerCredibility(challenger.credibility);
+          setShowTakeAdvantageModal(true);
+
+          // Store the challenge result message to show after modal closes
+          setTimeout(() => {
+            setChallengeResultMessage('');
+          }, 5000);
+
+          // DON'T transition to CORRECTION_REQUIRED yet
+          // Wait for user's choice in the modal
+          return; // Exit early
         }
 
-        // Immediately switch game state to CORRECTION_REQUIRED to prevent other challengers from acting
-        const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
-        if (playerIndex !== -1) {
-          setCurrentPlayerIndex(playerIndex);
-          setGameState('CORRECTION_REQUIRED');
-          setMovesThisTurn([]);
-          setTileRejected(true);
-          // Restore original pieces (remove any moves made)
-          const revertedPieces = playedTile.originalPieces.map(p => ({ ...p }));
-          setPieces(revertedPieces);
-          // Capture the reverted pieces as the baseline for correction move calculations
-          setPiecesAtCorrectionStart(revertedPieces);
-
-          // Clear piece movement tracking - fresh start for correction
-          setMovedPiecesThisTurn(new Set());
-          setPendingCommunityPieces(new Set());
-        }
+        // If no challenger found (shouldn't happen), continue as normal
+        transitionToCorrectionPhase();
 
         // Schedule auto-dismiss of challenge message after 5 seconds
         setTimeout(() => {
@@ -4414,6 +4573,400 @@ const App: React.FC = () => {
         ? { ...p, position: newPosition, rotation: newRotation, locationId }
         : p
     ));
+  };
+
+  /**
+   * Transitions the game to CORRECTION_REQUIRED phase after challenge success
+   * and Take Advantage flow completes (or is declined)
+   */
+  const transitionToCorrectionPhase = () => {
+    if (!playedTile) return;
+
+    const tilePlayer = players.find(p => p.id === playedTile.playerId);
+    const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
+
+    // Determine if tile player must withdraw (0 credibility penalty)
+    if (playerHasZeroCredibility) {
+      setTilePlayerMustWithdraw(true);
+    } else {
+      setTilePlayerMustWithdraw(false);
+    }
+
+    // Switch to correction phase
+    const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+    if (playerIndex !== -1) {
+      setCurrentPlayerIndex(playerIndex);
+      setGameState('CORRECTION_REQUIRED');
+      setMovesThisTurn([]);
+      setTileRejected(true);
+
+      // Restore original pieces (before challenged tile play)
+      const revertedPieces = playedTile.originalPieces.map(p => ({ ...p }));
+      setPieces(revertedPieces);
+      setPiecesAtCorrectionStart(revertedPieces);
+
+      // Clear piece movement tracking
+      setMovedPiecesThisTurn(new Set());
+      setPendingCommunityPieces(new Set());
+    }
+  };
+
+  /**
+   * Handler: User chose "No Thanks" (credibility = 3)
+   * Decline the Take Advantage offer and continue to correction phase
+   */
+  const handleTakeAdvantageDecline = () => {
+    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+    setGameLog(prev => [...prev, `${challengerName} declined the Take Advantage reward`]);
+
+    // Clean up modal state
+    setShowTakeAdvantageModal(false);
+    setTakeAdvantageChallengerId(null);
+    setTakeAdvantageChallengerCredibility(0);
+
+    // Continue to correction phase
+    transitionToCorrectionPhase();
+  };
+
+  /**
+   * Handler: User chose "Yes" (credibility = 3)
+   * Show tile selection screen
+   */
+  const handleTakeAdvantageYes = () => {
+    const challenger = players.find(p => p.id === takeAdvantageChallengerId);
+
+    if (!challenger) {
+      console.error('Challenger not found');
+      handleTakeAdvantageDecline();
+      return;
+    }
+
+    // Check if player has any tiles
+    if (challenger.bureaucracyTiles.length === 0) {
+      setTakeAdvantageValidationError('You have no tiles in your bank');
+      setTimeout(() => {
+        handleTakeAdvantageDecline();
+      }, 2000);
+      return;
+    }
+
+    // Hide initial modal, show tile selection
+    setShowTakeAdvantageModal(false);
+    setShowTakeAdvantageTileSelection(true);
+    setSelectedTilesForAdvantage([]);
+    setTotalKredcoinForAdvantage(0);
+  };
+
+  /**
+   * Handler: User chose "Recover Credibility" (credibility < 3)
+   * Add 1 credibility and continue
+   */
+  const handleRecoverCredibility = () => {
+    if (takeAdvantageChallengerId === null) return;
+
+    // Add 1 credibility (max 3)
+    setPlayers(prev => prev.map(p =>
+      p.id === takeAdvantageChallengerId
+        ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
+        : p
+    ));
+
+    // Log the recovery
+    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+    setGameLog(prev => [...prev, `${challengerName} recovered 1 credibility (successful challenge reward)`]);
+
+    // Clean up modal state
+    setShowTakeAdvantageModal(false);
+    setTakeAdvantageChallengerId(null);
+    setTakeAdvantageChallengerCredibility(0);
+
+    // Continue to correction phase
+    transitionToCorrectionPhase();
+  };
+
+  /**
+   * Handler: User chose "Purchase Move" (credibility < 3)
+   * Show tile selection screen
+   */
+  const handlePurchaseMove = () => {
+    const challenger = players.find(p => p.id === takeAdvantageChallengerId);
+
+    if (!challenger) {
+      console.error('Challenger not found');
+      handleTakeAdvantageDecline();
+      return;
+    }
+
+    // Check if player has any tiles
+    if (challenger.bureaucracyTiles.length === 0) {
+      setTakeAdvantageValidationError('You have no tiles in your bank');
+      setTimeout(() => {
+        handleTakeAdvantageDecline();
+      }, 2000);
+      return;
+    }
+
+    // Hide initial modal, show tile selection
+    setShowTakeAdvantageModal(false);
+    setShowTakeAdvantageTileSelection(true);
+    setSelectedTilesForAdvantage([]);
+    setTotalKredcoinForAdvantage(0);
+  };
+
+  /**
+   * Handler: Toggle tile selection (add or remove from selected array)
+   */
+  const handleToggleTileSelection = (tile: Tile) => {
+    const isCurrentlySelected = selectedTilesForAdvantage.some(t => t.id === tile.id);
+
+    let newSelection: Tile[];
+    if (isCurrentlySelected) {
+      // Remove from selection
+      newSelection = selectedTilesForAdvantage.filter(t => t.id !== tile.id);
+    } else {
+      // Add to selection
+      newSelection = [...selectedTilesForAdvantage, tile];
+    }
+
+    // Update selected tiles
+    setSelectedTilesForAdvantage(newSelection);
+
+    // Calculate new total kredcoin
+    const newTotal = newSelection.reduce((sum, t) => {
+      return sum + (TILE_KREDCOIN_VALUES[t.id] || 0);
+    }, 0);
+    setTotalKredcoinForAdvantage(newTotal);
+  };
+
+  /**
+   * Handler: Confirm tile selection and show action menu
+   */
+  const handleConfirmTileSelection = () => {
+    if (selectedTilesForAdvantage.length === 0) {
+      setTakeAdvantageValidationError('Please select at least one tile');
+      return;
+    }
+
+    if (totalKredcoinForAdvantage === 0) {
+      setTakeAdvantageValidationError('Selected tiles have no kredcoin value');
+      return;
+    }
+
+    // Log tile selection
+    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+    const tileIds = selectedTilesForAdvantage.map(t => t.id).join(', ');
+    setGameLog(prev => [...prev, `${challengerName} selected tiles [${tileIds}] for Take Advantage (₭-${totalKredcoinForAdvantage})`]);
+
+    // Take snapshot of current pieces (for reset functionality)
+    setTakeAdvantagePiecesSnapshot(pieces.map(p => ({ ...p })));
+
+    // Hide tile selection, show action menu
+    setShowTakeAdvantageTileSelection(false);
+    setShowTakeAdvantageMenu(true);
+  };
+
+  /**
+   * Handler: Cancel tile selection
+   */
+  const handleCancelTileSelection = () => {
+    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+    setGameLog(prev => [...prev, `${challengerName} cancelled Take Advantage`]);
+
+    // Clean up state
+    setShowTakeAdvantageTileSelection(false);
+    setSelectedTilesForAdvantage([]);
+    setTotalKredcoinForAdvantage(0);
+    setTakeAdvantageChallengerId(null);
+    setTakeAdvantageChallengerCredibility(0);
+
+    // Continue to correction phase
+    transitionToCorrectionPhase();
+  };
+
+  /**
+   * Handler: User selects an action from the Take Advantage menu
+   */
+  const handleSelectTakeAdvantageAction = (item: BureaucracyMenuItem) => {
+    // Validate affordability
+    if (totalKredcoinForAdvantage < item.price) {
+      setTakeAdvantageValidationError('Insufficient Kredcoin for this purchase');
+      setTimeout(() => setTakeAdvantageValidationError(null), 3000);
+      return;
+    }
+
+    // Create purchase object
+    const purchase: BureaucracyPurchase = {
+      playerId: takeAdvantageChallengerId!,
+      item,
+      timestamp: Date.now(),
+      completed: false
+    };
+
+    setTakeAdvantagePurchase(purchase);
+
+    // For CREDIBILITY type, apply immediately and complete
+    if (item.type === 'CREDIBILITY') {
+      setPlayers(prev => prev.map(p =>
+        p.id === takeAdvantageChallengerId
+          ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
+          : p
+      ));
+
+      const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+      setGameLog(prev => [...prev, `${challengerName} restored credibility using Take Advantage`]);
+
+      // Complete immediately
+      setTimeout(() => {
+        handleCompleteTakeAdvantage(purchase);
+      }, 1500);
+    }
+
+    // For MOVE and PROMOTION, user needs to perform action on board
+    // (board interaction handlers will track moves/promotions)
+  };
+
+  /**
+   * Handler: Reset Take Advantage action (restore pieces snapshot)
+   */
+  const handleResetTakeAdvantageAction = () => {
+    if (takeAdvantagePiecesSnapshot.length > 0) {
+      setPieces(takeAdvantagePiecesSnapshot.map(p => ({ ...p })));
+      setMovesThisTurn([]);
+      setMovedPiecesThisTurn(new Set());
+
+      const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+      setGameLog(prev => [...prev, `${challengerName} reset their Take Advantage action`]);
+    }
+
+    // Clear purchase
+    setTakeAdvantagePurchase(null);
+  };
+
+  /**
+   * Handler: User clicks "Done" after performing Take Advantage action
+   */
+  const handleDoneTakeAdvantageAction = () => {
+    if (!takeAdvantagePurchase) return;
+
+    const purchase = takeAdvantagePurchase;
+
+    // Validate action was performed correctly
+    const validation = validateTakeAdvantageAction(purchase);
+
+    if (!validation.isValid) {
+      setTakeAdvantageValidationError(validation.error || 'Invalid action. Please try again or reset.');
+      setTimeout(() => setTakeAdvantageValidationError(null), 4000);
+      return;
+    }
+
+    // Action is valid, complete the purchase
+    handleCompleteTakeAdvantage(purchase);
+  };
+
+  /**
+   * Validates that the Take Advantage action was performed correctly
+   */
+  const validateTakeAdvantageAction = (purchase: BureaucracyPurchase): { isValid: boolean; error?: string } => {
+    const item = purchase.item;
+
+    // CREDIBILITY: Always valid (auto-applied)
+    if (item.type === 'CREDIBILITY') {
+      return { isValid: true };
+    }
+
+    // PROMOTION: Check if a piece was promoted in the correct location
+    if (item.type === 'PROMOTION') {
+      const promotionLocation = item.promotionLocation!;
+      const snapshotPromotedPieces = takeAdvantagePiecesSnapshot.filter(p => p.name !== p.displayName);
+      const currentPromotedPieces = pieces.filter(p => p.name !== p.displayName);
+
+      if (currentPromotedPieces.length <= snapshotPromotedPieces.length) {
+        return { isValid: false, error: 'You must promote a piece' };
+      }
+
+      // Find the newly promoted piece
+      const newlyPromoted = currentPromotedPieces.find(cp =>
+        !snapshotPromotedPieces.some(sp => sp.id === cp.id && sp.displayName === cp.displayName)
+      );
+
+      if (!newlyPromoted) {
+        return { isValid: false, error: 'Promotion not detected' };
+      }
+
+      // Validate promotion location
+      const pieceLocation = newlyPromoted.locationId || '';
+      if (!pieceLocation.toLowerCase().includes(promotionLocation.toLowerCase())) {
+        return { isValid: false, error: `You must promote a piece in the ${promotionLocation}` };
+      }
+
+      return { isValid: true };
+    }
+
+    // MOVE: Check if the performed move matches the selected move type
+    if (item.type === 'MOVE') {
+      const requiredMoveType = item.moveType!;
+
+      if (movesThisTurn.length === 0) {
+        return { isValid: false, error: 'You must perform a move' };
+      }
+
+      // Check if any move matches the required type
+      const hasMatchingMove = movesThisTurn.some(move => move === requiredMoveType);
+
+      if (!hasMatchingMove) {
+        return { isValid: false, error: `You must perform a ${requiredMoveType} move` };
+      }
+
+      return { isValid: true };
+    }
+
+    return { isValid: false, error: 'Unknown action type' };
+  };
+
+  /**
+   * Completes the Take Advantage purchase and cleans up state
+   */
+  const handleCompleteTakeAdvantage = (purchase: BureaucracyPurchase) => {
+    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+
+    // Deduct selected tiles from player's bank
+    setPlayers(prev => prev.map(p => {
+      if (p.id === takeAdvantageChallengerId) {
+        const tilesToRemove = selectedTilesForAdvantage.map(t => t.id);
+        return {
+          ...p,
+          bureaucracyTiles: p.bureaucracyTiles.filter(t => !tilesToRemove.includes(t.id))
+        };
+      }
+      return p;
+    }));
+
+    // Log the completed action
+    const actionName = purchase.item.type === 'PROMOTION'
+      ? `Promotion (${purchase.item.promotionLocation})`
+      : purchase.item.type === 'CREDIBILITY'
+      ? 'Credibility Restoration'
+      : purchase.item.moveType;
+
+    const tileIds = selectedTilesForAdvantage.map(t => t.id).join(', ');
+    setGameLog(prev => [...prev,
+      `${challengerName} completed Take Advantage: ${actionName} (₭-${purchase.item.price}) using tiles [${tileIds}]`
+    ]);
+
+    // Clean up all Take Advantage state
+    setShowTakeAdvantageMenu(false);
+    setTakeAdvantagePurchase(null);
+    setSelectedTilesForAdvantage([]);
+    setTotalKredcoinForAdvantage(0);
+    setTakeAdvantageChallengerId(null);
+    setTakeAdvantageChallengerCredibility(0);
+    setTakeAdvantagePiecesSnapshot([]);
+    setTakeAdvantageValidationError(null);
+    setMovesThisTurn([]);
+    setMovedPiecesThisTurn(new Set());
+
+    // Continue to correction phase
+    transitionToCorrectionPhase();
   };
 
   const handleBureaucracyPiecePromote = (pieceId: string) => {
