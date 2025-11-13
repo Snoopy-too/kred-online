@@ -5211,29 +5211,39 @@ const App: React.FC = () => {
       return { isValid: true };
     }
 
-    // PROMOTION: Check if a piece was promoted in the correct location
+    // PROMOTION: Check if a piece was swapped to community (same as Bureaucracy)
     if (item.type === 'PROMOTION') {
-      const promotionLocation = item.promotionLocation!;
-      const snapshotPromotedPieces = takeAdvantagePiecesSnapshot.filter(p => p.name !== p.displayName);
-      const currentPromotedPieces = pieces.filter(p => p.name !== p.displayName);
+      // Find pieces that moved to community
+      const piecesMovedToCommunity = takeAdvantagePiecesSnapshot.filter(originalPiece => {
+        const currentPiece = pieces.find(p => p.id === originalPiece.id);
+        return (
+          currentPiece &&
+          originalPiece.locationId &&
+          !originalPiece.locationId.startsWith('community') &&
+          currentPiece.locationId &&
+          currentPiece.locationId.startsWith('community')
+        );
+      });
 
-      if (currentPromotedPieces.length <= snapshotPromotedPieces.length) {
-        return { isValid: false, error: 'You must promote a piece' };
+      if (piecesMovedToCommunity.length === 0) {
+        return { isValid: false, error: 'No promotion was performed. Please click a piece to promote it.' };
       }
 
-      // Find the newly promoted piece
-      const newlyPromoted = currentPromotedPieces.find(cp =>
-        !snapshotPromotedPieces.some(sp => sp.id === cp.id && sp.displayName === cp.displayName)
+      if (piecesMovedToCommunity.length > 1) {
+        return { isValid: false, error: 'Only one promotion can be performed per purchase.' };
+      }
+
+      const promotedPieceId = piecesMovedToCommunity[0].id;
+      const validation = validatePromotion(
+        pieces,
+        promotedPieceId,
+        item.promotionLocation!,
+        takeAdvantageChallengerId!,
+        takeAdvantagePiecesSnapshot
       );
 
-      if (!newlyPromoted) {
-        return { isValid: false, error: 'Promotion not detected' };
-      }
-
-      // Validate promotion location
-      const pieceLocation = newlyPromoted.locationId || '';
-      if (!pieceLocation.toLowerCase().includes(promotionLocation.toLowerCase())) {
-        return { isValid: false, error: `You must promote a piece in the ${promotionLocation}` };
+      if (!validation.isValid) {
+        return { isValid: false, error: validation.reason };
       }
 
       return { isValid: true };
@@ -5345,27 +5355,16 @@ const App: React.FC = () => {
       return;
     }
 
-    const piece = pieces.find(p => p.id === pieceId);
-    if (!piece) return;
+    // Perform the promotion (swap with community)
+    const result = performPromotion(pieces, pieceId);
 
-    // Check if piece is already promoted (displayName is uppercase)
-    if (piece.displayName === piece.name.toUpperCase()) {
-      setTakeAdvantageValidationError('This piece is already promoted');
+    if (!result.success) {
+      setTakeAdvantageValidationError(result.reason || 'Promotion failed');
       setTimeout(() => setTakeAdvantageValidationError(null), 3000);
       return;
     }
 
-    // Promote the piece
-    const newDisplayName = piece.name.toUpperCase();
-
-    setPieces(prev => prev.map(p =>
-      p.id === pieceId
-        ? { ...p, displayName: newDisplayName }
-        : p
-    ));
-
-    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-    setGameLog(prev => [...prev, `${challengerName} promoted ${piece.name} to ${newDisplayName} (Take Advantage)`]);
+    setPieces(result.pieces);
   };
 
   const handleBureaucracyPiecePromote = (pieceId: string) => {
