@@ -886,7 +886,27 @@ const CampaignScreen: React.FC<{
   onResetTurn: () => void;
   onResetPiecesCorrection: () => void;
   onResetBonusMove: () => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, showGridOverlay, setShowGridOverlay, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove }) => {
+  showTakeAdvantageModal: boolean;
+  takeAdvantageChallengerId: number | null;
+  takeAdvantageChallengerCredibility: number;
+  showTakeAdvantageTileSelection: boolean;
+  selectedTilesForAdvantage: Tile[];
+  totalKredcoinForAdvantage: number;
+  showTakeAdvantageMenu: boolean;
+  takeAdvantagePurchase: BureaucracyPurchase | null;
+  takeAdvantageValidationError: string | null;
+  onTakeAdvantageDecline: () => void;
+  onTakeAdvantageYes: () => void;
+  onRecoverCredibility: () => void;
+  onPurchaseMove: () => void;
+  onToggleTileSelection: (tile: Tile) => void;
+  onConfirmTileSelection: () => void;
+  onCancelTileSelection: () => void;
+  onSelectTakeAdvantageAction: (item: BureaucracyMenuItem) => void;
+  onResetTakeAdvantageAction: () => void;
+  onDoneTakeAdvantageAction: () => void;
+  onTakeAdvantagePiecePromote: (pieceId: string) => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, showGridOverlay, setShowGridOverlay, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove, showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility, showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage, showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError, onTakeAdvantageDecline, onTakeAdvantageYes, onRecoverCredibility, onPurchaseMove, onToggleTileSelection, onConfirmTileSelection, onCancelTileSelection, onSelectTakeAdvantageAction, onResetTakeAdvantageAction, onDoneTakeAdvantageAction, onTakeAdvantagePiecePromote }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
@@ -1985,13 +2005,13 @@ const CampaignScreen: React.FC<{
                 </p>
                 <div className="flex gap-4 justify-center">
                   <button
-                    onClick={handleTakeAdvantageYes}
+                    onClick={onTakeAdvantageYes}
                     className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
                   >
                     Yes
                   </button>
                   <button
-                    onClick={handleTakeAdvantageDecline}
+                    onClick={onTakeAdvantageDecline}
                     className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
                   >
                     No Thanks
@@ -2006,13 +2026,13 @@ const CampaignScreen: React.FC<{
                 </p>
                 <div className="flex gap-4 justify-center">
                   <button
-                    onClick={handleRecoverCredibility}
+                    onClick={onRecoverCredibility}
                     className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
                   >
                     Recover Credibility
                   </button>
                   <button
-                    onClick={handlePurchaseMove}
+                    onClick={onPurchaseMove}
                     className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
                   >
                     Purchase Move
@@ -2061,7 +2081,7 @@ const CampaignScreen: React.FC<{
                   return (
                     <button
                       key={tile.id}
-                      onClick={() => handleToggleTileSelection(tile)}
+                      onClick={() => onToggleTileSelection(tile)}
                       className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${
                         isSelected
                           ? 'border-yellow-400 ring-4 ring-yellow-400/50 scale-105'
@@ -2100,7 +2120,7 @@ const CampaignScreen: React.FC<{
             {/* Action Buttons */}
             <div className="flex gap-4 justify-center">
               <button
-                onClick={handleConfirmTileSelection}
+                onClick={onConfirmTileSelection}
                 disabled={selectedTilesForAdvantage.length === 0}
                 className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${
                   selectedTilesForAdvantage.length === 0
@@ -2111,7 +2131,7 @@ const CampaignScreen: React.FC<{
                 Continue with {selectedTilesForAdvantage.length} tile(s) (₭-{totalKredcoinForAdvantage})
               </button>
               <button
-                onClick={handleCancelTileSelection}
+                onClick={onCancelTileSelection}
                 className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
               >
                 Cancel
@@ -2200,7 +2220,7 @@ const CampaignScreen: React.FC<{
                             draggable={false}
                             onClick={() => {
                               if (isPromotionPurchase) {
-                                handleTakeAdvantagePiecePromote(piece.id);
+                                onTakeAdvantagePiecePromote(piece.id);
                               }
                             }}
                             className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
@@ -2248,7 +2268,7 @@ const CampaignScreen: React.FC<{
                                         return (
                                           <button
                                             key={item.id}
-                                            onClick={() => canAfford && handleSelectTakeAdvantageAction(item)}
+                                            onClick={() => canAfford && onSelectTakeAdvantageAction(item)}
                                             disabled={!canAfford}
                                             className={`p-2 rounded-lg border-2 transition-all ${
                                               canAfford
@@ -2278,7 +2298,7 @@ const CampaignScreen: React.FC<{
                                         return (
                                           <button
                                             key={item.id}
-                                            onClick={() => canAfford && handleSelectTakeAdvantageAction(item)}
+                                            onClick={() => canAfford && onSelectTakeAdvantageAction(item)}
                                             disabled={!canAfford}
                                             className={`p-2 rounded-lg border-2 transition-all ${
                                               canAfford
@@ -2310,7 +2330,7 @@ const CampaignScreen: React.FC<{
                                 return (
                                   <button
                                     key={item.id}
-                                    onClick={() => isEnabled && handleSelectTakeAdvantageAction(item)}
+                                    onClick={() => isEnabled && onSelectTakeAdvantageAction(item)}
                                     disabled={!isEnabled}
                                     className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
                                       isEnabled
@@ -2356,13 +2376,13 @@ const CampaignScreen: React.FC<{
 
                       <div className="flex gap-4 justify-center">
                         <button
-                          onClick={handleResetTakeAdvantageAction}
+                          onClick={onResetTakeAdvantageAction}
                           className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors"
                         >
                           Reset
                         </button>
                         <button
-                          onClick={handleDoneTakeAdvantageAction}
+                          onClick={onDoneTakeAdvantageAction}
                           className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors"
                         >
                           Done
@@ -5389,6 +5409,26 @@ const App: React.FC = () => {
             onResetTurn={handleResetTurn}
             onResetPiecesCorrection={handleResetPiecesCorrection}
             onResetBonusMove={handleResetBonusMove}
+            showTakeAdvantageModal={showTakeAdvantageModal}
+            takeAdvantageChallengerId={takeAdvantageChallengerId}
+            takeAdvantageChallengerCredibility={takeAdvantageChallengerCredibility}
+            showTakeAdvantageTileSelection={showTakeAdvantageTileSelection}
+            selectedTilesForAdvantage={selectedTilesForAdvantage}
+            totalKredcoinForAdvantage={totalKredcoinForAdvantage}
+            showTakeAdvantageMenu={showTakeAdvantageMenu}
+            takeAdvantagePurchase={takeAdvantagePurchase}
+            takeAdvantageValidationError={takeAdvantageValidationError}
+            onTakeAdvantageDecline={handleTakeAdvantageDecline}
+            onTakeAdvantageYes={handleTakeAdvantageYes}
+            onRecoverCredibility={handleRecoverCredibility}
+            onPurchaseMove={handlePurchaseMove}
+            onToggleTileSelection={handleToggleTileSelection}
+            onConfirmTileSelection={handleConfirmTileSelection}
+            onCancelTileSelection={handleCancelTileSelection}
+            onSelectTakeAdvantageAction={handleSelectTakeAdvantageAction}
+            onResetTakeAdvantageAction={handleResetTakeAdvantageAction}
+            onDoneTakeAdvantageAction={handleDoneTakeAdvantageAction}
+            onTakeAdvantagePiecePromote={handleTakeAdvantagePiecePromote}
           />
         );
       case 'PLAYER_SELECTION':
