@@ -2121,6 +2121,262 @@ const CampaignScreen: React.FC<{
         </div>
       )}
 
+      {/* Take Advantage Action Menu */}
+      {showTakeAdvantageMenu && takeAdvantageChallengerId !== null && (
+        <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 overflow-y-auto">
+          <div className="w-full max-w-7xl my-8 px-4">
+            <div className="bg-gray-900 rounded-lg shadow-2xl border-2 border-yellow-600 p-6">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h2 className="text-3xl font-bold text-yellow-400 mb-2">
+                  Take Advantage
+                </h2>
+                <p className="text-xl text-slate-200">
+                  Player {takeAdvantageChallengerId}'s Reward
+                </p>
+                <div className="mt-2 text-lg">
+                  <span className="text-yellow-400 font-bold">
+                    Available Kredcoin: ₭-{totalKredcoinForAdvantage}
+                  </span>
+                </div>
+                <p className="text-slate-400 text-sm mt-1">
+                  You can make ONE purchase with your selected tiles
+                </p>
+              </div>
+
+              {/* Validation Error Display */}
+              {takeAdvantageValidationError && (
+                <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 mb-4">
+                  <p className="text-red-200 text-center font-semibold">
+                    {takeAdvantageValidationError}
+                  </p>
+                </div>
+              )}
+
+              {/* Main Content: Board and Menu Side by Side */}
+              <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
+                {/* Board Section */}
+                <div className="w-full lg:w-2/3">
+                  <div className="relative aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
+                    <div
+                      className="absolute inset-0 w-full h-full transition-transform duration-500"
+                      style={{
+                        transform: `rotate(${(() => {
+                          const rotationMap = ROTATION_BY_PLAYER_AND_COUNT[playerCount];
+                          return rotationMap?.[takeAdvantageChallengerId] || 0;
+                        })()}deg)`
+                      }}
+                    >
+                      <img
+                        src={BOARD_IMAGE_URLS[playerCount]}
+                        alt={`${playerCount}-player board`}
+                        className="absolute inset-0 w-full h-full object-contain"
+                        draggable={false}
+                      />
+
+                      {/* Render pieces */}
+                      {pieces.map((piece) => {
+                        let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14';
+                        if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
+                        if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+
+                        const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.90 : 1;
+                        const baseScale = 0.798;
+                        const finalScale = baseScale * scaleMultiplier;
+
+                        const isInCommunity = piece.locationId?.startsWith('community') || false;
+                        const rotationMap = ROTATION_BY_PLAYER_AND_COUNT[playerCount];
+                        const boardRotation = rotationMap?.[takeAdvantageChallengerId] || 0;
+                        const communityCounterRotation = isInCommunity ? -boardRotation : 0;
+
+                        const isPromotionPurchase = takeAdvantagePurchase?.item.type === 'PROMOTION';
+                        const isDraggable = !isPromotionPurchase && takeAdvantagePurchase?.item.type === 'MOVE';
+
+                        return (
+                          <img
+                            key={piece.id}
+                            src={piece.imageUrl}
+                            alt={piece.name}
+                            draggable={false}
+                            onClick={() => {
+                              if (isPromotionPurchase) {
+                                handleTakeAdvantagePiecePromote(piece.id);
+                              }
+                            }}
+                            className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
+                              isPromotionPurchase ? 'cursor-pointer hover:scale-110' : 'cursor-default'
+                            }`}
+                            style={{
+                              position: 'absolute',
+                              top: `${piece.position.top}%`,
+                              left: `${piece.position.left}%`,
+                              transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`,
+                            }}
+                            aria-hidden="true"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Menu Section */}
+                <div className="w-full lg:w-1/3">
+                  {!takeAdvantagePurchase ? (
+                    /* Actions Menu */
+                    <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
+                      <h3 className="text-2xl font-bold text-center mb-4 text-yellow-400">
+                        Actions
+                      </h3>
+                      <div className="space-y-3">
+                        {(() => {
+                          const menu = playerCount === 5 ? FIVE_PLAYER_BUREAUCRACY_MENU : THREE_FOUR_PLAYER_BUREAUCRACY_MENU;
+                          const affordableItems = getAvailablePurchases(menu, totalKredcoinForAdvantage);
+                          const currentPlayer = players.find(p => p.id === takeAdvantageChallengerId);
+
+                          return (
+                            <>
+                              {/* Move items in two rows of three */}
+                              {menu.some(item => item.type === 'MOVE') && (
+                                <>
+                                  {/* First row: Assist, Remove, Influence */}
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {menu
+                                      .filter(item => item.type === 'MOVE' && ['ASSIST', 'REMOVE', 'INFLUENCE'].includes(item.moveType || ''))
+                                      .map((item) => {
+                                        const canAfford = affordableItems.some(ai => ai.id === item.id);
+                                        return (
+                                          <button
+                                            key={item.id}
+                                            onClick={() => canAfford && handleSelectTakeAdvantageAction(item)}
+                                            disabled={!canAfford}
+                                            className={`p-2 rounded-lg border-2 transition-all ${
+                                              canAfford
+                                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                            }`}
+                                          >
+                                            <div className="text-center">
+                                              <span className="font-bold text-sm block mb-1">
+                                                {item.moveType}
+                                              </span>
+                                              <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                                ₭-{item.price}
+                                              </span>
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                  </div>
+
+                                  {/* Second row: Advance, Withdraw, Organize */}
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {menu
+                                      .filter(item => item.type === 'MOVE' && ['ADVANCE', 'WITHDRAW', 'ORGANIZE'].includes(item.moveType || ''))
+                                      .map((item) => {
+                                        const canAfford = affordableItems.some(ai => ai.id === item.id);
+                                        return (
+                                          <button
+                                            key={item.id}
+                                            onClick={() => canAfford && handleSelectTakeAdvantageAction(item)}
+                                            disabled={!canAfford}
+                                            className={`p-2 rounded-lg border-2 transition-all ${
+                                              canAfford
+                                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                            }`}
+                                          >
+                                            <div className="text-center">
+                                              <span className="font-bold text-sm block mb-1">
+                                                {item.moveType}
+                                              </span>
+                                              <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                                ₭-{item.price}
+                                              </span>
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Non-move items (Promotion, Credibility) */}
+                              {menu.filter(item => item.type !== 'MOVE').map((item) => {
+                                const canAfford = affordableItems.some(ai => ai.id === item.id);
+                                const isCredibilityAtMax = item.type === 'CREDIBILITY' && currentPlayer && currentPlayer.credibility >= 3;
+                                const isEnabled = canAfford && !isCredibilityAtMax;
+
+                                return (
+                                  <button
+                                    key={item.id}
+                                    onClick={() => isEnabled && handleSelectTakeAdvantageAction(item)}
+                                    disabled={!isEnabled}
+                                    className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                                      isEnabled
+                                        ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                        : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                    }`}
+                                  >
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="font-bold text-lg">
+                                        {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
+                                        {item.type === 'CREDIBILITY' && 'Restore Credibility'}
+                                      </span>
+                                      <span className={`text-xl font-bold ${isEnabled ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                        ₭-{item.price}
+                                      </span>
+                                    </div>
+                                    {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
+                                  </button>
+                                );
+                              })}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Action Execution Panel */
+                    <div className="bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
+                      <h3 className="text-2xl font-bold text-center mb-4 text-blue-300">
+                        Perform Your Action
+                      </h3>
+                      <p className="text-center text-lg mb-6">
+                        {takeAdvantagePurchase.item.type === 'PROMOTION' && (
+                          <>Promote a piece in the <span className="font-bold text-yellow-400">{takeAdvantagePurchase.item.promotionLocation}</span></>
+                        )}
+                        {takeAdvantagePurchase.item.type === 'MOVE' && (
+                          <>Perform a <span className="font-bold text-yellow-400">{takeAdvantagePurchase.item.moveType}</span> move</>
+                        )}
+                        {takeAdvantagePurchase.item.type === 'CREDIBILITY' && (
+                          <>Your credibility has been restored</>
+                        )}
+                      </p>
+
+                      <div className="flex gap-4 justify-center">
+                        <button
+                          onClick={handleResetTakeAdvantageAction}
+                          className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          onClick={handleDoneTakeAdvantageAction}
+                          className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showWaitingOverlay && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4">
              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 p-6 rounded-xl text-center shadow-2xl">
@@ -4967,6 +5223,37 @@ const App: React.FC = () => {
 
     // Continue to correction phase
     transitionToCorrectionPhase();
+  };
+
+  /**
+   * Handler: Piece promotion during Take Advantage
+   */
+  const handleTakeAdvantagePiecePromote = (pieceId: string) => {
+    if (!takeAdvantagePurchase || takeAdvantagePurchase.item.type !== 'PROMOTION') {
+      return;
+    }
+
+    const piece = pieces.find(p => p.id === pieceId);
+    if (!piece) return;
+
+    // Check if piece is already promoted
+    if (piece.name !== piece.displayName) {
+      setTakeAdvantageValidationError('This piece is already promoted');
+      setTimeout(() => setTakeAdvantageValidationError(null), 3000);
+      return;
+    }
+
+    // Promote the piece
+    const newDisplayName = piece.name === 'Pawn' ? 'PAWN' : piece.name === 'Heel' ? 'HEEL' : 'MARK';
+
+    setPieces(prev => prev.map(p =>
+      p.id === pieceId
+        ? { ...p, displayName: newDisplayName }
+        : p
+    ));
+
+    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+    setGameLog(prev => [...prev, `${challengerName} promoted ${piece.name} to ${newDisplayName} (Take Advantage)`]);
   };
 
   const handleBureaucracyPiecePromote = (pieceId: string) => {
