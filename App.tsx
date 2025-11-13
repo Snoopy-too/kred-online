@@ -2250,7 +2250,7 @@ const CampaignScreen: React.FC<{
                       </h3>
                       <div className="space-y-3">
                         {(() => {
-                          const menu = playerCount === 5 ? FIVE_PLAYER_BUREAUCRACY_MENU : THREE_FOUR_PLAYER_BUREAUCRACY_MENU;
+                          const menu = getBureaucracyMenu(playerCount);
                           const affordableItems = getAvailablePurchases(menu, totalKredcoinForAdvantage);
                           const currentPlayer = players.find(p => p.id === takeAdvantageChallengerId);
 
