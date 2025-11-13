@@ -3720,10 +3720,17 @@ const App: React.FC = () => {
 
         // NEW: Offer Take Advantage reward to successful challenger
         const challengerId = challengeOrder[currentChallengerIndex];
-        const challenger = players.find(p => p.id === challengerId);
+
+        // Challenger gains up to 2 credibility for correctly challenging
+        const credibilityResult = handleCredibilityGain(challengerId, 2);
+        setPlayers(credibilityResult.newPlayers);
+
+        const challenger = credibilityResult.newPlayers.find(p => p.id === challengerId);
+        const challengerName = challenger?.name || 'Player';
+        addGameLog(`${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0})`);
 
         if (challenger) {
-          // Store challenger context
+          // Store challenger context with UPDATED credibility
           setTakeAdvantageChallengerId(challengerId);
           setTakeAdvantageChallengerCredibility(challenger.credibility);
           setShowTakeAdvantageModal(true);
