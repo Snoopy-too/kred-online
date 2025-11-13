@@ -52,6 +52,8 @@ import {
   validateMoveType,
   checkBureaucracyWinCondition,
   validatePieceMovement,
+  THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
+  FIVE_PLAYER_BUREAUCRACY_MENU,
 } from './game';
 
 // --- Helper Components ---
