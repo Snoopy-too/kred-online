@@ -2689,7 +2689,48 @@ const App: React.FC = () => {
   };
 
   const handleBonusMoveComplete = () => {
-    if (!playedTile) return;
+    if (!playedTile || bonusMovePlayerId === null) return;
+
+    // Calculate moves made during bonus move phase
+    const calculatedMoves = calculateMoves(piecesBeforeBonusMove, pieces, bonusMovePlayerId);
+
+    // Check if at least one ADVANCE move was performed
+    const advanceMoves = calculatedMoves.filter(m => m.moveType === 'ADVANCE');
+
+    if (advanceMoves.length === 0) {
+      showAlert(
+        'Move Required',
+        'You must perform a valid ADVANCE move (Community→Seat, Seat→Rostrum, or Rostrum→Office) before continuing.',
+        'error'
+      );
+      return;
+    }
+
+    // Validate each ADVANCE move
+    for (let i = 0; i < advanceMoves.length; i++) {
+      const move = advanceMoves[i];
+
+      // Build piece state after all previous moves
+      let piecesForValidation = piecesBeforeBonusMove.map(p => ({ ...p }));
+      for (let j = 0; j < calculatedMoves.indexOf(move); j++) {
+        const prevMove = calculatedMoves[j];
+        piecesForValidation = piecesForValidation.map(p =>
+          p.id === prevMove.pieceId
+            ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+            : p
+        );
+      }
+
+      const validation = validateSingleMove(move, bonusMovePlayerId, piecesForValidation, playerCount);
+      if (!validation.isValid) {
+        showAlert(
+          'Invalid Move',
+          `The ADVANCE move you made is not valid. ${validation.reason}`,
+          'error'
+        );
+        return;
+      }
+    }
 
     // Log the bonus move
     const player = players.find(p => p.id === bonusMovePlayerId);
