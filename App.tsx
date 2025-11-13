@@ -5314,6 +5314,49 @@ const App: React.FC = () => {
   const handleCompleteTakeAdvantage = (purchase: BureaucracyPurchase) => {
     const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
 
+    // Place used tiles face-up in player's bank spaces
+    if (takeAdvantageChallengerId !== null) {
+      const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+      const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === takeAdvantageChallengerId);
+
+      // Find which bank indices are already used
+      const usedBankIndices = new Set(
+        bankedTiles
+          .filter(bt => bt.ownerId === takeAdvantageChallengerId)
+          .map(bt => playerBankSpaces.findIndex(bs => bs.position.left === bt.position.left && bs.position.top === bt.position.top))
+      );
+
+      // Add each selected tile to bankedTiles as face-up
+      const newBankedTiles: (BoardTile & { faceUp: boolean })[] = [];
+      let bankIndex = 0;
+
+      for (const tile of selectedTilesForAdvantage) {
+        // Find next available bank space
+        while (bankIndex < playerBankSpaces.length && usedBankIndices.has(bankIndex)) {
+          bankIndex++;
+        }
+
+        if (bankIndex < playerBankSpaces.length) {
+          const bankSpace = playerBankSpaces[bankIndex];
+          const newBankedTile: BoardTile & { faceUp: boolean } = {
+            id: `bank_${takeAdvantageChallengerId}_${bankIndex}_${Date.now()}_${tile.id}`,
+            tile: tile,
+            position: bankSpace.position,
+            rotation: bankSpace.rotation,
+            placerId: takeAdvantageChallengerId,
+            ownerId: takeAdvantageChallengerId,
+            faceUp: true, // Face-up tiles don't count toward kredcoin
+          };
+
+          newBankedTiles.push(newBankedTile);
+          usedBankIndices.add(bankIndex);
+          bankIndex++;
+        }
+      }
+
+      setBankedTiles(prev => [...prev, ...newBankedTiles]);
+    }
+
     // Deduct selected tiles from player's bank
     setPlayers(prev => prev.map(p => {
       if (p.id === takeAdvantageChallengerId) {
