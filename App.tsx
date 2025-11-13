@@ -991,7 +991,9 @@ const CampaignScreen: React.FC<{
         const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
 
         // Validate if the move is allowed
-        const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, currentPlayerId, pieces);
+        // Use takeAdvantageChallengerId if in Take Advantage mode, otherwise use currentPlayerId
+        const activePlayerId = showTakeAdvantageMenu ? takeAdvantageChallengerId : currentPlayerId;
+        const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, activePlayerId!, pieces);
 
         if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
              setDropIndicator({
@@ -2188,6 +2190,9 @@ const CampaignScreen: React.FC<{
                           return rotationMap?.[takeAdvantageChallengerId] || 0;
                         })()}deg)`
                       }}
+                      onDragOver={handleDragOverBoard}
+                      onDrop={handleDropOnBoard}
+                      onMouseLeave={handleMouseLeaveBoard}
                     >
                       <img
                         src={BOARD_IMAGE_URLS[playerCount]}
@@ -2195,6 +2200,29 @@ const CampaignScreen: React.FC<{
                         className="absolute inset-0 w-full h-full object-contain"
                         draggable={false}
                       />
+
+                      {/* Drop indicator */}
+                      {dropIndicator && (
+                        <>
+                          {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
+                          <div
+                            className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
+                            style={{
+                              top: `${dropIndicator.position.top}%`,
+                              left: `${dropIndicator.position.left}%`,
+                              width: '80px',
+                              height: '80px',
+                              transform: 'translate(-50%, -50%)',
+                              backgroundColor: dropIndicator.isValid === false ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
+                              boxShadow: dropIndicator.isValid === false
+                                ? '0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)'
+                                : '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                              border: dropIndicator.isValid === false ? '2px solid rgba(239, 68, 68, 0.6)' : '2px solid rgba(34, 197, 94, 0.6)',
+                            }}
+                            aria-hidden="true"
+                          />
+                        </>
+                      )}
 
                       {/* Render pieces */}
                       {pieces.map((piece) => {
@@ -2219,14 +2247,20 @@ const CampaignScreen: React.FC<{
                             key={piece.id}
                             src={piece.imageUrl}
                             alt={piece.name}
-                            draggable={false}
+                            draggable={isDraggable}
+                            onDragStart={(e) => {
+                              if (isDraggable) {
+                                handleDragStartPiece(e, piece.id);
+                              }
+                            }}
+                            onDragEnd={handleDragEndPiece}
                             onClick={() => {
                               if (isPromotionPurchase) {
                                 onTakeAdvantagePiecePromote(piece.id);
                               }
                             }}
                             className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
-                              isPromotionPurchase ? 'cursor-pointer hover:scale-110' : 'cursor-default'
+                              isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab' : 'cursor-default'
                             }`}
                             style={{
                               position: 'absolute',
@@ -5258,24 +5292,21 @@ const App: React.FC = () => {
     const piece = pieces.find(p => p.id === pieceId);
     if (!piece) return;
 
-    // Check if piece is already promoted
-    if (piece.name !== piece.displayName) {
-      setTakeAdvantageValidationError('This piece is already promoted');
+    // Use the performPromotion function to handle the promotion
+    const result = performPromotion(pieces, pieceId);
+
+    if (!result.success) {
+      setTakeAdvantageValidationError(result.reason || 'Promotion failed');
       setTimeout(() => setTakeAdvantageValidationError(null), 3000);
       return;
     }
 
-    // Promote the piece
-    const newDisplayName = piece.name === 'Pawn' ? 'PAWN' : piece.name === 'Heel' ? 'HEEL' : 'MARK';
-
-    setPieces(prev => prev.map(p =>
-      p.id === pieceId
-        ? { ...p, displayName: newDisplayName }
-        : p
-    ));
+    // Update pieces with the result
+    setPieces(result.pieces);
 
     const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-    setGameLog(prev => [...prev, `${challengerName} promoted ${piece.name} to ${newDisplayName} (Take Advantage)`]);
+    const promotionType = piece.name === 'Mark' ? 'Heel' : 'Pawn';
+    setGameLog(prev => [...prev, `${challengerName} promoted ${piece.name} to ${promotionType} (Take Advantage)`]);
   };
 
   const handleBureaucracyPiecePromote = (pieceId: string) => {
