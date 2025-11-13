@@ -2406,6 +2406,16 @@ const CampaignScreen: React.FC<{
                           );
                         })()}
                       </div>
+
+                      {/* Cancel Button */}
+                      <div className="mt-6">
+                        <button
+                          onClick={onCancelTileSelection}
+                          className="w-full px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     /* Action Execution Panel */
