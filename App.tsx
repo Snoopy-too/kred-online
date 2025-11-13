@@ -3730,19 +3730,37 @@ const App: React.FC = () => {
         addGameLog(`${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0})`);
 
         if (challenger) {
+          // Check if challenger has tiles (only offer Take Advantage if they have tiles)
+          const hasTiles = challenger.bureaucracyTiles && challenger.bureaucracyTiles.length > 0;
+
           // Store challenger context with UPDATED credibility
           setTakeAdvantageChallengerId(challengerId);
           setTakeAdvantageChallengerCredibility(challenger.credibility);
-          setShowTakeAdvantageModal(true);
 
-          // Store the challenge result message to show after modal closes
-          setTimeout(() => {
-            setChallengeResultMessage('');
-          }, 5000);
+          // Only show modal if they have tiles, otherwise skip to correction
+          if (hasTiles) {
+            setShowTakeAdvantageModal(true);
 
-          // DON'T transition to CORRECTION_REQUIRED yet
-          // Wait for user's choice in the modal
-          return; // Exit early
+            // Store the challenge result message to show after modal closes
+            setTimeout(() => {
+              setChallengeResultMessage('');
+            }, 5000);
+
+            // DON'T transition to CORRECTION_REQUIRED yet
+            // Wait for user's choice in the modal
+            return; // Exit early
+          } else {
+            // No tiles, skip Take Advantage and go straight to correction
+            addGameLog(`${challengerName} has no tiles for Take Advantage - skipping reward`);
+            setTakeAdvantageChallengerId(null);
+            setTakeAdvantageChallengerCredibility(0);
+            transitionToCorrectionPhase();
+
+            setTimeout(() => {
+              setChallengeResultMessage('');
+            }, 5000);
+            return;
+          }
         }
 
         // If no challenger found (shouldn't happen), continue as normal
