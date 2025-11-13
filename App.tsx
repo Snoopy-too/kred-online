@@ -2000,8 +2000,11 @@ const CampaignScreen: React.FC<{
             {/* Credibility = 3 Message */}
             {takeAdvantageChallengerCredibility === 3 ? (
               <>
-                <p className="text-slate-200 text-lg mb-8 text-center leading-relaxed">
+                <p className="text-slate-200 text-lg mb-4 text-center leading-relaxed">
                   You have full credibility. Would you like to use one of the tiles in your bank to purchase an action?
+                </p>
+                <p className="text-slate-400 text-sm mb-8 text-center italic">
+                  Click Yes to view your funding. You can cancel if you change your mind.
                 </p>
                 <div className="flex gap-4 justify-center">
                   <button
