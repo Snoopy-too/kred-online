@@ -2182,7 +2182,7 @@ const CampaignScreen: React.FC<{
                       className="absolute inset-0 w-full h-full transition-transform duration-500"
                       style={{
                         transform: `rotate(${(() => {
-                          const rotationMap = ROTATION_BY_PLAYER_AND_COUNT[playerCount];
+                          const rotationMap = PLAYER_PERSPECTIVE_ROTATIONS[playerCount];
                           return rotationMap?.[takeAdvantageChallengerId] || 0;
                         })()}deg)`
                       }}
