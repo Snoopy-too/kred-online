@@ -2205,7 +2205,7 @@ const CampaignScreen: React.FC<{
                         const finalScale = baseScale * scaleMultiplier;
 
                         const isInCommunity = piece.locationId?.startsWith('community') || false;
-                        const rotationMap = ROTATION_BY_PLAYER_AND_COUNT[playerCount];
+                        const rotationMap = PLAYER_PERSPECTIVE_ROTATIONS[playerCount];
                         const boardRotation = rotationMap?.[takeAdvantageChallengerId] || 0;
                         const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
