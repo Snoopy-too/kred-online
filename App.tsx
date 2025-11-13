@@ -4922,8 +4922,9 @@ const App: React.FC = () => {
   /**
    * Transitions the game to CORRECTION_REQUIRED phase after challenge success
    * and Take Advantage flow completes (or is declined)
+   * @param updatedOriginalPieces - Optional updated pieces to use as baseline (includes Take Advantage changes)
    */
-  const transitionToCorrectionPhase = () => {
+  const transitionToCorrectionPhase = (updatedOriginalPieces?: Piece[]) => {
     if (!playedTile) return;
 
     const tilePlayer = players.find(p => p.id === playedTile.playerId);
@@ -4944,10 +4945,20 @@ const App: React.FC = () => {
       setMovesThisTurn([]);
       setTileRejected(true);
 
-      // Restore original pieces (before challenged tile play)
-      const revertedPieces = playedTile.originalPieces.map(p => ({ ...p }));
+      // Restore original pieces (using updated pieces if provided, which includes Take Advantage changes)
+      const revertedPieces = updatedOriginalPieces
+        ? updatedOriginalPieces.map(p => ({ ...p }))
+        : playedTile.originalPieces.map(p => ({ ...p }));
       setPieces(revertedPieces);
       setPiecesAtCorrectionStart(revertedPieces);
+
+      // Update playedTile if we have updated pieces
+      if (updatedOriginalPieces) {
+        setPlayedTile({
+          ...playedTile,
+          originalPieces: updatedOriginalPieces.map(p => ({ ...p }))
+        });
+      }
 
       // Clear piece movement tracking
       setMovedPiecesThisTurn(new Set());
@@ -5381,16 +5392,6 @@ const App: React.FC = () => {
       `${challengerName} completed Take Advantage: ${actionName} (₭-${purchase.item.price}) using tiles [${tileIds}]`
     ]);
 
-    // IMPORTANT: Update playedTile.originalPieces to include Take Advantage changes
-    // Take Advantage transactions occur within the Campaign phase, so promotions
-    // and moves must be preserved as part of the ongoing game state
-    if (playedTile) {
-      setPlayedTile({
-        ...playedTile,
-        originalPieces: pieces.map(p => ({ ...p }))
-      });
-    }
-
     // Clean up all Take Advantage state
     setShowTakeAdvantageMenu(false);
     setTakeAdvantagePurchase(null);
@@ -5403,8 +5404,10 @@ const App: React.FC = () => {
     setMovesThisTurn([]);
     setMovedPiecesThisTurn(new Set());
 
-    // Continue to correction phase (now preserves Take Advantage changes)
-    transitionToCorrectionPhase();
+    // Continue to correction phase, passing current pieces to preserve Take Advantage changes
+    // Take Advantage transactions occur within the Campaign phase, so promotions
+    // and moves must be preserved as part of the ongoing game state
+    transitionToCorrectionPhase(pieces.map(p => ({ ...p })));
   };
 
   /**
