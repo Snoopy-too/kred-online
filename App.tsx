@@ -3088,7 +3088,8 @@ const App: React.FC = () => {
 
     // Simply update the piece position and location
     // Move validation will be calculated when Check Move is clicked
-    setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p));
+    const updatedPieces = pieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p);
+    setPieces(updatedPieces);
 
     // Track that this piece has been moved this turn
     setMovedPiecesThisTurn(prev => new Set(prev).add(pieceId));
@@ -3096,6 +3097,22 @@ const App: React.FC = () => {
     // If piece is moved to community, mark it as "pending" until acceptance/challenge resolved
     if (locationId && locationId.includes('community')) {
       setPendingCommunityPieces(prev => new Set(prev).add(pieceId));
+    }
+
+    // Check for immediate win condition during Campaign phase
+    if (gameState === 'CAMPAIGN' || gameState === 'TILE_PLAYED' || gameState === 'CORRECTION_REQUIRED') {
+      const winners = checkBureaucracyWinCondition(players, updatedPieces);
+      if (winners.length > 0) {
+        if (winners.length === 1) {
+          const winnerName = players.find(p => p.id === winners[0])?.name || `Player ${winners[0]}`;
+          alert(`${winnerName} has won the game during the Campaign phase!`);
+        } else {
+          const winnerNames = winners.map(id => players.find(p => p.id === id)?.name || `Player ${id}`).join(', ');
+          alert(`The game is a draw! Winners: ${winnerNames}`);
+        }
+        // Set game to a finished state or allow restart
+        return;
+      }
     }
   };
 
@@ -4241,6 +4258,20 @@ const App: React.FC = () => {
       }, 3000);
 
       return; // Don't continue with campaign reset
+    }
+
+    // Check for immediate win condition after correction
+    const winners = checkBureaucracyWinCondition(updatedPlayers, pieces);
+    if (winners.length > 0) {
+      if (winners.length === 1) {
+        const winnerName = updatedPlayers.find(p => p.id === winners[0])?.name || `Player ${winners[0]}`;
+        alert(`${winnerName} has won the game during the Campaign phase!`);
+      } else {
+        const winnerNames = winners.map(id => updatedPlayers.find(p => p.id === id)?.name || `Player ${id}`).join(', ');
+        alert(`The game is a draw! Winners: ${winnerNames}`);
+      }
+      // Set game to a finished state or allow restart
+      return;
     }
 
     // Reset remaining state
@@ -5419,6 +5450,20 @@ const App: React.FC = () => {
     setGameLog(prev => [...prev,
       `${challengerName} completed Take Advantage: ${actionName} (₭-${purchase.item.price}) using tiles [${tileIds}]`
     ]);
+
+    // Check for immediate win condition after Take Advantage
+    const winners = checkBureaucracyWinCondition(players, pieces);
+    if (winners.length > 0) {
+      if (winners.length === 1) {
+        const winnerName = players.find(p => p.id === winners[0])?.name || `Player ${winners[0]}`;
+        alert(`${winnerName} has won the game during the Campaign phase!`);
+      } else {
+        const winnerNames = winners.map(id => players.find(p => p.id === id)?.name || `Player ${id}`).join(', ');
+        alert(`The game is a draw! Winners: ${winnerNames}`);
+      }
+      // Set game to a finished state or allow restart
+      return;
+    }
 
     // Clean up all Take Advantage state
     setShowTakeAdvantageMenu(false);
