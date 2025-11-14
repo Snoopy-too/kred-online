@@ -3222,22 +3222,23 @@ const App: React.FC = () => {
     addGameLog(`${playerName} lost 1 credibility: ${reason}`);
   };
 
-  const handleCredibilityGain = (playerId: number, amount: number): { newPlayers: Player[]; hadMaxCredibility: boolean } => {
-    const player = players.find(p => p.id === playerId);
-    if (!player) return { newPlayers: players, hadMaxCredibility: false };
+  const handleCredibilityGain = (playerId: number, amount: number, currentPlayers?: Player[]): { newPlayers: Player[]; hadMaxCredibility: boolean } => {
+    const playersToUse = currentPlayers || players;
+    const player = playersToUse.find(p => p.id === playerId);
+    if (!player) return { newPlayers: playersToUse, hadMaxCredibility: false };
 
     const currentCredibility = player.credibility ?? 3;
     const hadMaxCredibility = currentCredibility >= 3;
 
     if (hadMaxCredibility) {
       // Player already has max credibility, don't add more
-      return { newPlayers: players, hadMaxCredibility: true };
+      return { newPlayers: playersToUse, hadMaxCredibility: true };
     }
 
     const newCredibility = Math.min(3, currentCredibility + amount);
     const actualGain = newCredibility - currentCredibility;
 
-    const newPlayers = players.map(p =>
+    const newPlayers = playersToUse.map(p =>
       p.id === playerId ? { ...p, credibility: newCredibility } : p
     );
 
@@ -3708,24 +3709,38 @@ const App: React.FC = () => {
         const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
         setChallengeResultMessage(`Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`);
 
-        // Tile player loses 1 credibility when challenge succeeds
-        setPlayers(prev => handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(prev));
-        addCredibilityLossLog(playedTile.playerId, "Challenge succeeded - tile did not meet requirements");
-
-        // Receiver also loses 1 credibility if they accepted a tile that was successfully challenged
-        if (receiverAcceptance === true) {
-          setPlayers(prev => handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(prev));
-          addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
-        }
-
         // NEW: Offer Take Advantage reward to successful challenger
         const challengerId = challengeOrder[currentChallengerIndex];
 
-        // Challenger gains up to 2 credibility for correctly challenging
-        const credibilityResult = handleCredibilityGain(challengerId, 2);
-        setPlayers(credibilityResult.newPlayers);
+        // Apply all credibility changes in one update to prevent state overwriting
+        let finalPlayers: Player[] = [];
+        let hadMaxCredibility = false;
 
-        const challenger = credibilityResult.newPlayers.find(p => p.id === challengerId);
+        setPlayers(prev => {
+          // 1. Tile player loses 1 credibility when challenge succeeds
+          let updatedPlayers = handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(prev);
+
+          // 2. Receiver also loses 1 credibility if they accepted a tile that was successfully challenged
+          if (receiverAcceptance === true) {
+            updatedPlayers = handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(updatedPlayers);
+          }
+
+          // 3. Challenger gains up to 2 credibility for correctly challenging
+          const credibilityResult = handleCredibilityGain(challengerId, 2, updatedPlayers);
+          finalPlayers = credibilityResult.newPlayers;
+          hadMaxCredibility = credibilityResult.hadMaxCredibility;
+
+          return finalPlayers;
+        });
+
+        // Add logs after state update
+        addCredibilityLossLog(playedTile.playerId, "Challenge succeeded - tile did not meet requirements");
+
+        if (receiverAcceptance === true) {
+          addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
+        }
+
+        const challenger = finalPlayers.find(p => p.id === challengerId);
         const challengerName = challenger?.name || 'Player';
         addGameLog(`${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0})`);
 
