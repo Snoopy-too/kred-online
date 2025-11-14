@@ -2635,7 +2635,7 @@ const App: React.FC = () => {
   const [isTestMode, setIsTestMode] = useState(false);
   const [dummyTile, setDummyTile] = useState<{ position: { top: number; left: number }; rotation: number } | null>(null);
   const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
-  const [showGridOverlay, setShowGridOverlay] = useState(true);
+  const [showGridOverlay, setShowGridOverlay] = useState(false);
   const [credibilityRotationAdjustments, setCredibilityRotationAdjustments] = useState<{ [playerId: number]: number }>({});
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
   const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
