@@ -846,7 +846,14 @@ const CampaignScreen: React.FC<{
   onContinueAfterChallenge: () => void;
   onPlacerViewTile: (tileId: string) => void;
   onSetGiveReceiverViewingTileId: (tileId: string | null) => void;
-  playedTile?: any;
+  playedTile?: {
+    tileId: string;
+    playerId: number;
+    receivingPlayerId: number;
+    movesPerformed: TrackedMove[];
+    originalPieces: Piece[];
+    originalBoardTiles: BoardTile[];
+  } | null;
   receiverAcceptance?: boolean | null;
   onReceiverAcceptanceDecision?: (accepted: boolean) => void;
   onChallengerDecision?: (challenge: boolean) => void;
@@ -855,9 +862,9 @@ const CampaignScreen: React.FC<{
   showMoveCheckResult?: boolean;
   moveCheckResult?: {
     isMet: boolean;
-    requiredMoves: any[];
-    performedMoves: any[];
-    missingMoves: any[];
+    requiredMoves: TrackedMove[];
+    performedMoves: TrackedMove[];
+    missingMoves: TrackedMove[];
     moveValidations?: Array<{
       moveType: string;
       isValid: boolean;
@@ -2668,11 +2675,11 @@ const App: React.FC = () => {
     tileId: string;
     playerId: number;
     receivingPlayerId: number;
-    movesPerformed: any[]; // TrackedMove[]
+    movesPerformed: TrackedMove[];
     originalPieces: Piece[];
     originalBoardTiles: BoardTile[];
   } | null>(null);
-  const [movesThisTurn, setMovesThisTurn] = useState<any[]>([]); // TrackedMove[]
+  const [movesThisTurn, setMovesThisTurn] = useState<TrackedMove[]>([]);
   const [receiverAcceptance, setReceiverAcceptance] = useState<boolean | null>(null); // null = awaiting decision, true = accepted, false = rejected
   const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
   const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
@@ -2685,9 +2692,9 @@ const App: React.FC = () => {
   const [showMoveCheckResult, setShowMoveCheckResult] = useState(false);
   const [moveCheckResult, setMoveCheckResult] = useState<{
     isMet: boolean;
-    requiredMoves: any[];
-    performedMoves: any[];
-    missingMoves: any[];
+    requiredMoves: TrackedMove[];
+    performedMoves: TrackedMove[];
+    missingMoves: TrackedMove[];
     hasExtraMoves: boolean;
     extraMoves: string[];
     moveValidations?: Array<{
@@ -4290,8 +4297,8 @@ const App: React.FC = () => {
   /**
    * Helper function to calculate moves by comparing current pieces to original pieces
    */
-  const calculateMoves = (originalPieces: Piece[], currentPieces: Piece[], tilePlayerId: number): any[] => {
-    const calculatedMoves: any[] = [];
+  const calculateMoves = (originalPieces: Piece[], currentPieces: Piece[], tilePlayerId: number): TrackedMove[] => {
+    const calculatedMoves: TrackedMove[] = [];
 
     console.log('calculateMoves called with:', {
       originalPiecesCount: originalPieces.length,
