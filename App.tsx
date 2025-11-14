@@ -53,6 +53,7 @@ import {
   checkBureaucracyWinCondition,
   validatePieceMovement,
 } from './game';
+import { ALERTS, TIMEOUTS, DEFAULTS } from './constants';
 
 // --- Helper Components ---
 
@@ -2988,8 +2989,8 @@ const App: React.FC = () => {
     // This includes pieces that have been moved to community (pending community pieces)
     if (movedPiecesThisTurn.has(pieceId) || pendingCommunityPieces.has(pieceId)) {
       showAlert(
-        'Piece Already Moved',
-        'Pieces may only be moved once per turn! If you want to move this piece somewhere else, click the Reset Turn button.',
+        ALERTS.PIECE_ALREADY_MOVED.title,
+        ALERTS.PIECE_ALREADY_MOVED.message,
         'warning'
       );
       return;
@@ -3031,8 +3032,8 @@ const App: React.FC = () => {
         // If Marks in community, Heels and Pawns cannot move
         if (marksInCommunity) {
           showAlert(
-            'Cannot Move This Piece',
-            'To move a Pawn, Heels need to be gone. To move Heels, Marks need to be gone.',
+            ALERTS.CANNOT_MOVE_PIECE.title,
+            ALERTS.CANNOT_MOVE_PIECE.message,
             'warning'
           );
           return;
@@ -3048,8 +3049,8 @@ const App: React.FC = () => {
           // Pawns cannot move if Heels in community
           if (heelsInCommunity) {
             showAlert(
-              'Cannot Move This Piece',
-              'To move a Pawn, Heels need to be gone. To move Heels, Marks need to be gone.',
+              ALERTS.CANNOT_MOVE_PIECE.title,
+              ALERTS.CANNOT_MOVE_PIECE.message,
               'warning'
             );
             return;
@@ -3390,7 +3391,7 @@ const App: React.FC = () => {
       const otherPlayers = players.filter(p => p.id !== currentPlayer.id);
       const allOthersAreOutOfTiles = otherPlayers.every(p => p.keptTiles.length === 0);
       if (!allOthersAreOutOfTiles) {
-        showAlert('Cannot Play for Yourself', 'You cannot play a tile for yourself until all other players have run out of tiles.', 'warning');
+        showAlert(ALERTS.CANNOT_PLAY_FOR_YOURSELF.title, ALERTS.CANNOT_PLAY_FOR_YOURSELF.message, 'warning');
         return;
       }
     }
@@ -3754,7 +3755,7 @@ const App: React.FC = () => {
             // Store the challenge result message to show after modal closes
             setTimeout(() => {
               setChallengeResultMessage('');
-            }, 5000);
+            }, TIMEOUTS.CHALLENGE_MESSAGE_DISMISS);
 
             // DON'T transition to CORRECTION_REQUIRED yet
             // Wait for user's choice in the modal
@@ -5199,8 +5200,8 @@ const App: React.FC = () => {
   const handleSelectTakeAdvantageAction = (item: BureaucracyMenuItem) => {
     // Validate affordability
     if (totalKredcoinForAdvantage < item.price) {
-      setTakeAdvantageValidationError('Insufficient Kredcoin for this purchase');
-      setTimeout(() => setTakeAdvantageValidationError(null), 3000);
+      setTakeAdvantageValidationError(ALERTS.INSUFFICIENT_KREDCOIN.message);
+      setTimeout(() => setTakeAdvantageValidationError(null), TIMEOUTS.VALIDATION_ERROR_SHORT);
       return;
     }
 
