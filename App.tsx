@@ -2630,6 +2630,46 @@ const CampaignScreen: React.FC<{
 
 /**
  * The main application component.
+ *
+ * GAME STATE FLOW:
+ * ================
+ *
+ * 1. PLAYER_SELECTION
+ *    ↓ (select player count, test mode, skip options)
+ *
+ * 2. DRAFTING (optional, can be skipped)
+ *    ↓ (players draft tiles in snake order)
+ *
+ * 3. CAMPAIGN
+ *    ↓ (player plays tile and makes moves)
+ *
+ * 4. TILE_PLAYED
+ *    ↓ (player ends turn after playing tile)
+ *
+ * 5. PENDING_ACCEPTANCE
+ *    ↓ (receiver decides: accept or reject)
+ *
+ * 6a. If REJECTED → back to CAMPAIGN (tile player's turn)
+ *
+ * 6b. If ACCEPTED → PENDING_CHALLENGE
+ *     ↓ (other players can challenge in order)
+ *
+ * 7a. If CHALLENGE FAILS → back to CAMPAIGN (challenger corrects)
+ *
+ * 7b. If CHALLENGE SUCCEEDS → CORRECTION_REQUIRED
+ *     ↓ (tile player must correct moves)
+ *     ↓ (Take Advantage feature may trigger for challenger)
+ *
+ * 8. Back to CAMPAIGN
+ *    ↓ (receiver's turn begins)
+ *    ↓ (WIN CHECK happens here during Campaign phase)
+ *
+ * 9. When all tiles played → BUREAUCRACY
+ *    ↓ (players spend kredcoin on moves/promotions)
+ *    ↓ (WIN CHECK happens after all players finish)
+ *
+ * 10. If no winner → back to CAMPAIGN (new round)
+ *     If winner → GAME OVER (alert shown)
  */
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>('PLAYER_SELECTION');
@@ -3230,20 +3270,33 @@ const App: React.FC = () => {
     addGameLog(`${playerName} lost 1 credibility: ${reason}`);
   };
 
+  /**
+   * Handles credibility gain for a player
+   *
+   * Credibility Rules:
+   * - Default/Starting credibility: 3
+   * - Range: 0 (minimum) to 3 (maximum)
+   * - Cannot gain above 3 (MAX_CREDIBILITY)
+   *
+   * @param playerId - Player who gains credibility
+   * @param amount - Amount to gain (typically 1 or 2)
+   * @param currentPlayers - Optional player array to use instead of state (for chaining updates)
+   * @returns Object with newPlayers array and hadMaxCredibility flag
+   */
   const handleCredibilityGain = (playerId: number, amount: number, currentPlayers?: Player[]): { newPlayers: Player[]; hadMaxCredibility: boolean } => {
     const playersToUse = currentPlayers || players;
     const player = playersToUse.find(p => p.id === playerId);
     if (!player) return { newPlayers: playersToUse, hadMaxCredibility: false };
 
-    const currentCredibility = player.credibility ?? 3;
-    const hadMaxCredibility = currentCredibility >= 3;
+    const currentCredibility = player.credibility ?? DEFAULTS.INITIAL_CREDIBILITY;
+    const hadMaxCredibility = currentCredibility >= DEFAULTS.MAX_CREDIBILITY;
 
     if (hadMaxCredibility) {
       // Player already has max credibility, don't add more
       return { newPlayers: playersToUse, hadMaxCredibility: true };
     }
 
-    const newCredibility = Math.min(3, currentCredibility + amount);
+    const newCredibility = Math.min(DEFAULTS.MAX_CREDIBILITY, currentCredibility + amount);
     const actualGain = newCredibility - currentCredibility;
 
     const newPlayers = playersToUse.map(p =>
@@ -3720,10 +3773,20 @@ const App: React.FC = () => {
         // NEW: Offer Take Advantage reward to successful challenger
         const challengerId = challengeOrder[currentChallengerIndex];
 
-        // Apply all credibility changes in one update and capture the result synchronously
+        // IMPORTANT: Apply all credibility changes synchronously to avoid React state batching issues
+        // React batches setState calls, so we must calculate all changes BEFORE calling setPlayers
+        // Otherwise, later calls would read stale state and overwrite earlier changes
+        //
+        // Credibility Changes on Successful Challenge:
+        //   1. Tile player loses 1 credibility (failed challenge)
+        //   2. Receiver loses 1 credibility (if they accepted a bad tile)
+        //   3. Challenger gains up to 2 credibility (successful challenge)
+        //
+        // By chaining: players → updatedPlayers → finalPlayers
+        // We ensure each change builds on the previous one
         let finalPlayers: Player[] = [];
 
-        // Step 1: Calculate all credibility changes synchronously
+        // Step 1: Calculate all credibility changes synchronously (chain them together)
         let updatedPlayers = handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(players);
 
         if (receiverAcceptance === true) {
@@ -3733,7 +3796,7 @@ const App: React.FC = () => {
         const credibilityResult = handleCredibilityGain(challengerId, 2, updatedPlayers);
         finalPlayers = credibilityResult.newPlayers;
 
-        // Step 2: Apply the update
+        // Step 2: Apply the final result in one setState call
         setPlayers(finalPlayers);
 
         // Add logs after state update
@@ -3995,7 +4058,15 @@ const App: React.FC = () => {
     setPiecesAtCorrectionStart([]);
     setTilePlayerMustWithdraw(false);
 
-    // Check for win condition when receiver starts their turn
+    // CRITICAL: Check for win condition when receiver starts their turn
+    // This is the ONLY place in Campaign phase where win is checked
+    // Ensures complete tile play workflow finishes before checking:
+    //   1. Tile played and moves made
+    //   2. Acceptance/rejection by receiver
+    //   3. Challenge phase (if accepted)
+    //   4. Take Advantage (if challenger succeeds)
+    //   5. Correction (if needed)
+    // THEN check for win before receiver's turn begins
     const winners = checkBureaucracyWinCondition(players, pieces);
     if (winners.length > 0) {
       if (winners.length === 1) {

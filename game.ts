@@ -3418,6 +3418,18 @@ export function performPromotion(pieces: Piece[], pieceId: string): {
 
 /**
  * Checks if a player has achieved the win condition
+ *
+ * Win Condition Requirements:
+ * 1. Office: Must contain a Pawn (exactly 1)
+ * 2. Rostrum 1: Must contain a Heel
+ * 3. Rostrum 2: Must contain a Heel
+ * 4. All 6 Seats: Must be occupied (can be any piece type: Mark, Heel, or Pawn)
+ *
+ * Total: 9 pieces in specific positions (1 Pawn in office + 2 Heels in rostrums + 6 pieces in seats)
+ *
+ * @param playerId - The player ID to check (1-5)
+ * @param pieces - Current state of all pieces on the board
+ * @returns true if player has won, false otherwise
  */
 export function checkPlayerWinCondition(playerId: number, pieces: Piece[]): boolean {
   // Check Office: must have a Pawn
@@ -3453,8 +3465,20 @@ export function checkPlayerWinCondition(playerId: number, pieces: Piece[]): bool
 }
 
 /**
- * Checks for win condition at the end of Bureaucracy phase
- * Returns array of winning player IDs (can be multiple for a draw)
+ * Checks for win condition - used in both Campaign and Bureaucracy phases
+ *
+ * When Called:
+ * - Campaign Phase: When receiver starts their turn (after tile play workflow completes)
+ * - Bureaucracy Phase: After all players complete their Bureaucracy turns
+ *
+ * Win Detection:
+ * - Single winner: Returns array with one player ID [playerId]
+ * - Draw (multiple winners): Returns array with multiple player IDs [id1, id2, ...]
+ * - No winner: Returns empty array []
+ *
+ * @param players - All players in the game
+ * @param pieces - Current state of all pieces on the board
+ * @returns Array of winning player IDs (empty if no winner)
  */
 export function checkBureaucracyWinCondition(
   players: Player[],
