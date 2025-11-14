@@ -3712,26 +3712,21 @@ const App: React.FC = () => {
         // NEW: Offer Take Advantage reward to successful challenger
         const challengerId = challengeOrder[currentChallengerIndex];
 
-        // Apply all credibility changes in one update to prevent state overwriting
+        // Apply all credibility changes in one update and capture the result synchronously
         let finalPlayers: Player[] = [];
-        let hadMaxCredibility = false;
 
-        setPlayers(prev => {
-          // 1. Tile player loses 1 credibility when challenge succeeds
-          let updatedPlayers = handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(prev);
+        // Step 1: Calculate all credibility changes synchronously
+        let updatedPlayers = handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(players);
 
-          // 2. Receiver also loses 1 credibility if they accepted a tile that was successfully challenged
-          if (receiverAcceptance === true) {
-            updatedPlayers = handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(updatedPlayers);
-          }
+        if (receiverAcceptance === true) {
+          updatedPlayers = handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(updatedPlayers);
+        }
 
-          // 3. Challenger gains up to 2 credibility for correctly challenging
-          const credibilityResult = handleCredibilityGain(challengerId, 2, updatedPlayers);
-          finalPlayers = credibilityResult.newPlayers;
-          hadMaxCredibility = credibilityResult.hadMaxCredibility;
+        const credibilityResult = handleCredibilityGain(challengerId, 2, updatedPlayers);
+        finalPlayers = credibilityResult.newPlayers;
 
-          return finalPlayers;
-        });
+        // Step 2: Apply the update
+        setPlayers(finalPlayers);
 
         // Add logs after state update
         addCredibilityLossLog(playedTile.playerId, "Challenge succeeded - tile did not meet requirements");
