@@ -1260,7 +1260,7 @@ const CampaignScreen: React.FC<{
                 }
                 style={{ top: `${space.position.top}%`, left: `${space.position.left}%`, transform: `translate(-50%, -50%) rotate(${space.rotation}deg)` }}
               >
-                <div style={{ transform: `rotate(${-space.rotation}deg)` }} className={`font-semibold text-xs leading-tight ${isDraggingTile ? 'text-cyan-200' : 'text-cyan-400/70'}`}>
+                <div style={{ transform: `rotate(${-space.rotation - boardRotation}deg)` }} className={`font-semibold text-xs leading-tight ${isDraggingTile ? 'text-cyan-200' : 'text-cyan-400/70'}`}>
                   <div>Drop Tile</div> <div>For P{space.ownerId}</div>
                 </div>
               </div>
