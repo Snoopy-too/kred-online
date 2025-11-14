@@ -3121,7 +3121,13 @@ const App: React.FC = () => {
 
         // Receiver also loses 1 credibility if they accepted a tile that was successfully challenged
         if (receiverAcceptance === true) {
-          setPlayers(prev => handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(prev));
+          setPlayers(prev => {
+            console.log('[DEBUG] Before receiver credibility loss:', prev.map(p => ({ id: p.id, credibility: p.credibility })));
+            const updated = handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(prev);
+            console.log('[DEBUG] After receiver credibility loss:', updated.map(p => ({ id: p.id, credibility: p.credibility })));
+            console.log('[DEBUG] Receiver ID:', playedTile.receivingPlayerId);
+            return updated;
+          });
           addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
         }
 
