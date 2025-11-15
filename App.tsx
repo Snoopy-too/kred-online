@@ -54,6 +54,7 @@ import {
   validatePieceMovement,
 } from './game';
 import { ALERTS, TIMEOUTS, DEFAULTS } from './constants';
+import { getPlayerName, getPlayerNameSimple, getPlayerById, formatWinnerNames, isPlayerDomain, isCommunityLocation } from './utils';
 
 // --- Helper Components ---
 
@@ -3265,8 +3266,8 @@ const App: React.FC = () => {
 
   const addCredibilityLossLog = (playerId: number, reason: string, currentPlayers?: Player[]) => {
     const playersToUse = currentPlayers || players;
-    const player = playersToUse.find(p => p.id === playerId);
-    const playerName = player?.name || `Player ${playerId}`;
+    const player = getPlayerById(playersToUse, playerId);
+    const playerName = getPlayerName(player, playerId);
     addGameLog(`${playerName} lost 1 credibility: ${reason}`);
   };
 
@@ -3304,7 +3305,7 @@ const App: React.FC = () => {
     );
 
     if (actualGain > 0) {
-      const playerName = player.name || `Player ${playerId}`;
+      const playerName = getPlayerName(player, playerId);
       addGameLog(`${playerName} gained ${actualGain} credibility: Correctly rejected imperfect tile`);
     }
 
@@ -4070,10 +4071,10 @@ const App: React.FC = () => {
     const winners = checkBureaucracyWinCondition(players, pieces);
     if (winners.length > 0) {
       if (winners.length === 1) {
-        const winnerName = players.find(p => p.id === winners[0])?.name || `Player ${winners[0]}`;
+        const winnerName = getPlayerName(getPlayerById(players, winners[0]), winners[0]);
         alert(`${winnerName} has won the game during the Campaign phase!`);
       } else {
-        const winnerNames = winners.map(id => players.find(p => p.id === id)?.name || `Player ${id}`).join(', ');
+        const winnerNames = formatWinnerNames(winners, players);
         alert(`The game is a draw! Winners: ${winnerNames}`);
       }
       return;
@@ -4339,10 +4340,10 @@ const App: React.FC = () => {
     const winners = checkBureaucracyWinCondition(updatedPlayers, pieces);
     if (winners.length > 0) {
       if (winners.length === 1) {
-        const winnerName = updatedPlayers.find(p => p.id === winners[0])?.name || `Player ${winners[0]}`;
+        const winnerName = getPlayerName(getPlayerById(updatedPlayers, winners[0]), winners[0]);
         alert(`${winnerName} has won the game during the Campaign phase!`);
       } else {
-        const winnerNames = winners.map(id => updatedPlayers.find(p => p.id === id)?.name || `Player ${id}`).join(', ');
+        const winnerNames = formatWinnerNames(winners, updatedPlayers);
         alert(`The game is a draw! Winners: ${winnerNames}`);
       }
       // Set game to a finished state or allow restart
