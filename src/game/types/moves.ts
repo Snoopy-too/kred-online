@@ -78,13 +78,7 @@ export interface TilePlayOption {
  */
 export interface TileRequirement {
   tileId: string;
-  playOptions: {
-    [key: string]: {
-      optionType: TilePlayOptionType;
-      moves: Array<{
-        moveType: DefinedMoveType;
-        requirement: MoveRequirementType;
-      }>;
-    };
-  };
+  requiredMoves: DefinedMoveType[];
+  description: string;
+  canBeRejected: boolean; // false = cannot be rejected if requirements met or impossible
 }
