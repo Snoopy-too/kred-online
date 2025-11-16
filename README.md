@@ -99,6 +99,8 @@ kred-online/
 - Rails 8 (API backend)
 - PostgreSQL (database)
 - Action Cable (WebSockets)
+- Solid Cache (caching)
+- Solid Queue (background jobs)
 - Kamal (deployment)
 
 ## Development

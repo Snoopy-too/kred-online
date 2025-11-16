@@ -4,7 +4,7 @@
 
 **Current State:**
 
-- Tile-based strategy game (similar to Mahjong mechanics)
+- Tile-based strategy game
 - 8,023 lines across 2 files (App.tsx: 4,526 lines, game.ts: 3,497 lines)
 - Functional game logic with complex state management
 - Local multiplayer only
@@ -589,7 +589,7 @@ From `App.tsx` (4,526 lines → ~30 components):
 1. Configure Kamal deployment
 2. Set up Docker images
 3. Configure PostgreSQL on Hetzner
-4. Set up Redis for Action Cable
+4. Configure Solid Cache and Solid Queue (Rails 8)
 5. Configure SSL with Let's Encrypt
 6. Set up monitoring (error tracking, performance)
 7. Configure automated backups
@@ -607,7 +607,6 @@ From `App.tsx` (4,526 lines → ~30 components):
 - CPX31 or CCX23 (4 vCPU, 8GB RAM minimum)
 - Ubuntu 24.04 LTS
 - PostgreSQL 16
-- Redis 7.x
 - Docker installed
 
 ### Kamal Configuration
@@ -635,7 +634,6 @@ env:
   secret:
     - POSTGRES_PASSWORD
     - SECRET_KEY_BASE
-    - REDIS_URL
 
 traefik:
   options:
@@ -663,13 +661,6 @@ accessories:
         - POSTGRES_PASSWORD
     directories:
       - data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    host: your-hetzner-server-ip
-    port: 6379
-    directories:
-      - data:/data
 ```
 
 ### Deployment Commands
@@ -998,16 +989,17 @@ Need real-time synchronization of game state across multiple players.
 
 ## Decision
 
-Use Rails Action Cable with Redis adapter for WebSocket connections.
+Use Rails Action Cable with Solid Cache for WebSocket connections.
 
 ## Consequences
 
 - Built into Rails 8, minimal setup
-- Scales horizontally with Redis
+- Solid Cache provides persistent storage without Redis
+- Solid Queue handles background jobs natively
 - Consistent with rest of Rails stack
 
-* Requires Redis infrastructure
 * WebSocket connection management complexity
+* May need horizontal scaling strategy for high traffic
 ```
 
 ### Living Documentation
@@ -1085,7 +1077,7 @@ Keep docs up-to-date:
 - [ ] Set up Hetzner server
 - [ ] Install Docker
 - [ ] Set up PostgreSQL
-- [ ] Set up Redis
+- [ ] Configure Solid Cache and Solid Queue
 - [ ] Configure SSL certificates
 - [ ] Test deployment process
 - [ ] Set up monitoring

@@ -8,7 +8,7 @@
 
 **Tech Stack**:
 - Frontend: React 19, TypeScript, Vite
-- Backend (planned): Rails 8, PostgreSQL, Action Cable
+- Backend (planned): Rails 8, PostgreSQL, Action Cable, Solid Cache, Solid Queue
 - Deployment (planned): Kamal to Hetzner servers
 
 ---
@@ -127,7 +127,7 @@ Achieve >80% test coverage:
 Deploy to Hetzner using Kamal:
 - Docker containerization
 - SSL with Let's Encrypt
-- PostgreSQL + Redis
+- PostgreSQL with Solid Cache and Solid Queue
 - Monitoring and backups
 
 ---
