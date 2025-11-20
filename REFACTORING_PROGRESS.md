@@ -1,8 +1,8 @@
 # Phase 1 Refactoring Progress Report
 
-## Status: 50% Complete ✅
+## Status: 60% Complete ✅
 
-Successfully extracted **27 files** containing **~3,000 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (5,913 lines).
+Successfully extracted **31 files** containing **~3,600 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (5,913 lines).
 
 ---
 
@@ -13,7 +13,7 @@ src/
 ├── game/
 │   ├── types/           # Type definitions (6 files)
 │   ├── config/          # Game configuration (13 files)
-│   ├── rules/           # Game rules (1 file, more coming)
+│   ├── rules/           # Game rules (5 files) ✅
 │   ├── state/           # State management (3 files)
 │   └── utils/           # Utility functions (3 files)
 ├── components/          # React components (empty, Phase 1 final step)
@@ -54,14 +54,28 @@ src/
 - `bureaucracy.ts` - Purchase menus for 3/4/5 players
 - `index.ts` - Central config exports
 
-### 3. **Rules** (1 file, 442 lines)
-- `adjacency.ts` - Seat/rostrum adjacency rules
+### 3. **Rules** (5 files, ~1,028 lines)
+- `adjacency.ts` - Seat/rostrum adjacency rules (442 lines)
   - ROSTRUM_SUPPORT_RULES (seats 1-3 → rostrum1, seats 4-6 → rostrum2)
   - ROSTRUM_ADJACENCY_BY_PLAYER_COUNT (adjacent rostrums)
   - areSeatsAdjacent, areRostrumsAdjacent
   - areSupportingSeatsFullForRostrum
   - areBothRostrumsFilledForPlayer
   - getAdjacentSeats, getAdjacentRostrum
+- `credibility.ts` - Credibility management (141 lines)
+  - deductCredibility, restoreCredibility
+  - handleCredibilityLoss (4 scenarios)
+  - hasCredibility, canChallenge, canLookAtTile
+- `move-validation.ts` - Move validation logic (353 lines)
+  - validateMoveType (10 movement rules)
+  - validateMovesForTilePlay (2-move limit, category checking)
+  - validateTileRequirements
+  - validateTileRequirementsWithImpossibleMoveExceptions
+  - getMoveCategory, isValidMoveType
+- `win-conditions.ts` - Win condition checking (92 lines)
+  - checkPlayerWinCondition (office + 2 rostrums + 6 seats)
+  - checkBureaucracyWinCondition (single/multiple winners)
+- `index.ts` - Central rules exports
 
 ### 4. **State Management** (3 files, ~360 lines)
 - `initialization.ts` - Player/piece initialization
@@ -95,12 +109,12 @@ src/
 |----------|-------|-------|--------|
 | Types | 6 | ~400 | ✅ Complete |
 | Config | 13 | ~1,800 | ✅ Complete |
-| Rules | 1 | 442 | 🔄 In Progress |
+| Rules | 5 | ~1,028 | ✅ Complete |
 | State | 3 | ~360 | ✅ Complete |
 | Utils | 3 | ~250 | ✅ Complete |
 | Components | 0 | 0 | ⏳ Pending |
 | Hooks | 0 | 0 | ⏳ Pending |
-| **TOTAL** | **27** | **~3,000** | **50%** |
+| **TOTAL** | **31** | **~3,600** | **60%** |
 
 ---
 
@@ -121,13 +135,7 @@ src/
 
 ## ⏳ Remaining Work (Phase 1)
 
-### Rules Extraction (~30% remaining):
-- `win-conditions.ts` - Victory condition checking
-- `credibility.ts` - Credibility loss/gain mechanics
-- `challenge.ts` - Challenge resolution logic
-- `move-validation.ts` - Move legality validation
-
-### Component Extraction (~20% remaining):
+### Component Extraction (~40% remaining):
 - Break down `App.tsx` (5,913 lines) into:
   - `PlayerSelectionScreen.tsx`
   - `DraftingScreen.tsx`
@@ -156,13 +164,14 @@ src/
 
 ## 🎯 Next Steps
 
-1. Continue extracting game rules (win conditions, credibility, challenges, validation)
-2. Extract phase logic (drafting, campaign, bureaucracy)
-3. Break down App.tsx into component modules
+1. ~~Continue extracting game rules~~ ✅ DONE
+2. Extract phase logic (drafting, campaign, bureaucracy) - OPTIONAL
+3. Break down App.tsx into component modules - MAJOR TASK
 4. Create React hooks and context
 5. Test and validate functionality
 
 ---
 
-*Generated: Phase 1 Refactoring*
-*Branch: `claude/setup-production-branch-014HyHyFGZyyFYgB1Ah7FtqR`*
+*Last Updated: 2025-01-20*
+*Branch: `production`*
+*Commits: 12 (merged from claude/setup-production-branch-014HyHyFGZyyFYgB1Ah7FtqR + 3 new)*
