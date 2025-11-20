@@ -1526,7 +1526,7 @@ export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
 
 // --- Utility Functions ---
 
-const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = {
+export const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } = {
   3: { left: 50.44, top: 44.01 },
   4: { left: 49.94, top: 51.56 },
   5: { left: 47.97, top: 47.07 },

@@ -7,18 +7,16 @@ import type {
   BureaucracyPurchase,
   BureaucracyMenuItem,
 } from '../../game/types';
-import {
-  getBureaucracyMenu,
-  getAvailablePurchases,
-} from '../../game/config/bureaucracy';
 import { PLAYER_PERSPECTIVE_ROTATIONS } from '../../game/config';
 import { CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT } from '../../game/config/board-config';
 import { calculatePieceRotation, findNearestVacantLocation } from '../../game/utils';
 
 // Note: These functions are still in game.ts - will need to be extracted later
 import {
+  getBureaucracyMenu,
+  getAvailablePurchases,
   validatePieceMovement,
-} from '../../game';
+} from '../../../game';
 
 interface BureaucracyScreenProps {
   players: Player[];

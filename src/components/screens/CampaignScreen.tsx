@@ -14,12 +14,9 @@ import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   TILE_SPACES_BY_PLAYER_COUNT,
   TILE_KREDCOIN_VALUES,
-  BOARD_LOCATIONS_BY_PLAYER_COUNT,
-  BOARD_CENTERS,
-  COMMUNITY_LOCATIONS_BY_PLAYER_COUNT,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
-  PIECE_IMAGES,
-  TILE_IMAGES,
+  DROP_LOCATIONS_BY_PLAYER_COUNT,
+  PIECE_TYPES,
 } from '../../game/config';
 import {
   calculatePieceRotation,
@@ -28,10 +25,12 @@ import {
   findNearestVacantLocation,
   formatLocationId,
 } from '../../game/utils';
+// Note: These functions and constants are still in game.ts - will need to be extracted later
 import {
+  BOARD_CENTERS,
   validatePieceMovement,
   isLocationOccupied,
-} from '../../game';
+} from '../../../game';
 
 interface CampaignScreenProps {
   gameState: GameState;
@@ -328,7 +327,7 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
       const isValidDrop = locationId !== null && validatePieceMovement(draggedPieceInfo.pieceId, locationId, pieces, playerCount);
 
       const finalPosition = locationId
-        ? (BOARD_LOCATIONS_BY_PLAYER_COUNT[playerCount]?.find(loc => loc.id === locationId)?.position ?? { left, top })
+        ? (DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount]?.find(loc => loc.id === locationId)?.position ?? { left, top })
         : { left, top };
 
       const rotation = calculatePieceRotation(finalPosition.left, finalPosition.top, BOARD_CENTERS[playerCount]);
@@ -428,8 +427,8 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
     ? './dev_images/background_4p.jpg'
     : './dev_images/background_5p.jpg';
 
-  const boardLocations = BOARD_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
-  const communityLocations = COMMUNITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+  const boardLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+  const communityLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount]?.filter(loc => loc.id.startsWith('community')) || [];
   const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
 
   return (
