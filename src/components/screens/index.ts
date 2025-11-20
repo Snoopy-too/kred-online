@@ -6,4 +6,5 @@
 
 export * from './PlayerSelectionScreen';
 export * from './DraftingScreen';
+export * from './CampaignScreen';
 export * from './BureaucracyScreen';

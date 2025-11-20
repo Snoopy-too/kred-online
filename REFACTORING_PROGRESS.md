@@ -1,8 +1,8 @@
 # Phase 1 Refactoring Progress Report
 
-## Status: 65% Complete ✅
+## Status: 70% Complete ✅
 
-Successfully extracted **34 files** containing **~3,800 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (5,913 lines).
+Successfully extracted **35 files** containing **~4,500 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (5,913 lines).
 
 ---
 
@@ -113,9 +113,9 @@ src/
 | Rules | 5 | ~1,028 | ✅ Complete |
 | State | 3 | ~360 | ✅ Complete |
 | Utils | 3 | ~250 | ✅ Complete |
-| Components | 3 | ~195 | 🔄 In Progress (2/4 screens) |
+| Components | 4 | ~893 | 🔄 In Progress (3/4 screens) |
 | Hooks | 0 | 0 | ⏳ Pending |
-| **TOTAL** | **34** | **~3,800** | **65%** |
+| **TOTAL** | **35** | **~4,500** | **70%** |
 
 ---
 
@@ -136,11 +136,11 @@ src/
 
 ## ⏳ Remaining Work (Phase 1)
 
-### Component Extraction (~35% remaining):
+### Component Extraction (~30% remaining):
 - ✅ `PlayerSelectionScreen.tsx` (127 lines) - DONE
 - ✅ `DraftingScreen.tsx` (64 lines) - DONE
-- ⏳ `BureaucracyScreen.tsx` (~598 lines) - Complex drag-and-drop, needs extraction
-- ⏳ `CampaignScreen.tsx` (~1,865 lines) - MOST COMPLEX - game board, pieces, tiles
+- ✅ `BureaucracyScreen.tsx` (698 lines) - DONE - Complex drag-and-drop, purchase menu, board rotation
+- ⏳ `CampaignScreen.tsx` (~1,865 lines) - MOST COMPLEX - game board, pieces, tiles, challenge system
 - ⏳ Main `App.tsx` component (~3,222 lines) - Game state management
 - ⏳ Shared UI components - Buttons, modals, alerts
 - ⏳ Board sub-components - Pieces, tiles, drop zones
@@ -185,10 +185,11 @@ src/
 **Component Structure**:
 1. PlayerSelectionScreen (lines 61-166) - ✅ **EXTRACTED** (106 lines)
 2. DraftingScreen (lines 167-211) - ✅ **EXTRACTED** (45 lines)
-3. BureaucracyScreen (lines 212-809) - ⏳ **TO EXTRACT** (598 lines)
-   - Complex drag-and-drop logic
-   - Purchase menu system
-   - Board rotation handling
+3. BureaucracyScreen (lines 212-809) - ✅ **EXTRACTED** (598 lines → 698 with imports)
+   - Complex drag-and-drop logic with board rotation support
+   - Purchase menu system (6 moves + promotions + credibility)
+   - Drop indicator with validation
+   - Turn order tracking
 4. CampaignScreen (lines 810-2674) - ⏳ **TO EXTRACT** (1,865 lines)
    - Main game board
    - Piece drag-and-drop
