@@ -1,8 +1,8 @@
 # Phase 1 Refactoring Progress Report
 
-## Status: 60% Complete ✅
+## Status: 65% Complete ✅
 
-Successfully extracted **31 files** containing **~3,600 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (5,913 lines).
+Successfully extracted **34 files** containing **~3,800 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (5,913 lines).
 
 ---
 
@@ -16,7 +16,8 @@ src/
 │   ├── rules/           # Game rules (5 files) ✅
 │   ├── state/           # State management (3 files)
 │   └── utils/           # Utility functions (3 files)
-├── components/          # React components (empty, Phase 1 final step)
+├── components/          # React components (3 files) 🔄
+│   └── screens/         # Screen components
 ├── hooks/               # React hooks (empty, Phase 1 final step)
 ├── context/             # React context (empty, Phase 1 final step)
 └── services/            # API/WebSocket services (empty, Phase 2)
@@ -112,9 +113,9 @@ src/
 | Rules | 5 | ~1,028 | ✅ Complete |
 | State | 3 | ~360 | ✅ Complete |
 | Utils | 3 | ~250 | ✅ Complete |
-| Components | 0 | 0 | ⏳ Pending |
+| Components | 3 | ~195 | 🔄 In Progress (2/4 screens) |
 | Hooks | 0 | 0 | ⏳ Pending |
-| **TOTAL** | **31** | **~3,600** | **60%** |
+| **TOTAL** | **34** | **~3,800** | **65%** |
 
 ---
 
@@ -135,15 +136,14 @@ src/
 
 ## ⏳ Remaining Work (Phase 1)
 
-### Component Extraction (~40% remaining):
-- Break down `App.tsx` (5,913 lines) into:
-  - `PlayerSelectionScreen.tsx`
-  - `DraftingScreen.tsx`
-  - `CampaignScreen.tsx`
-  - `BureaucracyScreen.tsx`
-  - Shared UI components
-  - Board components
-  - Player components
+### Component Extraction (~35% remaining):
+- ✅ `PlayerSelectionScreen.tsx` (127 lines) - DONE
+- ✅ `DraftingScreen.tsx` (64 lines) - DONE
+- ⏳ `BureaucracyScreen.tsx` (~598 lines) - Complex drag-and-drop, needs extraction
+- ⏳ `CampaignScreen.tsx` (~1,865 lines) - MOST COMPLEX - game board, pieces, tiles
+- ⏳ Main `App.tsx` component (~3,222 lines) - Game state management
+- ⏳ Shared UI components - Buttons, modals, alerts
+- ⏳ Board sub-components - Pieces, tiles, drop zones
 
 ### Final Steps:
 - Create React hooks (useGame, useDragAndDrop)
@@ -174,4 +174,29 @@ src/
 
 *Last Updated: 2025-01-20*
 *Branch: `production`*
-*Commits: 12 (merged from claude/setup-production-branch-014HyHyFGZyyFYgB1Ah7FtqR + 3 new)*
+*Commits: 15 total (9 from initial merge + 6 new)*
+
+---
+
+## 📋 App.tsx Breakdown Analysis
+
+**Total Lines**: 5,913 lines
+
+**Component Structure**:
+1. PlayerSelectionScreen (lines 61-166) - ✅ **EXTRACTED** (106 lines)
+2. DraftingScreen (lines 167-211) - ✅ **EXTRACTED** (45 lines)
+3. BureaucracyScreen (lines 212-809) - ⏳ **TO EXTRACT** (598 lines)
+   - Complex drag-and-drop logic
+   - Purchase menu system
+   - Board rotation handling
+4. CampaignScreen (lines 810-2674) - ⏳ **TO EXTRACT** (1,865 lines)
+   - Main game board
+   - Piece drag-and-drop
+   - Tile play interface
+   - Challenge system
+   - **MOST COMPLEX COMPONENT**
+5. Main App Component (lines 2675-5896) - ⏳ **TO REFACTOR** (3,222 lines)
+   - Game state management
+   - Phase transitions
+   - Event handlers
+   - **Needs hooks extraction**
