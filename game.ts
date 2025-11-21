@@ -1,4 +1,8 @@
 import { TOTAL_TILES } from './src/config/constants';
+import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from './src/config/tiles';
+
+// Re-export for backwards compatibility
+export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES };
 
 // --- Type Definitions ---
 
@@ -1340,40 +1344,6 @@ export const BOARD_IMAGE_URLS: { [key: number]: string } = {
   3: './images/3player_board.jpg',
   4: './images/4player_board.jpg',
   5: './images/5player_board.jpg',
-};
-
-export const TILE_IMAGE_URLS = Array.from({ length: TOTAL_TILES }, (_, i) => {
-  const num = String(i + 1).padStart(2, '0');
-  return `./images/${num}.svg`;
-});
-
-// Kredcoin values for each tile (₭-)
-export const TILE_KREDCOIN_VALUES: { [key: number]: number } = {
-  1: 1,
-  2: 2,
-  3: 0,
-  4: 1,
-  5: 2,
-  6: 3,
-  7: 4,
-  8: 5,
-  9: 1,
-  10: 2,
-  11: 4,
-  12: 5,
-  13: 5,
-  14: 6,
-  15: 3,
-  16: 4,
-  17: 3,
-  18: 4,
-  19: 6,
-  20: 7,
-  21: 8,
-  22: 7,
-  23: 8,
-  24: 9,
-  // Blank tile (if needed) = 0
 };
 
 // Bureaucracy menu for 3 and 4 player modes
