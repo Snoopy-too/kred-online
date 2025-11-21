@@ -1,4 +1,297 @@
-# Kred Game - Production Refactoring & Deployment Plan
+# Kred Game – Production Refactoring & Deployment Plan
+
+> **Archived:** We paused the Rails/Action Cable infrastructure plan after deciding to standardize on a full TypeScript stack (NestJS + Socket.io + Kamal). This document remains for historical reference only; the active plan now lives in `docs/` and tracks the Node.js deployment path.
+
+_Last updated: 2025-11-21 · Branch: production_
+
+## 1. Snapshot
+
+### Current State
+
+- Tile-based strategy game for 3–5 players. UI lives in React/Vite with a still-monolithic `App.tsx` (≈3,305 lines after a 44% reduction) plus a partially extracted `game.ts` (36 standalone modules totaling ~5,600 LOC).
+- All gameplay happens locally on a single client. There is no backend authority, persistence, auth, or networking today.
+- Refactoring Phase 1 is 85% complete: screen components, most configuration, and rules are modularized, but hooks/context and some utilities remain inline.
+- No automated deployment path; production infrastructure and CI/CD are undefined. Test coverage is minimal and manual regression is required.
+
+### Target State
+
+- Turborepo monorepo with shared TypeScript game logic (`packages/game-logic`), a Vite React frontend (`apps/frontend`), and a NestJS API/WebSocket backend (`apps/backend`).
+- Single source of truth for rules and validations consumable by both client and server.
+- Realtime multiplayer powered by Socket.io on the backend, persisted via PostgreSQL/TypeORM.
+- Containerized services deployed to Hetzner using Kamal, Docker, and kamal-proxy with zero-downtime rollouts, health checks, logging, and secret management aligned with Kamal docs.
+- Comprehensive automated tests (unit, integration, e2e) and clear migration checklist per phase.
+
+---
+
+## 2. Phase Roadmap
+
+| Phase                    | Focus                                                                                         | Exit Criteria                                                                              | Status                |
+| ------------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------- |
+| 1. Refactor & Extract    | Split game logic and UI into reusable modules, add hooks/context scaffolding, stabilize tests | `App.tsx` < 500 lines, hooks/context drive screens, shared game package published locally  | 🔄 In progress (≈85%) |
+| 2. Backend Foundation    | Create NestJS service with persistence + REST endpoints, align models with shared logic       | CRUD for games/players, migrations, initial unit tests, Docker builds green                | ⏳ Pending            |
+| 3. Real-time Integration | Wire Socket.io events, optimistic UI, and shared validation across client/server              | Live multiplayer demo across two browsers, challenge/turn sync, failure recovery           | ⏳ Pending            |
+| 4. Production Deployment | Harden infrastructure, observability, secrets, Kamal workflows, Kamal accessories             | `kamal deploy` zero-downtime on Hetzner, monitoring/log rotation in place, rollback tested | ⏳ Pending            |
+
+---
+
+## 3. Repository & Documentation Layout (Monorepo)
+
+```
+/
+├── apps/
+│   ├── frontend/                  # React/Vite client
+│   │   ├── src/
+│   │   ├── Dockerfile
+│   │   └── config/deploy.yml      # Kamal destination config
+│   └── backend/                   # NestJS API + Socket.io
+│       ├── src/
+│       ├── Dockerfile
+│       └── config/deploy.yml
+├── packages/
+│   ├── game-logic/                # Shared pure TypeScript engine
+│   └── tsconfig/                  # Shared TS configs
+├── docs/
+│   ├── architecture/              # game-logic.md, api-design.md, websocket-protocol.md, db-schema.md
+│   ├── development/               # setup-guide.md, testing-strategy.md, deployment-guide.md
+│   ├── game-rules/                # overview, tile-definitions, piece-movements, win-conditions
+│   └── archives/                  # dated progress reports
+├── turbo.json
+├── package.json
+└── README.md
+```
+
+Documentation from the original plan remains authoritative; update each markdown file as milestones land to keep product, engineering, and ops aligned.
+
+---
+
+## 4. Phase 1 – Detailed Refactoring Plan
+
+### 4.1 Extract `game.ts` → `packages/game-logic`
+
+| Order | Original Logic             | Destination                 | Status / Notes                          |
+| ----- | -------------------------- | --------------------------- | --------------------------------------- |
+| 1     | Interfaces & enums         | `types/*.ts`                | ✅                                      |
+| 2     | Constants & player options | `config/constants.ts`       | ✅                                      |
+| 3     | Board layouts (3p/4p/5p)   | `config/board-layouts/*.ts` | ✅                                      |
+| 4     | Tile definitions           | `config/tiles.ts`           | ✅                                      |
+| 5     | Move definitions           | `config/moves.ts`           | ✅                                      |
+| 6     | Adjacency helpers          | `rules/adjacency.ts`        | ✅                                      |
+| 7     | Move validation            | `rules/move-validation.ts`  | ✅                                      |
+| 8     | Win conditions             | `rules/win-conditions.ts`   | ✅                                      |
+| 9     | Challenge logic            | `rules/challenge.ts`        | ⏳ (split from credibility module)      |
+| 10    | State setup                | `state/initialization.ts`   | ✅                                      |
+| 11    | State reducer/engine       | `engine.ts`                 | ⏳ (finalize after hooks adopt reducer) |
+
+**Testing checkpoint:** Jest suite inside `packages/game-logic` covering `validateMove`, `validateTileRequirements`, `applyMove`, and win conditions with fixtures for 3/4/5-player boards.
+
+### 4.2 Refactor `App.tsx` → `apps/frontend`
+
+| Order | Component Group | New Path                                      | Notes                                                         |
+| ----- | --------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| 1     | UI primitives   | `components/shared/Button.tsx`, `Modal.tsx`   | ✅ Buttons/Modals extracted                                   |
+| 2     | Screens         | `components/screens/*`                        | ✅ PlayerSelection, Drafting, Bureaucracy, Campaign extracted |
+| 3     | Board + tokens  | `components/game/Board/*`                     | ⏳ move drop indicators + rotation helpers                    |
+| 4     | Player HUD      | `components/game/Player/*`                    | ⏳ credibility tracker, tile hand                             |
+| 5     | Hooks & context | `hooks/useGame.ts`, `context/GameContext.tsx` | 🚧 last major Phase‑1 deliverable                             |
+
+### 4.3 Supporting Tasks
+
+- Create shared drag/drop + keyboard hooks.
+- Replace inline helper blobs with imports from `packages/game-logic`.
+- Add Storybook-style sandboxes (optional) for board pieces to speed UI QA.
+- Expand `test_adjacency.js` into TypeScript Jest tests colocated with `packages/game-logic`.
+
+---
+
+## 5. Frontend Architecture (React + Vite)
+
+```
+apps/frontend/src/
+├── components/
+│   ├── game/
+│   │   ├── Board/
+│   │   ├── Player/
+│   │   ├── Phases/
+│   │   └── Actions/
+│   ├── lobby/
+│   └── shared/
+├── game/                      # Temporary bridge until all logic lives in packages/
+├── hooks/
+├── context/
+├── services/                  # REST + WebSocket clients
+├── utils/
+├── App.tsx
+└── main.tsx
+```
+
+**Design principles**
+
+- Keep components ≤200 lines whenever practical; complex logic moves into hooks or shared package.
+- Favor prop-driven dumb components; orchestrate via `GameContext` and custom hooks.
+- Ensure every drag/drop action flows through a single validation pipeline supplied by `@kred/game-logic`.
+- Maintain feature flags (test mode, rotation lock) via context to simplify multiplayer later.
+
+---
+
+## 6. Shared `game-logic` Package
+
+- Pure TypeScript modules with zero DOM or framework dependencies.
+- Entry point exports typed helpers for initialization, validation, reducers, and immutable snapshots.
+- Provide JSON fixtures + deterministic helpers for undo/challenge flows.
+- Publish locally via `pnpm dev --filter=@kred/game-logic` and symlink into both apps through Turborepo.
+- Enforce 100% unit test coverage before backend consumes any API to guarantee parity.
+
+---
+
+## 7. Backend Architecture (NestJS + TypeORM + Socket.io)
+
+```
+apps/backend/src/
+├── main.ts
+├── app.module.ts
+├── database/
+│   ├── entities/ (Game, Player, Move, Snapshot)
+│   ├── migrations/
+│   └── subscribers/
+├── games/
+│   ├── games.controller.ts
+│   ├── games.service.ts
+│   └── games.gateway.ts
+├── moves/
+├── players/
+├── sockets/
+└── common/ (dto, filters, guards)
+```
+
+- **Entities:** Mirror shared types. Store canonical `stateSnapshot` JSONB plus denormalized move history for auditing/rollback.
+- **REST API:** `POST /games`, `POST /games/:code/join`, `POST /games/:code/moves`, `POST /games/:code/challenge`, `GET /games/:code`.
+- **Socket.io Gateway:** Rooms keyed by `roomCode`, events `join`, `move`, `tileAccepted`, `challenge`, `bureaucracyComplete`, `stateSync`.
+- **Validation:** Import `validateMove` + `applyMove` from `@kred/game-logic` to enforce identical rules server-side.
+- **Persistence:** TypeORM migrations targeting PostgreSQL 16. Use connection pooling tuned for single-node deployment.
+- **Observability:** Nest interceptors for request logging and duration metrics (ship to stdout; Kamal logging handles rotation).
+
+---
+
+## 8. Deployment with Kamal + Docker on Hetzner
+
+### 8.1 Infrastructure Plan
+
+- Single Hetzner dedicated server (e.g., AX52) running Docker. Future scaling can add worker nodes; Kamal already supports multi-host.
+- Kamal accessories manage PostgreSQL (`postgres:16`) with mounted volume `data:/var/lib/postgresql/data`.
+- `kamal-proxy` (Traefik) fronts both apps with TLS certificates; subdomains `kredgame.com` (frontend) and `api.kredgame.com` (backend).
+- DNS records point to Hetzner IP; optional Cloudflare proxied DNS is acceptable if websockets are enabled.
+
+### 8.2 Kamal Configuration Best Practices
+
+- Define `service` and `image` per app, plus roles (`web`, optional `workers`).
+- Configure health checks so `GET /up` (or `/api/health`) returns `200 OK`; Kamal only cuts traffic to new containers once these pass.
+- Use rolling boots to avoid simultaneous restarts on multitier setups:
+
+  ```yaml
+  boot:
+    limit: 2
+    wait: 10
+  ```
+
+- Rotate logs via Docker driver to protect disk:
+
+  ```yaml
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+  ```
+
+- Manage secrets with `.env.erb` + `kamal envify` or `kamal env push`; never bake secrets into images. Keep registry credentials under `env.secret`.
+- Use `accessories` for Postgres/Redis and pin versions; map persistent volumes and configure health/backup hooks.
+- Enforce registry logins with `kamal registry login` during CI before deploys.
+- Leverage `kamal audit` and `kamal prune` regularly (or via CI) to inspect history and free disk.
+- Define `healthcheck`, `readiness_delay`, `deploy_timeout`, and `drain_timeout` to keep zero-downtime guarantees explicit.
+
+### 8.3 Docker Image Strategy
+
+- Multi-stage builds with `node:20-alpine`, Corepack-enabled pnpm, and `turbo prune --scope=<app> --docker` to shrink context.
+- Separate `builder`, `installer`, and `runner` stages; copy only compiled `dist` + production `node_modules`.
+- Add `HEALTHCHECK CMD wget -qO- http://localhost:${PORT}/up || exit 1` to images for standalone diagnostics.
+- Run as non-root (`USER node`) inside the container; expose only necessary ports (3000 backend, 4173 frontend preview or 80 behind proxy).
+- Cache dependencies using PNPM store, and consider BuildKit cache (`builder.cache.type: registry`) once registry is online.
+
+### 8.4 Kamal Workflow
+
+1. **Setup**: `kamal setup` → installs Docker, logs into registry, boots kamal-proxy, deploys initial image, provisions accessories.
+2. **Deploy**: `kamal deploy` triggered via CI (GitHub Actions) on tagged releases; uses git SHA tags for traceability.
+3. **Rollback**: `kamal rollback <sha>` if monitoring fails; ensures previous image remains available thanks to `retain_containers`.
+4. **Operational Commands**: `kamal app exec -i bash` for live debugging, `kamal app logs -f` for tailing, `kamal env pull/push` for secret rotation.
+
+---
+
+## 9. Development Workflow (Local)
+
+1. `pnpm install`
+2. `pnpm dev` (runs frontend + backend + watcher via Turborepo)
+3. `docker compose up postgres` (or `pnpm docker:up`) for local DB
+4. `pnpm test` in packages + apps
+5. `pnpm lint && pnpm typecheck` before PRs
+6. `pnpm build --filter=frontend --filter=backend` to mirror CI builds
+
+---
+
+## 10. Testing Strategy
+
+| Layer       | Tooling                                                                       | Coverage Goals                                                |
+| ----------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Game Logic  | Jest + ts-jest + fast-check property tests                                    | 100% on validators, reducers, win/credibility rules           |
+| Frontend    | Vitest/RTL + Playwright                                                       | Component behavior, drag/drop flows, full campaign happy-path |
+| Backend     | Jest + Supertest + Socket.io client harness                                   | REST contract tests, gateway message order, DB migrations     |
+| Integration | Contract tests ensuring shared DTOs stay in sync (`ts-json-schema-generator`) | Fails build if DTO drifts                                     |
+| E2E         | Playwright multi-browser sessions hitting deployed staging env                | Two-player campaign, bureaucracy, reconnect flows             |
+
+---
+
+## 11. Migration Checklist
+
+### Phase 1 – Refactor
+
+- [ ] Finish hooks/context extraction (`useGame`, `useDragAndDrop`)
+- [ ] Replace inline helpers with `@kred/game-logic`
+- [ ] Achieve green unit tests + lint
+- [ ] Document refactor learnings in `REFACTORING_PROGRESS.md`
+
+### Phase 2 – Backend Skeleton
+
+- [ ] Scaffold NestJS project, configure TypeORM + migrations
+- [ ] Mirror shared types via `@kred/game-logic`
+- [ ] Implement `POST /games`, `POST /games/:code/join`, `GET /games/:code`
+- [ ] Add Dockerfile + Kamal config + CI build
+
+### Phase 3 – Real-time Integration
+
+- [ ] Implement Socket.io gateway + client hook
+- [ ] Support optimistic UI + rollback on invalid move
+- [ ] Persist challenges, bureaucracy actions, win states
+- [ ] Smoke test across two browsers
+
+### Phase 4 – Production Deployment
+
+- [ ] Provision Hetzner server + DNS + TLS
+- [ ] Run `kamal setup` for backend + frontend (including Postgres accessory)
+- [ ] Configure logging, healthchecks, boot limits, backups
+- [ ] Add CI job for `kamal deploy`, `kamal audit`, `kamal prune`
+- [ ] Run load test + failover drill + documented rollback
+
+---
+
+## 12. Risks & Open Questions
+
+- **Bandwidth of shared logic:** keep API surface manageable; consider semantic versioning for `@kred/game-logic`.
+- **Single-host limits:** plan monitoring for CPU/memory (Grafana/Prometheus accessory) to know when to scale horizontally.
+- **State drift:** ensure backend snapshots broadcast on reconnect; add checksum field to detect mismatch.
+- **Secret management:** decide on secret store (1Password CLI, Bitwarden, etc.) before production per Kamal env best practices.
+
+---
+
+This unified plan supersedes previous drafts; update this file going forward so the production story lives in a single source of truth.# Kred Game - Production Refactoring & Deployment Plan
 
 ## Project Overview
 

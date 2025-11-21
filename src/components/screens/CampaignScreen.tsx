@@ -29,8 +29,12 @@ import {
 import {
   BOARD_CENTERS,
   validatePieceMovement,
-  isLocationOccupied,
 } from '../../../game';
+
+// Helper function to check if a location is occupied
+const isLocationOccupied = (locationId: string, pieces: Piece[]): boolean => {
+  return pieces.some(p => p.locationId === locationId);
+};
 
 interface CampaignScreenProps {
   gameState: GameState;
@@ -232,6 +236,13 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
   onDoneTakeAdvantageAction,
   onTakeAdvantagePiecePromote,
 }) => {
+  // Create PIECE_IMAGES mapping from PIECE_TYPES
+  const PIECE_IMAGES: Record<string, string> = {
+    MARK: PIECE_TYPES.MARK.imageUrl,
+    HEEL: PIECE_TYPES.HEEL.imageUrl,
+    PAWN: PIECE_TYPES.PAWN.imageUrl,
+  };
+
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
   const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string; pieceId: string; locationId?: string } | null>(null);
@@ -305,11 +316,7 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
     if (boardRotation !== 0 && draggedPieceInfo) {
       const piece = pieces.find(p => p.id === draggedPieceInfo.pieceId);
-      const isInCommunity = piece && isPositionInCommunityCircle(
-        piece.position.left,
-        piece.position.top,
-        BOARD_CENTERS[playerCount]
-      );
+      const isInCommunity = piece && isPositionInCommunityCircle(piece.position);
 
       if (isInCommunity) {
         const angleRad = -boardRotation * (Math.PI / 180);
@@ -323,14 +330,18 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
     }
 
     if (draggedPieceInfo) {
-      const locationId = getLocationIdFromPosition(left, top, playerCount);
-      const isValidDrop = locationId !== null && validatePieceMovement(draggedPieceInfo.pieceId, locationId, pieces, playerCount);
+      const locationId = getLocationIdFromPosition({ left, top }, playerCount);
+      const piece = pieces.find(p => p.id.toString() === draggedPieceInfo.pieceId);
+      const movingPlayerId = piece?.playerId ?? currentPlayerId;
+      const currentLocationId = piece?.locationId;
+      const validationResult = locationId ? validatePieceMovement(draggedPieceInfo.pieceId, currentLocationId, locationId, movingPlayerId, pieces) : { isAllowed: false, reason: '' };
+      const isValidDrop = validationResult.isAllowed;
 
       const finalPosition = locationId
         ? (DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount]?.find(loc => loc.id === locationId)?.position ?? { left, top })
         : { left, top };
 
-      const rotation = calculatePieceRotation(finalPosition.left, finalPosition.top, BOARD_CENTERS[playerCount]);
+      const rotation = calculatePieceRotation(finalPosition, playerCount);
 
       setDropIndicator({
         position: finalPosition,
@@ -365,11 +376,7 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
     if (pieceId) {
       if (boardRotation !== 0) {
         const piece = pieces.find(p => p.id === pieceId);
-        const isInCommunity = piece && isPositionInCommunityCircle(
-          piece.position.left,
-          piece.position.top,
-          BOARD_CENTERS[playerCount]
-        );
+        const isInCommunity = piece && isPositionInCommunityCircle(piece.position);
 
         if (isInCommunity) {
           const angleRad = -boardRotation * (Math.PI / 180);
@@ -382,21 +389,25 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
         }
       }
 
-      const detectedLocationId = getLocationIdFromPosition(left, top, playerCount);
+      const detectedLocationId = getLocationIdFromPosition({ left, top }, playerCount);
 
-      if (detectedLocationId && validatePieceMovement(pieceId, detectedLocationId, pieces, playerCount)) {
-        const location = BOARD_LOCATIONS_BY_PLAYER_COUNT[playerCount]?.find(loc => loc.id === detectedLocationId);
-        if (location) {
-          if (isLocationOccupied(detectedLocationId, pieces)) {
-            const nearestVacantId = findNearestVacantLocation(detectedLocationId, pieces, playerCount);
-            if (nearestVacantId) {
-              const vacantLocation = BOARD_LOCATIONS_BY_PLAYER_COUNT[playerCount]?.find(loc => loc.id === nearestVacantId);
-              if (vacantLocation) {
-                onPieceMove(pieceId, vacantLocation.position, nearestVacantId);
+      if (detectedLocationId) {
+        const piece = pieces.find(p => p.id.toString() === pieceId.toString());
+        const movingPlayerId = piece?.playerId ?? currentPlayerId;
+        const currentLocationId = piece?.locationId;
+        const validationResult = validatePieceMovement(pieceId.toString(), currentLocationId, detectedLocationId, movingPlayerId, pieces);
+        
+        if (validationResult.isAllowed) {
+          const location = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount]?.find(loc => loc.id === detectedLocationId);
+          if (location) {
+            if (isLocationOccupied(detectedLocationId, pieces)) {
+              const nearestVacant = findNearestVacantLocation({ left, top }, pieces, playerCount);
+              if (nearestVacant) {
+                onPieceMove(pieceId, nearestVacant.position, nearestVacant.id);
               }
+            } else {
+              onPieceMove(pieceId, location.position, detectedLocationId);
             }
-          } else {
-            onPieceMove(pieceId, location.position, detectedLocationId);
           }
         }
       }
@@ -489,11 +500,7 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
             const isCurrentPlayerPiece = piece.playerId === currentPlayerId;
             const isDraggable = isTestMode && gameState === 'CAMPAIGN' && isCurrentPlayerPiece;
             const isDropped = piece.id === lastDroppedPieceId;
-            const shouldCounterRotate = !isPositionInCommunityCircle(
-              piece.position.left,
-              piece.position.top,
-              BOARD_CENTERS[playerCount]
-            );
+            const shouldCounterRotate = !isPositionInCommunityCircle(piece.position);
             const counterRotation = (shouldCounterRotate && boardRotation !== 0) ? -boardRotation : 0;
 
             return (
@@ -686,6 +693,7 @@ export const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   const targetSpace: TileReceivingSpace = {
                     ownerId: currentPlayerId === 1 ? 2 : 1,
                     position: { left: 50, top: 50 },
+                    rotation: 0,
                   };
                   onPlaceTile(tile.id, targetSpace);
                 }}

@@ -1,0 +1,40 @@
+
+> kred@0.0.0 build
+> vite build
+
+vite v6.3.6 building for production...
+transforming...
+✓ 53 modules transformed.
+✗ Build failed in 204ms
+error during build:
+src/components/screens/CampaignScreen.tsx (32:2): "isLocationOccupied" is not exported by "game.ts", imported by "src/components/screens/CampaignScreen.tsx".
+file: /Users/cody/Dev/kred-online/src/components/screens/CampaignScreen.tsx:32:2
+
+30:   BOARD_CENTERS,
+31:   validatePieceMovement,
+32:   isLocationOccupied,
+      ^
+33: } from '../../../game';
+
+    at getRollupError (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at error (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/parseAst.js:397:42)
+    at Module.error (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:16939:16)
+    at Module.traceVariable (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:17391:29)
+    at ModuleScope.findVariable (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:15061:39)
+    at ReturnValueScope.findVariable (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:5642:38)
+    at FunctionBodyScope.findVariable (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:5642:38)
+    at ReturnValueScope.findVariable (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:5642:38)
+    at FunctionBodyScope.findVariable (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:5642:38)
+    at TrackingScope.findVariable (file:///Users/cody/Dev/kred-online/node_modules/rollup/dist/es/shared/node-entry.js:5642:38)
+
+> kred@0.0.0 build
+> vite build
+
+vite v6.3.6 building for production...
+transforming...
+✓ 53 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.39 kB │ gzip:  0.27 kB
+dist/assets/index-C2Ht35dX.js  325.28 kB │ gzip: 94.82 kB
+✓ built in 406ms
