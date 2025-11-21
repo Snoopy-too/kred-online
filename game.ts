@@ -1,4 +1,10 @@
 import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace, Player, GameState, DropLocation, BankSpace, TrackedMove, DefinedMoveType, MoveRequirementType, DefinedMove } from './src/types';
+import { TOTAL_TILES, PLAYER_OPTIONS, BOARD_IMAGE_URLS } from './src/config/constants';
+import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from './src/config/tiles';
+import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from './src/config/pieces';
+
+// Re-export for backwards compatibility
+export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS, PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT };
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
@@ -1215,77 +1221,7 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: { [key: number]: BankSpace[]
   5: FIVE_PLAYER_CREDIBILITY_LOCATIONS,
 };
 
-export const PIECE_TYPES: { [key: string]: GamePieceInfo } = {
-  MARK: { name: 'Mark', imageUrl: './images/mark-transparent_bg.png' },
-  HEEL: { name: 'Heel', imageUrl: './images/heel-transparent_bg.png' },
-  PAWN: { name: 'Pawn', imageUrl: './images/pawn-transparent_bg.png' },
-};
-
-export const PIECE_COUNTS_BY_PLAYER_COUNT: {
-  [playerCount: number]: { [pieceType: string]: number };
-} = {
-  3: {
-    MARK: 12,
-    HEEL: 9,
-    PAWN: 3,
-  },
-  4: {
-    MARK: 14,
-    HEEL: 13,
-    PAWN: 4,
-  },
-  5: {
-    MARK: 18,
-    HEEL: 17,
-    PAWN: 5,
-  },
-};
-
-
 // --- Game Constants ---
-
-export const PLAYER_OPTIONS = [3, 4, 5];
-
-export const BOARD_IMAGE_URLS: { [key: number]: string } = {
-  3: './images/3player_board.jpg',
-  4: './images/4player_board.jpg',
-  5: './images/5player_board.jpg',
-};
-
-const TOTAL_TILES = 24;
-export const TILE_IMAGE_URLS = Array.from({ length: TOTAL_TILES }, (_, i) => {
-  const num = String(i + 1).padStart(2, '0');
-  return `./images/${num}.svg`;
-});
-
-// Kredcoin values for each tile (₭-)
-export const TILE_KREDCOIN_VALUES: { [key: number]: number } = {
-  1: 1,
-  2: 2,
-  3: 0,
-  4: 1,
-  5: 2,
-  6: 3,
-  7: 4,
-  8: 5,
-  9: 1,
-  10: 2,
-  11: 4,
-  12: 5,
-  13: 5,
-  14: 6,
-  15: 3,
-  16: 4,
-  17: 3,
-  18: 4,
-  19: 6,
-  20: 7,
-  21: 8,
-  22: 7,
-  23: 8,
-  24: 9,
-  // Blank tile (if needed) = 0
-};
 
 // Bureaucracy menu for 3 and 4 player modes
 export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
