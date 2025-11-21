@@ -1,4 +1,4 @@
-
+import { Piece, GamePieceInfo } from './src/types';
 
 // --- Type Definitions ---
 
@@ -18,21 +18,7 @@ export interface Player {
 export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLAYED' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE' | 'CORRECTION_REQUIRED' | 'BUREAUCRACY';
 
 // --- Game Piece Definitions ---
-
-export interface GamePieceInfo {
-  name: string;
-  imageUrl: string;
-}
-
-// Represents a piece instance on the game board
-export interface Piece {
-  id:string;
-  name: string;
-  imageUrl: string;
-  position: { top: number; left: number }; // in percentage
-  rotation: number;
-  locationId?: string; // ID of the drop location where this piece is placed
-}
+// (Types moved to src/types/piece.ts)
 
 // Represents a tile instance on the game board
 export interface BoardTile {
