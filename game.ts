@@ -1,15 +1,8 @@
-import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace } from './src/types';
+import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace, Player } from './src/types';
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
-
-export interface Player {
-  id: number;
-  hand: Tile[];
-  keptTiles: Tile[];
-  bureaucracyTiles: Tile[];
-  credibility: number;
-}
+// (Player type moved to src/types/player.ts)
 
 export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLAYED' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE' | 'CORRECTION_REQUIRED' | 'BUREAUCRACY';
 
