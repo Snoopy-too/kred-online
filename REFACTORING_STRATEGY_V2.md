@@ -41,11 +41,13 @@
 
 ---
 
-## Standard Game Architecture
+## Hybrid Architecture: Traditional React + Game-Specific
+
+Combines standard React best practices with game-specific organization.
 
 ```
 src/
-├── types/              # All TypeScript interfaces/types
+├── types/              # TypeScript interfaces/types (game-specific)
 │   ├── index.ts        # Re-exports all types
 │   ├── game.ts         # Game state, phases
 │   ├── player.ts       # Player data structures
@@ -54,42 +56,30 @@ src/
 │   ├── move.ts         # Move types and tracking
 │   └── ui.ts           # UI-specific types
 │
-├── config/             # Static configuration data
+├── config/             # Static configuration data (game-specific)
 │   ├── index.ts        # Re-exports all config
-│   ├── constants.ts    # Game constants (player counts, etc.)
-│   ├── pieces.ts       # Piece definitions and counts
-│   ├── tiles.ts        # Tile images and values
+│   ├── constants.ts    # Game constants (player counts, etc.) ✅ EXISTS
+│   ├── pieces.ts       # Piece definitions and counts ✅ EXISTS
+│   ├── tiles.ts        # Tile images and values ✅ EXISTS
 │   ├── board.ts        # Board layouts by player count
 │   └── rules.ts        # Rule definitions (moves, requirements)
 │
-├── game/               # Core game logic (pure functions)
+├── game/               # Core game logic (pure functions, game-specific)
 │   ├── index.ts        # Re-exports all game logic
 │   ├── initialization.ts   # Game setup functions
 │   ├── validation.ts       # Move validation logic
 │   ├── state-updates.ts    # State mutation functions
 │   └── calculations.ts     # Derived state calculations
 │
-├── rules/              # Game rules enforcement
+├── rules/              # Game rules enforcement (game-specific)
 │   ├── index.ts        # Re-exports all rules
 │   ├── adjacency.ts    # Seat/rostrum adjacency
 │   ├── movement.ts     # Piece movement rules
 │   ├── credibility.ts  # Credibility system
 │   └── win-conditions.ts   # Win checking
 │
-├── utils/              # Helper utilities
-│   ├── index.ts        # Re-exports all utils
-│   ├── positioning.ts  # Coordinate/rotation math
-│   ├── formatting.ts   # Display formatting
-│   └── array.ts        # Array helpers (shuffle, etc.)
-│
-├── hooks/              # React hooks
-│   ├── index.ts
-│   ├── useGameState.ts     # Central state management
-│   ├── useDragAndDrop.ts   # Drag-drop logic
-│   └── useRotation.ts      # Board rotation logic
-│
-├── components/         # React components
-│   ├── screens/        # Full-screen game phases
+├── components/         # React components (traditional React)
+│   ├── screens/        # Full-screen game phases (page-level)
 │   │   ├── PlayerSelectionScreen.tsx
 │   │   ├── DraftingScreen.tsx
 │   │   ├── CampaignScreen.tsx
@@ -102,12 +92,51 @@ src/
 │       ├── Modal.tsx
 │       └── Button.tsx
 │
+├── hooks/              # Custom React hooks (traditional React)
+│   ├── index.ts
+│   ├── useGameState.ts     # Central state management
+│   ├── useDragAndDrop.ts   # Drag-drop logic
+│   ├── useRotation.ts      # Board rotation logic
+│   └── useSocket.ts        # Socket.IO client hook (future)
+│
+├── contexts/           # React Context providers (traditional React)
+│   ├── index.ts
+│   └── GameContext.tsx     # Global game state context
+│
+├── services/           # External services/API (traditional React)
+│   ├── index.ts
+│   └── socket.ts           # Socket.IO client configuration (future)
+│
+├── utils/              # Helper utilities (shared)
+│   ├── index.ts        # Re-exports all utils
+│   ├── positioning.ts  # Coordinate/rotation math
+│   ├── formatting.ts   # Display formatting
+│   └── array.ts        # Array helpers (shuffle, etc.)
+│
+├── assets/             # Static assets (traditional React)
+│   ├── images/         # Game images (currently in /public/images)
+│   └── fonts/          # Custom fonts (if needed)
+│
 └── __tests__/          # Test files mirror src structure
+    ├── config/         # ✅ EXISTS (33 tests)
     ├── types/
-    ├── config/
     ├── game/
     ├── rules/
-    └── utils/
+    ├── components/
+    ├── hooks/
+    └── integration/    # ✅ EXISTS (55 tests)
+
+**Folder Creation Strategy**:
+- ✅ Created immediately: config/, types/, game/, rules/, utils/
+- ⏳ Created as needed: components/, hooks/, contexts/, services/, assets/
+- Game-specific folders: types/, config/, game/, rules/
+- Traditional React folders: components/, hooks/, contexts/, services/
+- Shared folders: utils/, assets/, __tests__/
+
+**Current Progress** (as of merge):
+- ✅ Phase 0: Test infrastructure complete (88 tests passing)
+- ✅ Phase 2: Partially complete (constants, tiles, pieces extracted)
+- ⏳ Phase 2: Continue with board.ts, rules.ts, bureaucracy.ts
 ```
 
 ---
@@ -226,29 +255,32 @@ describe('App smoke tests', () => {
 
 **Goal**: All static data in `src/config/`
 
-1. Create `src/config/constants.ts`
-   - Move `PLAYER_OPTIONS` → test → commit
-   - Move `TOTAL_TILES` → test → commit
-2. Create `src/config/pieces.ts`
-   - Move `PIECE_TYPES` → test → commit
-   - Move `PIECE_COUNTS_BY_PLAYER_COUNT` → test → commit
-3. Create `src/config/tiles.ts`
-   - Move `TILE_IMAGE_URLS` → test → commit
-   - Move `TILE_KREDCOIN_VALUES` → test → commit
-   - Move `BOARD_IMAGE_URLS` → test → commit
-4. Create `src/config/board.ts`
+**Status**:
+- ✅ `src/config/constants.ts` - DONE (TOTAL_TILES, PLAYER_OPTIONS, BOARD_IMAGE_URLS)
+- ✅ `src/config/pieces.ts` - DONE (PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT)
+- ✅ `src/config/tiles.ts` - DONE (TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES)
+- ⏳ `src/config/board.ts` - NEXT
+- ⏳ `src/config/rules.ts` - NEXT
+
+**Remaining Work**:
+
+4. Create `src/config/board.ts` with tests
    - Move `DROP_LOCATIONS_BY_PLAYER_COUNT` → test → commit
    - Move `TILE_SPACES_BY_PLAYER_COUNT` → test → commit
    - Move `BANK_SPACES_BY_PLAYER_COUNT` → test → commit
    - Move `CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT` → test → commit
-5. Create `src/config/rules.ts`
+   - Move `PLAYER_PERSPECTIVE_ROTATIONS` → test → commit
+5. Create `src/config/rules.ts` with tests
    - Move `DEFINED_MOVES` → test → commit
    - Move `TILE_PLAY_OPTIONS` → test → commit
    - Move `TILE_REQUIREMENTS` → test → commit
    - Move `ROSTRUM_SUPPORT_RULES` → test → commit
    - Move `ROSTRUM_ADJACENCY_BY_PLAYER_COUNT` → test → commit
+6. Create `src/config/bureaucracy.ts` with tests
+   - Move `THREE_FOUR_PLAYER_BUREAUCRACY_MENU` → test → commit
+   - Move `FIVE_PLAYER_BUREAUCRACY_MENU` → test → commit
 
-**Checkpoint**: ~15-20 commits, all tests passing, config fully extracted
+**Checkpoint**: ~15-20 commits total, all tests passing, config fully extracted
 
 ### Phase 3: Extract Pure Utility Functions
 
@@ -302,8 +334,38 @@ describe('App smoke tests', () => {
    - Extract state management → test → commit
 2. Create `src/hooks/useDragAndDrop.ts`
    - Extract drag-drop logic → test → commit
+3. Create `src/hooks/useRotation.ts`
+   - Extract board rotation logic → test → commit
 
-**Checkpoint**: ~2-5 commits, all tests passing
+**Checkpoint**: ~3-5 commits, all tests passing
+
+### Phase 6b: React Contexts (When Needed)
+
+**Goal**: Global state providers in `src/contexts/`
+
+**Note**: Create only when needed for global state management or when socket integration begins.
+
+1. Create `src/contexts/GameContext.tsx` (optional, if needed)
+   - Wrap game state in context → test → commit
+
+**Checkpoint**: ~1-2 commits, all tests passing
+
+### Phase 6c: Services Layer (Future - Socket Integration)
+
+**Goal**: External services in `src/services/`
+
+**Note**: This will be created when implementing multiplayer socket functionality.
+
+1. Create `src/services/socket.ts`
+   - Socket.IO client configuration
+   - Connection management
+   - Event handlers
+2. Create `src/hooks/useSocket.ts`
+   - Custom hook for socket connection
+   - State management for connection status
+   - Message handlers
+
+**Checkpoint**: Created when socket implementation begins
 
 ### Phase 7: Extract Components
 
