@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   PLAYER_OPTIONS,
   BOARD_IMAGE_URLS,
@@ -52,152 +51,173 @@ import {
   validateMoveType,
   checkBureaucracyWinCondition,
   validatePieceMovement,
-} from './game';
-import { ALERTS, TIMEOUTS, DEFAULTS } from './constants';
-import { getPlayerName, getPlayerNameSimple, getPlayerById, formatWinnerNames, isPlayerDomain, isCommunityLocation } from './utils';
+} from "./game";
+import { ALERTS, TIMEOUTS, DEFAULTS } from "./constants";
+import {
+  getPlayerName,
+  getPlayerNameSimple,
+  getPlayerById,
+  formatWinnerNames,
+  isPlayerDomain,
+  isCommunityLocation,
+} from "./utils";
 import {
   PlayerSelectionScreen,
   DraftingScreen,
   CampaignScreen,
   BureaucracyScreen,
-} from './src/components/screens';
+} from "./src/components/screens";
+import { useGameState } from "./src/hooks";
 
 // --- Helper Components ---
 
 const App: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState>('PLAYER_SELECTION');
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [pieces, setPieces] = useState<Piece[]>([]);
-  const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
-  const [bankedTiles, setBankedTiles] = useState<(BoardTile & { faceUp: boolean })[]>([]);
-  const [playerCount, setPlayerCount] = useState<number>(0);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [draftRound, setDraftRound] = useState(1);
-  const [isTestMode, setIsTestMode] = useState(false);
-  const [dummyTile, setDummyTile] = useState<{ position: { top: number; left: number }; rotation: number } | null>(null);
-  const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
-  const [showGridOverlay, setShowGridOverlay] = useState(false);
-  const [credibilityRotationAdjustments, setCredibilityRotationAdjustments] = useState<{ [playerId: number]: number }>({});
-  const [lastDroppedPosition, setLastDroppedPosition] = useState<{ top: number; left: number } | null>(null);
-  const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(null);
-  const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
-  const [revealedTileId, setRevealedTileId] = useState<string | null>(null);
-
-  // State for new acceptance/challenge flow
-  const [tileTransaction, setTileTransaction] = useState<{ placerId: number; receiverId: number; boardTileId: string; tile: Tile; } | null>(null);
-  const [bystanders, setBystanders] = useState<Player[]>([]);
-  const [bystanderIndex, setBystanderIndex] = useState(0);
-  const [isPrivatelyViewing, setIsPrivatelyViewing] = useState(false);
-  const [showChallengeRevealModal, setShowChallengeRevealModal] = useState(false);
-  const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
-  const [placerViewingTileId, setPlacerViewingTileId] = useState<string | null>(null);
-  const [giveReceiverViewingTileId, setGiveReceiverViewingTileId] = useState<string | null>(null);
-
-  // State for Game Log
-  const [gameLog, setGameLog] = useState<string[]>([]);
-  const [piecesAtTurnStart, setPiecesAtTurnStart] = useState<Piece[]>([]);
-
-  // State for collapsible test mode modules
-  const [isGameLogExpanded, setIsGameLogExpanded] = useState(true);
-  const [isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded] = useState(false);
-  const [isCredibilityRulesExpanded, setIsCredibilityRulesExpanded] = useState(false);
-  const [isPieceTrackerExpanded, setIsPieceTrackerExpanded] = useState(false);
-
-  // State for new tile play workflow
-  const [playedTile, setPlayedTile] = useState<{
-    tileId: string;
-    playerId: number;
-    receivingPlayerId: number;
-    movesPerformed: TrackedMove[];
-    originalPieces: Piece[];
-    originalBoardTiles: BoardTile[];
-  } | null>(null);
-  const [movesThisTurn, setMovesThisTurn] = useState<TrackedMove[]>([]);
-  const [receiverAcceptance, setReceiverAcceptance] = useState<boolean | null>(null); // null = awaiting decision, true = accepted, false = rejected
-  const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
-  const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
-  const [tileRejected, setTileRejected] = useState(false);
-  const [showBonusMoveModal, setShowBonusMoveModal] = useState(false);
-  const [bonusMovePlayerId, setBonusMovePlayerId] = useState<number | null>(null);
-  const [bonusMoveWasCompleted, setBonusMoveWasCompleted] = useState(false);
-  const [piecesBeforeBonusMove, setPiecesBeforeBonusMove] = useState<Piece[]>([]);
-  const [piecesAtCorrectionStart, setPiecesAtCorrectionStart] = useState<Piece[]>([]);
-  const [showMoveCheckResult, setShowMoveCheckResult] = useState(false);
-  const [moveCheckResult, setMoveCheckResult] = useState<{
-    isMet: boolean;
-    requiredMoves: TrackedMove[];
-    performedMoves: TrackedMove[];
-    missingMoves: TrackedMove[];
-    hasExtraMoves: boolean;
-    extraMoves: string[];
-    moveValidations?: Array<{
-      moveType: string;
-      isValid: boolean;
-      reason: string;
-      fromLocationId?: string;
-      toLocationId?: string;
-    }>;
-  } | null>(null);
-
-  const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
-  const [challengeResultMessage, setChallengeResultMessage] = useState<string | null>(null);
-  const [tilePlayerMustWithdraw, setTilePlayerMustWithdraw] = useState(false);
-
-  // State for Take Advantage (challenge reward)
-  const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
-  const [takeAdvantageChallengerId, setTakeAdvantageChallengerId] = useState<number | null>(null);
-  const [takeAdvantageChallengerCredibility, setTakeAdvantageChallengerCredibility] = useState<number>(0);
-  const [showTakeAdvantageTileSelection, setShowTakeAdvantageTileSelection] = useState(false);
-  const [selectedTilesForAdvantage, setSelectedTilesForAdvantage] = useState<Tile[]>([]);
-  const [totalKredcoinForAdvantage, setTotalKredcoinForAdvantage] = useState(0);
-  const [showTakeAdvantageMenu, setShowTakeAdvantageMenu] = useState(false);
-  const [takeAdvantagePurchase, setTakeAdvantagePurchase] = useState<BureaucracyPurchase | null>(null);
-  const [takeAdvantagePiecesSnapshot, setTakeAdvantagePiecesSnapshot] = useState<Piece[]>([]);
-  const [takeAdvantageValidationError, setTakeAdvantageValidationError] = useState<string | null>(null);
-
-  // State for custom alert modals
-  const [alertModal, setAlertModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: 'error' | 'warning' | 'info';
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
-
-  // Helper function to show styled alert modals
-  const showAlert = (title: string, message: string, type: 'error' | 'warning' | 'info' = 'info') => {
-    setAlertModal({
-      isOpen: true,
-      title,
-      message,
-      type,
-    });
-  };
-
-  // State for tracking moved pieces this turn (one move per piece restriction)
-  const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(new Set());
-
-  // Bureaucracy Phase State
-  const [bureaucracyStates, setBureaucracyStates] = useState<BureaucracyPlayerState[]>([]);
-  const [bureaucracyTurnOrder, setBureaucracyTurnOrder] = useState<number[]>([]);
-  const [currentBureaucracyPlayerIndex, setCurrentBureaucracyPlayerIndex] = useState(0);
-  const [currentBureaucracyPurchase, setCurrentBureaucracyPurchase] = useState<BureaucracyPurchase | null>(null);
-  const [showBureaucracyMenu, setShowBureaucracyMenu] = useState(true);
-  const [bureaucracyValidationError, setBureaucracyValidationError] = useState<string | null>(null);
-  const [bureaucracyMoves, setBureaucracyMoves] = useState<TrackedMove[]>([]);
-  const [bureaucracySnapshot, setBureaucracySnapshot] = useState<{ pieces: Piece[]; boardTiles: BoardTile[] } | null>(null);
-  const [showBureaucracyMoveCheckResult, setShowBureaucracyMoveCheckResult] = useState(false);
-  const [bureaucracyMoveCheckResult, setBureaucracyMoveCheckResult] = useState<{ isValid: boolean; reason: string } | null>(null);
-
-  // State for tracking pieces moved to community that are "pending" until acceptance/challenge resolved
-  const [pendingCommunityPieces, setPendingCommunityPieces] = useState<Set<string>>(new Set());
-
-  // State for phase transition message
-  const [showBureaucracyTransition, setShowBureaucracyTransition] = useState(false);
+  // Use custom hook for all game state
+  const {
+    gameState,
+    setGameState,
+    players,
+    setPlayers,
+    pieces,
+    setPieces,
+    boardTiles,
+    setBoardTiles,
+    bankedTiles,
+    setBankedTiles,
+    playerCount,
+    setPlayerCount,
+    currentPlayerIndex,
+    setCurrentPlayerIndex,
+    draftRound,
+    setDraftRound,
+    isTestMode,
+    setIsTestMode,
+    dummyTile,
+    setDummyTile,
+    boardRotationEnabled,
+    setBoardRotationEnabled,
+    showGridOverlay,
+    setShowGridOverlay,
+    credibilityRotationAdjustments,
+    setCredibilityRotationAdjustments,
+    lastDroppedPosition,
+    setLastDroppedPosition,
+    lastDroppedPieceId,
+    setLastDroppedPieceId,
+    hasPlayedTileThisTurn,
+    setHasPlayedTileThisTurn,
+    revealedTileId,
+    setRevealedTileId,
+    movedPiecesThisTurn,
+    setMovedPiecesThisTurn,
+    movesThisTurn,
+    setMovesThisTurn,
+    piecesAtTurnStart,
+    setPiecesAtTurnStart,
+    tileTransaction,
+    setTileTransaction,
+    bystanders,
+    setBystanders,
+    bystanderIndex,
+    setBystanderIndex,
+    isPrivatelyViewing,
+    setIsPrivatelyViewing,
+    showChallengeRevealModal,
+    setShowChallengeRevealModal,
+    challengedTile,
+    setChallengedTile,
+    placerViewingTileId,
+    setPlacerViewingTileId,
+    giveReceiverViewingTileId,
+    setGiveReceiverViewingTileId,
+    playedTile,
+    setPlayedTile,
+    receiverAcceptance,
+    setReceiverAcceptance,
+    challengeOrder,
+    setChallengeOrder,
+    currentChallengerIndex,
+    setCurrentChallengerIndex,
+    tileRejected,
+    setTileRejected,
+    challengeResultMessage,
+    setChallengeResultMessage,
+    tilePlayerMustWithdraw,
+    setTilePlayerMustWithdraw,
+    pendingCommunityPieces,
+    setPendingCommunityPieces,
+    showBonusMoveModal,
+    setShowBonusMoveModal,
+    bonusMovePlayerId,
+    setBonusMovePlayerId,
+    bonusMoveWasCompleted,
+    setBonusMoveWasCompleted,
+    piecesBeforeBonusMove,
+    setPiecesBeforeBonusMove,
+    piecesAtCorrectionStart,
+    setPiecesAtCorrectionStart,
+    showMoveCheckResult,
+    setShowMoveCheckResult,
+    moveCheckResult,
+    setMoveCheckResult,
+    showPerfectTileModal,
+    setShowPerfectTileModal,
+    showTakeAdvantageModal,
+    setShowTakeAdvantageModal,
+    takeAdvantageChallengerId,
+    setTakeAdvantageChallengerId,
+    takeAdvantageChallengerCredibility,
+    setTakeAdvantageChallengerCredibility,
+    showTakeAdvantageTileSelection,
+    setShowTakeAdvantageTileSelection,
+    selectedTilesForAdvantage,
+    setSelectedTilesForAdvantage,
+    totalKredcoinForAdvantage,
+    setTotalKredcoinForAdvantage,
+    showTakeAdvantageMenu,
+    setShowTakeAdvantageMenu,
+    takeAdvantagePurchase,
+    setTakeAdvantagePurchase,
+    takeAdvantagePiecesSnapshot,
+    setTakeAdvantagePiecesSnapshot,
+    takeAdvantageValidationError,
+    setTakeAdvantageValidationError,
+    bureaucracyStates,
+    setBureaucracyStates,
+    bureaucracyTurnOrder,
+    setBureaucracyTurnOrder,
+    currentBureaucracyPlayerIndex,
+    setCurrentBureaucracyPlayerIndex,
+    currentBureaucracyPurchase,
+    setCurrentBureaucracyPurchase,
+    showBureaucracyMenu,
+    setShowBureaucracyMenu,
+    bureaucracyValidationError,
+    setBureaucracyValidationError,
+    bureaucracyMoves,
+    setBureaucracyMoves,
+    bureaucracySnapshot,
+    setBureaucracySnapshot,
+    showBureaucracyMoveCheckResult,
+    setShowBureaucracyMoveCheckResult,
+    bureaucracyMoveCheckResult,
+    setBureaucracyMoveCheckResult,
+    showBureaucracyTransition,
+    setShowBureaucracyTransition,
+    gameLog,
+    setGameLog,
+    isGameLogExpanded,
+    setIsGameLogExpanded,
+    isCredibilityAdjusterExpanded,
+    setIsCredibilityAdjusterExpanded,
+    isCredibilityRulesExpanded,
+    setIsCredibilityRulesExpanded,
+    isPieceTrackerExpanded,
+    setIsPieceTrackerExpanded,
+    alertModal,
+    setAlertModal,
+    showAlert,
+  } = useGameState();
 
   // State for finish turn confirmation
   const [showFinishTurnConfirm, setShowFinishTurnConfirm] = useState<{
@@ -209,10 +229,15 @@ const App: React.FC = () => {
   });
 
   const closeAlert = () => {
-    setAlertModal(prev => ({ ...prev, isOpen: false }));
+    setAlertModal((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const handleStartGame = (count: number, testMode: boolean, skipDraft: boolean, skipCampaign: boolean) => {
+  const handleStartGame = (
+    count: number,
+    testMode: boolean,
+    skipDraft: boolean,
+    skipCampaign: boolean
+  ) => {
     setPlayerCount(count);
     setIsTestMode(testMode);
     setMovedPiecesThisTurn(new Set());
@@ -226,7 +251,7 @@ const App: React.FC = () => {
       for (let i = 1; i <= 24; i++) {
         allTiles.push({
           id: i,
-          url: `./images/${String(i).padStart(2, '0')}.svg`
+          url: `./images/${String(i).padStart(2, "0")}.svg`,
         });
       }
 
@@ -248,12 +273,15 @@ const App: React.FC = () => {
       // Distribute tiles to each player's bureaucracy tiles
       const playersWithTiles = initialPlayers.map((player, index) => {
         const startIdx = index * tilesPerPlayer;
-        const playerTiles = shuffledTiles.slice(startIdx, startIdx + tilesPerPlayer);
+        const playerTiles = shuffledTiles.slice(
+          startIdx,
+          startIdx + tilesPerPlayer
+        );
         return {
           ...player,
           hand: [],
           keptTiles: [],
-          bureaucracyTiles: playerTiles
+          bureaucracyTiles: playerTiles,
         };
       });
 
@@ -265,28 +293,29 @@ const App: React.FC = () => {
 
       // Initialize Bureaucracy phase
       const turnOrder = getBureaucracyTurnOrder(playersWithTiles);
-      const initialStates: BureaucracyPlayerState[] = playersWithTiles.map(p => ({
-        playerId: p.id,
-        initialKredcoin: calculatePlayerKredcoin(p),
-        remainingKredcoin: calculatePlayerKredcoin(p),
-        turnComplete: false,
-        purchases: []
-      }));
+      const initialStates: BureaucracyPlayerState[] = playersWithTiles.map(
+        (p) => ({
+          playerId: p.id,
+          initialKredcoin: calculatePlayerKredcoin(p),
+          remainingKredcoin: calculatePlayerKredcoin(p),
+          turnComplete: false,
+          purchases: [],
+        })
+      );
 
       setBureaucracyTurnOrder(turnOrder);
       setBureaucracyStates(initialStates);
       setCurrentBureaucracyPlayerIndex(0);
       setShowBureaucracyMenu(true);
-      setGameState('BUREAUCRACY');
+      setGameState("BUREAUCRACY");
       setCurrentPlayerIndex(0);
-
     } else if (skipDraft) {
       // Skip draft phase only - distribute tiles randomly to hand
       const allTiles: Tile[] = [];
       for (let i = 1; i <= 24; i++) {
         allTiles.push({
           id: i,
-          url: `./images/${String(i).padStart(2, '0')}.svg`
+          url: `./images/${String(i).padStart(2, "0")}.svg`,
         });
       }
 
@@ -312,7 +341,7 @@ const App: React.FC = () => {
           ...player,
           hand: playerTiles,
           keptTiles: playerTiles,
-          bureaucracyTiles: []
+          bureaucracyTiles: [],
         };
       });
 
@@ -321,30 +350,31 @@ const App: React.FC = () => {
       // Initialize campaign pieces and start campaign
       const campaignPieces = initializeCampaignPieces(count);
       setPieces(campaignPieces);
-      setPiecesAtTurnStart(campaignPieces.map(p => ({ ...p })));
+      setPiecesAtTurnStart(campaignPieces.map((p) => ({ ...p })));
 
       // Player with tile 03 goes first
       const startingTileId = 3;
-      const startingPlayerIndex = playersWithTiles.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
+      const startingPlayerIndex = playersWithTiles.findIndex(
+        (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
+      );
       if (startingPlayerIndex !== -1) {
         setCurrentPlayerIndex(startingPlayerIndex);
       } else {
         setCurrentPlayerIndex(0);
       }
 
-      setGameState('CAMPAIGN');
-
+      setGameState("CAMPAIGN");
     } else {
       // Normal game flow - start with drafting
       setPlayers(initialPlayers);
-      setGameState('DRAFTING');
+      setGameState("DRAFTING");
       setCurrentPlayerIndex(0);
       setDraftRound(1);
     }
   };
 
   const handleNewGame = () => {
-    setGameState('PLAYER_SELECTION');
+    setGameState("PLAYER_SELECTION");
     setPlayers([]);
     setPlayerCount(0);
     setPieces([]);
@@ -376,14 +406,14 @@ const App: React.FC = () => {
     setGiveReceiverViewingTileId(null);
     setTilePlayerMustWithdraw(false);
   };
-  
+
   const handleSelectTile = (selectedTile: Tile) => {
     const updatedPlayers = players.map((player, index) => {
       if (index === currentPlayerIndex) {
         return {
           ...player,
           keptTiles: [...player.keptTiles, selectedTile],
-          hand: player.hand.filter(tile => tile.id !== selectedTile.id),
+          hand: player.hand.filter((tile) => tile.id !== selectedTile.id),
         };
       }
       return player;
@@ -391,14 +421,14 @@ const App: React.FC = () => {
 
     const nextPlayerIndex = currentPlayerIndex + 1;
     if (nextPlayerIndex >= playerCount) {
-      const handsToPass = updatedPlayers.map(p => p.hand);
+      const handsToPass = updatedPlayers.map((p) => p.hand);
       const playersWithPassedHands = updatedPlayers.map((p, i) => {
         const passingPlayerIndex = (i - 1 + playerCount) % playerCount;
         return { ...p, hand: handsToPass[passingPlayerIndex] };
       });
 
       if (playersWithPassedHands[0].hand.length === 0) {
-        setGameState('CAMPAIGN');
+        setGameState("CAMPAIGN");
 
         // Initialize pieces for campaign: Marks at seats 1,3,5 + Heels/Pawns in community
         const initialPieces = initializeCampaignPieces(playerCount);
@@ -407,10 +437,19 @@ const App: React.FC = () => {
 
         // Player with tile 03.svg goes first in Campaign
         const startingTileId = 3;
-        const startingPlayerIndex = playersWithPassedHands.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
-        console.log('startingPlayerIndex:', startingPlayerIndex, 'playersWithPassedHands:', playersWithPassedHands);
+        const startingPlayerIndex = playersWithPassedHands.findIndex(
+          (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
+        );
+        console.log(
+          "startingPlayerIndex:",
+          startingPlayerIndex,
+          "playersWithPassedHands:",
+          playersWithPassedHands
+        );
 
-        setCurrentPlayerIndex(startingPlayerIndex !== -1 ? startingPlayerIndex : 0);
+        setCurrentPlayerIndex(
+          startingPlayerIndex !== -1 ? startingPlayerIndex : 0
+        );
         setHasPlayedTileThisTurn(false);
         setPlayers(playersWithPassedHands);
       } else {
@@ -423,20 +462,27 @@ const App: React.FC = () => {
       setCurrentPlayerIndex(nextPlayerIndex);
     }
   };
-  
-  const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
+
+  const handlePieceMove = (
+    pieceId: string,
+    newPosition: { top: number; left: number },
+    locationId?: string
+  ) => {
     // Check if this piece has already been moved this turn
     // This includes pieces that have been moved to community (pending community pieces)
-    if (movedPiecesThisTurn.has(pieceId) || pendingCommunityPieces.has(pieceId)) {
+    if (
+      movedPiecesThisTurn.has(pieceId) ||
+      pendingCommunityPieces.has(pieceId)
+    ) {
       showAlert(
         ALERTS.PIECE_ALREADY_MOVED.title,
         ALERTS.PIECE_ALREADY_MOVED.message,
-        'warning'
+        "warning"
       );
       return;
     }
 
-    const movingPiece = pieces.find(p => p.id === pieceId);
+    const movingPiece = pieces.find((p) => p.id === pieceId);
     if (!movingPiece) return;
 
     // Check if player is trying to move opponent's piece within opponent's domain
@@ -444,29 +490,37 @@ const App: React.FC = () => {
       const currentPlayer = players[currentPlayerIndex];
       if (!currentPlayer) return;
 
-      const validation = validatePieceMovement(pieceId, movingPiece.locationId, locationId, currentPlayer.id, pieces);
+      const validation = validatePieceMovement(
+        pieceId,
+        movingPiece.locationId,
+        locationId,
+        currentPlayer.id,
+        pieces
+      );
       if (!validation.isAllowed) {
-        showAlert(
-          'Invalid Move',
-          validation.reason,
-          'error'
-        );
+        showAlert("Invalid Move", validation.reason, "error");
         return;
       }
     }
 
     // Check community movement restrictions before allowing the move
-    if (movingPiece && movingPiece.locationId?.includes('community') && locationId && !locationId.includes('community')) {
+    if (
+      movingPiece &&
+      movingPiece.locationId?.includes("community") &&
+      locationId &&
+      !locationId.includes("community")
+    ) {
       // Piece is moving FROM community, check restrictions
       const pieceName = movingPiece.name.toLowerCase();
 
       // Marks can always move from community
-      if (pieceName !== 'mark') {
+      if (pieceName !== "mark") {
         // Check if Marks are in community (excluding pending pieces)
-        const marksInCommunity = pieces.some(p =>
-          p.locationId?.includes('community') &&
-          p.name.toLowerCase() === 'mark' &&
-          !pendingCommunityPieces.has(p.id)
+        const marksInCommunity = pieces.some(
+          (p) =>
+            p.locationId?.includes("community") &&
+            p.name.toLowerCase() === "mark" &&
+            !pendingCommunityPieces.has(p.id)
         );
 
         // If Marks in community, Heels and Pawns cannot move
@@ -474,24 +528,25 @@ const App: React.FC = () => {
           showAlert(
             ALERTS.CANNOT_MOVE_PIECE.title,
             ALERTS.CANNOT_MOVE_PIECE.message,
-            'warning'
+            "warning"
           );
           return;
         }
 
         // If moving a Pawn, check if Heels are in community (excluding pending pieces)
-        if (pieceName === 'pawn') {
-          const heelsInCommunity = pieces.some(p =>
-            p.locationId?.includes('community') &&
-            p.name.toLowerCase() === 'heel' &&
-            !pendingCommunityPieces.has(p.id)
+        if (pieceName === "pawn") {
+          const heelsInCommunity = pieces.some(
+            (p) =>
+              p.locationId?.includes("community") &&
+              p.name.toLowerCase() === "heel" &&
+              !pendingCommunityPieces.has(p.id)
           );
           // Pawns cannot move if Heels in community
           if (heelsInCommunity) {
             showAlert(
               ALERTS.CANNOT_MOVE_PIECE.title,
               ALERTS.CANNOT_MOVE_PIECE.message,
-              'warning'
+              "warning"
             );
             return;
           }
@@ -512,11 +567,15 @@ const App: React.FC = () => {
           playerCount
         );
 
-        if (moveType === 'UNKNOWN') {
+        if (moveType === "UNKNOWN") {
           showAlert(
-            'Illegal Move',
-            `Cannot move from ${formatLocationId(movingPiece.locationId)} to ${formatLocationId(locationId)}. This move violates game rules.`,
-            'error'
+            "Illegal Move",
+            `Cannot move from ${formatLocationId(
+              movingPiece.locationId
+            )} to ${formatLocationId(
+              locationId
+            )}. This move violates game rules.`,
+            "error"
           );
           return;
         }
@@ -525,24 +584,39 @@ const App: React.FC = () => {
 
     setLastDroppedPosition(newPosition);
     setLastDroppedPieceId(pieceId);
-    const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
+    const newRotation = calculatePieceRotation(
+      newPosition,
+      playerCount,
+      locationId
+    );
 
     // Simply update the piece position and location
     // Move validation will be calculated when Check Move is clicked
-    setPieces(prevPieces => prevPieces.map(p => p.id === pieceId ? { ...p, position: newPosition, rotation: newRotation, ...(locationId !== undefined && { locationId }) } : p));
+    setPieces((prevPieces) =>
+      prevPieces.map((p) =>
+        p.id === pieceId
+          ? {
+              ...p,
+              position: newPosition,
+              rotation: newRotation,
+              ...(locationId !== undefined && { locationId }),
+            }
+          : p
+      )
+    );
 
     // Track that this piece has been moved this turn
-    setMovedPiecesThisTurn(prev => new Set(prev).add(pieceId));
+    setMovedPiecesThisTurn((prev) => new Set(prev).add(pieceId));
 
     // If piece is moved to community, mark it as "pending" until acceptance/challenge resolved
-    if (locationId && locationId.includes('community')) {
-      setPendingCommunityPieces(prev => new Set(prev).add(pieceId));
+    if (locationId && locationId.includes("community")) {
+      setPendingCommunityPieces((prev) => new Set(prev).add(pieceId));
     }
   };
 
   const handleResetTurn = () => {
     // Restore pieces to turn start state
-    setPieces(piecesAtTurnStart.map(p => ({ ...p })));
+    setPieces(piecesAtTurnStart.map((p) => ({ ...p })));
 
     // If a tile was played, return it to player's hand and remove from board
     if (playedTile) {
@@ -550,20 +624,28 @@ const App: React.FC = () => {
       const tile = { id: tileId, url: `./images/${playedTile.tileId}.svg` };
 
       // Add tile back to player's hand
-      setPlayers(prev => prev.map(p =>
-        p.id === playedTile.playerId
-          ? { ...p, keptTiles: [...p.keptTiles, tile] }
-          : p
-      ));
+      setPlayers((prev) =>
+        prev.map((p) =>
+          p.id === playedTile.playerId
+            ? { ...p, keptTiles: [...p.keptTiles, tile] }
+            : p
+        )
+      );
 
       // Remove tile from board
-      setBoardTiles(prev => prev.filter(bt =>
-        !(bt.placerId === playedTile.playerId && bt.ownerId === playedTile.receivingPlayerId)
-      ));
+      setBoardTiles((prev) =>
+        prev.filter(
+          (bt) =>
+            !(
+              bt.placerId === playedTile.playerId &&
+              bt.ownerId === playedTile.receivingPlayerId
+            )
+        )
+      );
 
       // Clear the played tile state
       setPlayedTile(null);
-      setGameState('CAMPAIGN');
+      setGameState("CAMPAIGN");
       setHasPlayedTileThisTurn(false);
     }
 
@@ -579,7 +661,7 @@ const App: React.FC = () => {
   const handleResetPiecesCorrection = () => {
     // Reset pieces to correction start state while keeping tile in play
     if (piecesAtCorrectionStart.length > 0) {
-      setPieces(piecesAtCorrectionStart.map(p => ({ ...p })));
+      setPieces(piecesAtCorrectionStart.map((p) => ({ ...p })));
     }
 
     // Clear movement tracking for fresh correction attempt
@@ -593,7 +675,7 @@ const App: React.FC = () => {
 
   const handleResetBonusMove = () => {
     // Reset pieces to state before bonus move started
-    setPieces(piecesBeforeBonusMove.map(p => ({ ...p })));
+    setPieces(piecesBeforeBonusMove.map((p) => ({ ...p })));
 
     // Clear tracking sets
     setMovedPiecesThisTurn(new Set());
@@ -604,59 +686,96 @@ const App: React.FC = () => {
     setLastDroppedPieceId(null);
   };
 
-  const handleBoardTileMove = (boardTileId: string, newPosition: { top: number; left: number }) => {
+  const handleBoardTileMove = (
+    boardTileId: string,
+    newPosition: { top: number; left: number }
+  ) => {
     setLastDroppedPosition(newPosition);
-    setBoardTiles(prevBoardTiles => prevBoardTiles.map(bt => bt.id === boardTileId ? { ...bt, position: newPosition } : bt));
+    setBoardTiles((prevBoardTiles) =>
+      prevBoardTiles.map((bt) =>
+        bt.id === boardTileId ? { ...bt, position: newPosition } : bt
+      )
+    );
   };
 
   const generateTurnLog = (
-      turnPlayerId: number,
-      piecesBefore: Piece[],
-      piecesAfter: Piece[],
-      countOfPlayers: number,
-      tileTransactionAtTurnEnd: typeof tileTransaction
-    ): string[] => {
-      const logs: string[] = [];
+    turnPlayerId: number,
+    piecesBefore: Piece[],
+    piecesAfter: Piece[],
+    countOfPlayers: number,
+    tileTransactionAtTurnEnd: typeof tileTransaction
+  ): string[] => {
+    const logs: string[] = [];
 
-      const piecesBeforeMap = new Map(piecesBefore.map(p => [p.id, p]));
-      const piecesAfterMap = new Map(piecesAfter.map(p => [p.id, p]));
+    const piecesBeforeMap = new Map(piecesBefore.map((p) => [p.id, p]));
+    const piecesAfterMap = new Map(piecesAfter.map((p) => [p.id, p]));
 
-      if (tileTransactionAtTurnEnd && tileTransactionAtTurnEnd.placerId === turnPlayerId) {
-        logs.push(`Played a tile for Player ${tileTransactionAtTurnEnd.receiverId}.`);
-      }
+    if (
+      tileTransactionAtTurnEnd &&
+      tileTransactionAtTurnEnd.placerId === turnPlayerId
+    ) {
+      logs.push(
+        `Played a tile for Player ${tileTransactionAtTurnEnd.receiverId}.`
+      );
+    }
 
-      for (const [id, oldPiece] of piecesBeforeMap.entries()) {
-        const newPiece = piecesAfterMap.get(id);
-        if (newPiece) {
-          if (Math.abs(oldPiece.position.left - newPiece.position.left) > 0.01 || Math.abs(oldPiece.position.top - newPiece.position.top) > 0.01) {
-            const oldLocId = getLocationIdFromPosition(oldPiece.position, countOfPlayers);
-            const newLocId = getLocationIdFromPosition(newPiece.position, countOfPlayers);
-            const oldLocStr = oldLocId ? formatLocationId(oldLocId) : 'a location';
-            const newLocStr = newLocId ? formatLocationId(newLocId) : 'another location';
-            logs.push(`Moved a ${oldPiece.name} from ${oldLocStr} to ${newLocStr}.`);
-          }
-        } else {
-          const oldLocId = getLocationIdFromPosition(oldPiece.position, countOfPlayers);
-          const oldLocStr = oldLocId ? formatLocationId(oldLocId) : 'a location';
-          logs.push(`Returned a ${oldPiece.name} to supply from ${oldLocStr}.`);
+    for (const [id, oldPiece] of piecesBeforeMap.entries()) {
+      const newPiece = piecesAfterMap.get(id);
+      if (newPiece) {
+        if (
+          Math.abs(oldPiece.position.left - newPiece.position.left) > 0.01 ||
+          Math.abs(oldPiece.position.top - newPiece.position.top) > 0.01
+        ) {
+          const oldLocId = getLocationIdFromPosition(
+            oldPiece.position,
+            countOfPlayers
+          );
+          const newLocId = getLocationIdFromPosition(
+            newPiece.position,
+            countOfPlayers
+          );
+          const oldLocStr = oldLocId
+            ? formatLocationId(oldLocId)
+            : "a location";
+          const newLocStr = newLocId
+            ? formatLocationId(newLocId)
+            : "another location";
+          logs.push(
+            `Moved a ${oldPiece.name} from ${oldLocStr} to ${newLocStr}.`
+          );
         }
+      } else {
+        const oldLocId = getLocationIdFromPosition(
+          oldPiece.position,
+          countOfPlayers
+        );
+        const oldLocStr = oldLocId ? formatLocationId(oldLocId) : "a location";
+        logs.push(`Returned a ${oldPiece.name} to supply from ${oldLocStr}.`);
       }
+    }
 
-      for (const [id, newPiece] of piecesAfterMap.entries()) {
-        if (!piecesBeforeMap.has(id)) {
-          const newLocId = getLocationIdFromPosition(newPiece.position, countOfPlayers);
-          const newLocStr = newLocId ? formatLocationId(newLocId) : 'a location';
-          logs.push(`Added a ${newPiece.name} from supply to ${newLocStr}.`);
-        }
+    for (const [id, newPiece] of piecesAfterMap.entries()) {
+      if (!piecesBeforeMap.has(id)) {
+        const newLocId = getLocationIdFromPosition(
+          newPiece.position,
+          countOfPlayers
+        );
+        const newLocStr = newLocId ? formatLocationId(newLocId) : "a location";
+        logs.push(`Added a ${newPiece.name} from supply to ${newLocStr}.`);
       }
-      return logs;
+    }
+    return logs;
   };
 
   const addGameLog = (message: string) => {
-    setGameLog(prev => [...prev, message]);
+    setGameLog((prev) => [...prev, message]);
   };
 
-  const addCredibilityLossLog = (playerId: number, reason: string, currentPlayers?: Player[]) => {
+  const addCredibilityLossLog = (
+    playerId: number,
+    reason: string,
+    currentPlayers?: Player[]
+  ) => {
     const playersToUse = currentPlayers || players;
     const player = getPlayerById(playersToUse, playerId);
     const playerName = getPlayerName(player, playerId);
@@ -676,12 +795,17 @@ const App: React.FC = () => {
    * @param currentPlayers - Optional player array to use instead of state (for chaining updates)
    * @returns Object with newPlayers array and hadMaxCredibility flag
    */
-  const handleCredibilityGain = (playerId: number, amount: number, currentPlayers?: Player[]): { newPlayers: Player[]; hadMaxCredibility: boolean } => {
+  const handleCredibilityGain = (
+    playerId: number,
+    amount: number,
+    currentPlayers?: Player[]
+  ): { newPlayers: Player[]; hadMaxCredibility: boolean } => {
     const playersToUse = currentPlayers || players;
-    const player = playersToUse.find(p => p.id === playerId);
+    const player = playersToUse.find((p) => p.id === playerId);
     if (!player) return { newPlayers: playersToUse, hadMaxCredibility: false };
 
-    const currentCredibility = player.credibility ?? DEFAULTS.INITIAL_CREDIBILITY;
+    const currentCredibility =
+      player.credibility ?? DEFAULTS.INITIAL_CREDIBILITY;
     const hadMaxCredibility = currentCredibility >= DEFAULTS.MAX_CREDIBILITY;
 
     if (hadMaxCredibility) {
@@ -689,16 +813,21 @@ const App: React.FC = () => {
       return { newPlayers: playersToUse, hadMaxCredibility: true };
     }
 
-    const newCredibility = Math.min(DEFAULTS.MAX_CREDIBILITY, currentCredibility + amount);
+    const newCredibility = Math.min(
+      DEFAULTS.MAX_CREDIBILITY,
+      currentCredibility + amount
+    );
     const actualGain = newCredibility - currentCredibility;
 
-    const newPlayers = playersToUse.map(p =>
+    const newPlayers = playersToUse.map((p) =>
       p.id === playerId ? { ...p, credibility: newCredibility } : p
     );
 
     if (actualGain > 0) {
       const playerName = getPlayerName(player, playerId);
-      addGameLog(`${playerName} gained ${actualGain} credibility: Correctly rejected imperfect tile`);
+      addGameLog(
+        `${playerName} gained ${actualGain} credibility: Correctly rejected imperfect tile`
+      );
     }
 
     return { newPlayers, hadMaxCredibility: false };
@@ -708,9 +837,11 @@ const App: React.FC = () => {
     if (!playedTile) return;
 
     // Log the bonus move
-    const player = players.find(p => p.id === bonusMovePlayerId);
+    const player = players.find((p) => p.id === bonusMovePlayerId);
     const playerName = player?.name || `Player ${bonusMovePlayerId}`;
-    addGameLog(`${playerName} took a bonus Advance move (already had 3 credibility)`);
+    addGameLog(
+      `${playerName} took a bonus Advance move (already had 3 credibility)`
+    );
 
     // Close the modal and mark that bonus move was completed
     setShowBonusMoveModal(false);
@@ -718,13 +849,13 @@ const App: React.FC = () => {
     setBonusMoveWasCompleted(true);
 
     // Capture the current pieces state as baseline for correction phase (after bonus move)
-    setPiecesAtCorrectionStart(pieces.map(p => ({ ...p })));
+    setPiecesAtCorrectionStart(pieces.map((p) => ({ ...p })));
 
     // Now switch back to tile player for correction
-    const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+    const playerIndex = players.findIndex((p) => p.id === playedTile.playerId);
     if (playerIndex !== -1) {
       setCurrentPlayerIndex(playerIndex);
-      setGameState('CORRECTION_REQUIRED');
+      setGameState("CORRECTION_REQUIRED");
       setMovesThisTurn([]);
     }
   };
@@ -734,15 +865,15 @@ const App: React.FC = () => {
       console.error("Cannot advance turn: playerCount is 0.");
       return;
     }
-    
+
     const fromPlayerId = startingPlayerId ?? players[currentPlayerIndex]?.id;
-    
+
     if (!fromPlayerId) {
       console.error("Cannot advance turn: current player not found.");
       return;
     }
 
-    const fromPlayerIndex = players.findIndex(p => p.id === fromPlayerId);
+    const fromPlayerIndex = players.findIndex((p) => p.id === fromPlayerId);
     // If player not found, fromPlayerIndex will be -1.
     // (-1 + 1) % playerCount will be 0, which is a safe default.
     const nextPlayerIndex = (fromPlayerIndex + 1) % playerCount;
@@ -750,7 +881,7 @@ const App: React.FC = () => {
     setCurrentPlayerIndex(nextPlayerIndex);
     setHasPlayedTileThisTurn(false);
     setRevealedTileId(null);
-    setGameState('CAMPAIGN');
+    setGameState("CAMPAIGN");
     setTileTransaction(null);
     setBystanders([]);
     setBystanderIndex(0);
@@ -759,7 +890,7 @@ const App: React.FC = () => {
     setPlacerViewingTileId(null);
 
     // Set piece state snapshot for the start of this new turn
-    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+    setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
 
     // Clear piece movement tracking for new turn
     setMovedPiecesThisTurn(new Set());
@@ -769,31 +900,43 @@ const App: React.FC = () => {
 
   const handleEndTurn = () => {
     // NEW WORKFLOW: Handle correction of rejected/challenged tile
-    if (gameState === 'CORRECTION_REQUIRED' && playedTile) {
+    if (gameState === "CORRECTION_REQUIRED" && playedTile) {
       // Use handleCorrectionComplete which calculates moves from actual piece positions
       handleCorrectionComplete();
       return;
     }
 
     // NEW WORKFLOW: If a tile has been played, move to acceptance phase
-    if (playedTile && gameState === 'TILE_PLAYED') {
+    if (playedTile && gameState === "TILE_PLAYED") {
       // Calculate moves from piece positions
-      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+      const calculatedMoves = calculateMoves(
+        playedTile.originalPieces,
+        pieces,
+        playedTile.playerId
+      );
 
       // Validate moves performed (max 2 moves: 1 O and 1 M)
       const movesValidation = validateMovesForTilePlay(calculatedMoves);
       if (!movesValidation.isValid) {
-        showAlert('Invalid Moves', movesValidation.error || 'Invalid move combination', 'error');
+        showAlert(
+          "Invalid Moves",
+          movesValidation.error || "Invalid move combination",
+          "error"
+        );
         return;
       }
 
       // Store moves and move to acceptance phase
-      setPlayedTile(prev => prev ? { ...prev, movesPerformed: calculatedMoves } : null);
+      setPlayedTile((prev) =>
+        prev ? { ...prev, movesPerformed: calculatedMoves } : null
+      );
       setReceiverAcceptance(null); // Reset for acceptance decision
-      setGameState('PENDING_ACCEPTANCE');
+      setGameState("PENDING_ACCEPTANCE");
 
       // Switch to receiving player
-      const receiverIndex = players.findIndex(p => p.id === playedTile.receivingPlayerId);
+      const receiverIndex = players.findIndex(
+        (p) => p.id === playedTile.receivingPlayerId
+      );
       if (receiverIndex !== -1) {
         setCurrentPlayerIndex(receiverIndex);
       }
@@ -803,23 +946,34 @@ const App: React.FC = () => {
     // OLD WORKFLOW: Normal end turn (if not in tile play)
     // Log actions for the turn that just ended.
     const turnEnderId = players[currentPlayerIndex].id;
-    const transactionToLog = (tileTransaction && tileTransaction.placerId === turnEnderId) ? tileTransaction : null;
+    const transactionToLog =
+      tileTransaction && tileTransaction.placerId === turnEnderId
+        ? tileTransaction
+        : null;
 
-    const turnLogs = generateTurnLog(turnEnderId, piecesAtTurnStart, pieces, playerCount, transactionToLog);
+    const turnLogs = generateTurnLog(
+      turnEnderId,
+      piecesAtTurnStart,
+      pieces,
+      playerCount,
+      transactionToLog
+    );
 
     if (turnLogs.length > 0) {
       const logHeader = `--- Turn Actions by Player ${turnEnderId} ---`;
-      setGameLog(prev => [...prev, logHeader, ...turnLogs]);
+      setGameLog((prev) => [...prev, logHeader, ...turnLogs]);
     }
 
     // Set piece state for the start of the next turn.
     // IMPORTANT: Use deep copy (.map with spread) not reference to avoid mutations affecting baseline
-    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+    setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
 
     if (hasPlayedTileThisTurn && tileTransaction) {
-      const receiverIndex = players.findIndex(p => p.id === tileTransaction.receiverId);
+      const receiverIndex = players.findIndex(
+        (p) => p.id === tileTransaction.receiverId
+      );
       if (receiverIndex !== -1) {
-        setGameState('PENDING_ACCEPTANCE');
+        setGameState("PENDING_ACCEPTANCE");
         setCurrentPlayerIndex(receiverIndex);
         setHasPlayedTileThisTurn(false);
         setRevealedTileId(null);
@@ -836,15 +990,25 @@ const App: React.FC = () => {
   const handlePlaceTile = (tileId: number, targetSpace: TileReceivingSpace) => {
     if (hasPlayedTileThisTurn) return;
     const currentPlayer = players[currentPlayerIndex];
-    const tileToPlace = currentPlayer.keptTiles.find(t => t.id === tileId);
+    const tileToPlace = currentPlayer.keptTiles.find((t) => t.id === tileId);
 
-    if (!tileToPlace || boardTiles.some(bt => bt.ownerId === targetSpace.ownerId)) return;
+    if (
+      !tileToPlace ||
+      boardTiles.some((bt) => bt.ownerId === targetSpace.ownerId)
+    )
+      return;
 
     if (currentPlayer.id === targetSpace.ownerId) {
-      const otherPlayers = players.filter(p => p.id !== currentPlayer.id);
-      const allOthersAreOutOfTiles = otherPlayers.every(p => p.keptTiles.length === 0);
+      const otherPlayers = players.filter((p) => p.id !== currentPlayer.id);
+      const allOthersAreOutOfTiles = otherPlayers.every(
+        (p) => p.keptTiles.length === 0
+      );
       if (!allOthersAreOutOfTiles) {
-        showAlert(ALERTS.CANNOT_PLAY_FOR_YOURSELF.title, ALERTS.CANNOT_PLAY_FOR_YOURSELF.message, 'warning');
+        showAlert(
+          ALERTS.CANNOT_PLAY_FOR_YOURSELF.title,
+          ALERTS.CANNOT_PLAY_FOR_YOURSELF.message,
+          "warning"
+        );
         return;
       }
     }
@@ -852,32 +1016,43 @@ const App: React.FC = () => {
     // Check if target player's bank is full
     const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
     const tilesPerPlayer = allBankSpaces.length / playerCount;
-    const targetPlayer = players.find(p => p.id === targetSpace.ownerId);
+    const targetPlayer = players.find((p) => p.id === targetSpace.ownerId);
 
-    if (targetPlayer && targetPlayer.bureaucracyTiles.length >= tilesPerPlayer) {
+    if (
+      targetPlayer &&
+      targetPlayer.bureaucracyTiles.length >= tilesPerPlayer
+    ) {
       showAlert(
-        'Bank Full',
+        "Bank Full",
         `Player ${targetSpace.ownerId}'s bank is full. You cannot play a tile to them. Choose a different player.`,
-        'warning'
+        "warning"
       );
       return;
     }
 
     // NEW VALIDATION: Campaign phase tile rules
-    const totalTilesPlayed = players.reduce((sum, p) => sum + p.bureaucracyTiles.length, 0);
+    const totalTilesPlayed = players.reduce(
+      (sum, p) => sum + p.bureaucracyTiles.length,
+      0
+    );
     const totalTiles = allBankSpaces.length; // 24 for 3/4p, 25 for 5p
-    const isLastTile = (totalTilesPlayed === totalTiles - 1);
+    const isLastTile = totalTilesPlayed === totalTiles - 1;
 
     if (isLastTile) {
       // Final tile: Can ONLY be played to the player with one remaining bank space
-      if (!targetPlayer || targetPlayer.bureaucracyTiles.length !== tilesPerPlayer - 1) {
-        const eligiblePlayer = players.find(p => p.bureaucracyTiles.length === tilesPerPlayer - 1);
+      if (
+        !targetPlayer ||
+        targetPlayer.bureaucracyTiles.length !== tilesPerPlayer - 1
+      ) {
+        const eligiblePlayer = players.find(
+          (p) => p.bureaucracyTiles.length === tilesPerPlayer - 1
+        );
         showAlert(
-          'Invalid Final Tile Placement',
+          "Invalid Final Tile Placement",
           eligiblePlayer
             ? `This is the final tile of the campaign phase. It can only be played to Player ${eligiblePlayer.id}, who has one remaining bank space.`
-            : 'This is the final tile of the campaign phase, but no player has exactly one remaining bank space.',
-          'warning'
+            : "This is the final tile of the campaign phase, but no player has exactly one remaining bank space.",
+          "warning"
         );
         return;
       }
@@ -885,16 +1060,16 @@ const App: React.FC = () => {
       // Non-final tiles: MUST be played to a player who has at least 1 tile in their hand
       if (!targetPlayer || targetPlayer.keptTiles.length === 0) {
         showAlert(
-          'Invalid Tile Placement',
+          "Invalid Tile Placement",
           `You must play to a player who has at least 1 tile in their hand. Player ${targetSpace.ownerId} has no tiles left.`,
-          'warning'
+          "warning"
         );
         return;
       }
     }
 
     // Initialize the tile play state (NEW WORKFLOW)
-    const tileIdStr = tileId.toString().padStart(2, '0');
+    const tileIdStr = tileId.toString().padStart(2, "0");
     const boardTileId = `boardtile_${Date.now()}`;
 
     // Create a BoardTile to display in the receiving space (face-down/white back)
@@ -912,22 +1087,24 @@ const App: React.FC = () => {
       playerId: currentPlayer.id,
       receivingPlayerId: targetSpace.ownerId,
       movesPerformed: [],
-      originalPieces: piecesAtTurnStart.map(p => ({ ...p })),
-      originalBoardTiles: boardTiles.map(t => ({ ...t })),
+      originalPieces: piecesAtTurnStart.map((p) => ({ ...p })),
+      originalBoardTiles: boardTiles.map((t) => ({ ...t })),
     });
 
     // Add the board tile to display in the receiving space
-    setBoardTiles(prev => [...prev, newBoardTile]);
+    setBoardTiles((prev) => [...prev, newBoardTile]);
 
     // Remove tile from player's hand (will be added back if rejected)
-    setPlayers(prev => prev.map(p =>
-      p.id === currentPlayer.id
-        ? { ...p, keptTiles: p.keptTiles.filter(t => t.id !== tileId) }
-        : p
-    ));
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.id === currentPlayer.id
+          ? { ...p, keptTiles: p.keptTiles.filter((t) => t.id !== tileId) }
+          : p
+      )
+    );
 
     // Set game state to allow moves (tile not yet visible to others)
-    setGameState('TILE_PLAYED');
+    setGameState("TILE_PLAYED");
     setMovesThisTurn([]);
     setHasPlayedTileThisTurn(true);
 
@@ -942,13 +1119,15 @@ const App: React.FC = () => {
     setPiecesAtCorrectionStart([]);
     setPiecesBeforeBonusMove([]);
   };
-  
-  const handleRevealTile = (tileId: string | null) => { setRevealedTileId(tileId); };
 
-  const handleTogglePrivateView = () => setIsPrivatelyViewing(prev => !prev);
-  
+  const handleRevealTile = (tileId: string | null) => {
+    setRevealedTileId(tileId);
+  };
+
+  const handleTogglePrivateView = () => setIsPrivatelyViewing((prev) => !prev);
+
   const handlePlacerViewTile = (tileId: string) => {
-    setPlacerViewingTileId(prevId => (prevId === tileId ? null : tileId));
+    setPlacerViewingTileId((prevId) => (prevId === tileId ? null : tileId));
   };
 
   // NEW WORKFLOW HANDLERS
@@ -961,20 +1140,25 @@ const App: React.FC = () => {
 
     if (!accepted) {
       // Check if tile is perfect using same logic as Check Move
-      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
-      const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
-        playedTile.tileId,
-        calculatedMoves,
-        playedTile.playerId,
+      const calculatedMoves = calculateMoves(
         playedTile.originalPieces,
         pieces,
-        players,
-        playerCount
+        playedTile.playerId
       );
+      const tileRequirements =
+        validateTileRequirementsWithImpossibleMoveExceptions(
+          playedTile.tileId,
+          calculatedMoves,
+          playedTile.playerId,
+          playedTile.originalPieces,
+          pieces,
+          players,
+          playerCount
+        );
 
       // Check for extra moves
       const requiredMoveTypes = tileRequirements.requiredMoves;
-      const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+      const performedMoveTypes = calculatedMoves.map((m) => m.moveType);
       const extraMoves: string[] = [];
       for (const moveType of performedMoveTypes) {
         if (!requiredMoveTypes.includes(moveType)) {
@@ -984,7 +1168,8 @@ const App: React.FC = () => {
       const uniqueExtraMoves = [...new Set(extraMoves)];
 
       // Tile is perfect if requirements are met and no extra moves
-      const isTilePerfect = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+      const isTilePerfect =
+        tileRequirements.isMet && uniqueExtraMoves.length === 0;
 
       if (isTilePerfect) {
         // Cannot reject - show perfect tile modal
@@ -997,9 +1182,11 @@ const App: React.FC = () => {
       setTileRejected(true);
 
       // Check if tile player has 0 credibility - if so, they MUST perform a WITHDRAW during correction
-      const tilePlayer = players.find(p => p.id === playedTile.playerId);
-      const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
-      const movesMeetRequirements = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+      const tilePlayer = players.find((p) => p.id === playedTile.playerId);
+      const playerHasZeroCredibility =
+        tilePlayer && tilePlayer.credibility === 0;
+      const movesMeetRequirements =
+        tileRequirements.isMet && uniqueExtraMoves.length === 0;
 
       if (playerHasZeroCredibility && !movesMeetRequirements) {
         setTilePlayerMustWithdraw(true);
@@ -1008,7 +1195,7 @@ const App: React.FC = () => {
       }
 
       // Restore original pieces (remove any moves made)
-      const revertedPieces = playedTile.originalPieces.map(p => ({ ...p }));
+      const revertedPieces = playedTile.originalPieces.map((p) => ({ ...p }));
       setPieces(revertedPieces);
       // Capture the reverted pieces as the baseline for correction move calculations
       setPiecesAtCorrectionStart(revertedPieces);
@@ -1020,23 +1207,45 @@ const App: React.FC = () => {
       setPendingCommunityPieces(new Set());
 
       // Add tile to receiving player's bureaucracy tiles for tracking
-      const receivingPlayer = players.find(p => p.id === playedTile.receivingPlayerId);
+      const receivingPlayer = players.find(
+        (p) => p.id === playedTile.receivingPlayerId
+      );
       if (receivingPlayer) {
-        setPlayers(prev =>
-          prev.map(p =>
+        setPlayers((prev) =>
+          prev.map((p) =>
             p.id === receivingPlayer.id
-              ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` }] }
+              ? {
+                  ...p,
+                  bureaucracyTiles: [
+                    ...p.bureaucracyTiles,
+                    {
+                      id: parseInt(playedTile.tileId),
+                      url: `./images/${playedTile.tileId}.svg`,
+                    },
+                  ],
+                }
               : p
           )
         );
       }
 
       // Tile player loses 1 credibility when tile is rejected by receiver
-      setPlayers(prev => handleCredibilityLoss('tile_rejected_by_receiver', playedTile.playerId)(prev));
-      addCredibilityLossLog(playedTile.playerId, "Tile was rejected by Player " + playedTile.receivingPlayerId);
+      setPlayers((prev) =>
+        handleCredibilityLoss(
+          "tile_rejected_by_receiver",
+          playedTile.playerId
+        )(prev)
+      );
+      addCredibilityLossLog(
+        playedTile.playerId,
+        "Tile was rejected by Player " + playedTile.receivingPlayerId
+      );
 
       // Receiver gains up to 2 credibility for correctly rejecting
-      const credibilityResult = handleCredibilityGain(playedTile.receivingPlayerId, 2);
+      const credibilityResult = handleCredibilityGain(
+        playedTile.receivingPlayerId,
+        2
+      );
 
       if (credibilityResult.hadMaxCredibility) {
         // Player had 3 credibility, show bonus move modal
@@ -1053,10 +1262,12 @@ const App: React.FC = () => {
         setPlayers(credibilityResult.newPlayers);
 
         // Switch back to tile player for correction
-        const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+        const playerIndex = players.findIndex(
+          (p) => p.id === playedTile.playerId
+        );
         if (playerIndex !== -1) {
           setCurrentPlayerIndex(playerIndex);
-          setGameState('CORRECTION_REQUIRED');
+          setGameState("CORRECTION_REQUIRED");
           setMovesThisTurn([]);
         }
       }
@@ -1065,16 +1276,24 @@ const App: React.FC = () => {
       setReceiverAcceptance(true);
 
       // Determine challenge order (clockwise from tile player, excluding giver and receiver)
-      const tilePlayerIndex = players.findIndex(p => p.id === playedTile.playerId);
-      const order = getChallengeOrder(playedTile.playerId, playerCount, playedTile.receivingPlayerId);
+      const tilePlayerIndex = players.findIndex(
+        (p) => p.id === playedTile.playerId
+      );
+      const order = getChallengeOrder(
+        playedTile.playerId,
+        playerCount,
+        playedTile.receivingPlayerId
+      );
       setChallengeOrder(order);
 
       // If there are challengers, move to first challenger
       if (order.length > 0) {
-        const firstChallengerIndex = players.findIndex(p => p.id === order[0]);
+        const firstChallengerIndex = players.findIndex(
+          (p) => p.id === order[0]
+        );
         setCurrentPlayerIndex(firstChallengerIndex);
         setCurrentChallengerIndex(0);
-        setGameState('PENDING_CHALLENGE');
+        setGameState("PENDING_CHALLENGE");
       } else {
         // No challengers, finalize the play
         finalizeTilePlay(false, null);
@@ -1092,15 +1311,19 @@ const App: React.FC = () => {
     setReceiverAcceptance(true);
 
     // Determine challenge order (clockwise from tile player, excluding giver and receiver)
-    const order = getChallengeOrder(playedTile.playerId, playerCount, playedTile.receivingPlayerId);
+    const order = getChallengeOrder(
+      playedTile.playerId,
+      playerCount,
+      playedTile.receivingPlayerId
+    );
     setChallengeOrder(order);
 
     // If there are challengers, move to first challenger
     if (order.length > 0) {
-      const firstChallengerIndex = players.findIndex(p => p.id === order[0]);
+      const firstChallengerIndex = players.findIndex((p) => p.id === order[0]);
       setCurrentPlayerIndex(firstChallengerIndex);
       setCurrentChallengerIndex(0);
-      setGameState('PENDING_CHALLENGE');
+      setGameState("PENDING_CHALLENGE");
     } else {
       // No challengers, finalize the play
       finalizeTilePlay(false, null);
@@ -1115,20 +1338,25 @@ const App: React.FC = () => {
 
     if (challenge) {
       // CHALLENGED: Use exact same logic as Check Move to verify if tile player met requirements perfectly
-      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
-      const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
-        playedTile.tileId,
-        calculatedMoves,
-        playedTile.playerId,
+      const calculatedMoves = calculateMoves(
         playedTile.originalPieces,
         pieces,
-        players,
-        playerCount
+        playedTile.playerId
       );
+      const tileRequirements =
+        validateTileRequirementsWithImpossibleMoveExceptions(
+          playedTile.tileId,
+          calculatedMoves,
+          playedTile.playerId,
+          playedTile.originalPieces,
+          pieces,
+          players,
+          playerCount
+        );
 
       // Check if there are extra moves beyond what's required
       const requiredMoveTypes = tileRequirements.requiredMoves;
-      const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+      const performedMoveTypes = calculatedMoves.map((m) => m.moveType);
       const extraMoves: string[] = [];
 
       for (const moveType of performedMoveTypes) {
@@ -1138,17 +1366,25 @@ const App: React.FC = () => {
       }
 
       const uniqueExtraMoves = [...new Set(extraMoves)];
-      const isTilePerfect = tileRequirements.isMet && uniqueExtraMoves.length === 0;
+      const isTilePerfect =
+        tileRequirements.isMet && uniqueExtraMoves.length === 0;
 
       if (isTilePerfect) {
         // Challenge is INVALID - player played perfectly
         const challengerId = challengeOrder[currentChallengerIndex];
-        const challengerName = players.find(p => p.id === challengerId)?.name || 'Player';
-        const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
-        setChallengeResultMessage(`Challenge Failed: ${challengedPlayerName} played the tile perfectly.`);
+        const challengerName =
+          players.find((p) => p.id === challengerId)?.name || "Player";
+        const challengedPlayerName =
+          players.find((p) => p.id === playedTile.playerId)?.name || "Player";
+        setChallengeResultMessage(
+          `Challenge Failed: ${challengedPlayerName} played the tile perfectly.`
+        );
 
         // Challenger loses 1 credibility for unsuccessful challenge (applied in finalizeTilePlay)
-        addCredibilityLossLog(challengerId, "Unsuccessful challenge - tile was played perfectly");
+        addCredibilityLossLog(
+          challengerId,
+          "Unsuccessful challenge - tile was played perfectly"
+        );
 
         // A challenge was made (even though unsuccessful), so no more challenges allowed
         // Finalize the tile play immediately (credibility loss applied there)
@@ -1156,12 +1392,15 @@ const App: React.FC = () => {
 
         // Schedule auto-dismiss of challenge message after 5 seconds
         setTimeout(() => {
-          setChallengeResultMessage('');
+          setChallengeResultMessage("");
         }, 5000);
       } else {
         // Challenge is VALID - player did NOT meet requirements perfectly
-        const challengedPlayerName = players.find(p => p.id === playedTile.playerId)?.name || 'Player';
-        setChallengeResultMessage(`Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`);
+        const challengedPlayerName =
+          players.find((p) => p.id === playedTile.playerId)?.name || "Player";
+        setChallengeResultMessage(
+          `Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`
+        );
 
         // NEW: Offer Take Advantage reward to successful challenger
         const challengerId = challengeOrder[currentChallengerIndex];
@@ -1180,32 +1419,56 @@ const App: React.FC = () => {
         let finalPlayers: Player[] = [];
 
         // Step 1: Calculate all credibility changes synchronously (chain them together)
-        let updatedPlayers = handleCredibilityLoss('tile_failed_challenge', playedTile.playerId)(players);
+        let updatedPlayers = handleCredibilityLoss(
+          "tile_failed_challenge",
+          playedTile.playerId
+        )(players);
 
         if (receiverAcceptance === true) {
-          updatedPlayers = handleCredibilityLoss('did_not_reject_when_challenged', playedTile.playerId, undefined, playedTile.receivingPlayerId)(updatedPlayers);
+          updatedPlayers = handleCredibilityLoss(
+            "did_not_reject_when_challenged",
+            playedTile.playerId,
+            undefined,
+            playedTile.receivingPlayerId
+          )(updatedPlayers);
         }
 
-        const credibilityResult = handleCredibilityGain(challengerId, 2, updatedPlayers);
+        const credibilityResult = handleCredibilityGain(
+          challengerId,
+          2,
+          updatedPlayers
+        );
         finalPlayers = credibilityResult.newPlayers;
 
         // Step 2: Apply the final result in one setState call
         setPlayers(finalPlayers);
 
         // Add logs after state update
-        addCredibilityLossLog(playedTile.playerId, "Challenge succeeded - tile did not meet requirements");
+        addCredibilityLossLog(
+          playedTile.playerId,
+          "Challenge succeeded - tile did not meet requirements"
+        );
 
         if (receiverAcceptance === true) {
-          addCredibilityLossLog(playedTile.receivingPlayerId, "Accepted a tile that was successfully challenged");
+          addCredibilityLossLog(
+            playedTile.receivingPlayerId,
+            "Accepted a tile that was successfully challenged"
+          );
         }
 
-        const challenger = finalPlayers.find(p => p.id === challengerId);
-        const challengerName = challenger?.name || 'Player';
-        addGameLog(`${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0})`);
+        const challenger = finalPlayers.find((p) => p.id === challengerId);
+        const challengerName = challenger?.name || "Player";
+        addGameLog(
+          `${challengerName} gained credibility for successful challenge (now ${
+            challenger?.credibility ?? 0
+          })`
+        );
 
         if (challenger) {
           // Check if challenger has tiles (only offer Take Advantage if they have tiles)
-          const hasTiles = challenger.bureaucracyTiles && challenger.bureaucracyTiles.length > 0;
+          const hasTiles =
+            challenger.bureaucracyTiles &&
+            challenger.bureaucracyTiles.length > 0;
 
           // Store challenger context with UPDATED credibility
           setTakeAdvantageChallengerId(challengerId);
@@ -1217,7 +1480,7 @@ const App: React.FC = () => {
 
             // Store the challenge result message to show after modal closes
             setTimeout(() => {
-              setChallengeResultMessage('');
+              setChallengeResultMessage("");
             }, TIMEOUTS.CHALLENGE_MESSAGE_DISMISS);
 
             // DON'T transition to CORRECTION_REQUIRED yet
@@ -1225,13 +1488,15 @@ const App: React.FC = () => {
             return; // Exit early
           } else {
             // No tiles, skip Take Advantage and go straight to correction
-            addGameLog(`${challengerName} has no tiles for Take Advantage - skipping reward`);
+            addGameLog(
+              `${challengerName} has no tiles for Take Advantage - skipping reward`
+            );
             setTakeAdvantageChallengerId(null);
             setTakeAdvantageChallengerCredibility(0);
             transitionToCorrectionPhase();
 
             setTimeout(() => {
-              setChallengeResultMessage('');
+              setChallengeResultMessage("");
             }, 5000);
             return;
           }
@@ -1242,7 +1507,7 @@ const App: React.FC = () => {
 
         // Schedule auto-dismiss of challenge message after 5 seconds
         setTimeout(() => {
-          setChallengeResultMessage('');
+          setChallengeResultMessage("");
         }, 5000);
       }
     } else {
@@ -1255,7 +1520,9 @@ const App: React.FC = () => {
       } else {
         // Move to next challenger
         const nextChallengerId = challengeOrder[nextChallengerIndex];
-        const nextChallengerIndex_PlayerIndex = players.findIndex(p => p.id === nextChallengerId);
+        const nextChallengerIndex_PlayerIndex = players.findIndex(
+          (p) => p.id === nextChallengerId
+        );
         setCurrentChallengerIndex(nextChallengerIndex);
         setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
       }
@@ -1265,23 +1532,36 @@ const App: React.FC = () => {
   /**
    * Finalize tile play - determine who keeps the tile and next player
    */
-  const finalizeTilePlay = (wasChallenged: boolean, challengerId: number | null) => {
+  const finalizeTilePlay = (
+    wasChallenged: boolean,
+    challengerId: number | null
+  ) => {
     if (!playedTile) return;
 
     // Log the standing moves (the actual piece movements that were validated)
     if (!tileRejected && playedTile.originalPieces) {
-      const calculatedMoves = calculateMoves(playedTile.originalPieces, pieces, playedTile.playerId);
+      const calculatedMoves = calculateMoves(
+        playedTile.originalPieces,
+        pieces,
+        playedTile.playerId
+      );
 
       // Log each standing move
       for (const move of calculatedMoves) {
-        const fromLoc = move.fromLocationId ? formatLocationId(move.fromLocationId) : 'supply';
-        const toLoc = move.toLocationId ? formatLocationId(move.toLocationId) : 'supply';
+        const fromLoc = move.fromLocationId
+          ? formatLocationId(move.fromLocationId)
+          : "supply";
+        const toLoc = move.toLocationId
+          ? formatLocationId(move.toLocationId)
+          : "supply";
 
         // Get the piece name from the current pieces
-        const movedPiece = pieces.find(p => p.id === move.pieceId);
-        const pieceName = movedPiece?.name || 'piece';
+        const movedPiece = pieces.find((p) => p.id === move.pieceId);
+        const pieceName = movedPiece?.name || "piece";
 
-        addGameLog(`Standing Move: Player ${playedTile.playerId} moves ${pieceName} from ${fromLoc} to ${toLoc}`);
+        addGameLog(
+          `Standing Move: Player ${playedTile.playerId} moves ${pieceName} from ${fromLoc} to ${toLoc}`
+        );
       }
     }
 
@@ -1291,13 +1571,21 @@ const App: React.FC = () => {
 
     // Get bank spaces for the receiving player
     const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
-    const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === playedTile.receivingPlayerId);
+    const playerBankSpaces = bankSpaces.filter(
+      (bs) => bs.ownerId === playedTile.receivingPlayerId
+    );
 
     // Find the next available bank space (accounting for already banked tiles)
     const usedBankIndices = new Set(
       bankedTiles
-        .filter(bt => bt.ownerId === playedTile.receivingPlayerId)
-        .map(bt => playerBankSpaces.findIndex(bs => bs.position.left === bt.position.left && bs.position.top === bt.position.top))
+        .filter((bt) => bt.ownerId === playedTile.receivingPlayerId)
+        .map((bt) =>
+          playerBankSpaces.findIndex(
+            (bs) =>
+              bs.position.left === bt.position.left &&
+              bs.position.top === bt.position.top
+          )
+        )
     );
 
     let nextBankIndex = -1; // Start with invalid index
@@ -1308,20 +1596,27 @@ const App: React.FC = () => {
       }
     }
 
-    console.log('[finalizeTilePlay] Bank check:', {
+    console.log("[finalizeTilePlay] Bank check:", {
       receiverId: playedTile.receivingPlayerId,
       nextBankIndex,
       playerBankSpacesLength: playerBankSpaces.length,
       usedBankIndices: Array.from(usedBankIndices),
-      bankedTilesForPlayer: bankedTiles.filter(bt => bt.ownerId === playedTile.receivingPlayerId).length
+      bankedTilesForPlayer: bankedTiles.filter(
+        (bt) => bt.ownerId === playedTile.receivingPlayerId
+      ).length,
     });
 
     // Create the banked tile - only if there's space in the bank
     if (nextBankIndex >= 0 && nextBankIndex < playerBankSpaces.length) {
       const bankSpace = playerBankSpaces[nextBankIndex];
       const newBankedTile: BoardTile & { faceUp: boolean } = {
-        id: `bank_${playedTile.receivingPlayerId}_${nextBankIndex}_${Date.now()}`,
-        tile: { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` },
+        id: `bank_${
+          playedTile.receivingPlayerId
+        }_${nextBankIndex}_${Date.now()}`,
+        tile: {
+          id: parseInt(playedTile.tileId),
+          url: `./images/${playedTile.tileId}.svg`,
+        },
         position: bankSpace.position,
         rotation: bankSpace.rotation,
         placerId: playedTile.playerId,
@@ -1329,14 +1624,17 @@ const App: React.FC = () => {
         faceUp: faceUpInBank,
       };
 
-      setBankedTiles(prev => [...prev, newBankedTile]);
+      setBankedTiles((prev) => [...prev, newBankedTile]);
     }
 
     // Receiving player keeps the tile in their bureaucracy (always, even if bank display is full)
-    const tile = { id: parseInt(playedTile.tileId), url: `./images/${playedTile.tileId}.svg` };
+    const tile = {
+      id: parseInt(playedTile.tileId),
+      url: `./images/${playedTile.tileId}.svg`,
+    };
 
     // Calculate the updated players array directly from current state
-    let updatedPlayers = players.map(p =>
+    let updatedPlayers = players.map((p) =>
       p.id === playedTile.receivingPlayerId
         ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
         : p
@@ -1345,7 +1643,7 @@ const App: React.FC = () => {
     // Apply credibility loss for unsuccessful challenge
     // If wasChallenged=true and challengerId is set, the challenge was unsuccessful
     if (wasChallenged && challengerId !== null) {
-      updatedPlayers = updatedPlayers.map(p =>
+      updatedPlayers = updatedPlayers.map((p) =>
         p.id === challengerId
           ? { ...p, credibility: Math.max(0, p.credibility - 1) }
           : p
@@ -1357,28 +1655,35 @@ const App: React.FC = () => {
     const tilesPerPlayer = allBankSpaces.length / playerCount;
 
     // Ensure we have valid player data before checking
-    const allBanksFull = updatedPlayers.length > 0 && updatedPlayers.every(p => p.bureaucracyTiles.length >= tilesPerPlayer);
+    const allBanksFull =
+      updatedPlayers.length > 0 &&
+      updatedPlayers.every((p) => p.bureaucracyTiles.length >= tilesPerPlayer);
 
     // Debug logging
-    console.log('[finalizeTilePlay] Bureaucracy check:', {
+    console.log("[finalizeTilePlay] Bureaucracy check:", {
       wasChallenged,
       challengerId,
       updatedPlayersCount: updatedPlayers.length,
       tilesPerPlayer,
-      playerTileCounts: updatedPlayers.map(p => `P${p.id}:${p.bureaucracyTiles.length}`).join(', '),
-      allBanksFull
+      playerTileCounts: updatedPlayers
+        .map((p) => `P${p.id}:${p.bureaucracyTiles.length}`)
+        .join(", "),
+      allBanksFull,
     });
 
     // Update the players state
     setPlayers(updatedPlayers);
 
     // Remove from board tiles
-    setBoardTiles(prev =>
-      prev.filter(bt => !(
-        bt.tile.id.toString().padStart(2, '0') === playedTile.tileId &&
-        bt.placerId === playedTile.playerId &&
-        bt.ownerId === playedTile.receivingPlayerId
-      ))
+    setBoardTiles((prev) =>
+      prev.filter(
+        (bt) =>
+          !(
+            bt.tile.id.toString().padStart(2, "0") === playedTile.tileId &&
+            bt.placerId === playedTile.playerId &&
+            bt.ownerId === playedTile.receivingPlayerId
+          )
+      )
     );
 
     if (allBanksFull) {
@@ -1388,19 +1693,21 @@ const App: React.FC = () => {
       setTimeout(() => {
         // Initialize Bureaucracy phase
         const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
-        const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(p => ({
-          playerId: p.id,
-          initialKredcoin: calculatePlayerKredcoin(p),
-          remainingKredcoin: calculatePlayerKredcoin(p),
-          turnComplete: false,
-          purchases: []
-        }));
+        const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(
+          (p) => ({
+            playerId: p.id,
+            initialKredcoin: calculatePlayerKredcoin(p),
+            remainingKredcoin: calculatePlayerKredcoin(p),
+            turnComplete: false,
+            purchases: [],
+          })
+        );
 
         setBureaucracyTurnOrder(turnOrder);
         setBureaucracyStates(initialStates);
         setCurrentBureaucracyPlayerIndex(0);
         setShowBureaucracyMenu(true);
-        setGameState('BUREAUCRACY');
+        setGameState("BUREAUCRACY");
 
         // Reset tile play state
         setPlayedTile(null);
@@ -1427,13 +1734,15 @@ const App: React.FC = () => {
 
     // Next player is the receiving player
     // Use the players state to find the correct index
-    setPlayers(prev => {
-      const receiverIndex = prev.findIndex(p => p.id === playedTile.receivingPlayerId);
-      console.log('[finalizeTilePlay] Setting turn to receiver:', {
+    setPlayers((prev) => {
+      const receiverIndex = prev.findIndex(
+        (p) => p.id === playedTile.receivingPlayerId
+      );
+      console.log("[finalizeTilePlay] Setting turn to receiver:", {
         receivingPlayerId: playedTile.receivingPlayerId,
         receiverIndex,
         wasChallenged,
-        challengerId
+        challengerId,
       });
       if (receiverIndex !== -1) {
         setCurrentPlayerIndex(receiverIndex);
@@ -1444,7 +1753,7 @@ const App: React.FC = () => {
     // Reset remaining tile play state
     setPlayedTile(null);
     setMovesThisTurn([]);
-    setGameState('CAMPAIGN');
+    setGameState("CAMPAIGN");
     setHasPlayedTileThisTurn(false);
     setGiveReceiverViewingTileId(null);
     setBonusMoveWasCompleted(false);
@@ -1463,7 +1772,10 @@ const App: React.FC = () => {
     const winners = checkBureaucracyWinCondition(players, pieces);
     if (winners.length > 0) {
       if (winners.length === 1) {
-        const winnerName = getPlayerName(getPlayerById(players, winners[0]), winners[0]);
+        const winnerName = getPlayerName(
+          getPlayerById(players, winners[0]),
+          winners[0]
+        );
         alert(`${winnerName} has won the game during the Campaign phase!`);
       } else {
         const winnerNames = formatWinnerNames(winners, players);
@@ -1473,7 +1785,7 @@ const App: React.FC = () => {
     }
 
     // Set piece state snapshot for the start of this new turn
-    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+    setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
 
     // Clear piece movement tracking for new turn
     setMovedPiecesThisTurn(new Set());
@@ -1501,46 +1813,59 @@ const App: React.FC = () => {
     }
 
     // Use the same calculation logic as Check Move button
-    const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
+    const calculatedMoves = calculateMoves(
+      baselinePieces,
+      piecesForCalculation,
+      playedTile.playerId
+    );
 
     // Validate moves performed (max 2 moves: 1 O and 1 M)
     const movesValidation = validateMovesForTilePlay(calculatedMoves);
     if (!movesValidation.isValid) {
-      showAlert('Invalid Moves', movesValidation.error || 'Invalid move combination', 'error');
+      showAlert(
+        "Invalid Moves",
+        movesValidation.error || "Invalid move combination",
+        "error"
+      );
       return;
     }
 
     // Validate that tile player has now met the requirements
-    const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
-      playedTile.tileId,
-      calculatedMoves,
-      playedTile.playerId,
-      baselinePieces,
-      piecesForCalculation,
-      players,
-      playerCount
-    );
+    const tileRequirements =
+      validateTileRequirementsWithImpossibleMoveExceptions(
+        playedTile.tileId,
+        calculatedMoves,
+        playedTile.playerId,
+        baselinePieces,
+        piecesForCalculation,
+        players,
+        playerCount
+      );
 
-    console.log('=== handleCorrectionComplete DEBUG ===');
-    console.log('Tile ID:', playedTile.tileId);
-    console.log('Tile Player ID:', playedTile.playerId);
-    console.log('Number of original pieces:', playedTile.originalPieces.length);
-    console.log('Number of current pieces:', pieces.length);
-    console.log('Sample original piece:', playedTile.originalPieces[0]);
-    console.log('Sample current piece:', pieces[0]);
-    console.log('Calculated moves:', calculatedMoves);
-    console.log('Tile requirements:', tileRequirements);
-    console.log('======================================');
+    console.log("=== handleCorrectionComplete DEBUG ===");
+    console.log("Tile ID:", playedTile.tileId);
+    console.log("Tile Player ID:", playedTile.playerId);
+    console.log("Number of original pieces:", playedTile.originalPieces.length);
+    console.log("Number of current pieces:", pieces.length);
+    console.log("Sample original piece:", playedTile.originalPieces[0]);
+    console.log("Sample current piece:", pieces[0]);
+    console.log("Calculated moves:", calculatedMoves);
+    console.log("Tile requirements:", tileRequirements);
+    console.log("======================================");
 
     if (!tileRequirements.isMet) {
-      showAlert('Incomplete Moves', `Still missing ${tileRequirements.missingMoves.join(', ')} move(s)`, 'error');
+      showAlert(
+        "Incomplete Moves",
+        `Still missing ${tileRequirements.missingMoves.join(", ")} move(s)`,
+        "error"
+      );
       return;
     }
 
     // Check for extra moves in correction phase - NOT ALLOWED during correction
     // EXCEPTION: If tile player must perform penalty WITHDRAW, allow one extra WITHDRAW
     const requiredMoveTypes = tileRequirements.requiredMoves;
-    const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+    const performedMoveTypes = calculatedMoves.map((m) => m.moveType);
     const extraMoves: string[] = [];
 
     for (const moveType of performedMoveTypes) {
@@ -1555,15 +1880,17 @@ const App: React.FC = () => {
     let allowedExtraMoves = uniqueExtraMoves;
     if (tilePlayerMustWithdraw) {
       // Remove WITHDRAW from extra moves list if it's the penalty WITHDRAW
-      allowedExtraMoves = uniqueExtraMoves.filter(m => m !== 'WITHDRAW');
+      allowedExtraMoves = uniqueExtraMoves.filter((m) => m !== "WITHDRAW");
     }
 
     // During correction phase, reject if there are any extra moves (after accounting for penalty WITHDRAW)
     if (allowedExtraMoves.length > 0) {
       showAlert(
-        'Extra Moves Not Allowed',
-        `You made extra moves that weren't required: ${allowedExtraMoves.join(', ')}. Remove these moves and try again.`,
-        'error'
+        "Extra Moves Not Allowed",
+        `You made extra moves that weren't required: ${allowedExtraMoves.join(
+          ", "
+        )}. Remove these moves and try again.`,
+        "error"
       );
       return;
     }
@@ -1572,27 +1899,33 @@ const App: React.FC = () => {
     // The WITHDRAW must be IN ADDITION to the required moves (not replacing a required move)
     // EXCEPTION: If the player's domain is empty, skip the WITHDRAW requirement
     if (tilePlayerMustWithdraw) {
-      const withdrawMoves = calculatedMoves.filter(m => m.moveType === 'WITHDRAW');
+      const withdrawMoves = calculatedMoves.filter(
+        (m) => m.moveType === "WITHDRAW"
+      );
 
       // Count how many WITHDRAW moves are in the required moves
-      const requiredWithdrawCount = requiredMoveTypes.filter(m => m === 'WITHDRAW').length;
+      const requiredWithdrawCount = requiredMoveTypes.filter(
+        (m) => m === "WITHDRAW"
+      ).length;
 
       // Check if player's domain is empty (no pieces in seats, rostrums, or offices)
-      const tilePlayer = players.find(p => p.id === playedTile.playerId);
-      const playerDomainEmpty = tilePlayer && pieces.every(p => {
-        if (!p.locationId) return true; // piece not in domain
-        const locationPrefix = `p${tilePlayer.id}_`;
-        return !p.locationId.startsWith(locationPrefix);
-      });
+      const tilePlayer = players.find((p) => p.id === playedTile.playerId);
+      const playerDomainEmpty =
+        tilePlayer &&
+        pieces.every((p) => {
+          if (!p.locationId) return true; // piece not in domain
+          const locationPrefix = `p${tilePlayer.id}_`;
+          return !p.locationId.startsWith(locationPrefix);
+        });
 
       // If domain is not empty, require the additional WITHDRAW move
       if (!playerDomainEmpty) {
         // Check if there's at least one MORE WITHDRAW move than required
         if (withdrawMoves.length <= requiredWithdrawCount) {
           showAlert(
-            'Mandatory WITHDRAW Required',
-            'You must perform an ADDITIONAL WITHDRAW move beyond the tile requirements. Add another WITHDRAW move to proceed.',
-            'error'
+            "Mandatory WITHDRAW Required",
+            "You must perform an ADDITIONAL WITHDRAW move beyond the tile requirements. Add another WITHDRAW move to proceed.",
+            "error"
           );
           return;
         }
@@ -1601,29 +1934,46 @@ const App: React.FC = () => {
     }
 
     // Create updated tile with corrected moves
-    const updatedPlayedTile = { ...playedTile, movesPerformed: calculatedMoves };
+    const updatedPlayedTile = {
+      ...playedTile,
+      movesPerformed: calculatedMoves,
+    };
 
     // Log the standing moves (corrected moves that are now final)
     for (const move of calculatedMoves) {
-      const fromLoc = move.fromLocationId ? formatLocationId(move.fromLocationId) : 'supply';
-      const toLoc = move.toLocationId ? formatLocationId(move.toLocationId) : 'supply';
+      const fromLoc = move.fromLocationId
+        ? formatLocationId(move.fromLocationId)
+        : "supply";
+      const toLoc = move.toLocationId
+        ? formatLocationId(move.toLocationId)
+        : "supply";
 
       // Get the piece name from the current pieces
-      const movedPiece = pieces.find(p => p.id === move.pieceId);
-      const pieceName = movedPiece?.name || 'piece';
+      const movedPiece = pieces.find((p) => p.id === move.pieceId);
+      const pieceName = movedPiece?.name || "piece";
 
-      addGameLog(`Standing Move: Player ${playedTile.playerId} moves ${pieceName} from ${fromLoc} to ${toLoc}`);
+      addGameLog(
+        `Standing Move: Player ${playedTile.playerId} moves ${pieceName} from ${fromLoc} to ${toLoc}`
+      );
     }
 
     // Get bank spaces for the receiving player
     const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
-    const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === updatedPlayedTile.receivingPlayerId);
+    const playerBankSpaces = bankSpaces.filter(
+      (bs) => bs.ownerId === updatedPlayedTile.receivingPlayerId
+    );
 
     // Find the next available bank space (accounting for already banked tiles)
     const usedBankIndices = new Set(
       bankedTiles
-        .filter(bt => bt.ownerId === updatedPlayedTile.receivingPlayerId)
-        .map(bt => playerBankSpaces.findIndex(bs => bs.position.left === bt.position.left && bs.position.top === bt.position.top))
+        .filter((bt) => bt.ownerId === updatedPlayedTile.receivingPlayerId)
+        .map((bt) =>
+          playerBankSpaces.findIndex(
+            (bs) =>
+              bs.position.left === bt.position.left &&
+              bs.position.top === bt.position.top
+          )
+        )
     );
 
     let nextBankIndex = 0;
@@ -1638,8 +1988,13 @@ const App: React.FC = () => {
     if (nextBankIndex < playerBankSpaces.length) {
       const bankSpace = playerBankSpaces[nextBankIndex];
       const newBankedTile: BoardTile & { faceUp: boolean } = {
-        id: `bank_${updatedPlayedTile.receivingPlayerId}_${nextBankIndex}_${Date.now()}`,
-        tile: { id: parseInt(updatedPlayedTile.tileId), url: `./images/${updatedPlayedTile.tileId}.svg` },
+        id: `bank_${
+          updatedPlayedTile.receivingPlayerId
+        }_${nextBankIndex}_${Date.now()}`,
+        tile: {
+          id: parseInt(updatedPlayedTile.tileId),
+          url: `./images/${updatedPlayedTile.tileId}.svg`,
+        },
         position: bankSpace.position,
         rotation: bankSpace.rotation,
         placerId: updatedPlayedTile.playerId,
@@ -1647,20 +2002,27 @@ const App: React.FC = () => {
         faceUp: true, // Always face-up for rejected tiles
       };
 
-      setBankedTiles(prev => [...prev, newBankedTile]);
+      setBankedTiles((prev) => [...prev, newBankedTile]);
     }
 
     // Remove from board tiles
-    setBoardTiles(prev =>
-      prev.filter(bt => !(
-        bt.tile.id.toString().padStart(2, '0') === updatedPlayedTile.tileId &&
-        bt.placerId === updatedPlayedTile.playerId &&
-        bt.ownerId === updatedPlayedTile.receivingPlayerId
-      ))
+    setBoardTiles((prev) =>
+      prev.filter(
+        (bt) =>
+          !(
+            bt.tile.id.toString().padStart(2, "0") ===
+              updatedPlayedTile.tileId &&
+            bt.placerId === updatedPlayedTile.playerId &&
+            bt.ownerId === updatedPlayedTile.receivingPlayerId
+          )
+      )
     );
 
     // Receiving player gets the tile in their bureaucracy
-    const tile = { id: parseInt(updatedPlayedTile.tileId), url: `./images/${updatedPlayedTile.tileId}.svg` };
+    const tile = {
+      id: parseInt(updatedPlayedTile.tileId),
+      url: `./images/${updatedPlayedTile.tileId}.svg`,
+    };
 
     // Reset challenge state FIRST before setting turn
     setChallengeOrder([]);
@@ -1670,14 +2032,16 @@ const App: React.FC = () => {
 
     // Update players and set turn to receiver using latest state
     // Calculate the updated players array directly from current state
-    const updatedPlayers = players.map(p =>
+    const updatedPlayers = players.map((p) =>
       p.id === updatedPlayedTile.receivingPlayerId
         ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
         : p
     );
 
     // Move to receiving player for their turn
-    const receiverIndex = updatedPlayers.findIndex(p => p.id === updatedPlayedTile.receivingPlayerId);
+    const receiverIndex = updatedPlayers.findIndex(
+      (p) => p.id === updatedPlayedTile.receivingPlayerId
+    );
     if (receiverIndex !== -1) {
       setCurrentPlayerIndex(receiverIndex);
     }
@@ -1688,7 +2052,9 @@ const App: React.FC = () => {
     // Check if all players have filled their banks (trigger Bureaucracy phase)
     const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
     const tilesPerPlayer = allBankSpaces.length / playerCount;
-    const allBanksFull = updatedPlayers.length > 0 && updatedPlayers.every(p => p.bureaucracyTiles.length >= tilesPerPlayer);
+    const allBanksFull =
+      updatedPlayers.length > 0 &&
+      updatedPlayers.every((p) => p.bureaucracyTiles.length >= tilesPerPlayer);
 
     if (allBanksFull) {
       // Show "Bureaucracy!" transition message for 3 seconds before starting bureaucracy phase
@@ -1697,19 +2063,21 @@ const App: React.FC = () => {
       setTimeout(() => {
         // Initialize Bureaucracy phase
         const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
-        const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(p => ({
-          playerId: p.id,
-          initialKredcoin: calculatePlayerKredcoin(p),
-          remainingKredcoin: calculatePlayerKredcoin(p),
-          turnComplete: false,
-          purchases: []
-        }));
+        const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(
+          (p) => ({
+            playerId: p.id,
+            initialKredcoin: calculatePlayerKredcoin(p),
+            remainingKredcoin: calculatePlayerKredcoin(p),
+            turnComplete: false,
+            purchases: [],
+          })
+        );
 
         setBureaucracyTurnOrder(turnOrder);
         setBureaucracyStates(initialStates);
         setCurrentBureaucracyPlayerIndex(0);
         setShowBureaucracyMenu(true);
-        setGameState('BUREAUCRACY');
+        setGameState("BUREAUCRACY");
 
         // Reset tile play state
         setPlayedTile(null);
@@ -1732,7 +2100,10 @@ const App: React.FC = () => {
     const winners = checkBureaucracyWinCondition(updatedPlayers, pieces);
     if (winners.length > 0) {
       if (winners.length === 1) {
-        const winnerName = getPlayerName(getPlayerById(updatedPlayers, winners[0]), winners[0]);
+        const winnerName = getPlayerName(
+          getPlayerById(updatedPlayers, winners[0]),
+          winners[0]
+        );
         alert(`${winnerName} has won the game during the Campaign phase!`);
       } else {
         const winnerNames = formatWinnerNames(winners, updatedPlayers);
@@ -1745,12 +2116,12 @@ const App: React.FC = () => {
     // Reset remaining state
     setPlayedTile(null);
     setMovesThisTurn([]);
-    setGameState('CAMPAIGN');
+    setGameState("CAMPAIGN");
     setHasPlayedTileThisTurn(false);
     setGiveReceiverViewingTileId(null);
 
     // Set piece state snapshot for the start of this new turn
-    setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+    setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
 
     // Clear piece movement tracking for new turn
     setMovedPiecesThisTurn(new Set());
@@ -1761,19 +2132,23 @@ const App: React.FC = () => {
   /**
    * Helper function to calculate moves by comparing current pieces to original pieces
    */
-  const calculateMoves = (originalPieces: Piece[], currentPieces: Piece[], tilePlayerId: number): TrackedMove[] => {
+  const calculateMoves = (
+    originalPieces: Piece[],
+    currentPieces: Piece[],
+    tilePlayerId: number
+  ): TrackedMove[] => {
     const calculatedMoves: TrackedMove[] = [];
 
-    console.log('calculateMoves called with:', {
+    console.log("calculateMoves called with:", {
       originalPiecesCount: originalPieces.length,
       currentPiecesCount: currentPieces.length,
-      tilePlayerId
+      tilePlayerId,
     });
 
     for (const currentPiece of currentPieces) {
-      const initialPiece = originalPieces.find(p => p.id === currentPiece.id);
+      const initialPiece = originalPieces.find((p) => p.id === currentPiece.id);
       if (!initialPiece) {
-        console.log('No initial piece found for:', currentPiece.id);
+        console.log("No initial piece found for:", currentPiece.id);
         continue;
       }
 
@@ -1789,52 +2164,79 @@ const App: React.FC = () => {
       let shouldCountMove = false;
 
       // Rule 1: Community → Seat/Rostrum/Office = COUNT
-      if (initialLocId?.includes('community') &&
-          (finalLocId?.includes('_seat') || finalLocId?.includes('_rostrum') || finalLocId?.includes('_office'))) {
+      if (
+        initialLocId?.includes("community") &&
+        (finalLocId?.includes("_seat") ||
+          finalLocId?.includes("_rostrum") ||
+          finalLocId?.includes("_office"))
+      ) {
         shouldCountMove = true;
       }
       // Rule 2: Seat → Community = COUNT (only if started in seat)
-      else if (initialLocId?.includes('_seat') && finalLocId?.includes('community')) {
+      else if (
+        initialLocId?.includes("_seat") &&
+        finalLocId?.includes("community")
+      ) {
         shouldCountMove = true;
       }
       // Rule 3: Seat → Seat = COUNT (intermediate moves don't matter)
-      else if (initialLocId?.includes('_seat') && finalLocId?.includes('_seat')) {
+      else if (
+        initialLocId?.includes("_seat") &&
+        finalLocId?.includes("_seat")
+      ) {
         shouldCountMove = true;
       }
       // Rule 4: Seat → Rostrum = COUNT
-      else if (initialLocId?.includes('_seat') && finalLocId?.includes('_rostrum')) {
+      else if (
+        initialLocId?.includes("_seat") &&
+        finalLocId?.includes("_rostrum")
+      ) {
         shouldCountMove = true;
       }
       // Rule 5: Rostrum → Seat/Office = COUNT
-      else if (initialLocId?.includes('_rostrum') &&
-               (finalLocId?.includes('_seat') || finalLocId?.includes('_office'))) {
+      else if (
+        initialLocId?.includes("_rostrum") &&
+        (finalLocId?.includes("_seat") || finalLocId?.includes("_office"))
+      ) {
         shouldCountMove = true;
       }
       // Rule 6: Office → Rostrum = COUNT
-      else if (initialLocId?.includes('_office') && finalLocId?.includes('_rostrum')) {
+      else if (
+        initialLocId?.includes("_office") &&
+        finalLocId?.includes("_rostrum")
+      ) {
         shouldCountMove = true;
       }
       // Rule 7: Rostrum → Community = COUNT (WITHDRAW)
-      else if (initialLocId?.includes('_rostrum') && finalLocId?.includes('community')) {
+      else if (
+        initialLocId?.includes("_rostrum") &&
+        finalLocId?.includes("community")
+      ) {
         shouldCountMove = true;
       }
       // Rule 8: Rostrum → Rostrum = COUNT (ORGANIZE)
-      else if (initialLocId?.includes('_rostrum') && finalLocId?.includes('_rostrum')) {
+      else if (
+        initialLocId?.includes("_rostrum") &&
+        finalLocId?.includes("_rostrum")
+      ) {
         shouldCountMove = true;
       }
       // Rule 9: Office → Community = COUNT (shouldn't happen but count if it does)
-      else if (initialLocId?.includes('_office') && finalLocId?.includes('community')) {
+      else if (
+        initialLocId?.includes("_office") &&
+        finalLocId?.includes("community")
+      ) {
         shouldCountMove = true;
       }
 
       if (!shouldCountMove) continue;
 
       // Determine move type
-      let moveType = 'UNKNOWN';
-      const isCommunity = (loc?: string) => loc?.includes('community');
-      const isSeat = (loc?: string) => loc?.includes('_seat');
-      const isRostrum = (loc?: string) => loc?.includes('_rostrum');
-      const isOffice = (loc?: string) => loc?.includes('_office');
+      let moveType = "UNKNOWN";
+      const isCommunity = (loc?: string) => loc?.includes("community");
+      const isSeat = (loc?: string) => loc?.includes("_seat");
+      const isRostrum = (loc?: string) => loc?.includes("_rostrum");
+      const isOffice = (loc?: string) => loc?.includes("_office");
       const getPlayerFromLocation = (loc?: string): number | null => {
         const match = loc?.match(/p(\d+)_/);
         return match ? parseInt(match[1]) : null;
@@ -1842,52 +2244,65 @@ const App: React.FC = () => {
 
       if (isCommunity(initialLocId) && isSeat(finalLocId)) {
         const ownerPlayer = getPlayerFromLocation(finalLocId);
-        moveType = ownerPlayer === tilePlayerId ? 'ADVANCE' : 'ASSIST';
+        moveType = ownerPlayer === tilePlayerId ? "ADVANCE" : "ASSIST";
       } else if (isSeat(initialLocId) && isRostrum(finalLocId)) {
-        moveType = 'ADVANCE';
+        moveType = "ADVANCE";
       } else if (isRostrum(initialLocId) && isOffice(finalLocId)) {
-        moveType = 'ADVANCE';
+        moveType = "ADVANCE";
       } else if (isRostrum(initialLocId) && isSeat(finalLocId)) {
-        moveType = 'WITHDRAW';
+        moveType = "WITHDRAW";
       } else if (isOffice(initialLocId) && isRostrum(finalLocId)) {
-        moveType = 'WITHDRAW';
+        moveType = "WITHDRAW";
       } else if (isSeat(initialLocId) && isCommunity(finalLocId)) {
         // Determine if this is REMOVE or WITHDRAW based on piece ownership
         const fromPlayer = getPlayerFromLocation(initialLocId);
         if (fromPlayer === tilePlayerId) {
-          moveType = 'WITHDRAW';
+          moveType = "WITHDRAW";
         } else {
           // Check if the piece is a Mark or Heel (REMOVE only for these pieces)
-          const movingPiece = currentPieces.find(p => p.id === currentPiece.id);
+          const movingPiece = currentPieces.find(
+            (p) => p.id === currentPiece.id
+          );
           if (movingPiece) {
             const pieceName = movingPiece.name.toLowerCase();
-            moveType = (pieceName === 'mark' || pieceName === 'heel') ? 'REMOVE' : 'UNKNOWN';
+            moveType =
+              pieceName === "mark" || pieceName === "heel"
+                ? "REMOVE"
+                : "UNKNOWN";
           } else {
-            moveType = 'UNKNOWN';
+            moveType = "UNKNOWN";
           }
         }
       } else if (isSeat(initialLocId) && isSeat(finalLocId)) {
         const fromPlayer = getPlayerFromLocation(initialLocId);
         // Check if seats are adjacent using the helper function from game.ts
-        if (initialLocId && finalLocId && areSeatsAdjacent(initialLocId, finalLocId, playerCount)) {
+        if (
+          initialLocId &&
+          finalLocId &&
+          areSeatsAdjacent(initialLocId, finalLocId, playerCount)
+        ) {
           if (fromPlayer === tilePlayerId) {
-            moveType = 'ORGANIZE';
+            moveType = "ORGANIZE";
           } else {
-            moveType = 'INFLUENCE';
+            moveType = "INFLUENCE";
           }
         } else {
           // Non-adjacent seats - not a valid move type
-          moveType = 'UNKNOWN';
+          moveType = "UNKNOWN";
         }
       } else if (isRostrum(initialLocId) && isRostrum(finalLocId)) {
         const fromPlayer = getPlayerFromLocation(initialLocId);
-        moveType = fromPlayer === tilePlayerId ? 'ORGANIZE' : 'INFLUENCE';
+        moveType = fromPlayer === tilePlayerId ? "ORGANIZE" : "INFLUENCE";
       }
 
       // Determine category
-      let category: 'M' | 'O' = 'M';
-      if (moveType === 'REMOVE' || moveType === 'INFLUENCE' || moveType === 'ASSIST') {
-        category = 'O';
+      let category: "M" | "O" = "M";
+      if (
+        moveType === "REMOVE" ||
+        moveType === "INFLUENCE" ||
+        moveType === "ASSIST"
+      ) {
+        category = "O";
       }
 
       // Create tracked move
@@ -1914,7 +2329,10 @@ const App: React.FC = () => {
     let baselinePieces = playedTile.originalPieces;
 
     // If in correction phase, use the pieces captured at correction start as both baseline and current
-    if (gameState === 'CORRECTION_REQUIRED' && piecesAtCorrectionStart.length > 0) {
+    if (
+      gameState === "CORRECTION_REQUIRED" &&
+      piecesAtCorrectionStart.length > 0
+    ) {
       baselinePieces = piecesAtCorrectionStart;
     }
     // If a bonus move was completed, use the pieces before the bonus move to avoid counting bonus moves as extra moves
@@ -1922,32 +2340,48 @@ const App: React.FC = () => {
       piecesForCalculation = piecesBeforeBonusMove;
     }
 
-    const calculatedMoves = calculateMoves(baselinePieces, piecesForCalculation, playedTile.playerId);
-
-    // Validate the calculated moves
-    const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
-      playedTile.tileId,
-      calculatedMoves,
-      playedTile.playerId,
+    const calculatedMoves = calculateMoves(
       baselinePieces,
       piecesForCalculation,
-      players,
-      playerCount
+      playedTile.playerId
     );
+
+    // Validate the calculated moves
+    const tileRequirements =
+      validateTileRequirementsWithImpossibleMoveExceptions(
+        playedTile.tileId,
+        calculatedMoves,
+        playedTile.playerId,
+        baselinePieces,
+        piecesForCalculation,
+        players,
+        playerCount
+      );
 
     const moveValidations = calculatedMoves.map((move, index) => {
       // Build piece state after all previous moves
-      let piecesForValidation = playedTile.originalPieces.map(p => ({ ...p }));
+      let piecesForValidation = playedTile.originalPieces.map((p) => ({
+        ...p,
+      }));
       for (let i = 0; i < index; i++) {
         const prevMove = calculatedMoves[i];
-        piecesForValidation = piecesForValidation.map(p =>
+        piecesForValidation = piecesForValidation.map((p) =>
           p.id === prevMove.pieceId
-            ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+            ? {
+                ...p,
+                locationId: prevMove.toLocationId,
+                position: prevMove.toPosition,
+              }
             : p
         );
       }
 
-      const validation = validateSingleMove(move, playedTile.playerId, piecesForValidation, playerCount);
+      const validation = validateSingleMove(
+        move,
+        playedTile.playerId,
+        piecesForValidation,
+        playerCount
+      );
       return {
         moveType: move.moveType,
         isValid: validation.isValid,
@@ -1959,7 +2393,7 @@ const App: React.FC = () => {
 
     // Check if there are extra moves beyond what's required
     const requiredMoveTypes = tileRequirements.requiredMoves;
-    const performedMoveTypes = calculatedMoves.map(m => m.moveType);
+    const performedMoveTypes = calculatedMoves.map((m) => m.moveType);
     const extraMoves: string[] = [];
 
     for (const moveType of performedMoveTypes) {
@@ -1983,76 +2417,103 @@ const App: React.FC = () => {
   const resolveTransaction = (wasChallenged: boolean) => {
     if (!tileTransaction) return;
 
-    setPlayers(prev => prev.map(p => {
+    setPlayers((prev) =>
+      prev.map((p) => {
         if (p.id === tileTransaction.receiverId) {
-            return { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tileTransaction.tile] };
+          return {
+            ...p,
+            bureaucracyTiles: [...p.bureaucracyTiles, tileTransaction.tile],
+          };
         }
         return p;
-    }));
-    setBoardTiles(prev => prev.filter(bt => bt.id !== tileTransaction.boardTileId));
+      })
+    );
+    setBoardTiles((prev) =>
+      prev.filter((bt) => bt.id !== tileTransaction.boardTileId)
+    );
     advanceTurnNormally(tileTransaction.placerId);
   };
-  
-  const handleReceiverDecision = (decision: 'accept' | 'reject') => {
-      if (!tileTransaction) return;
-      setIsPrivatelyViewing(false);
 
-      if (decision === 'reject') {
-          const placer = players.find(p => p.id === tileTransaction.placerId);
-          if (placer) {
-              setPlayers(prev => prev.map(p => p.id === placer.id ? { ...p, keptTiles: [...p.keptTiles, tileTransaction.tile] } : p));
-          }
-          setBoardTiles(prev => prev.filter(bt => bt.id !== tileTransaction.boardTileId));
-          advanceTurnNormally(tileTransaction.placerId);
-      } else { // 'accept'
-          setGameState('PENDING_CHALLENGE');
-          
-          const bystanderPlayers = players.filter(p => p.id !== tileTransaction.placerId && p.id !== tileTransaction.receiverId);
-          const placerIndex = players.findIndex(p => p.id === tileTransaction.placerId);
+  const handleReceiverDecision = (decision: "accept" | "reject") => {
+    if (!tileTransaction) return;
+    setIsPrivatelyViewing(false);
 
-          const sortedBystanders = bystanderPlayers.sort((a, b) => {
-              const indexA = players.findIndex(p => p.id === a.id);
-              const indexB = players.findIndex(p => p.id === b.id);
-              const relativeA = (indexA - placerIndex + playerCount) % playerCount;
-              const relativeB = (indexB - placerIndex + playerCount) % playerCount;
-              return relativeA - relativeB;
-          });
-
-          if (sortedBystanders.length > 0) {
-              setBystanders(sortedBystanders);
-              setBystanderIndex(0);
-              const firstBystanderIndex = players.findIndex(p => p.id === sortedBystanders[0].id);
-              setCurrentPlayerIndex(firstBystanderIndex);
-          } else {
-              resolveTransaction(false);
-          }
+    if (decision === "reject") {
+      const placer = players.find((p) => p.id === tileTransaction.placerId);
+      if (placer) {
+        setPlayers((prev) =>
+          prev.map((p) =>
+            p.id === placer.id
+              ? { ...p, keptTiles: [...p.keptTiles, tileTransaction.tile] }
+              : p
+          )
+        );
       }
+      setBoardTiles((prev) =>
+        prev.filter((bt) => bt.id !== tileTransaction.boardTileId)
+      );
+      advanceTurnNormally(tileTransaction.placerId);
+    } else {
+      // 'accept'
+      setGameState("PENDING_CHALLENGE");
+
+      const bystanderPlayers = players.filter(
+        (p) =>
+          p.id !== tileTransaction.placerId &&
+          p.id !== tileTransaction.receiverId
+      );
+      const placerIndex = players.findIndex(
+        (p) => p.id === tileTransaction.placerId
+      );
+
+      const sortedBystanders = bystanderPlayers.sort((a, b) => {
+        const indexA = players.findIndex((p) => p.id === a.id);
+        const indexB = players.findIndex((p) => p.id === b.id);
+        const relativeA = (indexA - placerIndex + playerCount) % playerCount;
+        const relativeB = (indexB - placerIndex + playerCount) % playerCount;
+        return relativeA - relativeB;
+      });
+
+      if (sortedBystanders.length > 0) {
+        setBystanders(sortedBystanders);
+        setBystanderIndex(0);
+        const firstBystanderIndex = players.findIndex(
+          (p) => p.id === sortedBystanders[0].id
+        );
+        setCurrentPlayerIndex(firstBystanderIndex);
+      } else {
+        resolveTransaction(false);
+      }
+    }
   };
 
-  const handleBystanderDecision = (decision: 'challenge' | 'pass') => {
-      if (decision === 'challenge') {
-          if (tileTransaction) {
-              setChallengedTile(tileTransaction.tile);
-              setShowChallengeRevealModal(true);
-          }
-      } else { // 'pass'
-          const nextBystanderIndex = bystanderIndex + 1;
-          if (nextBystanderIndex >= bystanders.length) {
-              resolveTransaction(false);
-          } else {
-              setBystanderIndex(nextBystanderIndex);
-              const nextBystander = bystanders[nextBystanderIndex];
-              const nextBystanderPlayerIndex = players.findIndex(p => p.id === nextBystander.id);
-              setCurrentPlayerIndex(nextBystanderPlayerIndex);
-          }
+  const handleBystanderDecision = (decision: "challenge" | "pass") => {
+    if (decision === "challenge") {
+      if (tileTransaction) {
+        setChallengedTile(tileTransaction.tile);
+        setShowChallengeRevealModal(true);
       }
+    } else {
+      // 'pass'
+      const nextBystanderIndex = bystanderIndex + 1;
+      if (nextBystanderIndex >= bystanders.length) {
+        resolveTransaction(false);
+      } else {
+        setBystanderIndex(nextBystanderIndex);
+        const nextBystander = bystanders[nextBystanderIndex];
+        const nextBystanderPlayerIndex = players.findIndex(
+          (p) => p.id === nextBystander.id
+        );
+        setCurrentPlayerIndex(nextBystanderPlayerIndex);
+      }
+    }
   };
 
   const handleContinueAfterChallenge = () => {
-      setShowChallengeRevealModal(false);
-      resolveTransaction(true);
-      setChallengedTile(null);
-  }
+    setShowChallengeRevealModal(false);
+    resolveTransaction(true);
+    setChallengedTile(null);
+  };
 
   // ============================================================================
   // BUREAUCRACY PHASE HANDLERS
@@ -2060,10 +2521,12 @@ const App: React.FC = () => {
 
   const handleSelectBureaucracyMenuItem = (item: BureaucracyMenuItem) => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
-    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    const playerState = bureaucracyStates.find(
+      (s) => s.playerId === currentPlayerId
+    );
 
     if (!playerState || playerState.remainingKredcoin < item.price) {
-      setBureaucracyValidationError('Insufficient Kredcoin for this purchase');
+      setBureaucracyValidationError("Insufficient Kredcoin for this purchase");
       return;
     }
 
@@ -2072,7 +2535,7 @@ const App: React.FC = () => {
       playerId: currentPlayerId,
       item,
       timestamp: Date.now(),
-      completed: false
+      completed: false,
     };
 
     setCurrentBureaucracyPurchase(purchase);
@@ -2083,12 +2546,14 @@ const App: React.FC = () => {
     setBureaucracySnapshot(createGameStateSnapshot(pieces, boardTiles));
 
     // If credibility purchase, apply it immediately
-    if (item.type === 'CREDIBILITY') {
-      setPlayers(players.map(p =>
-        p.id === currentPlayerId
-          ? { ...p, credibility: Math.min(10, p.credibility + 1) }
-          : p
-      ));
+    if (item.type === "CREDIBILITY") {
+      setPlayers(
+        players.map((p) =>
+          p.id === currentPlayerId
+            ? { ...p, credibility: Math.min(10, p.credibility + 1) }
+            : p
+        )
+      );
     }
   };
 
@@ -2096,38 +2561,44 @@ const App: React.FC = () => {
     if (!currentBureaucracyPurchase) return;
 
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
-    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    const playerState = bureaucracyStates.find(
+      (s) => s.playerId === currentPlayerId
+    );
     if (!playerState) return;
 
     // Validate the action
     let isValid = false;
-    let validationMessage = '';
+    let validationMessage = "";
 
-    if (currentBureaucracyPurchase.item.type === 'CREDIBILITY') {
+    if (currentBureaucracyPurchase.item.type === "CREDIBILITY") {
       // Credibility restore is always valid (already applied)
       isValid = true;
-    } else if (currentBureaucracyPurchase.item.type === 'PROMOTION') {
+    } else if (currentBureaucracyPurchase.item.type === "PROMOTION") {
       // Find which piece was swapped to community (should now be in community)
       const snapshot = bureaucracySnapshot;
       if (!snapshot) {
-        validationMessage = 'No snapshot available for validation';
+        validationMessage = "No snapshot available for validation";
       } else {
         // Find pieces that moved to community
-        const piecesMovedToCommunity = snapshot.pieces.filter(originalPiece => {
-          const currentPiece = pieces.find(p => p.id === originalPiece.id);
-          return (
-            currentPiece &&
-            originalPiece.locationId &&
-            !originalPiece.locationId.startsWith('community') &&
-            currentPiece.locationId &&
-            currentPiece.locationId.startsWith('community')
-          );
-        });
+        const piecesMovedToCommunity = snapshot.pieces.filter(
+          (originalPiece) => {
+            const currentPiece = pieces.find((p) => p.id === originalPiece.id);
+            return (
+              currentPiece &&
+              originalPiece.locationId &&
+              !originalPiece.locationId.startsWith("community") &&
+              currentPiece.locationId &&
+              currentPiece.locationId.startsWith("community")
+            );
+          }
+        );
 
         if (piecesMovedToCommunity.length === 0) {
-          validationMessage = 'No promotion was performed. Please click a piece to promote it.';
+          validationMessage =
+            "No promotion was performed. Please click a piece to promote it.";
         } else if (piecesMovedToCommunity.length > 1) {
-          validationMessage = 'Only one promotion can be performed per purchase.';
+          validationMessage =
+            "Only one promotion can be performed per purchase.";
         } else {
           const promotedPieceId = piecesMovedToCommunity[0].id;
           const validation = validatePromotion(
@@ -2145,13 +2616,17 @@ const App: React.FC = () => {
           }
         }
       }
-    } else if (currentBureaucracyPurchase.item.type === 'MOVE') {
+    } else if (currentBureaucracyPurchase.item.type === "MOVE") {
       // Use the same calculateMoves logic as Campaign phase
       const snapshot = bureaucracySnapshot;
       if (!snapshot) {
-        validationMessage = 'No snapshot available for validation';
+        validationMessage = "No snapshot available for validation";
       } else {
-        const calculatedMoves = calculateMoves(snapshot.pieces, pieces, currentPlayerId);
+        const calculatedMoves = calculateMoves(
+          snapshot.pieces,
+          pieces,
+          currentPlayerId
+        );
 
         // Validate each move with proper piece state (same as Campaign)
         // We need to validate using the piece state BEFORE the move, not after
@@ -2160,17 +2635,26 @@ const App: React.FC = () => {
           const move = calculatedMoves[i];
 
           // Build piece state after all previous moves but before this move
-          let piecesForValidation = snapshot.pieces.map(p => ({ ...p }));
+          let piecesForValidation = snapshot.pieces.map((p) => ({ ...p }));
           for (let j = 0; j < i; j++) {
             const prevMove = calculatedMoves[j];
-            piecesForValidation = piecesForValidation.map(p =>
+            piecesForValidation = piecesForValidation.map((p) =>
               p.id === prevMove.pieceId
-                ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+                ? {
+                    ...p,
+                    locationId: prevMove.toLocationId,
+                    position: prevMove.toPosition,
+                  }
                 : p
             );
           }
 
-          const validation = validateSingleMove(move, currentPlayerId, piecesForValidation, playerCount);
+          const validation = validateSingleMove(
+            move,
+            currentPlayerId,
+            piecesForValidation,
+            playerCount
+          );
           if (!validation.isValid) {
             allMovesValid = false;
             validationMessage = `${move.moveType} move validation failed: ${validation.reason}`;
@@ -2181,7 +2665,9 @@ const App: React.FC = () => {
         if (allMovesValid) {
           // Check that at least one move matches the purchased type
           const expectedMoveType = currentBureaucracyPurchase.item.moveType!;
-          const hasMatchingMove = calculatedMoves.some(m => m.moveType === expectedMoveType);
+          const hasMatchingMove = calculatedMoves.some(
+            (m) => m.moveType === expectedMoveType
+          );
 
           if (!hasMatchingMove) {
             validationMessage = `Expected a ${expectedMoveType} move, but none was found`;
@@ -2206,12 +2692,16 @@ const App: React.FC = () => {
     }
 
     // Purchase successful - deduct kredcoin
-    const updatedStates = bureaucracyStates.map(s => {
+    const updatedStates = bureaucracyStates.map((s) => {
       if (s.playerId === currentPlayerId) {
         return {
           ...s,
-          remainingKredcoin: s.remainingKredcoin - currentBureaucracyPurchase.item.price,
-          purchases: [...s.purchases, { ...currentBureaucracyPurchase, completed: true }]
+          remainingKredcoin:
+            s.remainingKredcoin - currentBureaucracyPurchase.item.price,
+          purchases: [
+            ...s.purchases,
+            { ...currentBureaucracyPurchase, completed: true },
+          ],
         };
       }
       return s;
@@ -2223,7 +2713,7 @@ const App: React.FC = () => {
     setBureaucracyMoves([]);
 
     // Deduct tiles from bureaucracyTiles
-    const updatedPlayers = players.map(p => {
+    const updatedPlayers = players.map((p) => {
       if (p.id === currentPlayerId) {
         let remainingPrice = currentBureaucracyPurchase.item.price;
         const newBureaucracyTiles = [...p.bureaucracyTiles];
@@ -2249,10 +2739,8 @@ const App: React.FC = () => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
 
     // Mark turn as complete
-    const updatedStates = bureaucracyStates.map(s =>
-      s.playerId === currentPlayerId
-        ? { ...s, turnComplete: true }
-        : s
+    const updatedStates = bureaucracyStates.map((s) =>
+      s.playerId === currentPlayerId ? { ...s, turnComplete: true } : s
     );
     setBureaucracyStates(updatedStates);
 
@@ -2267,7 +2755,7 @@ const App: React.FC = () => {
         if (winners.length === 1) {
           alert(`Player ${winners[0]} has won the game!`);
         } else {
-          alert(`The game is a draw! Winners: ${winners.join(', ')}`);
+          alert(`The game is a draw! Winners: ${winners.join(", ")}`);
         }
         // Could add a game over state here
         return;
@@ -2275,11 +2763,11 @@ const App: React.FC = () => {
 
       // No winner - transition back to campaign for next round
       // Bureaucracy tiles become the hand (keptTiles) for the next campaign phase
-      const updatedPlayers = players.map(p => ({
+      const updatedPlayers = players.map((p) => ({
         ...p,
         hand: [],
         keptTiles: [...p.bureaucracyTiles],
-        bureaucracyTiles: []
+        bureaucracyTiles: [],
       }));
 
       setPlayers(updatedPlayers);
@@ -2289,14 +2777,16 @@ const App: React.FC = () => {
 
       // Player with tile 03 goes first in the new campaign round
       const startingTileId = 3;
-      const startingPlayerIndex = updatedPlayers.findIndex(p => p.keptTiles && p.keptTiles.some(t => t.id === startingTileId));
+      const startingPlayerIndex = updatedPlayers.findIndex(
+        (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
+      );
       if (startingPlayerIndex !== -1) {
         setCurrentPlayerIndex(startingPlayerIndex);
       } else {
         setCurrentPlayerIndex(0);
       }
 
-      setGameState('CAMPAIGN');
+      setGameState("CAMPAIGN");
       setBureaucracyStates([]);
       setBureaucracyTurnOrder([]);
       setCurrentBureaucracyPlayerIndex(0);
@@ -2309,9 +2799,13 @@ const App: React.FC = () => {
 
   const handleFinishBureaucracyTurn = () => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
-    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    const playerState = bureaucracyStates.find(
+      (s) => s.playerId === currentPlayerId
+    );
     const menu = getBureaucracyMenu(playerCount);
-    const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
+    const affordableItems = playerState
+      ? getAvailablePurchases(menu, playerState.remainingKredcoin)
+      : [];
 
     // Confirm if they still have kredcoin
     if (affordableItems.length > 0) {
@@ -2352,34 +2846,53 @@ const App: React.FC = () => {
   };
 
   const handleCheckBureaucracyMove = () => {
-    if (!currentBureaucracyPurchase || currentBureaucracyPurchase.item.type !== 'MOVE') return;
+    if (
+      !currentBureaucracyPurchase ||
+      currentBureaucracyPurchase.item.type !== "MOVE"
+    )
+      return;
     if (!bureaucracySnapshot) return;
 
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
     const moveType = currentBureaucracyPurchase.item.moveType!;
 
     // Use the same calculateMoves logic as Campaign phase
-    const calculatedMoves = calculateMoves(bureaucracySnapshot.pieces, pieces, currentPlayerId);
+    const calculatedMoves = calculateMoves(
+      bureaucracySnapshot.pieces,
+      pieces,
+      currentPlayerId
+    );
 
     // Validate each move with proper piece state (same as Campaign)
     let allMovesValid = true;
-    let failureReason = '';
+    let failureReason = "";
 
     for (let i = 0; i < calculatedMoves.length; i++) {
       const move = calculatedMoves[i];
 
       // Build piece state after all previous moves but before this move
-      let piecesForValidation = bureaucracySnapshot.pieces.map(p => ({ ...p }));
+      let piecesForValidation = bureaucracySnapshot.pieces.map((p) => ({
+        ...p,
+      }));
       for (let j = 0; j < i; j++) {
         const prevMove = calculatedMoves[j];
-        piecesForValidation = piecesForValidation.map(p =>
+        piecesForValidation = piecesForValidation.map((p) =>
           p.id === prevMove.pieceId
-            ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+            ? {
+                ...p,
+                locationId: prevMove.toLocationId,
+                position: prevMove.toPosition,
+              }
             : p
         );
       }
 
-      const validation = validateSingleMove(move, currentPlayerId, piecesForValidation, playerCount);
+      const validation = validateSingleMove(
+        move,
+        currentPlayerId,
+        piecesForValidation,
+        playerCount
+      );
       if (!validation.isValid) {
         allMovesValid = false;
         failureReason = `${move.moveType} move validation failed: ${validation.reason}`;
@@ -2389,22 +2902,24 @@ const App: React.FC = () => {
 
     if (allMovesValid) {
       // Check that at least one move matches the purchased type
-      const hasMatchingMove = calculatedMoves.some(m => m.moveType === moveType);
+      const hasMatchingMove = calculatedMoves.some(
+        (m) => m.moveType === moveType
+      );
       if (!hasMatchingMove) {
         setBureaucracyMoveCheckResult({
           isValid: false,
-          reason: `Expected a ${moveType} move, but none was found`
+          reason: `Expected a ${moveType} move, but none was found`,
         });
       } else {
         setBureaucracyMoveCheckResult({
           isValid: true,
-          reason: 'Move is valid!'
+          reason: "Move is valid!",
         });
       }
     } else {
       setBureaucracyMoveCheckResult({
         isValid: false,
-        reason: failureReason
+        reason: failureReason,
       });
     }
 
@@ -2415,35 +2930,49 @@ const App: React.FC = () => {
     setShowBureaucracyMoveCheckResult(false);
   };
 
-  const handleBureaucracyPieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
+  const handleBureaucracyPieceMove = (
+    pieceId: string,
+    newPosition: { top: number; left: number },
+    locationId?: string
+  ) => {
     // Track the move
-    const piece = pieces.find(p => p.id === pieceId);
+    const piece = pieces.find((p) => p.id === pieceId);
     if (!piece) return;
 
     // Determine the move type based on from/to locations
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
-    const moveType = determineMoveType(piece.locationId, locationId, currentPlayerId);
+    const moveType = determineMoveType(
+      piece.locationId,
+      locationId,
+      currentPlayerId
+    );
 
     const move: TrackedMove = {
       moveType: moveType || 0,
-      category: 'M',
+      category: "M",
       pieceId,
       fromPosition: piece.position,
       fromLocationId: piece.locationId,
       toPosition: newPosition,
       toLocationId: locationId,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     setBureaucracyMoves([...bureaucracyMoves, move]);
 
     // Update piece position and rotation
-    const newRotation = calculatePieceRotation(newPosition, playerCount, locationId);
-    setPieces(pieces.map(p =>
-      p.id === pieceId
-        ? { ...p, position: newPosition, rotation: newRotation, locationId }
-        : p
-    ));
+    const newRotation = calculatePieceRotation(
+      newPosition,
+      playerCount,
+      locationId
+    );
+    setPieces(
+      pieces.map((p) =>
+        p.id === pieceId
+          ? { ...p, position: newPosition, rotation: newRotation, locationId }
+          : p
+      )
+    );
   };
 
   /**
@@ -2454,7 +2983,7 @@ const App: React.FC = () => {
   const transitionToCorrectionPhase = (updatedOriginalPieces?: Piece[]) => {
     if (!playedTile) return;
 
-    const tilePlayer = players.find(p => p.id === playedTile.playerId);
+    const tilePlayer = players.find((p) => p.id === playedTile.playerId);
     const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
 
     // Determine if tile player must withdraw (0 credibility penalty)
@@ -2465,17 +2994,17 @@ const App: React.FC = () => {
     }
 
     // Switch to correction phase
-    const playerIndex = players.findIndex(p => p.id === playedTile.playerId);
+    const playerIndex = players.findIndex((p) => p.id === playedTile.playerId);
     if (playerIndex !== -1) {
       setCurrentPlayerIndex(playerIndex);
-      setGameState('CORRECTION_REQUIRED');
+      setGameState("CORRECTION_REQUIRED");
       setMovesThisTurn([]);
       setTileRejected(true);
 
       // Restore original pieces (using updated pieces if provided, which includes Take Advantage changes)
       const revertedPieces = updatedOriginalPieces
-        ? updatedOriginalPieces.map(p => ({ ...p }))
-        : playedTile.originalPieces.map(p => ({ ...p }));
+        ? updatedOriginalPieces.map((p) => ({ ...p }))
+        : playedTile.originalPieces.map((p) => ({ ...p }));
       setPieces(revertedPieces);
       setPiecesAtCorrectionStart(revertedPieces);
 
@@ -2483,7 +3012,7 @@ const App: React.FC = () => {
       if (updatedOriginalPieces) {
         setPlayedTile({
           ...playedTile,
-          originalPieces: updatedOriginalPieces.map(p => ({ ...p }))
+          originalPieces: updatedOriginalPieces.map((p) => ({ ...p })),
         });
       }
 
@@ -2498,8 +3027,12 @@ const App: React.FC = () => {
    * Decline the Take Advantage offer and continue to correction phase
    */
   const handleTakeAdvantageDecline = () => {
-    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-    setGameLog(prev => [...prev, `${challengerName} declined the Take Advantage reward`]);
+    const challengerName =
+      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    setGameLog((prev) => [
+      ...prev,
+      `${challengerName} declined the Take Advantage reward`,
+    ]);
 
     // Clean up modal state
     setShowTakeAdvantageModal(false);
@@ -2515,17 +3048,17 @@ const App: React.FC = () => {
    * Show tile selection screen
    */
   const handleTakeAdvantageYes = () => {
-    const challenger = players.find(p => p.id === takeAdvantageChallengerId);
+    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
 
     if (!challenger) {
-      console.error('Challenger not found');
+      console.error("Challenger not found");
       handleTakeAdvantageDecline();
       return;
     }
 
     // Check if player has any tiles
     if (challenger.bureaucracyTiles.length === 0) {
-      setTakeAdvantageValidationError('You have no tiles in your bank');
+      setTakeAdvantageValidationError("You have no tiles in your bank");
       setTimeout(() => {
         handleTakeAdvantageDecline();
       }, 2000);
@@ -2547,15 +3080,21 @@ const App: React.FC = () => {
     if (takeAdvantageChallengerId === null) return;
 
     // Add 1 credibility (max 3)
-    setPlayers(prev => prev.map(p =>
-      p.id === takeAdvantageChallengerId
-        ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
-        : p
-    ));
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.id === takeAdvantageChallengerId
+          ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
+          : p
+      )
+    );
 
     // Log the recovery
-    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-    setGameLog(prev => [...prev, `${challengerName} recovered 1 credibility (successful challenge reward)`]);
+    const challengerName =
+      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    setGameLog((prev) => [
+      ...prev,
+      `${challengerName} recovered 1 credibility (successful challenge reward)`,
+    ]);
 
     // Clean up modal state
     setShowTakeAdvantageModal(false);
@@ -2571,17 +3110,17 @@ const App: React.FC = () => {
    * Show tile selection screen
    */
   const handlePurchaseMove = () => {
-    const challenger = players.find(p => p.id === takeAdvantageChallengerId);
+    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
 
     if (!challenger) {
-      console.error('Challenger not found');
+      console.error("Challenger not found");
       handleTakeAdvantageDecline();
       return;
     }
 
     // Check if player has any tiles
     if (challenger.bureaucracyTiles.length === 0) {
-      setTakeAdvantageValidationError('You have no tiles in your bank');
+      setTakeAdvantageValidationError("You have no tiles in your bank");
       setTimeout(() => {
         handleTakeAdvantageDecline();
       }, 2000);
@@ -2599,12 +3138,14 @@ const App: React.FC = () => {
    * Handler: Toggle tile selection (add or remove from selected array)
    */
   const handleToggleTileSelection = (tile: Tile) => {
-    const isCurrentlySelected = selectedTilesForAdvantage.some(t => t.id === tile.id);
+    const isCurrentlySelected = selectedTilesForAdvantage.some(
+      (t) => t.id === tile.id
+    );
 
     let newSelection: Tile[];
     if (isCurrentlySelected) {
       // Remove from selection
-      newSelection = selectedTilesForAdvantage.filter(t => t.id !== tile.id);
+      newSelection = selectedTilesForAdvantage.filter((t) => t.id !== tile.id);
     } else {
       // Add to selection
       newSelection = [...selectedTilesForAdvantage, tile];
@@ -2625,22 +3166,26 @@ const App: React.FC = () => {
    */
   const handleConfirmTileSelection = () => {
     if (selectedTilesForAdvantage.length === 0) {
-      setTakeAdvantageValidationError('Please select at least one tile');
+      setTakeAdvantageValidationError("Please select at least one tile");
       return;
     }
 
     if (totalKredcoinForAdvantage === 0) {
-      setTakeAdvantageValidationError('Selected tiles have no kredcoin value');
+      setTakeAdvantageValidationError("Selected tiles have no kredcoin value");
       return;
     }
 
     // Log tile selection
-    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-    const tileIds = selectedTilesForAdvantage.map(t => t.id).join(', ');
-    setGameLog(prev => [...prev, `${challengerName} selected tiles [${tileIds}] for Take Advantage (₭-${totalKredcoinForAdvantage})`]);
+    const challengerName =
+      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    const tileIds = selectedTilesForAdvantage.map((t) => t.id).join(", ");
+    setGameLog((prev) => [
+      ...prev,
+      `${challengerName} selected tiles [${tileIds}] for Take Advantage (₭-${totalKredcoinForAdvantage})`,
+    ]);
 
     // Take snapshot of current pieces (for reset functionality)
-    setTakeAdvantagePiecesSnapshot(pieces.map(p => ({ ...p })));
+    setTakeAdvantagePiecesSnapshot(pieces.map((p) => ({ ...p })));
 
     // Hide tile selection, show action menu
     setShowTakeAdvantageTileSelection(false);
@@ -2651,8 +3196,12 @@ const App: React.FC = () => {
    * Handler: Cancel tile selection
    */
   const handleCancelTileSelection = () => {
-    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-    setGameLog(prev => [...prev, `${challengerName} cancelled Take Advantage`]);
+    const challengerName =
+      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    setGameLog((prev) => [
+      ...prev,
+      `${challengerName} cancelled Take Advantage`,
+    ]);
 
     // Clean up state
     setShowTakeAdvantageTileSelection(false);
@@ -2672,7 +3221,10 @@ const App: React.FC = () => {
     // Validate affordability
     if (totalKredcoinForAdvantage < item.price) {
       setTakeAdvantageValidationError(ALERTS.INSUFFICIENT_KREDCOIN.message);
-      setTimeout(() => setTakeAdvantageValidationError(null), TIMEOUTS.VALIDATION_ERROR_SHORT);
+      setTimeout(
+        () => setTakeAdvantageValidationError(null),
+        TIMEOUTS.VALIDATION_ERROR_SHORT
+      );
       return;
     }
 
@@ -2681,21 +3233,28 @@ const App: React.FC = () => {
       playerId: takeAdvantageChallengerId!,
       item,
       timestamp: Date.now(),
-      completed: false
+      completed: false,
     };
 
     setTakeAdvantagePurchase(purchase);
 
     // For CREDIBILITY type, apply immediately and complete
-    if (item.type === 'CREDIBILITY') {
-      setPlayers(prev => prev.map(p =>
-        p.id === takeAdvantageChallengerId
-          ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
-          : p
-      ));
+    if (item.type === "CREDIBILITY") {
+      setPlayers((prev) =>
+        prev.map((p) =>
+          p.id === takeAdvantageChallengerId
+            ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
+            : p
+        )
+      );
 
-      const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-      setGameLog(prev => [...prev, `${challengerName} restored credibility using Take Advantage`]);
+      const challengerName =
+        players.find((p) => p.id === takeAdvantageChallengerId)?.name ||
+        "Player";
+      setGameLog((prev) => [
+        ...prev,
+        `${challengerName} restored credibility using Take Advantage`,
+      ]);
 
       // Complete immediately
       setTimeout(() => {
@@ -2712,12 +3271,17 @@ const App: React.FC = () => {
    */
   const handleResetTakeAdvantageAction = () => {
     if (takeAdvantagePiecesSnapshot.length > 0) {
-      setPieces(takeAdvantagePiecesSnapshot.map(p => ({ ...p })));
+      setPieces(takeAdvantagePiecesSnapshot.map((p) => ({ ...p })));
       setMovesThisTurn([]);
       setMovedPiecesThisTurn(new Set());
 
-      const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
-      setGameLog(prev => [...prev, `${challengerName} reset their Take Advantage action`]);
+      const challengerName =
+        players.find((p) => p.id === takeAdvantageChallengerId)?.name ||
+        "Player";
+      setGameLog((prev) => [
+        ...prev,
+        `${challengerName} reset their Take Advantage action`,
+      ]);
     }
 
     // Clear purchase
@@ -2736,7 +3300,9 @@ const App: React.FC = () => {
     const validation = validateTakeAdvantageAction(purchase);
 
     if (!validation.isValid) {
-      setTakeAdvantageValidationError(validation.error || 'Invalid action. Please try again or reset.');
+      setTakeAdvantageValidationError(
+        validation.error || "Invalid action. Please try again or reset."
+      );
       setTimeout(() => setTakeAdvantageValidationError(null), 4000);
       return;
     }
@@ -2748,34 +3314,45 @@ const App: React.FC = () => {
   /**
    * Validates that the Take Advantage action was performed correctly
    */
-  const validateTakeAdvantageAction = (purchase: BureaucracyPurchase): { isValid: boolean; error?: string } => {
+  const validateTakeAdvantageAction = (
+    purchase: BureaucracyPurchase
+  ): { isValid: boolean; error?: string } => {
     const item = purchase.item;
 
     // CREDIBILITY: Always valid (auto-applied)
-    if (item.type === 'CREDIBILITY') {
+    if (item.type === "CREDIBILITY") {
       return { isValid: true };
     }
 
     // PROMOTION: Check if a piece was swapped to community (same as Bureaucracy)
-    if (item.type === 'PROMOTION') {
+    if (item.type === "PROMOTION") {
       // Find pieces that moved to community
-      const piecesMovedToCommunity = takeAdvantagePiecesSnapshot.filter(originalPiece => {
-        const currentPiece = pieces.find(p => p.id === originalPiece.id);
-        return (
-          currentPiece &&
-          originalPiece.locationId &&
-          !originalPiece.locationId.startsWith('community') &&
-          currentPiece.locationId &&
-          currentPiece.locationId.startsWith('community')
-        );
-      });
+      const piecesMovedToCommunity = takeAdvantagePiecesSnapshot.filter(
+        (originalPiece) => {
+          const currentPiece = pieces.find((p) => p.id === originalPiece.id);
+          return (
+            currentPiece &&
+            originalPiece.locationId &&
+            !originalPiece.locationId.startsWith("community") &&
+            currentPiece.locationId &&
+            currentPiece.locationId.startsWith("community")
+          );
+        }
+      );
 
       if (piecesMovedToCommunity.length === 0) {
-        return { isValid: false, error: 'No promotion was performed. Please click a piece to promote it.' };
+        return {
+          isValid: false,
+          error:
+            "No promotion was performed. Please click a piece to promote it.",
+        };
       }
 
       if (piecesMovedToCommunity.length > 1) {
-        return { isValid: false, error: 'Only one promotion can be performed per purchase.' };
+        return {
+          isValid: false,
+          error: "Only one promotion can be performed per purchase.",
+        };
       }
 
       const promotedPieceId = piecesMovedToCommunity[0].id;
@@ -2795,14 +3372,18 @@ const App: React.FC = () => {
     }
 
     // MOVE: Check if the performed move matches the selected move type (same validation as Bureaucracy)
-    if (item.type === 'MOVE') {
+    if (item.type === "MOVE") {
       const requiredMoveType = item.moveType!;
 
       // Calculate moves using the same logic as Bureaucracy
-      const calculatedMoves = calculateMoves(takeAdvantagePiecesSnapshot, pieces, takeAdvantageChallengerId!);
+      const calculatedMoves = calculateMoves(
+        takeAdvantagePiecesSnapshot,
+        pieces,
+        takeAdvantageChallengerId!
+      );
 
       if (calculatedMoves.length === 0) {
-        return { isValid: false, error: 'You must perform a move' };
+        return { isValid: false, error: "You must perform a move" };
       }
 
       // Validate each move with proper piece state (same as Bureaucracy)
@@ -2811,57 +3392,87 @@ const App: React.FC = () => {
         const move = calculatedMoves[i];
 
         // Build piece state after all previous moves but before this move
-        let piecesForValidation = takeAdvantagePiecesSnapshot.map(p => ({ ...p }));
+        let piecesForValidation = takeAdvantagePiecesSnapshot.map((p) => ({
+          ...p,
+        }));
         for (let j = 0; j < i; j++) {
           const prevMove = calculatedMoves[j];
-          piecesForValidation = piecesForValidation.map(p =>
+          piecesForValidation = piecesForValidation.map((p) =>
             p.id === prevMove.pieceId
-              ? { ...p, locationId: prevMove.toLocationId, position: prevMove.toPosition }
+              ? {
+                  ...p,
+                  locationId: prevMove.toLocationId,
+                  position: prevMove.toPosition,
+                }
               : p
           );
         }
 
-        const validation = validateSingleMove(move, takeAdvantageChallengerId!, piecesForValidation, playerCount);
+        const validation = validateSingleMove(
+          move,
+          takeAdvantageChallengerId!,
+          piecesForValidation,
+          playerCount
+        );
         if (!validation.isValid) {
           allMovesValid = false;
-          return { isValid: false, error: `${move.moveType} move validation failed: ${validation.reason}` };
+          return {
+            isValid: false,
+            error: `${move.moveType} move validation failed: ${validation.reason}`,
+          };
         }
       }
 
       if (!allMovesValid) {
-        return { isValid: false, error: 'Move validation failed' };
+        return { isValid: false, error: "Move validation failed" };
       }
 
       // Check if at least one move matches the expected type
-      const hasMatchingMove = calculatedMoves.some(m => m.moveType === requiredMoveType);
+      const hasMatchingMove = calculatedMoves.some(
+        (m) => m.moveType === requiredMoveType
+      );
 
       if (!hasMatchingMove) {
-        const performedTypes = calculatedMoves.map(m => m.moveType).join(', ');
-        return { isValid: false, error: `Expected a ${requiredMoveType} move, but you performed: ${performedTypes}` };
+        const performedTypes = calculatedMoves
+          .map((m) => m.moveType)
+          .join(", ");
+        return {
+          isValid: false,
+          error: `Expected a ${requiredMoveType} move, but you performed: ${performedTypes}`,
+        };
       }
 
       return { isValid: true };
     }
 
-    return { isValid: false, error: 'Unknown action type' };
+    return { isValid: false, error: "Unknown action type" };
   };
 
   /**
    * Completes the Take Advantage purchase and cleans up state
    */
   const handleCompleteTakeAdvantage = (purchase: BureaucracyPurchase) => {
-    const challengerName = players.find(p => p.id === takeAdvantageChallengerId)?.name || 'Player';
+    const challengerName =
+      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
 
     // Place used tiles face-up in player's bank spaces
     if (takeAdvantageChallengerId !== null) {
       const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
-      const playerBankSpaces = bankSpaces.filter(bs => bs.ownerId === takeAdvantageChallengerId);
+      const playerBankSpaces = bankSpaces.filter(
+        (bs) => bs.ownerId === takeAdvantageChallengerId
+      );
 
       // Find which bank indices are already used
       const usedBankIndices = new Set(
         bankedTiles
-          .filter(bt => bt.ownerId === takeAdvantageChallengerId)
-          .map(bt => playerBankSpaces.findIndex(bs => bs.position.left === bt.position.left && bs.position.top === bt.position.top))
+          .filter((bt) => bt.ownerId === takeAdvantageChallengerId)
+          .map((bt) =>
+            playerBankSpaces.findIndex(
+              (bs) =>
+                bs.position.left === bt.position.left &&
+                bs.position.top === bt.position.top
+            )
+          )
       );
 
       // Add each selected tile to bankedTiles as face-up
@@ -2870,14 +3481,19 @@ const App: React.FC = () => {
 
       for (const tile of selectedTilesForAdvantage) {
         // Find next available bank space
-        while (bankIndex < playerBankSpaces.length && usedBankIndices.has(bankIndex)) {
+        while (
+          bankIndex < playerBankSpaces.length &&
+          usedBankIndices.has(bankIndex)
+        ) {
           bankIndex++;
         }
 
         if (bankIndex < playerBankSpaces.length) {
           const bankSpace = playerBankSpaces[bankIndex];
           const newBankedTile: BoardTile & { faceUp: boolean } = {
-            id: `bank_${takeAdvantageChallengerId}_${bankIndex}_${Date.now()}_${tile.id}`,
+            id: `bank_${takeAdvantageChallengerId}_${bankIndex}_${Date.now()}_${
+              tile.id
+            }`,
             tile: tile,
             position: bankSpace.position,
             rotation: bankSpace.rotation,
@@ -2892,31 +3508,37 @@ const App: React.FC = () => {
         }
       }
 
-      setBankedTiles(prev => [...prev, ...newBankedTiles]);
+      setBankedTiles((prev) => [...prev, ...newBankedTiles]);
     }
 
     // Deduct selected tiles from player's bank
-    setPlayers(prev => prev.map(p => {
-      if (p.id === takeAdvantageChallengerId) {
-        const tilesToRemove = selectedTilesForAdvantage.map(t => t.id);
-        return {
-          ...p,
-          bureaucracyTiles: p.bureaucracyTiles.filter(t => !tilesToRemove.includes(t.id))
-        };
-      }
-      return p;
-    }));
+    setPlayers((prev) =>
+      prev.map((p) => {
+        if (p.id === takeAdvantageChallengerId) {
+          const tilesToRemove = selectedTilesForAdvantage.map((t) => t.id);
+          return {
+            ...p,
+            bureaucracyTiles: p.bureaucracyTiles.filter(
+              (t) => !tilesToRemove.includes(t.id)
+            ),
+          };
+        }
+        return p;
+      })
+    );
 
     // Log the completed action
-    const actionName = purchase.item.type === 'PROMOTION'
-      ? `Promotion (${purchase.item.promotionLocation})`
-      : purchase.item.type === 'CREDIBILITY'
-      ? 'Credibility Restoration'
-      : purchase.item.moveType;
+    const actionName =
+      purchase.item.type === "PROMOTION"
+        ? `Promotion (${purchase.item.promotionLocation})`
+        : purchase.item.type === "CREDIBILITY"
+        ? "Credibility Restoration"
+        : purchase.item.moveType;
 
-    const tileIds = selectedTilesForAdvantage.map(t => t.id).join(', ');
-    setGameLog(prev => [...prev,
-      `${challengerName} completed Take Advantage: ${actionName} (₭-${purchase.item.price}) using tiles [${tileIds}]`
+    const tileIds = selectedTilesForAdvantage.map((t) => t.id).join(", ");
+    setGameLog((prev) => [
+      ...prev,
+      `${challengerName} completed Take Advantage: ${actionName} (₭-${purchase.item.price}) using tiles [${tileIds}]`,
     ]);
 
     // Clean up all Take Advantage state
@@ -2934,14 +3556,17 @@ const App: React.FC = () => {
     // Continue to correction phase, passing current pieces to preserve Take Advantage changes
     // Take Advantage transactions occur within the Campaign phase, so promotions
     // and moves must be preserved as part of the ongoing game state
-    transitionToCorrectionPhase(pieces.map(p => ({ ...p })));
+    transitionToCorrectionPhase(pieces.map((p) => ({ ...p })));
   };
 
   /**
    * Handler: Piece promotion during Take Advantage
    */
   const handleTakeAdvantagePiecePromote = (pieceId: string) => {
-    if (!takeAdvantagePurchase || takeAdvantagePurchase.item.type !== 'PROMOTION') {
+    if (
+      !takeAdvantagePurchase ||
+      takeAdvantagePurchase.item.type !== "PROMOTION"
+    ) {
       return;
     }
 
@@ -2949,7 +3574,7 @@ const App: React.FC = () => {
     const result = performPromotion(pieces, pieceId);
 
     if (!result.success) {
-      setTakeAdvantageValidationError(result.reason || 'Promotion failed');
+      setTakeAdvantageValidationError(result.reason || "Promotion failed");
       setTimeout(() => setTakeAdvantageValidationError(null), 3000);
       return;
     }
@@ -2958,7 +3583,10 @@ const App: React.FC = () => {
   };
 
   const handleBureaucracyPiecePromote = (pieceId: string) => {
-    if (!currentBureaucracyPurchase || currentBureaucracyPurchase.item.type !== 'PROMOTION') {
+    if (
+      !currentBureaucracyPurchase ||
+      currentBureaucracyPurchase.item.type !== "PROMOTION"
+    ) {
       return;
     }
 
@@ -2966,7 +3594,7 @@ const App: React.FC = () => {
     const result = performPromotion(pieces, pieceId);
 
     if (!result.success) {
-      setBureaucracyValidationError(result.reason || 'Promotion failed');
+      setBureaucracyValidationError(result.reason || "Promotion failed");
       return;
     }
 
@@ -2974,11 +3602,27 @@ const App: React.FC = () => {
   };
 
   const renderGameState = () => {
-    console.log('renderGameState called with gameState:', gameState, 'playerCount:', playerCount, 'players:', players.length, 'currentPlayerIndex:', currentPlayerIndex);
+    console.log(
+      "renderGameState called with gameState:",
+      gameState,
+      "playerCount:",
+      playerCount,
+      "players:",
+      players.length,
+      "currentPlayerIndex:",
+      currentPlayerIndex
+    );
     switch (gameState) {
-      case 'DRAFTING':
-        return <DraftingScreen players={players} currentPlayerIndex={currentPlayerIndex} draftRound={draftRound} onSelectTile={handleSelectTile} />;
-      case 'BUREAUCRACY':
+      case "DRAFTING":
+        return (
+          <DraftingScreen
+            players={players}
+            currentPlayerIndex={currentPlayerIndex}
+            draftRound={draftRound}
+            onSelectTile={handleSelectTile}
+          />
+        );
+      case "BUREAUCRACY":
         return (
           <BureaucracyScreen
             players={players}
@@ -3009,16 +3653,25 @@ const App: React.FC = () => {
             credibilityRotationAdjustments={credibilityRotationAdjustments}
           />
         );
-      case 'CAMPAIGN':
-      case 'TILE_PLAYED':
-      case 'PENDING_ACCEPTANCE':
-      case 'PENDING_CHALLENGE':
-      case 'CORRECTION_REQUIRED':
+      case "CAMPAIGN":
+      case "TILE_PLAYED":
+      case "PENDING_ACCEPTANCE":
+      case "PENDING_CHALLENGE":
+      case "CORRECTION_REQUIRED":
         const currentPlayer = players[currentPlayerIndex];
         if (!currentPlayer || players.length === 0) {
           // Wait for state to be set up properly
-          console.log('currentPlayer not found. currentPlayerIndex:', currentPlayerIndex, 'players.length:', players.length);
-          return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-slate-300">Loading campaign... (currentPlayer issue)</div>;
+          console.log(
+            "currentPlayer not found. currentPlayerIndex:",
+            currentPlayerIndex,
+            "players.length:",
+            players.length
+          );
+          return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center text-slate-300">
+              Loading campaign... (currentPlayer issue)
+            </div>
+          );
         }
         return (
           <CampaignScreen
@@ -3072,7 +3725,9 @@ const App: React.FC = () => {
             onCloseMoveCheckResult={() => setShowMoveCheckResult(false)}
             onCheckMove={handleCheckMove}
             credibilityRotationAdjustments={credibilityRotationAdjustments}
-            setCredibilityRotationAdjustments={setCredibilityRotationAdjustments}
+            setCredibilityRotationAdjustments={
+              setCredibilityRotationAdjustments
+            }
             isGameLogExpanded={isGameLogExpanded}
             setIsGameLogExpanded={setIsGameLogExpanded}
             isCredibilityAdjusterExpanded={isCredibilityAdjusterExpanded}
@@ -3092,7 +3747,9 @@ const App: React.FC = () => {
             onResetBonusMove={handleResetBonusMove}
             showTakeAdvantageModal={showTakeAdvantageModal}
             takeAdvantageChallengerId={takeAdvantageChallengerId}
-            takeAdvantageChallengerCredibility={takeAdvantageChallengerCredibility}
+            takeAdvantageChallengerCredibility={
+              takeAdvantageChallengerCredibility
+            }
             showTakeAdvantageTileSelection={showTakeAdvantageTileSelection}
             selectedTilesForAdvantage={selectedTilesForAdvantage}
             totalKredcoinForAdvantage={totalKredcoinForAdvantage}
@@ -3112,7 +3769,7 @@ const App: React.FC = () => {
             onTakeAdvantagePiecePromote={handleTakeAdvantagePiecePromote}
           />
         );
-      case 'PLAYER_SELECTION':
+      case "PLAYER_SELECTION":
       default:
         return <PlayerSelectionScreen onStartGame={handleStartGame} />;
     }
@@ -3126,7 +3783,11 @@ const App: React.FC = () => {
 
       {/* Custom Alert Modal */}
       {showPerfectTileModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          aria-modal="true"
+          role="dialog"
+        >
           <div className="bg-gray-800 border-2 border-green-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
             <div className="mb-4">
               <div className="text-6xl text-green-400 mb-2">✓</div>
@@ -3135,7 +3796,8 @@ const App: React.FC = () => {
               Perfect Tile Play
             </h2>
             <p className="text-slate-300 mb-6 text-lg">
-              The tile requirements have been fulfilled perfectly. You cannot reject this tile. Other players may now challenge the play.
+              The tile requirements have been fulfilled perfectly. You cannot
+              reject this tile. Other players may now challenge the play.
             </p>
             <button
               onClick={handlePerfectTileContinue}
@@ -3149,46 +3811,70 @@ const App: React.FC = () => {
 
       {/* Challenge Result Message - displays for 5 seconds */}
       {challengeResultMessage && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4" aria-live="polite" role="status">
-          <div className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
-            challengeResultMessage.includes('Failed')
-              ? 'bg-green-900 border-green-500 text-green-300'
-              : 'bg-orange-900 border-orange-500 text-orange-300'
-          }`}>
+        <div
+          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4"
+          aria-live="polite"
+          role="status"
+        >
+          <div
+            className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
+              challengeResultMessage.includes("Failed")
+                ? "bg-green-900 border-green-500 text-green-300"
+                : "bg-orange-900 border-orange-500 text-orange-300"
+            }`}
+          >
             <h2 className="text-2xl font-bold mb-2">
-              {challengeResultMessage.includes('Failed') ? '✓ Challenge Failed' : '⚠️ Challenge Successful'}
+              {challengeResultMessage.includes("Failed")
+                ? "✓ Challenge Failed"
+                : "⚠️ Challenge Successful"}
             </h2>
-            <p className="text-lg">
-              {challengeResultMessage}
-            </p>
+            <p className="text-lg">{challengeResultMessage}</p>
           </div>
         </div>
       )}
 
       {alertModal.isOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-          <div className="bg-gray-800 border-2 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8" style={{
-            borderColor: alertModal.type === 'error' ? '#ef5350' : alertModal.type === 'warning' ? '#ffa726' : '#29b6f6'
-          }}>
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div
+            className="bg-gray-800 border-2 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8"
+            style={{
+              borderColor:
+                alertModal.type === "error"
+                  ? "#ef5350"
+                  : alertModal.type === "warning"
+                  ? "#ffa726"
+                  : "#29b6f6",
+            }}
+          >
             <div className="mb-4">
-              {alertModal.type === 'error' && (
+              {alertModal.type === "error" && (
                 <div className="text-6xl font-bold text-red-400 mb-2">✕</div>
               )}
-              {alertModal.type === 'warning' && (
+              {alertModal.type === "warning" && (
                 <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
               )}
-              {alertModal.type === 'info' && (
+              {alertModal.type === "info" && (
                 <div className="text-6xl text-blue-400 mb-2">ℹ️</div>
               )}
             </div>
-            <h2 className="text-3xl font-bold mb-3" style={{
-              color: alertModal.type === 'error' ? '#ef5350' : alertModal.type === 'warning' ? '#ffa726' : '#29b6f6'
-            }}>
+            <h2
+              className="text-3xl font-bold mb-3"
+              style={{
+                color:
+                  alertModal.type === "error"
+                    ? "#ef5350"
+                    : alertModal.type === "warning"
+                    ? "#ffa726"
+                    : "#29b6f6",
+              }}
+            >
               {alertModal.title}
             </h2>
-            <p className="text-slate-300 mb-6 text-lg">
-              {alertModal.message}
-            </p>
+            <p className="text-slate-300 mb-6 text-lg">{alertModal.message}</p>
             <button
               onClick={closeAlert}
               className="px-8 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition-colors shadow-md"
@@ -3201,7 +3887,11 @@ const App: React.FC = () => {
 
       {/* Finish Turn Confirmation Modal */}
       {showFinishTurnConfirm.isOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          aria-modal="true"
+          role="dialog"
+        >
           <div className="bg-gray-800 border-2 border-yellow-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
             <div className="mb-4">
               <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
@@ -3210,7 +3900,11 @@ const App: React.FC = () => {
               Finish Turn?
             </h2>
             <p className="text-slate-300 mb-6 text-lg">
-              Are you sure you want to finish? You still have <span className="text-yellow-400 font-bold">₭-{showFinishTurnConfirm.remainingKredcoin}</span> left.
+              Are you sure you want to finish? You still have{" "}
+              <span className="text-yellow-400 font-bold">
+                ₭-{showFinishTurnConfirm.remainingKredcoin}
+              </span>{" "}
+              left.
             </p>
             <div className="flex gap-4 justify-center">
               <button
@@ -3232,13 +3926,21 @@ const App: React.FC = () => {
 
       {/* Bureaucracy Phase Transition Message */}
       {showBureaucracyTransition && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] transition-opacity duration-500" aria-live="polite" role="status">
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] transition-opacity duration-500"
+          aria-live="polite"
+          role="status"
+        >
           <div className="text-center animate-pulse">
-            <h1 className="text-8xl sm:text-9xl font-black text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] mb-4" style={{
-              textShadow: '0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.3)',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              letterSpacing: '0.05em'
-            }}>
+            <h1
+              className="text-8xl sm:text-9xl font-black text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] mb-4"
+              style={{
+                textShadow:
+                  "0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.3)",
+                fontFamily: "system-ui, -apple-system, sans-serif",
+                letterSpacing: "0.05em",
+              }}
+            >
               BUREAUCRACY!
             </h1>
             <p className="text-2xl text-yellow-200 font-semibold">
@@ -3262,7 +3964,10 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -3273,8 +3978,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught:', error);
-    console.error('Error info:', errorInfo);
+    console.error("ErrorBoundary caught:", error);
+    console.error("Error info:", errorInfo);
   }
 
   render() {
@@ -3290,8 +3995,13 @@ const ErrorDisplay: React.FC = () => (
   <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
     <div className="bg-gray-800 border-2 border-red-500 rounded-xl p-8 max-w-md w-full text-center">
       <div className="text-6xl text-red-400 mb-4">✕</div>
-      <h1 className="text-3xl font-bold text-red-400 mb-4">Error Loading Game</h1>
-      <p className="text-slate-300 mb-6">An unexpected error occurred. Please check the browser console for details.</p>
+      <h1 className="text-3xl font-bold text-red-400 mb-4">
+        Error Loading Game
+      </h1>
+      <p className="text-slate-300 mb-6">
+        An unexpected error occurred. Please check the browser console for
+        details.
+      </p>
       <button
         onClick={() => window.location.reload()}
         className="px-6 py-2 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition-colors"
