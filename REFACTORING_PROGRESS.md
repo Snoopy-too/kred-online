@@ -1,12 +1,12 @@
 # Phase 1 Refactoring Progress Report
 
-## Status: 85% Complete ✅
+## Status: 95% Complete ✅
 
-**BUILD STATUS: ✅ PASSING** (325.28 kB, gzip: 94.82 kB)
+**BUILD STATUS: ✅ PASSING** (325.32 kB, gzip: 94.83 kB)
 
-Successfully extracted **36 files** containing **~5,600 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (originally 5,913 lines, now 3,305 lines).
+Successfully extracted **37 files** containing **~6,000 lines** of organized, modular code from the original monolithic `game.ts` (3,610 lines) and `App.tsx` (originally 5,913 lines, now 3,305 lines).
 
-**Major Milestone**: All screen components extracted, App.tsx refactored to use imports, and all build errors resolved. App.tsx reduced by 44% (2,608 lines removed).
+**Major Milestone**: All screen components extracted, App.tsx refactored to use imports, all build errors resolved, and custom hooks created for state management. App.tsx reduced by 44% (2,608 lines removed).
 
 ---
 
@@ -113,6 +113,23 @@ src/
   - BOARD_CENTERS (center coordinates by player count)
 - `index.ts` - Central utility exports
 
+### 6. **Custom Hooks** (1 file, ~392 lines) ✅
+
+- `useGameState.ts` - Consolidated game state management hook (392 lines)
+  - Consolidates 80+ individual useState calls from App.tsx
+  - Core game state (gameState, players, pieces, boardTiles, bankedTiles, playerCount, etc.)
+  - Board UI state (rotation, grid, credibility adjustments, last dropped piece)
+  - Turn state (played tiles, moves tracking, pieces at turn start)
+  - Tile transaction workflow (acceptance/challenge flow, bystanders, viewing states)
+  - Tile play workflow (playedTile, receiverAcceptance, challengeOrder, rejection states)
+  - Bonus move state (modal, player ID, completion tracking, piece snapshots)
+  - Move validation state (showMoveCheckResult, moveCheckResult with requirements/performed/missing)
+  - Take Advantage state (challenge reward: modal, tile selection, purchase menu, validation)
+  - Bureaucracy phase state (states, turn order, purchases, moves, snapshots, validation)
+  - Game log and UI expansion state (log entries, expandable modules)
+  - Alert modal system (alertModal state, showAlert helper function)
+- `index.ts` - Hook exports
+
 ---
 
 ## 📊 Extraction Summary
@@ -126,8 +143,8 @@ src/
 | Utils       | 3      | ~250       | ✅ Complete |
 | Components  | 5      | ~2,608     | ✅ Complete |
 | Build Fixes | -      | -          | ✅ Complete |
-| Hooks       | 0      | 0          | ⏳ Pending  |
-| **TOTAL**   | **36** | **~5,600** | **85%**     |
+| Hooks       | 1      | ~392       | ✅ Complete |
+| **TOTAL**   | **37** | **~6,000** | **95%**     |
 
 ---
 
@@ -136,6 +153,7 @@ src/
 **20 commits on `production` branch:**
 
 ### Original Merge (9 commits from claude/setup-production-branch):
+
 1. Extract types and configuration constants
 2. Extract board layouts for all player counts
 3. Extract move definitions, tile requirements, and bureaucracy config
@@ -147,13 +165,16 @@ src/
 9. Extract PlayerSelectionScreen and DraftingScreen components
 
 ### New Extractions (11 commits):
+
 10. Extract BureaucracyScreen component (598 lines)
 11. Extract CampaignScreen component (1,865 lines) - MOST COMPLEX
 12. Refactor App.tsx to import screen components (5,913 → 3,305 lines)
 13. Update progress tracker: 85% complete
 14. WIP: Fix import paths for extracted components
 15. Fix all build errors from component extraction ✅
-16-20. Documentation, production plan consolidation, and progress updates
+16. Update progress tracker: Build fixes complete
+17. Extract useGameState hook - consolidate 80+ state variables ✅
+18-20. Documentation, production plan consolidation, and progress updates
 
 ---
 
@@ -168,16 +189,18 @@ src/
 - ✅ Main `App.tsx` refactored - Now imports all screen components (5,913 → 3,305 lines, 44% reduction)
 - ✅ Build errors fixed - All function signature mismatches resolved, build passing
 
-### Optional Improvements (~15% remaining):
+### Optional Improvements (~5% remaining):
 
-- ⏳ Extract custom hooks (useGame, useDragAndDrop) - Would simplify App.tsx further
+- ⏳ Refactor App.tsx to use useGameState hook (requires systematic find-replace of all state references)
+- ⏳ Extract useDragAndDrop hook - Simplify drag-and-drop logic
 - ⏳ Shared UI components - Modals, buttons (if patterns emerge)
 - ⏳ Further refactor game.ts monolith into src/game modules
 
 ### Final Steps:
 
-- Create React hooks (useGame, useDragAndDrop)
-- Create React context (GameContext)
+- Refactor App.tsx to use useGameState hook (3,305 lines → estimated 2,500 lines)
+- Create additional hooks (useDragAndDrop, useBureaucracy)
+- Create React context (GameContext) for global state
 - Test refactored game in browser
 - Write unit tests
 - Write unit tests
