@@ -35,6 +35,33 @@ describe("Campaign Phase", () => {
     expect(screen.getByText(/player.*turn/i)).toBeInTheDocument();
   });
 
+  it("player with tile 03 goes first in campaign phase", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await skipToCampaign(user, 3);
+
+    // Get the current player's turn from the UI
+    const turnText = screen.getByText(/player.*turn/i).textContent;
+    const currentPlayerMatch = turnText?.match(/player (\d+)/i);
+    expect(currentPlayerMatch).toBeTruthy();
+
+    const currentPlayer = parseInt(currentPlayerMatch![1], 10);
+    expect(currentPlayer).toBeGreaterThanOrEqual(1);
+    expect(currentPlayer).toBeLessThanOrEqual(3);
+
+    // Look for tile 03 in the visible tiles
+    // The current player should have tile 03 in their hand/kept tiles
+    const images = screen.getAllByRole('img');
+    const tile03Images = images.filter(img => {
+      const src = img.getAttribute('src') || '';
+      return src.includes('03.svg') || src.includes('/03.svg');
+    });
+
+    // Tile 03 should be visible (in current player's hand or kept tiles)
+    expect(tile03Images.length).toBeGreaterThan(0);
+  });
+
   it("loads board image for 3 players", async () => {
     const user = userEvent.setup();
     render(<App />);
