@@ -1,21 +1,10 @@
-import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace, Player, GameState, DropLocation, BankSpace } from './src/types';
+import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace, Player, GameState, DropLocation, BankSpace, TrackedMove, DefinedMoveType, MoveRequirementType, DefinedMove } from './src/types';
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
 // (Player type moved to src/types/player.ts)
 // (GameState, DropLocation, BankSpace moved to src/types/game.ts)
-
-// Move tracking for undo/replay functionality
-export interface TrackedMove {
-  moveType: DefinedMoveType;
-  category: 'M' | 'O'; // M = My domain, O = Opponent domain
-  pieceId: string;
-  fromPosition: { top: number; left: number };
-  fromLocationId?: string;
-  toPosition: { top: number; left: number };
-  toLocationId?: string;
-  timestamp: number;
-}
+// (Move types moved to src/types/move.ts)
 
 // Represents a tile that has been played but not yet fully resolved
 export interface PlayedTileState {
@@ -552,30 +541,7 @@ export const ROSTRUM_ADJACENCY_BY_PLAYER_COUNT: { [playerCount: number]: Rostrum
  *   - Adjacent rostrum is in an opponent's domain
  *   - All supporting seats of destination must be full
  */
-export enum DefinedMoveType {
-  REMOVE = 'REMOVE',
-  ADVANCE = 'ADVANCE',
-  INFLUENCE = 'INFLUENCE',
-  ASSIST = 'ASSIST',
-  WITHDRAW = 'WITHDRAW',
-  ORGANIZE = 'ORGANIZE',
-}
-
-export enum MoveRequirementType {
-  MANDATORY = 'MANDATORY',
-  OPTIONAL = 'OPTIONAL',
-}
-
-export interface DefinedMove {
-  type: DefinedMoveType;
-  category: 'M' | 'O'; // 'M' = My domain, 'O' = Opponent domain
-  requirement: MoveRequirementType;
-  description: string;
-  options: string[];
-  canTargetOwnDomain: boolean;
-  canTargetOpponentDomain: boolean;
-  affectsCommunity: boolean;
-}
+// (DefinedMoveType, MoveRequirementType, DefinedMove moved to src/types/move.ts)
 
 /**
  * Complete definition of all Defined Moves available in the game.
