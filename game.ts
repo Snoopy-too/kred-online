@@ -1,27 +1,9 @@
-import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace, Player } from './src/types';
+import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace, Player, GameState, DropLocation, BankSpace } from './src/types';
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
 // (Player type moved to src/types/player.ts)
-
-export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLAYED' | 'PENDING_ACCEPTANCE' | 'PENDING_CHALLENGE' | 'CORRECTION_REQUIRED' | 'BUREAUCRACY';
-
-// --- Game Piece Definitions ---
-// (Types moved to src/types/piece.ts)
-// (BoardTile moved to src/types/tile.ts)
-
-export interface DropLocation {
-  id: string;
-  position: { left: number; top: number };
-}
-
-// TileReceivingSpace moved to src/types/tile.ts
-
-export interface BankSpace {
-  ownerId: number;
-  position: { left: number; top: number };
-  rotation: number;
-}
+// (GameState, DropLocation, BankSpace moved to src/types/game.ts)
 
 // Move tracking for undo/replay functionality
 export interface TrackedMove {

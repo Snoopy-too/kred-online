@@ -4,3 +4,4 @@
 export * from './piece';
 export * from './tile';
 export * from './player';
+export * from './game';
