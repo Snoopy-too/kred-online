@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import type {
   Player,
   Piece,
@@ -6,17 +6,20 @@ import type {
   BureaucracyPlayerState,
   BureaucracyPurchase,
   BureaucracyMenuItem,
-} from '../../game/types';
-import { PLAYER_PERSPECTIVE_ROTATIONS } from '../../game/config';
-import { CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT } from '../../game/config/board-config';
-import { calculatePieceRotation, findNearestVacantLocation } from '../../game/utils';
+} from "../../game/types";
+import { PLAYER_PERSPECTIVE_ROTATIONS } from "../../game/config";
+import { CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT } from "../../game/config/board-config";
+import {
+  calculatePieceRotation,
+  findNearestVacantLocation,
+} from "../../game/utils";
 
-// Note: These functions are still in game.ts - will need to be extracted later
+// Note: These functions are still in game.ts - not yet extracted
 import {
   getBureaucracyMenu,
   getAvailablePurchases,
   validatePieceMovement,
-} from '../../../game';
+} from "../../../game";
 
 interface BureaucracyScreenProps {
   players: Player[];
@@ -81,12 +84,14 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
 }) => {
   const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
   const currentPlayer = players.find((p) => p.id === currentPlayerId);
-  const playerState = bureaucracyStates.find((s) => s.playerId === currentPlayerId);
+  const playerState = bureaucracyStates.find(
+    (s) => s.playerId === currentPlayerId
+  );
   const menu = getBureaucracyMenu(playerCount);
   const affordableItems = playerState
     ? getAvailablePurchases(menu, playerState.remainingKredcoin)
     : [];
-  const isPromotionPurchase = currentPurchase?.item.type === 'PROMOTION';
+  const isPromotionPurchase = currentPurchase?.item.type === "PROMOTION";
   const boardRotation = boardRotationEnabled
     ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0
     : 0;
@@ -107,9 +112,12 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
   } | null>(null);
 
   // Drag handlers
-  const handleDragStartPiece = (e: React.DragEvent<HTMLDivElement>, pieceId: string) => {
-    e.dataTransfer.setData('pieceId', pieceId);
-    e.dataTransfer.effectAllowed = 'move';
+  const handleDragStartPiece = (
+    e: React.DragEvent<HTMLDivElement>,
+    pieceId: string
+  ) => {
+    e.dataTransfer.setData("pieceId", pieceId);
+    e.dataTransfer.effectAllowed = "move";
     const piece = pieces.find((p) => p.id === pieceId);
     if (piece) {
       setDraggedPieceInfo({
@@ -145,13 +153,19 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
       const centerY = 50;
       const translatedX = rawLeft - centerX;
       const translatedY = rawTop - centerY;
-      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
-      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      const rotatedX =
+        translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY =
+        translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
       left = rotatedX + centerX;
       top = rotatedY + centerY;
     }
 
-    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
+    const snappedLocation = findNearestVacantLocation(
+      { top, left },
+      pieces,
+      playerCount
+    );
 
     if (snappedLocation) {
       const newRotation = calculatePieceRotation(
@@ -190,7 +204,7 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
   const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDropIndicator(null);
-    const pieceId = e.dataTransfer.getData('pieceId');
+    const pieceId = e.dataTransfer.getData("pieceId");
 
     const boardRect = e.currentTarget.getBoundingClientRect();
     const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
@@ -204,14 +218,20 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
       const centerY = 50;
       const translatedX = rawLeft - centerX;
       const translatedY = rawTop - centerY;
-      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
-      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      const rotatedX =
+        translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY =
+        translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
       left = rotatedX + centerX;
       top = rotatedY + centerY;
     }
 
     // Regular piece placement with snapping
-    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
+    const snappedLocation = findNearestVacantLocation(
+      { top, left },
+      pieces,
+      playerCount
+    );
 
     if (snappedLocation && pieceId) {
       onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
@@ -222,11 +242,13 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
     setDropIndicator(null);
   };
 
-  let indicatorSizeClass = '';
+  let indicatorSizeClass = "";
   if (dropIndicator) {
-    if (dropIndicator.name === 'Heel') indicatorSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
-    else if (dropIndicator.name === 'Pawn') indicatorSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
-    else indicatorSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
+    if (dropIndicator.name === "Heel")
+      indicatorSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
+    else if (dropIndicator.name === "Pawn")
+      indicatorSizeClass = "w-16 h-16 sm:w-20 sm:h-20";
+    else indicatorSizeClass = "w-10 h-10 sm:w-14 sm:h-14"; // Mark
   }
 
   return (
@@ -236,7 +258,9 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
           Bureaucracy Phase
         </h1>
-        <p className="text-2xl text-slate-200 mt-2">Player {currentPlayerId}'s Turn</p>
+        <p className="text-2xl text-slate-200 mt-2">
+          Player {currentPlayerId}'s Turn
+        </p>
         <div className="mt-2 text-lg">
           <span className="text-yellow-400 font-bold">
             Kredcoin: ₭-{playerState?.remainingKredcoin || 0}
@@ -248,7 +272,9 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
       {validationError && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
-            <h2 className="text-2xl font-bold text-white mb-6">Invalid Action</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Invalid Action
+            </h2>
             <div className="flex justify-center">
               <button
                 onClick={onResetAction}
@@ -288,21 +314,21 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                   style={{
                     top: `${dropIndicator.position.top}%`,
                     left: `${dropIndicator.position.left}%`,
-                    width: '80px',
-                    height: '80px',
-                    transform: 'translate(-50%, -50%)',
+                    width: "80px",
+                    height: "80px",
+                    transform: "translate(-50%, -50%)",
                     backgroundColor:
                       dropIndicator.isValid === false
-                        ? 'rgba(239, 68, 68, 0.3)'
-                        : 'rgba(34, 197, 94, 0.3)',
+                        ? "rgba(239, 68, 68, 0.3)"
+                        : "rgba(34, 197, 94, 0.3)",
                     boxShadow:
                       dropIndicator.isValid === false
-                        ? '0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)'
-                        : '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                        ? "0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)"
+                        : "0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)",
                     border:
                       dropIndicator.isValid === false
-                        ? '2px solid rgba(239, 68, 68, 0.6)'
-                        : '2px solid rgba(34, 197, 94, 0.6)',
+                        ? "2px solid rgba(239, 68, 68, 0.6)"
+                        : "2px solid rgba(34, 197, 94, 0.6)",
                   }}
                   aria-hidden="true"
                 />
@@ -313,7 +339,7 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                     top: `${dropIndicator.position.top}%`,
                     left: `${dropIndicator.position.left}%`,
                     transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
-                    filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
+                    filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))",
                     opacity: 0.7,
                   }}
                   aria-hidden="true"
@@ -329,19 +355,25 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
 
             {/* Render pieces */}
             {pieces.map((piece) => {
-              let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
-              if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
-              if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+              let pieceSizeClass = "w-10 h-10 sm:w-14 sm:h-14"; // Mark
+              if (piece.name === "Heel")
+                pieceSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
+              if (piece.name === "Pawn")
+                pieceSizeClass = "w-16 h-16 sm:w-20 sm:h-20";
 
               // Apply size reduction for different player counts
-              const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
+              const scaleMultiplier =
+                playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
               const baseScale = 0.798;
               const finalScale = baseScale * scaleMultiplier;
 
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
               // Check both position AND locationId to avoid false positives for seats near the community
-              const isInCommunity = piece.locationId?.startsWith('community') || false;
-              const communityCounterRotation = isInCommunity ? -boardRotation : 0;
+              const isInCommunity =
+                piece.locationId?.startsWith("community") || false;
+              const communityCounterRotation = isInCommunity
+                ? -boardRotation
+                : 0;
 
               const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
 
@@ -364,13 +396,13 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                   }}
                   className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
                     isPromotionPurchase
-                      ? 'cursor-pointer hover:scale-110'
+                      ? "cursor-pointer hover:scale-110"
                       : isDraggable
-                      ? 'cursor-grab'
-                      : 'cursor-not-allowed'
+                      ? "cursor-grab"
+                      : "cursor-not-allowed"
                   }`}
                   style={{
-                    position: 'absolute',
+                    position: "absolute",
                     top: `${piece.position.top}%`,
                     left: `${piece.position.left}%`,
                     transform: `translate(-50%, -50%) rotate(${
@@ -393,8 +425,8 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                   transform: `translate(-50%, -50%) rotate(${
                     boardTile.rotation - boardRotation
                   }deg)`,
-                  width: '3%',
-                  height: '6%',
+                  width: "3%",
+                  height: "6%",
                 }}
               >
                 <img
@@ -413,7 +445,8 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
               return credibilityLocations.map((location) => {
                 const player = players.find((p) => p.id === location.ownerId);
                 const credibilityValue = player?.credibility ?? 3;
-                const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
+                const adjustment =
+                  credibilityRotationAdjustments[location.ownerId] || 0;
                 const finalRotation = (location.rotation || 0) + adjustment;
                 const credibilityImage = `./images/${credibilityValue}_credibility.svg`;
 
@@ -422,8 +455,8 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                     key={`credibility_${location.ownerId}_${credibilityValue}`}
                     className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
                     style={{
-                      width: '5.283rem',
-                      height: '5.283rem',
+                      width: "5.283rem",
+                      height: "5.283rem",
                       top: `${location.position.top}%`,
                       left: `${location.position.left}%`,
                       transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
@@ -446,30 +479,38 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
           {/* Actions Menu */}
           {showPurchaseMenu && (
             <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
-              <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">Actions</h2>
+              <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
+                Actions
+              </h2>
               <div className="space-y-3">
                 {/* Move items in two rows of three */}
-                {menu.some((item) => item.type === 'MOVE') && (
+                {menu.some((item) => item.type === "MOVE") && (
                   <>
                     {/* First row: Assist, Remove, Influence */}
                     <div className="grid grid-cols-3 gap-2">
                       {menu
                         .filter(
                           (item) =>
-                            item.type === 'MOVE' &&
-                            ['ASSIST', 'REMOVE', 'INFLUENCE'].includes(item.moveType || '')
+                            item.type === "MOVE" &&
+                            ["ASSIST", "REMOVE", "INFLUENCE"].includes(
+                              item.moveType || ""
+                            )
                         )
                         .map((item) => {
-                          const canAfford = affordableItems.some((ai) => ai.id === item.id);
+                          const canAfford = affordableItems.some(
+                            (ai) => ai.id === item.id
+                          );
                           return (
                             <button
                               key={item.id}
-                              onClick={() => canAfford && onSelectMenuItem(item)}
+                              onClick={() =>
+                                canAfford && onSelectMenuItem(item)
+                              }
                               disabled={!canAfford}
                               className={`p-2 rounded-lg border-2 transition-all ${
                                 canAfford
-                                  ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                                  : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                  ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                  : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                               }`}
                             >
                               <div className="text-center">
@@ -478,7 +519,9 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                                 </span>
                                 <span
                                   className={`text-base font-bold ${
-                                    canAfford ? 'text-yellow-400' : 'text-gray-600'
+                                    canAfford
+                                      ? "text-yellow-400"
+                                      : "text-gray-600"
                                   }`}
                                 >
                                   ₭-{item.price}
@@ -493,20 +536,26 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                       {menu
                         .filter(
                           (item) =>
-                            item.type === 'MOVE' &&
-                            ['ADVANCE', 'WITHDRAW', 'ORGANIZE'].includes(item.moveType || '')
+                            item.type === "MOVE" &&
+                            ["ADVANCE", "WITHDRAW", "ORGANIZE"].includes(
+                              item.moveType || ""
+                            )
                         )
                         .map((item) => {
-                          const canAfford = affordableItems.some((ai) => ai.id === item.id);
+                          const canAfford = affordableItems.some(
+                            (ai) => ai.id === item.id
+                          );
                           return (
                             <button
                               key={item.id}
-                              onClick={() => canAfford && onSelectMenuItem(item)}
+                              onClick={() =>
+                                canAfford && onSelectMenuItem(item)
+                              }
                               disabled={!canAfford}
                               className={`p-2 rounded-lg border-2 transition-all ${
                                 canAfford
-                                  ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                                  : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                  ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                  : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                               }`}
                             >
                               <div className="text-center">
@@ -515,7 +564,9 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                                 </span>
                                 <span
                                   className={`text-base font-bold ${
-                                    canAfford ? 'text-yellow-400' : 'text-gray-600'
+                                    canAfford
+                                      ? "text-yellow-400"
+                                      : "text-gray-600"
                                   }`}
                                 >
                                   ₭-{item.price}
@@ -529,11 +580,15 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                 )}
                 {/* Non-move items (Promotion, Credibility) remain full width */}
                 {menu
-                  .filter((item) => item.type !== 'MOVE')
+                  .filter((item) => item.type !== "MOVE")
                   .map((item) => {
-                    const canAfford = affordableItems.some((ai) => ai.id === item.id);
+                    const canAfford = affordableItems.some(
+                      (ai) => ai.id === item.id
+                    );
                     const isCredibilityAtMax =
-                      item.type === 'CREDIBILITY' && currentPlayer && currentPlayer.credibility >= 3;
+                      item.type === "CREDIBILITY" &&
+                      currentPlayer &&
+                      currentPlayer.credibility >= 3;
                     const isEnabled = canAfford && !isCredibilityAtMax;
                     return (
                       <button
@@ -542,26 +597,29 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                         disabled={!isEnabled}
                         className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
                           isEnabled
-                            ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                            : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                            ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                            : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                         }`}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <span className="font-bold text-lg">
-                            {item.type === 'PROMOTION' &&
+                            {item.type === "PROMOTION" &&
                               `Promote ${item.promotionLocation}`}
-                            {item.type === 'CREDIBILITY' && 'Restore Credibility'}
+                            {item.type === "CREDIBILITY" &&
+                              "Restore Credibility"}
                           </span>
                           <span
                             className={`text-xl font-bold ${
-                              isEnabled ? 'text-yellow-400' : 'text-gray-600'
+                              isEnabled ? "text-yellow-400" : "text-gray-600"
                             }`}
                           >
                             ₭-{item.price}
                           </span>
                         </div>
                         {item.description && (
-                          <p className="text-sm text-gray-300">{item.description}</p>
+                          <p className="text-sm text-gray-300">
+                            {item.description}
+                          </p>
                         )}
                       </button>
                     );
@@ -585,20 +643,22 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                 Perform Your Action
               </h2>
               <p className="text-center text-lg mb-6">
-                {currentPurchase.item.type === 'PROMOTION' && (
+                {currentPurchase.item.type === "PROMOTION" && (
                   <>
-                    Promote a{' '}
-                    {currentPurchase.item.promotionLocation === 'OFFICE'
-                      ? 'piece in your Office'
-                      : currentPurchase.item.promotionLocation === 'ROSTRUM'
-                      ? 'piece in one of your Rostrums'
-                      : 'piece in one of your Seats'}
+                    Promote a{" "}
+                    {currentPurchase.item.promotionLocation === "OFFICE"
+                      ? "piece in your Office"
+                      : currentPurchase.item.promotionLocation === "ROSTRUM"
+                      ? "piece in one of your Rostrums"
+                      : "piece in one of your Seats"}
                   </>
                 )}
-                {currentPurchase.item.type === 'MOVE' && (
+                {currentPurchase.item.type === "MOVE" && (
                   <>Perform a {currentPurchase.item.moveType} move</>
                 )}
-                {currentPurchase.item.type === 'CREDIBILITY' && <>Your credibility has been restored</>}
+                {currentPurchase.item.type === "CREDIBILITY" && (
+                  <>Your credibility has been restored</>
+                )}
               </p>
               <div className="flex justify-center gap-3">
                 <button
@@ -619,10 +679,14 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
 
           {/* Turn Progress */}
           <div className="bg-gray-800/70 rounded-lg p-4">
-            <h3 className="text-lg font-bold text-center mb-3 text-yellow-400">Turn Order</h3>
+            <h3 className="text-lg font-bold text-center mb-3 text-yellow-400">
+              Turn Order
+            </h3>
             <div className="flex justify-center gap-4 flex-wrap">
               {turnOrder.map((playerId, index) => {
-                const pState = bureaucracyStates.find((s) => s.playerId === playerId);
+                const pState = bureaucracyStates.find(
+                  (s) => s.playerId === playerId
+                );
                 const isCurrentPlayer = index === currentBureaucracyPlayerIndex;
                 const isComplete = pState?.turnComplete;
 
@@ -631,13 +695,13 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                     key={playerId}
                     className={`px-4 py-2 rounded-lg border-2 ${
                       isCurrentPlayer
-                        ? 'bg-yellow-600 border-yellow-400 text-white font-bold'
+                        ? "bg-yellow-600 border-yellow-400 text-white font-bold"
                         : isComplete
-                        ? 'bg-green-800 border-green-600 text-green-200'
-                        : 'bg-gray-700 border-gray-500 text-gray-300'
+                        ? "bg-green-800 border-green-600 text-green-200"
+                        : "bg-gray-700 border-gray-500 text-gray-300"
                     }`}
                   >
-                    Player {playerId} {isComplete && '✓'}
+                    Player {playerId} {isComplete && "✓"}
                   </div>
                 );
               })}
@@ -654,7 +718,7 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                 className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500 cursor-pointer"
               />
               <span className="ml-3 text-slate-200">
-                Board Rotation {boardRotationEnabled ? '(ON)' : '(OFF)'}
+                Board Rotation {boardRotationEnabled ? "(ON)" : "(OFF)"}
               </span>
             </label>
           </div>
@@ -663,7 +727,7 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
           {isTestMode &&
             !showPurchaseMenu &&
             currentPurchase &&
-            currentPurchase.item.type === 'MOVE' && (
+            currentPurchase.item.type === "MOVE" && (
               <div className="bg-gray-700 rounded-lg p-4">
                 <button
                   onClick={onCheckMove}
@@ -690,8 +754,12 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
             <div className="mb-8">
               {moveCheckResult.isValid ? (
                 <div className="text-center">
-                  <div className="text-9xl text-green-500 font-bold mb-4">✓</div>
-                  <h2 className="text-4xl font-bold text-green-400 mb-2">Valid Move!</h2>
+                  <div className="text-9xl text-green-500 font-bold mb-4">
+                    ✓
+                  </div>
+                  <h2 className="text-4xl font-bold text-green-400 mb-2">
+                    Valid Move!
+                  </h2>
                   <p className="text-lg text-green-300">
                     The move matches the selected action type.
                   </p>
@@ -699,8 +767,12 @@ export const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
               ) : (
                 <div className="text-center">
                   <div className="text-9xl text-red-500 font-bold mb-4">✕</div>
-                  <h2 className="text-4xl font-bold text-red-400 mb-2">Invalid Move</h2>
-                  <p className="text-lg text-red-300">{moveCheckResult.reason}</p>
+                  <h2 className="text-4xl font-bold text-red-400 mb-2">
+                    Invalid Move
+                  </h2>
+                  <p className="text-lg text-red-300">
+                    {moveCheckResult.reason}
+                  </p>
                 </div>
               )}
             </div>

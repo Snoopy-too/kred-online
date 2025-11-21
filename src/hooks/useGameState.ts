@@ -8,7 +8,7 @@ import {
   TrackedMove,
   BureaucracyPlayerState,
   BureaucracyPurchase,
-} from "../../game";
+} from "../game/types";
 
 /**
  * Custom hook for managing core game state

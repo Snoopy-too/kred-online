@@ -1,57 +1,78 @@
 import React, { useState, useEffect, useRef } from "react";
+
+// Import from extracted modules
 import {
-  PLAYER_OPTIONS,
-  BOARD_IMAGE_URLS,
-  initializePlayers,
-  initializePieces,
-  initializeCampaignPieces,
-  PIECE_COUNTS_BY_PLAYER_COUNT,
-  PIECE_TYPES,
-  Tile,
   Player,
   GameState,
   Piece,
   BoardTile,
-  calculatePieceRotation,
-  findNearestVacantLocation,
-  TILE_SPACES_BY_PLAYER_COUNT,
-  TileReceivingSpace,
-  BANK_SPACES_BY_PLAYER_COUNT,
-  TILE_KREDCOIN_VALUES,
-  CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
-  BankSpace,
-  PLAYER_PERSPECTIVE_ROTATIONS,
-  formatLocationId,
-  getLocationIdFromPosition,
-  DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
-  isPositionInCommunityCircle,
+  Tile,
   TrackedMove,
   PlayedTileState,
+  BureaucracyPlayerState,
+  BureaucracyPurchase,
+  BureaucracyMoveType,
+  BureaucracyMenuItem,
+  TileReceivingSpace,
+  BankSpace,
+} from "./src/game/types";
+import {
+  PLAYER_PERSPECTIVE_ROTATIONS,
+  PIECE_COUNTS_BY_PLAYER_COUNT,
+  PIECE_TYPES,
+  BOARD_IMAGE_URLS,
+  PLAYER_OPTIONS,
+} from "./src/game/config";
+import {
+  TILE_SPACES_BY_PLAYER_COUNT,
+  BANK_SPACES_BY_PLAYER_COUNT,
+  CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
+} from "./src/game/config/board-config";
+import { TILE_KREDCOIN_VALUES } from "./src/game/config/tiles";
+import {
   validateMovesForTilePlay,
   validateTileRequirements,
   validateTileRequirementsWithImpossibleMoveExceptions,
+  validateMoveType,
+} from "./src/game/rules/move-validation";
+import { areSeatsAdjacent } from "./src/game/rules/adjacency";
+import { handleCredibilityLoss } from "./src/game/rules/credibility";
+import { checkBureaucracyWinCondition } from "./src/game/rules/win-conditions";
+import {
+  initializePlayers,
+  initializePieces,
+  initializeCampaignPieces,
+} from "./src/game/state/initialization";
+import {
   createGameStateSnapshot,
-  getChallengeOrder,
-  getTileRequirements,
-  validateSingleMove,
-  areSeatsAdjacent,
-  handleCredibilityLoss,
-  BureaucracyMenuItem,
-  BureaucracyPurchase,
-  BureaucracyPlayerState,
-  BureaucracyMoveType,
   calculatePlayerKredcoin,
   getBureaucracyTurnOrder,
+  getChallengeOrder,
+} from "./src/game/state/calculations";
+import {
+  formatLocationId,
+  getLocationIdFromPosition,
+  findNearestVacantLocation,
+} from "./src/game/utils/location";
+import {
+  calculatePieceRotation,
+  isPositionInCommunityCircle,
+} from "./src/game/utils/positioning";
+
+// Import remaining items from game.ts (not yet extracted)
+import {
+  DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
+  getTileRequirements,
+  validateSingleMove,
   getBureaucracyMenu,
   getAvailablePurchases,
   validatePromotion,
   performPromotion,
   validatePurchasedMove,
   determineMoveType,
-  validateMoveType,
-  checkBureaucracyWinCondition,
   validatePieceMovement,
 } from "./game";
+
 import { ALERTS, TIMEOUTS, DEFAULTS } from "./constants";
 import {
   getPlayerName,
