@@ -1,4 +1,4 @@
-
+import { TOTAL_TILES } from './src/config/constants';
 
 // --- Type Definitions ---
 
@@ -1342,7 +1342,6 @@ export const BOARD_IMAGE_URLS: { [key: number]: string } = {
   5: './images/5player_board.jpg',
 };
 
-const TOTAL_TILES = 24;
 export const TILE_IMAGE_URLS = Array.from({ length: TOTAL_TILES }, (_, i) => {
   const num = String(i + 1).padStart(2, '0');
   return `./images/${num}.svg`;
