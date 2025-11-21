@@ -1,8 +1,8 @@
-import { TOTAL_TILES } from './src/config/constants';
+import { TOTAL_TILES, PLAYER_OPTIONS, BOARD_IMAGE_URLS } from './src/config/constants';
 import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from './src/config/tiles';
 
 // Re-export for backwards compatibility
-export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES };
+export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS };
 
 // --- Type Definitions ---
 
@@ -1337,14 +1337,6 @@ export const PIECE_COUNTS_BY_PLAYER_COUNT: {
 
 
 // --- Game Constants ---
-
-export const PLAYER_OPTIONS = [3, 4, 5];
-
-export const BOARD_IMAGE_URLS: { [key: number]: string } = {
-  3: './images/3player_board.jpg',
-  4: './images/4player_board.jpg',
-  5: './images/5player_board.jpg',
-};
 
 // Bureaucracy menu for 3 and 4 player modes
 export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
