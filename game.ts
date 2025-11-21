@@ -1,8 +1,9 @@
 import { TOTAL_TILES, PLAYER_OPTIONS, BOARD_IMAGE_URLS } from './src/config/constants';
 import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from './src/config/tiles';
+import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from './src/config/pieces';
 
 // Re-export for backwards compatibility
-export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS };
+export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS, PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT };
 
 // --- Type Definitions ---
 
@@ -1308,33 +1309,6 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: { [key: number]: BankSpace[]
   4: FOUR_PLAYER_CREDIBILITY_LOCATIONS,
   5: FIVE_PLAYER_CREDIBILITY_LOCATIONS,
 };
-
-export const PIECE_TYPES: { [key: string]: GamePieceInfo } = {
-  MARK: { name: 'Mark', imageUrl: './images/mark-transparent_bg.png' },
-  HEEL: { name: 'Heel', imageUrl: './images/heel-transparent_bg.png' },
-  PAWN: { name: 'Pawn', imageUrl: './images/pawn-transparent_bg.png' },
-};
-
-export const PIECE_COUNTS_BY_PLAYER_COUNT: {
-  [playerCount: number]: { [pieceType: string]: number };
-} = {
-  3: {
-    MARK: 12,
-    HEEL: 9,
-    PAWN: 3,
-  },
-  4: {
-    MARK: 14,
-    HEEL: 13,
-    PAWN: 4,
-  },
-  5: {
-    MARK: 18,
-    HEEL: 17,
-    PAWN: 5,
-  },
-};
-
 
 // --- Game Constants ---
 
