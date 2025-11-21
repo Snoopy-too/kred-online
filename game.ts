@@ -1,11 +1,7 @@
-import { Piece, GamePieceInfo } from './src/types';
+import { Piece, GamePieceInfo, Tile, BoardTile, TileReceivingSpace } from './src/types';
 
 // --- Type Definitions ---
-
-export interface Tile {
-  id: number;
-  url: string;
-}
+// (Tile types moved to src/types/tile.ts)
 
 export interface Player {
   id: number;
@@ -19,27 +15,14 @@ export type GameState = 'PLAYER_SELECTION' | 'DRAFTING' | 'CAMPAIGN' | 'TILE_PLA
 
 // --- Game Piece Definitions ---
 // (Types moved to src/types/piece.ts)
-
-// Represents a tile instance on the game board
-export interface BoardTile {
-  id: string;
-  tile: Tile;
-  position: { top: number; left: number };
-  rotation: number;
-  placerId: number;
-  ownerId: number; // Who owns the slot.
-}
+// (BoardTile moved to src/types/tile.ts)
 
 export interface DropLocation {
   id: string;
   position: { left: number; top: number };
 }
 
-export interface TileReceivingSpace {
-  ownerId: number;
-  position: { left: number; top: number };
-  rotation: number;
-}
+// TileReceivingSpace moved to src/types/tile.ts
 
 export interface BankSpace {
   ownerId: number;

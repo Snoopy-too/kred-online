@@ -2,3 +2,4 @@
 // Types will be re-exported here as they are extracted
 
 export * from './piece';
+export * from './tile';
