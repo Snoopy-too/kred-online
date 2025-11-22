@@ -33,6 +33,9 @@ import type {
 
   // Challenge types - challenge system data structures
   ChallengeState,
+
+  // Played tile types - tile play tracking
+  PlayedTileState,
 } from "./src/types";
 
 // Enum/value imports that are used at runtime (not just for typing)
@@ -79,18 +82,6 @@ import {
 // (GameState, DropLocation, BankSpace moved to src/types/game.ts)
 // (Move types moved to src/types/move.ts)
 
-// Represents a tile that has been played but not yet fully resolved
-export interface PlayedTileState {
-  tileId: string;
-  playerId: number; // Player who played the tile
-  receivingPlayerId: number; // Player who received the tile
-  playedAt: number; // Timestamp when played
-  movesPerformed: TrackedMove[]; // Moves made by the player during play
-  gameStateSnapshot: {
-    pieces: Piece[];
-    boardTiles: BoardTile[];
-  };
-}
 
 
 
