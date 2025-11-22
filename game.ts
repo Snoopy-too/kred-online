@@ -91,6 +91,11 @@ import {
   formatLocationId,
 } from "./src/utils/formatting";
 
+import {
+  // Array utilities - array manipulation helpers
+  shuffle,
+} from "./src/utils/array";
+
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
 // (Player type moved to src/types/player.ts)
@@ -1398,24 +1403,7 @@ export function validateAdjacentRostrumMovement(
   return { isAllowed: true, reason: "Adjacent rostrum movement is valid" };
 }
 
-/**
- * Shuffles an array in place.
- * @param array The array to shuffle.
- */
-function shuffle<T>(array: T[]): T[] {
-  let currentIndex = array.length;
-  let randomIndex;
-
-  while (currentIndex !== 0) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-    [array[currentIndex], array[randomIndex]] = [
-      array[randomIndex],
-      array[currentIndex],
-    ];
-  }
-  return array;
-}
+// (shuffle function moved to src/utils/array.ts)
 
 /**
  * Creates the initial set of game pieces.
