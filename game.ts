@@ -27,6 +27,9 @@ import {
   TILE_PLAY_OPTIONS,
   TileRequirement,
   TILE_REQUIREMENTS,
+  RostrumSupport,
+  PlayerRostrum,
+  ROSTRUM_SUPPORT_RULES,
 } from "./src/config/rules";
 
 // Re-export for backwards compatibility
@@ -41,8 +44,9 @@ export {
   TilePlayOptionType,
   TILE_PLAY_OPTIONS,
   TILE_REQUIREMENTS,
+  ROSTRUM_SUPPORT_RULES,
 };
-export type { TilePlayOption, TileRequirement };
+export type { TilePlayOption, TileRequirement, RostrumSupport, PlayerRostrum };
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
@@ -350,106 +354,6 @@ export const DROP_LOCATIONS_BY_PLAYER_COUNT: {
   3: THREE_PLAYER_DROP_LOCATIONS,
   4: FOUR_PLAYER_DROP_LOCATIONS,
   5: FIVE_PLAYER_DROP_LOCATIONS,
-};
-
-/**
- * GAME RULE: Seat-to-Rostrum Support Mapping
- *
- * Each player has 2 rostrums. The 6 seats for each player are divided into two groups of 3.
- * A player may only move a piece from their seats into a rostrum if ALL 3 supporting seats are full.
- * If all 3 supporting seats for a rostrum become vacant, any piece at that rostrum must be moved
- * to one of the supporting seats.
- *
- * Support structure (same for all player counts: 3, 4, 5 players):
- * - Seats 1-3 support Rostrum 1
- * - Seats 4-6 support Rostrum 2
- */
-export interface RostrumSupport {
-  rostrum: string; // e.g., 'p1_rostrum1'
-  supportingSeats: string[]; // e.g., ['p1_seat1', 'p1_seat2', 'p1_seat3']
-}
-
-export interface PlayerRostrum {
-  playerId: number;
-  rostrums: RostrumSupport[];
-  office: string; // e.g., 'p1_office'
-}
-
-/**
- * Comprehensive mapping of rostrums to their supporting seats for all player counts.
- * The structure is the same regardless of player count (3, 4, or 5 players).
- */
-export const ROSTRUM_SUPPORT_RULES: { [playerId: number]: PlayerRostrum } = {
-  1: {
-    playerId: 1,
-    rostrums: [
-      {
-        rostrum: "p1_rostrum1",
-        supportingSeats: ["p1_seat1", "p1_seat2", "p1_seat3"],
-      },
-      {
-        rostrum: "p1_rostrum2",
-        supportingSeats: ["p1_seat4", "p1_seat5", "p1_seat6"],
-      },
-    ],
-    office: "p1_office",
-  },
-  2: {
-    playerId: 2,
-    rostrums: [
-      {
-        rostrum: "p2_rostrum1",
-        supportingSeats: ["p2_seat1", "p2_seat2", "p2_seat3"],
-      },
-      {
-        rostrum: "p2_rostrum2",
-        supportingSeats: ["p2_seat4", "p2_seat5", "p2_seat6"],
-      },
-    ],
-    office: "p2_office",
-  },
-  3: {
-    playerId: 3,
-    rostrums: [
-      {
-        rostrum: "p3_rostrum1",
-        supportingSeats: ["p3_seat1", "p3_seat2", "p3_seat3"],
-      },
-      {
-        rostrum: "p3_rostrum2",
-        supportingSeats: ["p3_seat4", "p3_seat5", "p3_seat6"],
-      },
-    ],
-    office: "p3_office",
-  },
-  4: {
-    playerId: 4,
-    rostrums: [
-      {
-        rostrum: "p4_rostrum1",
-        supportingSeats: ["p4_seat1", "p4_seat2", "p4_seat3"],
-      },
-      {
-        rostrum: "p4_rostrum2",
-        supportingSeats: ["p4_seat4", "p4_seat5", "p4_seat6"],
-      },
-    ],
-    office: "p4_office",
-  },
-  5: {
-    playerId: 5,
-    rostrums: [
-      {
-        rostrum: "p5_rostrum1",
-        supportingSeats: ["p5_seat1", "p5_seat2", "p5_seat3"],
-      },
-      {
-        rostrum: "p5_rostrum2",
-        supportingSeats: ["p5_seat4", "p5_seat5", "p5_seat6"],
-      },
-    ],
-    office: "p5_office",
-  },
 };
 
 /**

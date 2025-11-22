@@ -4,7 +4,8 @@ import {
   DEFINED_MOVES,
   TilePlayOptionType,
   TILE_PLAY_OPTIONS,
-  TILE_REQUIREMENTS
+  TILE_REQUIREMENTS,
+  ROSTRUM_SUPPORT_RULES
 } from '../../config/rules';
 
 describe('DEFINED_MOVES Configuration', () => {
@@ -803,6 +804,219 @@ describe('TILE_REQUIREMENTS Configuration', () => {
           expect(validMoves).toContain(move);
         });
       });
+    });
+  });
+});
+
+describe('ROSTRUM_SUPPORT_RULES Configuration', () => {
+  describe('Structure and Completeness', () => {
+    it('should define rules for all 5 players', () => {
+      const playerIds = Object.keys(ROSTRUM_SUPPORT_RULES).map(Number);
+      expect(playerIds).toHaveLength(5);
+      expect(playerIds).toEqual(expect.arrayContaining([1, 2, 3, 4, 5]));
+    });
+
+    it('should have all required properties for each player', () => {
+      Object.values(ROSTRUM_SUPPORT_RULES).forEach((player) => {
+        expect(player).toHaveProperty('playerId');
+        expect(player).toHaveProperty('rostrums');
+        expect(player).toHaveProperty('office');
+      });
+    });
+
+    it('should have matching playerId in key and value', () => {
+      Object.entries(ROSTRUM_SUPPORT_RULES).forEach(([key, value]) => {
+        expect(Number(key)).toBe(value.playerId);
+      });
+    });
+  });
+
+  describe('Rostrum Configuration', () => {
+    it('should have exactly 2 rostrums per player', () => {
+      Object.values(ROSTRUM_SUPPORT_RULES).forEach((player) => {
+        expect(player.rostrums).toHaveLength(2);
+      });
+    });
+
+    it('should have all required properties for each rostrum', () => {
+      Object.values(ROSTRUM_SUPPORT_RULES).forEach((player) => {
+        player.rostrums.forEach((rostrum) => {
+          expect(rostrum).toHaveProperty('rostrum');
+          expect(rostrum).toHaveProperty('supportingSeats');
+        });
+      });
+    });
+
+    it('should have correct rostrum names for each player', () => {
+      for (let playerId = 1; playerId <= 5; playerId++) {
+        const player = ROSTRUM_SUPPORT_RULES[playerId];
+        expect(player.rostrums[0].rostrum).toBe(`p${playerId}_rostrum1`);
+        expect(player.rostrums[1].rostrum).toBe(`p${playerId}_rostrum2`);
+      }
+    });
+
+    it('should have exactly 3 supporting seats per rostrum', () => {
+      Object.values(ROSTRUM_SUPPORT_RULES).forEach((player) => {
+        player.rostrums.forEach((rostrum) => {
+          expect(rostrum.supportingSeats).toHaveLength(3);
+        });
+      });
+    });
+
+    it('should have valid seat arrays', () => {
+      Object.values(ROSTRUM_SUPPORT_RULES).forEach((player) => {
+        player.rostrums.forEach((rostrum) => {
+          expect(Array.isArray(rostrum.supportingSeats)).toBe(true);
+          rostrum.supportingSeats.forEach((seat) => {
+            expect(typeof seat).toBe('string');
+            expect(seat.length).toBeGreaterThan(0);
+          });
+        });
+      });
+    });
+  });
+
+  describe('Seat Groupings', () => {
+    it('should have seats 1-3 supporting rostrum1 for all players', () => {
+      for (let playerId = 1; playerId <= 5; playerId++) {
+        const player = ROSTRUM_SUPPORT_RULES[playerId];
+        const rostrum1 = player.rostrums.find(r => r.rostrum === `p${playerId}_rostrum1`);
+
+        expect(rostrum1).toBeDefined();
+        expect(rostrum1!.supportingSeats).toEqual([
+          `p${playerId}_seat1`,
+          `p${playerId}_seat2`,
+          `p${playerId}_seat3`
+        ]);
+      }
+    });
+
+    it('should have seats 4-6 supporting rostrum2 for all players', () => {
+      for (let playerId = 1; playerId <= 5; playerId++) {
+        const player = ROSTRUM_SUPPORT_RULES[playerId];
+        const rostrum2 = player.rostrums.find(r => r.rostrum === `p${playerId}_rostrum2`);
+
+        expect(rostrum2).toBeDefined();
+        expect(rostrum2!.supportingSeats).toEqual([
+          `p${playerId}_seat4`,
+          `p${playerId}_seat5`,
+          `p${playerId}_seat6`
+        ]);
+      }
+    });
+
+    it('should have no seat supporting multiple rostrums', () => {
+      Object.values(ROSTRUM_SUPPORT_RULES).forEach((player) => {
+        const allSeats = player.rostrums.flatMap(r => r.supportingSeats);
+        const uniqueSeats = new Set(allSeats);
+        expect(allSeats.length).toBe(uniqueSeats.size);
+      });
+    });
+
+    it('should have all 6 seats accounted for per player', () => {
+      for (let playerId = 1; playerId <= 5; playerId++) {
+        const player = ROSTRUM_SUPPORT_RULES[playerId];
+        const allSeats = player.rostrums.flatMap(r => r.supportingSeats);
+
+        expect(allSeats).toHaveLength(6);
+        for (let seatNum = 1; seatNum <= 6; seatNum++) {
+          expect(allSeats).toContain(`p${playerId}_seat${seatNum}`);
+        }
+      }
+    });
+  });
+
+  describe('Office Configuration', () => {
+    it('should have correct office name for each player', () => {
+      for (let playerId = 1; playerId <= 5; playerId++) {
+        const player = ROSTRUM_SUPPORT_RULES[playerId];
+        expect(player.office).toBe(`p${playerId}_office`);
+      }
+    });
+
+    it('should have non-empty office strings', () => {
+      Object.values(ROSTRUM_SUPPORT_RULES).forEach((player) => {
+        expect(player.office).toBeTruthy();
+        expect(player.office.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should have unique office names', () => {
+      const offices = Object.values(ROSTRUM_SUPPORT_RULES).map(p => p.office);
+      const uniqueOffices = new Set(offices);
+      expect(offices.length).toBe(uniqueOffices.size);
+    });
+  });
+
+  describe('Individual Player Configurations', () => {
+    it('should have correct configuration for Player 1', () => {
+      const p1 = ROSTRUM_SUPPORT_RULES[1];
+      expect(p1.playerId).toBe(1);
+      expect(p1.office).toBe('p1_office');
+      expect(p1.rostrums).toHaveLength(2);
+    });
+
+    it('should have correct configuration for Player 2', () => {
+      const p2 = ROSTRUM_SUPPORT_RULES[2];
+      expect(p2.playerId).toBe(2);
+      expect(p2.office).toBe('p2_office');
+      expect(p2.rostrums).toHaveLength(2);
+    });
+
+    it('should have correct configuration for Player 3', () => {
+      const p3 = ROSTRUM_SUPPORT_RULES[3];
+      expect(p3.playerId).toBe(3);
+      expect(p3.office).toBe('p3_office');
+      expect(p3.rostrums).toHaveLength(2);
+    });
+
+    it('should have correct configuration for Player 4', () => {
+      const p4 = ROSTRUM_SUPPORT_RULES[4];
+      expect(p4.playerId).toBe(4);
+      expect(p4.office).toBe('p4_office');
+      expect(p4.rostrums).toHaveLength(2);
+    });
+
+    it('should have correct configuration for Player 5', () => {
+      const p5 = ROSTRUM_SUPPORT_RULES[5];
+      expect(p5.playerId).toBe(5);
+      expect(p5.office).toBe('p5_office');
+      expect(p5.rostrums).toHaveLength(2);
+    });
+  });
+
+  describe('Consistency Checks', () => {
+    it('should have consistent structure across all players', () => {
+      const structures = Object.values(ROSTRUM_SUPPORT_RULES).map(player => ({
+        rostrumCount: player.rostrums.length,
+        totalSeats: player.rostrums.flatMap(r => r.supportingSeats).length,
+        seatsPerRostrum: player.rostrums.map(r => r.supportingSeats.length)
+      }));
+
+      // All should be identical
+      structures.forEach(structure => {
+        expect(structure.rostrumCount).toBe(2);
+        expect(structure.totalSeats).toBe(6);
+        expect(structure.seatsPerRostrum).toEqual([3, 3]);
+      });
+    });
+
+    it('should have unique rostrum names across all players', () => {
+      const allRostrums = Object.values(ROSTRUM_SUPPORT_RULES).flatMap(
+        player => player.rostrums.map(r => r.rostrum)
+      );
+      const uniqueRostrums = new Set(allRostrums);
+      expect(allRostrums.length).toBe(uniqueRostrums.size);
+      expect(allRostrums).toHaveLength(10); // 5 players × 2 rostrums
+    });
+
+    it('should have unique seat names across all players', () => {
+      const allSeats = Object.values(ROSTRUM_SUPPORT_RULES).flatMap(
+        player => player.rostrums.flatMap(r => r.supportingSeats)
+      );
+      const uniqueSeats = new Set(allSeats);
+      expect(allSeats.length).toBe(uniqueSeats.size);
+      expect(allSeats).toHaveLength(30); // 5 players × 6 seats
     });
   });
 });
