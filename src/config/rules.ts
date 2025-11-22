@@ -1,6 +1,35 @@
 import { DefinedMoveType, MoveRequirementType, DefinedMove } from '../types/move';
 
 /**
+ * TILE PLAY OPTION TYPES
+ *
+ * Defines the four possible response options when a player receives a played tile.
+ */
+export enum TilePlayOptionType {
+  NO_MOVE = "NO_MOVE",
+  ONE_OPTIONAL = "ONE_OPTIONAL",
+  ONE_MANDATORY = "ONE_MANDATORY",
+  ONE_OPTIONAL_AND_ONE_MANDATORY = "ONE_OPTIONAL_AND_ONE_MANDATORY",
+}
+
+/**
+ * TILE PLAY OPTION INTERFACE
+ *
+ * Defines the structure of a tile play option, specifying:
+ * - What types of moves are allowed
+ * - How many of each type can be performed
+ * - Whether the option requires action or is passive
+ */
+export interface TilePlayOption {
+  optionType: TilePlayOptionType;
+  description: string;
+  allowedMoveTypes: DefinedMoveType[];
+  maxOptionalMoves: number;
+  maxMandatoryMoves: number;
+  requiresAction: boolean;
+}
+
+/**
  * DEFINED MOVES - Action Types Available to Players
  *
  * This comprehensive mapping defines all six core move types in KRED,
@@ -107,5 +136,79 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
     canTargetOwnDomain: true,
     canTargetOpponentDomain: true,
     affectsCommunity: false,
+  },
+};
+
+/**
+ * TILE PLAY OPTIONS - What a Player Can Do When Challenged
+ *
+ * When a player plays a tile to another player, the receiving player initially has ONE of
+ * these four options available to them, pending any rejection challenges.
+ *
+ * The receiving player selects ONE option from:
+ *
+ * a. NO MOVE - Do nothing. The tile play is complete.
+ *
+ * b. ONE "O" MOVE - Execute one Optional move (REMOVE, INFLUENCE, or ASSIST).
+ *    Examples: Remove opponent's piece, move opponent's piece via adjacency, or assist opponent.
+ *
+ * c. ONE "M" MOVE - Execute one Mandatory move (ADVANCE, WITHDRAW, or ORGANIZE).
+ *    Examples: Move piece up the hierarchy, move piece down, or move to adjacent location.
+ *
+ * d. ONE "O" MOVE AND ONE "M" MOVE - Execute both an Optional and a Mandatory move in any order.
+ *    Examples: Remove opponent's piece AND advance your own, or any other valid combination.
+ *
+ * Note: The options above may be modified by rejection challenges or tile-specific requirements.
+ */
+export const TILE_PLAY_OPTIONS: {
+  [key in TilePlayOptionType]: TilePlayOption;
+} = {
+  [TilePlayOptionType.NO_MOVE]: {
+    optionType: TilePlayOptionType.NO_MOVE,
+    description: "Do nothing. The tile play is complete.",
+    allowedMoveTypes: [],
+    maxOptionalMoves: 0,
+    maxMandatoryMoves: 0,
+    requiresAction: false,
+  },
+  [TilePlayOptionType.ONE_OPTIONAL]: {
+    optionType: TilePlayOptionType.ONE_OPTIONAL,
+    description: "Execute one Optional move (REMOVE, INFLUENCE, or ASSIST)",
+    allowedMoveTypes: [
+      DefinedMoveType.REMOVE,
+      DefinedMoveType.INFLUENCE,
+      DefinedMoveType.ASSIST,
+    ],
+    maxOptionalMoves: 1,
+    maxMandatoryMoves: 0,
+    requiresAction: true,
+  },
+  [TilePlayOptionType.ONE_MANDATORY]: {
+    optionType: TilePlayOptionType.ONE_MANDATORY,
+    description: "Execute one Mandatory move (ADVANCE, WITHDRAW, or ORGANIZE)",
+    allowedMoveTypes: [
+      DefinedMoveType.ADVANCE,
+      DefinedMoveType.WITHDRAW,
+      DefinedMoveType.ORGANIZE,
+    ],
+    maxOptionalMoves: 0,
+    maxMandatoryMoves: 1,
+    requiresAction: true,
+  },
+  [TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY]: {
+    optionType: TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY,
+    description:
+      "Execute one Optional move AND one Mandatory move in any order",
+    allowedMoveTypes: [
+      DefinedMoveType.REMOVE,
+      DefinedMoveType.INFLUENCE,
+      DefinedMoveType.ASSIST,
+      DefinedMoveType.ADVANCE,
+      DefinedMoveType.WITHDRAW,
+      DefinedMoveType.ORGANIZE,
+    ],
+    maxOptionalMoves: 1,
+    maxMandatoryMoves: 1,
+    requiresAction: true,
   },
 };

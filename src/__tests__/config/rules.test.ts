@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DefinedMoveType, MoveRequirementType } from '../../types/move';
-import { DEFINED_MOVES } from '../../config/rules';
+import { DEFINED_MOVES, TilePlayOptionType, TILE_PLAY_OPTIONS } from '../../config/rules';
 
 describe('DEFINED_MOVES Configuration', () => {
   describe('Structure and Completeness', () => {
@@ -284,6 +284,227 @@ describe('DEFINED_MOVES Configuration', () => {
       expect(nonCommunityMoves).toContain(DefinedMoveType.INFLUENCE);
       expect(nonCommunityMoves).toContain(DefinedMoveType.ORGANIZE);
       expect(nonCommunityMoves).toHaveLength(2);
+    });
+  });
+});
+
+describe('TILE_PLAY_OPTIONS Configuration', () => {
+  describe('Structure and Completeness', () => {
+    it('should define all four tile play option types', () => {
+      const optionTypes = Object.keys(TILE_PLAY_OPTIONS);
+      expect(optionTypes).toHaveLength(4);
+      expect(optionTypes).toContain(TilePlayOptionType.NO_MOVE);
+      expect(optionTypes).toContain(TilePlayOptionType.ONE_OPTIONAL);
+      expect(optionTypes).toContain(TilePlayOptionType.ONE_MANDATORY);
+      expect(optionTypes).toContain(TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY);
+    });
+
+    it('should have all required properties for each option', () => {
+      Object.values(TILE_PLAY_OPTIONS).forEach((option) => {
+        expect(option).toHaveProperty('optionType');
+        expect(option).toHaveProperty('description');
+        expect(option).toHaveProperty('allowedMoveTypes');
+        expect(option).toHaveProperty('maxOptionalMoves');
+        expect(option).toHaveProperty('maxMandatoryMoves');
+        expect(option).toHaveProperty('requiresAction');
+      });
+    });
+
+    it('should have non-empty descriptions', () => {
+      Object.values(TILE_PLAY_OPTIONS).forEach((option) => {
+        expect(option.description).toBeTruthy();
+        expect(option.description.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should have valid allowedMoveTypes arrays', () => {
+      Object.values(TILE_PLAY_OPTIONS).forEach((option) => {
+        expect(Array.isArray(option.allowedMoveTypes)).toBe(true);
+      });
+    });
+  });
+
+  describe('NO_MOVE Option', () => {
+    const noMove = TILE_PLAY_OPTIONS[TilePlayOptionType.NO_MOVE];
+
+    it('should have correct option type', () => {
+      expect(noMove.optionType).toBe(TilePlayOptionType.NO_MOVE);
+    });
+
+    it('should allow no moves', () => {
+      expect(noMove.allowedMoveTypes).toHaveLength(0);
+    });
+
+    it('should have zero max optional moves', () => {
+      expect(noMove.maxOptionalMoves).toBe(0);
+    });
+
+    it('should have zero max mandatory moves', () => {
+      expect(noMove.maxMandatoryMoves).toBe(0);
+    });
+
+    it('should not require action', () => {
+      expect(noMove.requiresAction).toBe(false);
+    });
+  });
+
+  describe('ONE_OPTIONAL Option', () => {
+    const oneOptional = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_OPTIONAL];
+
+    it('should have correct option type', () => {
+      expect(oneOptional.optionType).toBe(TilePlayOptionType.ONE_OPTIONAL);
+    });
+
+    it('should allow exactly 3 optional move types', () => {
+      expect(oneOptional.allowedMoveTypes).toHaveLength(3);
+      expect(oneOptional.allowedMoveTypes).toContain(DefinedMoveType.REMOVE);
+      expect(oneOptional.allowedMoveTypes).toContain(DefinedMoveType.INFLUENCE);
+      expect(oneOptional.allowedMoveTypes).toContain(DefinedMoveType.ASSIST);
+    });
+
+    it('should have max optional moves of 1', () => {
+      expect(oneOptional.maxOptionalMoves).toBe(1);
+    });
+
+    it('should have zero max mandatory moves', () => {
+      expect(oneOptional.maxMandatoryMoves).toBe(0);
+    });
+
+    it('should require action', () => {
+      expect(oneOptional.requiresAction).toBe(true);
+    });
+  });
+
+  describe('ONE_MANDATORY Option', () => {
+    const oneMandatory = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_MANDATORY];
+
+    it('should have correct option type', () => {
+      expect(oneMandatory.optionType).toBe(TilePlayOptionType.ONE_MANDATORY);
+    });
+
+    it('should allow exactly 3 mandatory move types', () => {
+      expect(oneMandatory.allowedMoveTypes).toHaveLength(3);
+      expect(oneMandatory.allowedMoveTypes).toContain(DefinedMoveType.ADVANCE);
+      expect(oneMandatory.allowedMoveTypes).toContain(DefinedMoveType.WITHDRAW);
+      expect(oneMandatory.allowedMoveTypes).toContain(DefinedMoveType.ORGANIZE);
+    });
+
+    it('should have zero max optional moves', () => {
+      expect(oneMandatory.maxOptionalMoves).toBe(0);
+    });
+
+    it('should have max mandatory moves of 1', () => {
+      expect(oneMandatory.maxMandatoryMoves).toBe(1);
+    });
+
+    it('should require action', () => {
+      expect(oneMandatory.requiresAction).toBe(true);
+    });
+  });
+
+  describe('ONE_OPTIONAL_AND_ONE_MANDATORY Option', () => {
+    const oneOfEach = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY];
+
+    it('should have correct option type', () => {
+      expect(oneOfEach.optionType).toBe(TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY);
+    });
+
+    it('should allow all 6 move types', () => {
+      expect(oneOfEach.allowedMoveTypes).toHaveLength(6);
+      // Optional moves
+      expect(oneOfEach.allowedMoveTypes).toContain(DefinedMoveType.REMOVE);
+      expect(oneOfEach.allowedMoveTypes).toContain(DefinedMoveType.INFLUENCE);
+      expect(oneOfEach.allowedMoveTypes).toContain(DefinedMoveType.ASSIST);
+      // Mandatory moves
+      expect(oneOfEach.allowedMoveTypes).toContain(DefinedMoveType.ADVANCE);
+      expect(oneOfEach.allowedMoveTypes).toContain(DefinedMoveType.WITHDRAW);
+      expect(oneOfEach.allowedMoveTypes).toContain(DefinedMoveType.ORGANIZE);
+    });
+
+    it('should have max optional moves of 1', () => {
+      expect(oneOfEach.maxOptionalMoves).toBe(1);
+    });
+
+    it('should have max mandatory moves of 1', () => {
+      expect(oneOfEach.maxMandatoryMoves).toBe(1);
+    });
+
+    it('should require action', () => {
+      expect(oneOfEach.requiresAction).toBe(true);
+    });
+  });
+
+  describe('Action Requirements', () => {
+    it('should have exactly 1 option that does not require action', () => {
+      const noActionOptions = Object.values(TILE_PLAY_OPTIONS).filter(
+        (opt) => !opt.requiresAction
+      );
+      expect(noActionOptions).toHaveLength(1);
+      expect(noActionOptions[0].optionType).toBe(TilePlayOptionType.NO_MOVE);
+    });
+
+    it('should have exactly 3 options that require action', () => {
+      const actionOptions = Object.values(TILE_PLAY_OPTIONS).filter(
+        (opt) => opt.requiresAction
+      );
+      expect(actionOptions).toHaveLength(3);
+    });
+  });
+
+  describe('Move Count Constraints', () => {
+    it('should have correct total move limits for each option', () => {
+      const noMove = TILE_PLAY_OPTIONS[TilePlayOptionType.NO_MOVE];
+      expect(noMove.maxOptionalMoves + noMove.maxMandatoryMoves).toBe(0);
+
+      const oneOptional = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_OPTIONAL];
+      expect(oneOptional.maxOptionalMoves + oneOptional.maxMandatoryMoves).toBe(1);
+
+      const oneMandatory = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_MANDATORY];
+      expect(oneMandatory.maxOptionalMoves + oneMandatory.maxMandatoryMoves).toBe(1);
+
+      const oneOfEach = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY];
+      expect(oneOfEach.maxOptionalMoves + oneOfEach.maxMandatoryMoves).toBe(2);
+    });
+
+    it('should have non-negative move counts', () => {
+      Object.values(TILE_PLAY_OPTIONS).forEach((option) => {
+        expect(option.maxOptionalMoves).toBeGreaterThanOrEqual(0);
+        expect(option.maxMandatoryMoves).toBeGreaterThanOrEqual(0);
+      });
+    });
+  });
+
+  describe('Allowed Move Types Consistency', () => {
+    it('should match allowedMoveTypes with move counts for ONE_OPTIONAL', () => {
+      const oneOptional = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_OPTIONAL];
+      // Should only have optional moves
+      oneOptional.allowedMoveTypes.forEach((moveType) => {
+        const move = DEFINED_MOVES[moveType];
+        expect(move.requirement).toBe(MoveRequirementType.OPTIONAL);
+      });
+    });
+
+    it('should match allowedMoveTypes with move counts for ONE_MANDATORY', () => {
+      const oneMandatory = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_MANDATORY];
+      // Should only have mandatory moves
+      oneMandatory.allowedMoveTypes.forEach((moveType) => {
+        const move = DEFINED_MOVES[moveType];
+        expect(move.requirement).toBe(MoveRequirementType.MANDATORY);
+      });
+    });
+
+    it('should have both optional and mandatory moves for ONE_OPTIONAL_AND_ONE_MANDATORY', () => {
+      const oneOfEach = TILE_PLAY_OPTIONS[TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY];
+
+      const optionalMoves = oneOfEach.allowedMoveTypes.filter(
+        (moveType) => DEFINED_MOVES[moveType].requirement === MoveRequirementType.OPTIONAL
+      );
+      const mandatoryMoves = oneOfEach.allowedMoveTypes.filter(
+        (moveType) => DEFINED_MOVES[moveType].requirement === MoveRequirementType.MANDATORY
+      );
+
+      expect(optionalMoves.length).toBe(3);
+      expect(mandatoryMoves.length).toBe(3);
     });
   });
 });

@@ -20,7 +20,7 @@ import {
 } from "./src/config/constants";
 import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from "./src/config/tiles";
 import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from "./src/config/pieces";
-import { DEFINED_MOVES } from "./src/config/rules";
+import { DEFINED_MOVES, TilePlayOptionType, TilePlayOption, TILE_PLAY_OPTIONS } from "./src/config/rules";
 
 // Re-export for backwards compatibility
 export {
@@ -31,7 +31,10 @@ export {
   PIECE_TYPES,
   PIECE_COUNTS_BY_PLAYER_COUNT,
   DEFINED_MOVES,
+  TilePlayOptionType,
+  TILE_PLAY_OPTIONS,
 };
+export type { TilePlayOption };
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
@@ -640,78 +643,7 @@ export const ROSTRUM_ADJACENCY_BY_PLAYER_COUNT: {
  * Note: After executing their chosen option(s), the receiving player is then eligible to
  * reject or challenge the tile play (mechanisms to be implemented later).
  */
-export enum TilePlayOptionType {
-  NO_MOVE = "NO_MOVE",
-  ONE_OPTIONAL = "ONE_OPTIONAL",
-  ONE_MANDATORY = "ONE_MANDATORY",
-  ONE_OPTIONAL_AND_ONE_MANDATORY = "ONE_OPTIONAL_AND_ONE_MANDATORY",
-}
-
-export interface TilePlayOption {
-  optionType: TilePlayOptionType;
-  description: string;
-  allowedMoveTypes: DefinedMoveType[];
-  maxOptionalMoves: number;
-  maxMandatoryMoves: number;
-  requiresAction: boolean;
-}
-
-/**
- * Complete definition of all tile play options available to a receiving player.
- * The receiving player must choose exactly ONE of these options when challenged with a tile.
- */
-export const TILE_PLAY_OPTIONS: {
-  [key in TilePlayOptionType]: TilePlayOption;
-} = {
-  [TilePlayOptionType.NO_MOVE]: {
-    optionType: TilePlayOptionType.NO_MOVE,
-    description: "Do nothing. The tile play is complete.",
-    allowedMoveTypes: [],
-    maxOptionalMoves: 0,
-    maxMandatoryMoves: 0,
-    requiresAction: false,
-  },
-  [TilePlayOptionType.ONE_OPTIONAL]: {
-    optionType: TilePlayOptionType.ONE_OPTIONAL,
-    description: "Execute one Optional move (REMOVE, INFLUENCE, or ASSIST)",
-    allowedMoveTypes: [
-      DefinedMoveType.REMOVE,
-      DefinedMoveType.INFLUENCE,
-      DefinedMoveType.ASSIST,
-    ],
-    maxOptionalMoves: 1,
-    maxMandatoryMoves: 0,
-    requiresAction: true,
-  },
-  [TilePlayOptionType.ONE_MANDATORY]: {
-    optionType: TilePlayOptionType.ONE_MANDATORY,
-    description: "Execute one Mandatory move (ADVANCE, WITHDRAW, or ORGANIZE)",
-    allowedMoveTypes: [
-      DefinedMoveType.ADVANCE,
-      DefinedMoveType.WITHDRAW,
-      DefinedMoveType.ORGANIZE,
-    ],
-    maxOptionalMoves: 0,
-    maxMandatoryMoves: 1,
-    requiresAction: true,
-  },
-  [TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY]: {
-    optionType: TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY,
-    description:
-      "Execute one Optional move AND one Mandatory move in any order",
-    allowedMoveTypes: [
-      DefinedMoveType.REMOVE,
-      DefinedMoveType.INFLUENCE,
-      DefinedMoveType.ASSIST,
-      DefinedMoveType.ADVANCE,
-      DefinedMoveType.WITHDRAW,
-      DefinedMoveType.ORGANIZE,
-    ],
-    maxOptionalMoves: 1,
-    maxMandatoryMoves: 1,
-    requiresAction: true,
-  },
-};
+// (TilePlayOptionType, TilePlayOption, TILE_PLAY_OPTIONS moved to src/config/rules.ts)
 
 /**
  * Helper function to check if a move type is allowed within a tile play option.
