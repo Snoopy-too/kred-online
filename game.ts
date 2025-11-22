@@ -22,6 +22,14 @@ import type {
   // Move tracking types - move validation and tracking
   TrackedMove,
   DefinedMove,
+
+  // Bureaucracy types - bureaucracy phase data structures
+  BureaucracyItemType,
+  BureaucracyMoveType,
+  PromotionLocationType,
+  BureaucracyMenuItem,
+  BureaucracyPurchase,
+  BureaucracyPlayerState,
 } from "./src/types";
 
 // Enum/value imports that are used at runtime (not just for typing)
@@ -88,43 +96,6 @@ export interface ChallengeState {
   acceptedByReceivingPlayer: boolean;
 }
 
-// Bureaucracy Phase Types
-export type BureaucracyItemType = "MOVE" | "PROMOTION" | "CREDIBILITY";
-export type BureaucracyMoveType =
-  | "ADVANCE"
-  | "WITHDRAW"
-  | "ORGANIZE"
-  | "ASSIST"
-  | "REMOVE"
-  | "INFLUENCE";
-export type PromotionLocationType = "OFFICE" | "ROSTRUM" | "SEAT";
-
-export interface BureaucracyMenuItem {
-  id: string;
-  type: BureaucracyItemType;
-  moveType?: BureaucracyMoveType;
-  promotionLocation?: PromotionLocationType;
-  price: number;
-  description: string;
-}
-
-export interface BureaucracyPurchase {
-  playerId: number;
-  item: BureaucracyMenuItem;
-  pieceId?: string;
-  fromLocationId?: string;
-  toLocationId?: string;
-  timestamp: number;
-  completed: boolean;
-}
-
-export interface BureaucracyPlayerState {
-  playerId: number;
-  initialKredcoin: number;
-  remainingKredcoin: number;
-  turnComplete: boolean;
-  purchases: BureaucracyPurchase[];
-}
 
 // These are the ONLY valid drop locations for pieces.
 const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [

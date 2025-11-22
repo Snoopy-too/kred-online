@@ -6,3 +6,4 @@ export * from './tile';
 export * from './player';
 export * from './game';
 export * from './move';
+export * from './bureaucracy';
