@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT } from '../../config/board';
+import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT } from '../../config/board';
 import { PLAYER_OPTIONS } from '../../config/constants';
 
 describe('DROP_LOCATIONS_BY_PLAYER_COUNT', () => {
@@ -192,6 +192,121 @@ describe('TILE_SPACES_BY_PLAYER_COUNT', () => {
   it('should have all required properties', () => {
     PLAYER_OPTIONS.forEach(playerCount => {
       const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      spaces.forEach(space => {
+        expect(space).toHaveProperty('ownerId');
+        expect(space).toHaveProperty('position');
+        expect(space.position).toHaveProperty('left');
+        expect(space.position).toHaveProperty('top');
+        expect(space).toHaveProperty('rotation');
+      });
+    });
+  });
+});
+
+describe('BANK_SPACES_BY_PLAYER_COUNT', () => {
+  it('should have bank spaces for all player counts', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      expect(BANK_SPACES_BY_PLAYER_COUNT[playerCount]).toBeDefined();
+      expect(Array.isArray(BANK_SPACES_BY_PLAYER_COUNT[playerCount])).toBe(true);
+    });
+  });
+
+  it('should have correct number of bank spaces for 3 players', () => {
+    const spaces = BANK_SPACES_BY_PLAYER_COUNT[3];
+    // 3 players: 8 bank spaces per player
+    expect(spaces.length).toBe(24);
+  });
+
+  it('should have correct number of bank spaces for 4 players', () => {
+    const spaces = BANK_SPACES_BY_PLAYER_COUNT[4];
+    // 4 players: 6 bank spaces per player
+    expect(spaces.length).toBe(24);
+  });
+
+  it('should have correct number of bank spaces for 5 players', () => {
+    const spaces = BANK_SPACES_BY_PLAYER_COUNT[5];
+    // 5 players: 5 bank spaces per player
+    expect(spaces.length).toBe(25);
+  });
+
+  it('should have unique owner IDs for each player count', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount];
+      const ownerIds = spaces.map(space => space.ownerId);
+
+      // Check that all owner IDs are valid (1 to playerCount)
+      ownerIds.forEach(ownerId => {
+        expect(ownerId).toBeGreaterThanOrEqual(1);
+        expect(ownerId).toBeLessThanOrEqual(playerCount);
+      });
+    });
+  });
+
+  it('should have owner IDs matching player count', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      // Each player from 1 to playerCount should have bank spaces
+      for (let playerId = 1; playerId <= playerCount; playerId++) {
+        const playerSpaces = spaces.filter(space => space.ownerId === playerId);
+        expect(playerSpaces.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  it('should have correct bank spaces per player', () => {
+    // 3 players: 8 spaces each
+    const threePlayerSpaces = BANK_SPACES_BY_PLAYER_COUNT[3];
+    for (let playerId = 1; playerId <= 3; playerId++) {
+      const playerSpaces = threePlayerSpaces.filter(space => space.ownerId === playerId);
+      expect(playerSpaces.length).toBe(8);
+    }
+
+    // 4 players: 6 spaces each
+    const fourPlayerSpaces = BANK_SPACES_BY_PLAYER_COUNT[4];
+    for (let playerId = 1; playerId <= 4; playerId++) {
+      const playerSpaces = fourPlayerSpaces.filter(space => space.ownerId === playerId);
+      expect(playerSpaces.length).toBe(6);
+    }
+
+    // 5 players: 5 spaces each
+    const fivePlayerSpaces = BANK_SPACES_BY_PLAYER_COUNT[5];
+    for (let playerId = 1; playerId <= 5; playerId++) {
+      const playerSpaces = fivePlayerSpaces.filter(space => space.ownerId === playerId);
+      expect(playerSpaces.length).toBe(5);
+    }
+  });
+
+  it('should have valid position coordinates (0-100)', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      spaces.forEach(space => {
+        expect(space.position.left).toBeGreaterThanOrEqual(0);
+        expect(space.position.left).toBeLessThanOrEqual(100);
+        expect(space.position.top).toBeGreaterThanOrEqual(0);
+        expect(space.position.top).toBeLessThanOrEqual(100);
+      });
+    });
+  });
+
+  it('should have rotation values', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      spaces.forEach(space => {
+        expect(typeof space.rotation).toBe('number');
+        // Rotation can be negative or > 360 in the data
+        expect(space.rotation).toBeGreaterThanOrEqual(-360);
+        expect(space.rotation).toBeLessThanOrEqual(360);
+      });
+    });
+  });
+
+  it('should have all required properties', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount];
 
       spaces.forEach(space => {
         expect(space).toHaveProperty('ownerId');
