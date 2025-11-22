@@ -46,6 +46,8 @@ import {
   isPositionInCommunityCircle,
 } from "./src/utils/positioning";
 
+import { formatLocationId } from "./src/utils/formatting";
+
 // ============================================================================
 // GAME LOGIC IMPORTS - Functions still in game.ts (to be extracted)
 // ============================================================================
@@ -54,7 +56,6 @@ import {
   initializePieces,
   initializeCampaignPieces,
   findNearestVacantLocation,
-  formatLocationId,
   getLocationIdFromPosition,
   DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
   validateMovesForTilePlay,

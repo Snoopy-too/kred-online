@@ -86,6 +86,11 @@ import {
   calculatePieceRotation,
 } from "./src/utils/positioning";
 
+import {
+  // Formatting utilities - display string formatting
+  formatLocationId,
+} from "./src/utils/formatting";
+
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
 // (Player type moved to src/types/player.ts)
