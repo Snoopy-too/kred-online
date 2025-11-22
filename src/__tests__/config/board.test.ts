@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DROP_LOCATIONS_BY_PLAYER_COUNT } from '../../config/board';
+import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT } from '../../config/board';
 import { PLAYER_OPTIONS } from '../../config/constants';
 
 describe('DROP_LOCATIONS_BY_PLAYER_COUNT', () => {
@@ -122,6 +122,83 @@ describe('DROP_LOCATIONS_BY_PLAYER_COUNT', () => {
         expect(loc.id).toBeTruthy();
         expect(typeof loc.id).toBe('string');
         expect(loc.id.length).toBeGreaterThan(0);
+      });
+    });
+  });
+});
+
+describe('TILE_SPACES_BY_PLAYER_COUNT', () => {
+  it('should have tile spaces for all player counts', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      expect(TILE_SPACES_BY_PLAYER_COUNT[playerCount]).toBeDefined();
+      expect(Array.isArray(TILE_SPACES_BY_PLAYER_COUNT[playerCount])).toBe(true);
+    });
+  });
+
+  it('should have exactly one tile space per player', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount];
+      expect(spaces.length).toBe(playerCount);
+    });
+  });
+
+  it('should have unique owner IDs', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount];
+      const ownerIds = spaces.map(space => space.ownerId);
+      const uniqueOwners = new Set(ownerIds);
+
+      expect(uniqueOwners.size).toBe(playerCount);
+    });
+  });
+
+  it('should have owner IDs matching player count', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      // Each player from 1 to playerCount should have exactly one tile space
+      for (let playerId = 1; playerId <= playerCount; playerId++) {
+        const playerSpace = spaces.find(space => space.ownerId === playerId);
+        expect(playerSpace).toBeDefined();
+      }
+    });
+  });
+
+  it('should have valid position coordinates (0-100)', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      spaces.forEach(space => {
+        expect(space.position.left).toBeGreaterThanOrEqual(0);
+        expect(space.position.left).toBeLessThanOrEqual(100);
+        expect(space.position.top).toBeGreaterThanOrEqual(0);
+        expect(space.position.top).toBeLessThanOrEqual(100);
+      });
+    });
+  });
+
+  it('should have rotation values', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      spaces.forEach(space => {
+        expect(typeof space.rotation).toBe('number');
+        expect(space.rotation).toBeGreaterThanOrEqual(0);
+        expect(space.rotation).toBeLessThanOrEqual(360);
+      });
+    });
+  });
+
+  it('should have all required properties', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount];
+
+      spaces.forEach(space => {
+        expect(space).toHaveProperty('ownerId');
+        expect(space).toHaveProperty('position');
+        expect(space.position).toHaveProperty('left');
+        expect(space.position).toHaveProperty('top');
+        expect(space).toHaveProperty('rotation');
       });
     });
   });

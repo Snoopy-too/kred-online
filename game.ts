@@ -1,10 +1,10 @@
 import { TOTAL_TILES, PLAYER_OPTIONS, BOARD_IMAGE_URLS } from './src/config/constants';
 import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from './src/config/tiles';
 import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from './src/config/pieces';
-import { DROP_LOCATIONS_BY_PLAYER_COUNT } from './src/config/board';
+import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT } from './src/config/board';
 
 // Re-export for backwards compatibility
-export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS, PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT, DROP_LOCATIONS_BY_PLAYER_COUNT };
+export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS, PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT, DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT };
 
 // --- Type Definitions ---
 
@@ -902,32 +902,6 @@ export const PLAYER_PERSPECTIVE_ROTATIONS: { [playerCount: number]: { [playerId:
   5: { 1: -71, 2: -140, 3: 145, 4: 75, 5: 0 },
 };
 
-const THREE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
-    { ownerId: 1, position: { left: 15.30, top: 44.76 }, rotation: 168.0 },
-    { ownerId: 2, position: { left: 75.42, top: 15.71 }, rotation: 288.0 },
-    { ownerId: 3, position: { left: 68.51, top: 75.24 }, rotation: 48.0 },
-];
-
-const FOUR_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
-    { ownerId: 1, position: { left: 10.57, top: 52.44 }, rotation: 157.0 },
-    { ownerId: 2, position: { left: 48.91, top: 13.18 }, rotation: 247.0 },
-    { ownerId: 3, position: { left: 89.11, top: 48.14 }, rotation: 337.0 },
-    { ownerId: 4, position: { left: 52.34, top: 88.09 }, rotation: 67.0 },
-];
-
-const FIVE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
-    { ownerId: 1, position: { left: 14.64, top: 72.07 }, rotation: 93.0 },
-    { ownerId: 2, position: { left: 11.93, top: 25.49 }, rotation: 165.0 },
-    { ownerId: 3, position: { left: 58.59, top: 8.50 }, rotation: 237.0 },
-    { ownerId: 4, position: { left: 89.53, top: 44.43 }, rotation: 309.0 },
-    { ownerId: 5, position: { left: 63.07, top: 83.98 }, rotation: 21.0 },
-];
-
-export const TILE_SPACES_BY_PLAYER_COUNT: { [key: number]: TileReceivingSpace[] } = {
-  3: THREE_PLAYER_TILE_SPACES,
-  4: FOUR_PLAYER_TILE_SPACES,
-  5: FIVE_PLAYER_TILE_SPACES,
-};
 
 // Bank spaces for storing received tiles
 const THREE_PLAYER_BANK_SPACES: BankSpace[] = [

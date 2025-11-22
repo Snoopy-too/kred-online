@@ -1,5 +1,5 @@
 // Board layout configuration
-import { DropLocation } from '../../game';
+import { DropLocation, TileReceivingSpace } from '../../game';
 
 // These are the ONLY valid drop locations for pieces.
 const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -241,4 +241,32 @@ export const DROP_LOCATIONS_BY_PLAYER_COUNT: { [playerCount: number]: DropLocati
   3: THREE_PLAYER_DROP_LOCATIONS,
   4: FOUR_PLAYER_DROP_LOCATIONS,
   5: FIVE_PLAYER_DROP_LOCATIONS,
+};
+
+// Tile receiving spaces - where tiles are placed when played
+const THREE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
+    { ownerId: 1, position: { left: 15.30, top: 44.76 }, rotation: 168.0 },
+    { ownerId: 2, position: { left: 75.42, top: 15.71 }, rotation: 288.0 },
+    { ownerId: 3, position: { left: 68.51, top: 75.24 }, rotation: 48.0 },
+];
+
+const FOUR_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
+    { ownerId: 1, position: { left: 10.57, top: 52.44 }, rotation: 157.0 },
+    { ownerId: 2, position: { left: 48.91, top: 13.18 }, rotation: 247.0 },
+    { ownerId: 3, position: { left: 89.11, top: 48.14 }, rotation: 337.0 },
+    { ownerId: 4, position: { left: 52.34, top: 88.09 }, rotation: 67.0 },
+];
+
+const FIVE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
+    { ownerId: 1, position: { left: 14.64, top: 72.07 }, rotation: 93.0 },
+    { ownerId: 2, position: { left: 11.93, top: 25.49 }, rotation: 165.0 },
+    { ownerId: 3, position: { left: 58.59, top: 8.50 }, rotation: 237.0 },
+    { ownerId: 4, position: { left: 89.53, top: 44.43 }, rotation: 309.0 },
+    { ownerId: 5, position: { left: 63.07, top: 83.98 }, rotation: 21.0 },
+];
+
+export const TILE_SPACES_BY_PLAYER_COUNT: { [key: number]: TileReceivingSpace[] } = {
+  3: THREE_PLAYER_TILE_SPACES,
+  4: FOUR_PLAYER_TILE_SPACES,
+  5: FIVE_PLAYER_TILE_SPACES,
 };
