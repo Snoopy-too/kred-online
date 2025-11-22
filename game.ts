@@ -1,26 +1,53 @@
-import {
+// ============================================================================
+// TYPE IMPORTS - TypeScript interfaces and type definitions
+// ============================================================================
+import type {
+  // Piece types - game pieces (marks, heels, pawns)
   Piece,
   GamePieceInfo,
+  
+  // Tile types - game tiles and tile spaces
   Tile,
   BoardTile,
   TileReceivingSpace,
+  
+  // Player types - player data structures
   Player,
+  
+  // Game state types - phases and locations
   GameState,
   DropLocation,
   BankSpace,
+  
+  // Move tracking types - move validation and tracking
   TrackedMove,
-  DefinedMoveType,
-  MoveRequirementType,
   DefinedMove,
 } from "./src/types";
+
+// Enum/value imports that are used at runtime (not just for typing)
 import {
+  DefinedMoveType,
+  MoveRequirementType,
+} from "./src/types";
+
+// ============================================================================
+// CONFIGURATION IMPORTS - Static game configuration data
+// ============================================================================
+import {
+  // Basic constants - player counts, tile counts, board images
   TOTAL_TILES,
   PLAYER_OPTIONS,
   BOARD_IMAGE_URLS,
-} from "./src/config/constants";
-import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from "./src/config/tiles";
-import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from "./src/config/pieces";
-import {
+  
+  // Tile configuration - images and kredcoin values
+  TILE_IMAGE_URLS,
+  TILE_KREDCOIN_VALUES,
+  
+  // Piece configuration - types and counts by player count
+  PIECE_TYPES,
+  PIECE_COUNTS_BY_PLAYER_COUNT,
+  
+  // Game rules - move definitions, tile requirements, rostrum rules
   DEFINED_MOVES,
   TilePlayOptionType,
   TilePlayOption,
@@ -32,11 +59,11 @@ import {
   ROSTRUM_SUPPORT_RULES,
   RostrumAdjacency,
   ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
-} from "./src/config/rules";
-import {
+  
+  // Bureaucracy configuration - menus for different player counts
   THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
   FIVE_PLAYER_BUREAUCRACY_MENU,
-} from "./src/config/bureaucracy";
+} from "./src/config";
 
 // Re-export for backwards compatibility
 export {
