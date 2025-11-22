@@ -411,3 +411,11 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: { [key: number]: BankSpace[]
   4: FOUR_PLAYER_CREDIBILITY_LOCATIONS,
   5: FIVE_PLAYER_CREDIBILITY_LOCATIONS,
 };
+
+// Player perspective rotations - camera rotation angles for each player's view
+export const PLAYER_PERSPECTIVE_ROTATIONS: { [playerCount: number]: { [playerId: number]: number } } = {
+  3: { 1: -120, 2: 120, 3: 0 },
+  4: { 1: -135, 2: 135, 3: 45, 4: -45 },
+  // Recalculated based on the geometric center of each player's actual seat coordinates.
+  5: { 1: -71, 2: -140, 3: 145, 4: 75, 5: 0 },
+};

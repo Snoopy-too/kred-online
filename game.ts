@@ -1,10 +1,10 @@
 import { TOTAL_TILES, PLAYER_OPTIONS, BOARD_IMAGE_URLS } from './src/config/constants';
 import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from './src/config/tiles';
 import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from './src/config/pieces';
-import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT, CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT } from './src/config/board';
+import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT, CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT, PLAYER_PERSPECTIVE_ROTATIONS } from './src/config/board';
 
 // Re-export for backwards compatibility
-export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS, PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT, DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT, CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT };
+export { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES, PLAYER_OPTIONS, BOARD_IMAGE_URLS, PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT, DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT, CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT, PLAYER_PERSPECTIVE_ROTATIONS };
 
 // --- Type Definitions ---
 
@@ -894,13 +894,6 @@ export function canTileBeRejected(
   // If some (but not all) requirements were met, tile can be rejected
   return true;
 }
-
-export const PLAYER_PERSPECTIVE_ROTATIONS: { [playerCount: number]: { [playerId: number]: number } } = {
-  3: { 1: -120, 2: 120, 3: 0 },
-  4: { 1: -135, 2: 135, 3: 45, 4: -45 },
-  // Recalculated based on the geometric center of each player's actual seat coordinates.
-  5: { 1: -71, 2: -140, 3: 145, 4: 75, 5: 0 },
-};
 
 
 // --- Game Constants ---

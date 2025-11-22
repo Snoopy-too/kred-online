@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT, CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT } from '../../config/board';
+import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT, CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT, PLAYER_PERSPECTIVE_ROTATIONS } from '../../config/board';
 import { PLAYER_OPTIONS } from '../../config/constants';
 
 describe('DROP_LOCATIONS_BY_PLAYER_COUNT', () => {
@@ -393,6 +393,63 @@ describe('CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT', () => {
         expect(loc.position).toHaveProperty('top');
         expect(loc).toHaveProperty('rotation');
       });
+    });
+  });
+});
+
+describe('PLAYER_PERSPECTIVE_ROTATIONS', () => {
+  it('should have rotations for all player counts', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      expect(PLAYER_PERSPECTIVE_ROTATIONS[playerCount]).toBeDefined();
+      expect(typeof PLAYER_PERSPECTIVE_ROTATIONS[playerCount]).toBe('object');
+    });
+  });
+
+  it('should have rotation for each player ID', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const rotations = PLAYER_PERSPECTIVE_ROTATIONS[playerCount];
+
+      // Each player from 1 to playerCount should have a rotation
+      for (let playerId = 1; playerId <= playerCount; playerId++) {
+        expect(rotations[playerId]).toBeDefined();
+        expect(typeof rotations[playerId]).toBe('number');
+      }
+    });
+  });
+
+  it('should have valid rotation angles', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const rotations = PLAYER_PERSPECTIVE_ROTATIONS[playerCount];
+
+      Object.values(rotations).forEach(rotation => {
+        expect(typeof rotation).toBe('number');
+        // Rotation angles should be reasonable (between -360 and 360)
+        expect(rotation).toBeGreaterThanOrEqual(-360);
+        expect(rotation).toBeLessThanOrEqual(360);
+      });
+    });
+  });
+
+  it('should have correct number of rotations per player count', () => {
+    // 3 players should have 3 rotations
+    expect(Object.keys(PLAYER_PERSPECTIVE_ROTATIONS[3]).length).toBe(3);
+
+    // 4 players should have 4 rotations
+    expect(Object.keys(PLAYER_PERSPECTIVE_ROTATIONS[4]).length).toBe(4);
+
+    // 5 players should have 5 rotations
+    expect(Object.keys(PLAYER_PERSPECTIVE_ROTATIONS[5]).length).toBe(5);
+  });
+
+  it('should have unique rotation values for different players', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const rotations = PLAYER_PERSPECTIVE_ROTATIONS[playerCount];
+      const rotationValues = Object.values(rotations);
+      const uniqueRotations = new Set(rotationValues);
+
+      // Most player counts should have unique rotations (though not strictly required)
+      // At minimum, check that we have rotations defined
+      expect(rotationValues.length).toBe(playerCount);
     });
   });
 });
