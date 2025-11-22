@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { DefinedMoveType, MoveRequirementType } from '../../types/move';
-import { DEFINED_MOVES, TilePlayOptionType, TILE_PLAY_OPTIONS } from '../../config/rules';
+import {
+  DEFINED_MOVES,
+  TilePlayOptionType,
+  TILE_PLAY_OPTIONS,
+  TILE_REQUIREMENTS
+} from '../../config/rules';
 
 describe('DEFINED_MOVES Configuration', () => {
   describe('Structure and Completeness', () => {
@@ -505,6 +510,299 @@ describe('TILE_PLAY_OPTIONS Configuration', () => {
 
       expect(optionalMoves.length).toBe(3);
       expect(mandatoryMoves.length).toBe(3);
+    });
+  });
+});
+
+describe('TILE_REQUIREMENTS Configuration', () => {
+  describe('Structure and Completeness', () => {
+    it('should define all 25 tiles (24 numbered + BLANK)', () => {
+      const tileIds = Object.keys(TILE_REQUIREMENTS);
+      expect(tileIds).toHaveLength(25);
+
+      // Check all numbered tiles 01-24
+      for (let i = 1; i <= 24; i++) {
+        const tileId = i.toString().padStart(2, '0');
+        expect(tileIds).toContain(tileId);
+      }
+
+      // Check BLANK tile
+      expect(tileIds).toContain('BLANK');
+    });
+
+    it('should have all required properties for each tile', () => {
+      Object.values(TILE_REQUIREMENTS).forEach((requirement) => {
+        expect(requirement).toHaveProperty('tileId');
+        expect(requirement).toHaveProperty('requiredMoves');
+        expect(requirement).toHaveProperty('description');
+        expect(requirement).toHaveProperty('canBeRejected');
+      });
+    });
+
+    it('should have valid tile IDs', () => {
+      Object.values(TILE_REQUIREMENTS).forEach((requirement) => {
+        expect(requirement.tileId).toBeTruthy();
+        expect(requirement.tileId.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should have non-empty descriptions', () => {
+      Object.values(TILE_REQUIREMENTS).forEach((requirement) => {
+        expect(requirement.description).toBeTruthy();
+        expect(requirement.description.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should have valid requiredMoves arrays', () => {
+      Object.values(TILE_REQUIREMENTS).forEach((requirement) => {
+        expect(Array.isArray(requirement.requiredMoves)).toBe(true);
+      });
+    });
+
+    it('should have boolean canBeRejected property', () => {
+      Object.values(TILE_REQUIREMENTS).forEach((requirement) => {
+        expect(typeof requirement.canBeRejected).toBe('boolean');
+      });
+    });
+  });
+
+  describe('Tiles by Move Requirements', () => {
+    it('should have exactly 2 tiles requiring REMOVE + ADVANCE (01-02)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 2 &&
+          req.requiredMoves.includes(DefinedMoveType.REMOVE) &&
+          req.requiredMoves.includes(DefinedMoveType.ADVANCE)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['01', '02']));
+    });
+
+    it('should have exactly 2 tiles requiring INFLUENCE + ADVANCE (03-04)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 2 &&
+          req.requiredMoves.includes(DefinedMoveType.INFLUENCE) &&
+          req.requiredMoves.includes(DefinedMoveType.ADVANCE)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['03', '04']));
+    });
+
+    it('should have exactly 2 tiles requiring only ADVANCE (05-06)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 1 &&
+          req.requiredMoves.includes(DefinedMoveType.ADVANCE)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['05', '06']));
+    });
+
+    it('should have exactly 2 tiles requiring ASSIST + ADVANCE (07-08)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 2 &&
+          req.requiredMoves.includes(DefinedMoveType.ASSIST) &&
+          req.requiredMoves.includes(DefinedMoveType.ADVANCE)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['07', '08']));
+    });
+
+    it('should have exactly 2 tiles requiring REMOVE + ORGANIZE (09-10)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 2 &&
+          req.requiredMoves.includes(DefinedMoveType.REMOVE) &&
+          req.requiredMoves.includes(DefinedMoveType.ORGANIZE)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['09', '10']));
+    });
+
+    it('should have exactly 1 tile requiring only INFLUENCE (11)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 1 &&
+          req.requiredMoves.includes(DefinedMoveType.INFLUENCE)
+      );
+      expect(tiles).toHaveLength(1);
+      expect(tiles[0].tileId).toBe('11');
+    });
+
+    it('should have exactly 1 tile requiring only ORGANIZE (12)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 1 &&
+          req.requiredMoves.includes(DefinedMoveType.ORGANIZE)
+      );
+      expect(tiles).toHaveLength(1);
+      expect(tiles[0].tileId).toBe('12');
+    });
+
+    it('should have exactly 2 tiles requiring ASSIST + ORGANIZE (13-14)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 2 &&
+          req.requiredMoves.includes(DefinedMoveType.ASSIST) &&
+          req.requiredMoves.includes(DefinedMoveType.ORGANIZE)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['13', '14']));
+    });
+
+    it('should have exactly 2 tiles requiring only REMOVE (15-16)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 1 &&
+          req.requiredMoves.includes(DefinedMoveType.REMOVE)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['15', '16']));
+    });
+
+    it('should have exactly 2 tiles requiring INFLUENCE + WITHDRAW (17-18)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 2 &&
+          req.requiredMoves.includes(DefinedMoveType.INFLUENCE) &&
+          req.requiredMoves.includes(DefinedMoveType.WITHDRAW)
+      );
+      expect(tiles).toHaveLength(2);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['17', '18']));
+    });
+
+    it('should have exactly 3 tiles requiring only WITHDRAW (19-21)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 1 &&
+          req.requiredMoves.includes(DefinedMoveType.WITHDRAW)
+      );
+      expect(tiles).toHaveLength(3);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['19', '20', '21']));
+    });
+
+    it('should have exactly 3 tiles requiring ASSIST + WITHDRAW (22-24)', () => {
+      const tiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) =>
+          req.requiredMoves.length === 2 &&
+          req.requiredMoves.includes(DefinedMoveType.ASSIST) &&
+          req.requiredMoves.includes(DefinedMoveType.WITHDRAW)
+      );
+      expect(tiles).toHaveLength(3);
+      expect(tiles.map((t) => t.tileId)).toEqual(expect.arrayContaining(['22', '23', '24']));
+    });
+  });
+
+  describe('BLANK Tile', () => {
+    const blank = TILE_REQUIREMENTS['BLANK'];
+
+    it('should exist', () => {
+      expect(blank).toBeDefined();
+    });
+
+    it('should have tileId of BLANK', () => {
+      expect(blank.tileId).toBe('BLANK');
+    });
+
+    it('should have no required moves', () => {
+      expect(blank.requiredMoves).toHaveLength(0);
+    });
+
+    it('should be rejectable', () => {
+      expect(blank.canBeRejected).toBe(true);
+    });
+
+    it('should have description mentioning wild tile', () => {
+      expect(blank.description.toLowerCase()).toContain('blank');
+    });
+  });
+
+  describe('Rejection Rules', () => {
+    it('should mark all numbered tiles (01-24) as non-rejectable', () => {
+      for (let i = 1; i <= 24; i++) {
+        const tileId = i.toString().padStart(2, '0');
+        const tile = TILE_REQUIREMENTS[tileId];
+        expect(tile.canBeRejected).toBe(false);
+      }
+    });
+
+    it('should mark only BLANK tile as rejectable', () => {
+      const rejectableTiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) => req.canBeRejected
+      );
+      expect(rejectableTiles).toHaveLength(1);
+      expect(rejectableTiles[0].tileId).toBe('BLANK');
+    });
+
+    it('should have 24 non-rejectable tiles', () => {
+      const nonRejectableTiles = Object.values(TILE_REQUIREMENTS).filter(
+        (req) => !req.canBeRejected
+      );
+      expect(nonRejectableTiles).toHaveLength(24);
+    });
+  });
+
+  describe('Move Distribution', () => {
+    it('should use all 6 move types across all tiles', () => {
+      const usedMoves = new Set<DefinedMoveType>();
+      Object.values(TILE_REQUIREMENTS).forEach((req) => {
+        req.requiredMoves.forEach((move) => usedMoves.add(move));
+      });
+
+      expect(usedMoves.size).toBe(6);
+      expect(usedMoves).toContain(DefinedMoveType.REMOVE);
+      expect(usedMoves).toContain(DefinedMoveType.ADVANCE);
+      expect(usedMoves).toContain(DefinedMoveType.INFLUENCE);
+      expect(usedMoves).toContain(DefinedMoveType.ASSIST);
+      expect(usedMoves).toContain(DefinedMoveType.WITHDRAW);
+      expect(usedMoves).toContain(DefinedMoveType.ORGANIZE);
+    });
+
+    it('should have tiles with 0, 1, or 2 required moves only', () => {
+      Object.values(TILE_REQUIREMENTS).forEach((req) => {
+        expect([0, 1, 2]).toContain(req.requiredMoves.length);
+      });
+    });
+
+    it('should have correct count of tiles by move count', () => {
+      const noMoves = Object.values(TILE_REQUIREMENTS).filter(
+        (req) => req.requiredMoves.length === 0
+      );
+      const oneMoves = Object.values(TILE_REQUIREMENTS).filter(
+        (req) => req.requiredMoves.length === 1
+      );
+      const twoMoves = Object.values(TILE_REQUIREMENTS).filter(
+        (req) => req.requiredMoves.length === 2
+      );
+
+      expect(noMoves).toHaveLength(1); // BLANK
+      expect(oneMoves).toHaveLength(9); // Tiles 05-06, 11-12, 15-16, 19-21
+      expect(twoMoves).toHaveLength(15); // Remaining tiles
+    });
+  });
+
+  describe('Consistency Checks', () => {
+    it('should have matching tileId in key and value', () => {
+      Object.entries(TILE_REQUIREMENTS).forEach(([key, value]) => {
+        expect(key).toBe(value.tileId);
+      });
+    });
+
+    it('should have unique tile IDs', () => {
+      const tileIds = Object.values(TILE_REQUIREMENTS).map((req) => req.tileId);
+      const uniqueIds = new Set(tileIds);
+      expect(uniqueIds.size).toBe(tileIds.length);
+    });
+
+    it('should have valid move types in requiredMoves', () => {
+      const validMoves = Object.values(DefinedMoveType);
+      Object.values(TILE_REQUIREMENTS).forEach((req) => {
+        req.requiredMoves.forEach((move) => {
+          expect(validMoves).toContain(move);
+        });
+      });
     });
   });
 });
