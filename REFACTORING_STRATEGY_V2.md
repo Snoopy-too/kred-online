@@ -39,6 +39,121 @@
 - Commit message format: `refactor: move [thing] to [destination]`
 - Never batch unrelated changes
 
+### 6. **Consistent Import Organization & Documentation**
+
+All files must follow standardized import and documentation patterns:
+
+#### Import Organization Rules:
+1. **Section Headers**: Use clear comment blocks to separate import types
+2. **Barrel Exports**: Every folder gets an `index.ts` that re-exports all modules
+3. **Import Order**: 
+   - Type-only imports first (`import type { ... }`)
+   - Runtime value imports second (enums, functions, constants)
+   - Group by source module (types, config, game, rules, utils)
+4. **Inline Comments**: Each import group gets descriptive comments
+5. **Single Source**: Import from barrel exports, not individual files
+   - ✅ `import { X } from "./src/config"`
+   - ❌ `import { X } from "./src/config/constants"`
+
+#### Import Template:
+```typescript
+// ============================================================================
+// TYPE IMPORTS - TypeScript interfaces and type definitions
+// ============================================================================
+import type {
+  // [Category] - brief description of what these types represent
+  TypeName1,
+  TypeName2,
+} from "./src/types";
+
+// Runtime imports (enums/values used at runtime, not just for typing)
+import {
+  EnumName,
+  ConstantName,
+} from "./src/types";
+
+// ============================================================================
+// CONFIGURATION IMPORTS - Static game configuration data
+// ============================================================================
+import {
+  // [Category] - what this configuration controls
+  CONFIG_CONSTANT,
+  ANOTHER_CONFIG,
+} from "./src/config";
+
+// ============================================================================
+// FUNCTION IMPORTS - Business logic and utilities
+// ============================================================================
+import {
+  // [Purpose] - what these functions do
+  functionName,
+  helperFunction,
+} from "./src/game";
+```
+
+#### File Header Documentation:
+Every extracted file must include a header comment:
+
+```typescript
+/**
+ * [Module Name] - [One-line description]
+ * 
+ * Purpose: [What this module is responsible for]
+ * Dependencies: [What it depends on, if any]
+ * Usage: [Common use cases or examples]
+ * 
+ * @module [folder]/[filename]
+ */
+```
+
+#### Barrel Export Template (`index.ts`):
+```typescript
+// Barrel file for [module name]
+// [One-sentence description of what this module exports]
+
+// [Category 1] - description
+export * from './file1';
+
+// [Category 2] - description
+export * from './file2';
+```
+
+#### Function Documentation:
+All exported functions require JSDoc comments:
+
+```typescript
+/**
+ * [Brief description of what function does]
+ * 
+ * @param paramName - Description of parameter
+ * @returns Description of return value
+ * @throws [Optional] What errors might be thrown
+ * 
+ * @example
+ * ```typescript
+ * const result = functionName(value);
+ * ```
+ */
+export function functionName(paramName: Type): ReturnType {
+  // Implementation
+}
+```
+
+#### Constant Documentation:
+Complex constants and configuration objects need explanatory comments:
+
+```typescript
+/**
+ * [Constant Name] - What it represents and why it exists
+ * 
+ * Structure: [Explain the data structure if complex]
+ * Usage: [When/how this should be used]
+ */
+export const CONSTANT_NAME = {
+  // Implementation
+};
+```
+
 ---
 
 ## Hybrid Architecture: Traditional React + Game-Specific
