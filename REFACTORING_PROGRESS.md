@@ -4,9 +4,9 @@ Last updated: 2025-11-22
 
 ## Current Status
 
-**Active Phase**: Phase 3 - Type Extraction ✅ COMPLETE
+**Active Phase**: Phase 3b - Utils Extraction ✅ COMPLETE
 **Branch**: `refactoring`
-**Tests Passing**: 363 tests (55 integration + 308 unit)
+**Tests Passing**: 425 tests (55 integration + 370 unit)
 
 ---
 
@@ -61,11 +61,31 @@ Last updated: 2025-11-22
 
 **Total extracted in Phase 3**: 3 new type files, 26 tests
 
+### Phase 3b: Utils Extraction - Pure Utility Functions ✅ COMPLETE
+
+- [x] `src/utils/positioning.ts` - 3 exports, 24 tests
+  - BOARD_CENTERS constant
+  - isPositionInCommunityCircle() function
+  - calculatePieceRotation() function
+- [x] `src/utils/formatting.ts` - formatLocationId() function, 26 tests
+- [x] `src/utils/array.ts` - shuffle() function, 12 tests
+- [x] `src/utils/index.ts` - barrel export for all utils
+
+**Total extracted in Phase 3b**: 3 new util files + barrel export, 62 tests
+
 ---
 
 ## 🚧 Next Steps
 
-### Phase 4: Game Logic Extraction (Planned)
+### Phase 4: Game Initialization Logic (Next)
+
+Extract to `src/game/`:
+
+- [ ] initializePlayers() - Creates players with dealt hands
+- [ ] initializePieces() - Sets up pieces for drafting phase
+- [ ] initializeCampaignPieces() - Initializes pieces for campaign
+
+### Phase 5: Game Logic Extraction (Planned)
 
 Extract to `src/game/`:
 
@@ -113,7 +133,12 @@ kred-online/
 │       ├── bureaucracy.ts (6 bureaucracy types) ✨ NEW
 │       ├── challenge.ts (ChallengeState) ✨ NEW
 │       └── played-tile.ts (PlayedTileState) ✨ NEW
-├── game.ts (main file - being refactored, now ~3,134 lines)
+│   └── utils/
+│       ├── index.ts (barrel export) ✨ NEW
+│       ├── positioning.ts (rotation, community circle) ✨ NEW
+│       ├── formatting.ts (formatLocationId) ✨ NEW
+│       └── array.ts (shuffle) ✨ NEW
+├── game.ts (main file - being refactored, now ~3,087 lines)
 └── REFACTORING_STRATEGY_V2.md (detailed strategy)
 ```
 
@@ -131,20 +156,25 @@ kred-online/
 - **Test coverage added**: 26 new unit tests (12 bureaucracy + 7 challenge + 7 played-tile)
 - **Type files created**: 3 files (bureaucracy, challenge, played-tile)
 
+### Phase 3b (Utils Extraction)
+- **Lines extracted from game.ts**: ~86 lines (positioning + formatting + array utilities)
+- **Test coverage added**: 62 new unit tests (24 positioning + 26 formatting + 12 array)
+- **Util files created**: 4 files (positioning, formatting, array, index)
+
 ### Overall Progress
-- **Total lines extracted from game.ts**: ~1,250 lines
-- **Lines remaining in game.ts**: ~3,134 lines (down from ~3,803 = 17.6% reduction)
-- **Total tests passing**: 363 tests (55 integration + 308 unit)
-- **Total commits**: 17 refactoring commits (14 config + 3 types)
-- **All tests passing**: ✅ 363/363
+- **Total lines extracted from game.ts**: ~1,336 lines
+- **Lines remaining in game.ts**: ~3,087 lines (down from ~3,803 = 18.8% reduction)
+- **Total tests passing**: 425 tests (55 integration + 370 unit)
+- **Total commits**: 22 refactoring commits (14 config + 3 types + 5 utils)
+- **All tests passing**: ✅ 425/425
 
 ---
 
 ## Progress Summary
 
-**Phase 3 Complete!** 🎉
+**Phase 3b Complete!** 🎉
 
-Successfully completed type extraction from game.ts:
+Successfully completed utility function extraction from game.ts:
 
 ### Phase 2 (Config Extraction) ✅
 - ✅ Basic constants (tiles, pieces, player options)
@@ -157,7 +187,12 @@ Successfully completed type extraction from game.ts:
 - ✅ Challenge types (ChallengeState)
 - ✅ Played tile types (PlayedTileState)
 
-**Next Phase**: Game logic extraction - extracting core game functions, validation, and state management to `src/game/`.
+### Phase 3b (Utils Extraction) ✅
+- ✅ Positioning utilities (BOARD_CENTERS, calculatePieceRotation, isPositionInCommunityCircle)
+- ✅ Formatting utilities (formatLocationId)
+- ✅ Array utilities (shuffle)
+
+**Next Phase**: Game initialization logic - extracting game setup functions (initializePlayers, initializePieces, initializeCampaignPieces) to `src/game/`.
 
 ---
 
