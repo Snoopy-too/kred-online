@@ -30,6 +30,9 @@ import type {
   BureaucracyMenuItem,
   BureaucracyPurchase,
   BureaucracyPlayerState,
+
+  // Challenge types - challenge system data structures
+  ChallengeState,
 } from "./src/types";
 
 // Enum/value imports that are used at runtime (not just for typing)
@@ -89,12 +92,6 @@ export interface PlayedTileState {
   };
 }
 
-// Challenge information
-export interface ChallengeState {
-  status: "PENDING" | "CHALLENGED" | "RESOLVED";
-  challengedByPlayerId?: number;
-  acceptedByReceivingPlayer: boolean;
-}
 
 
 // These are the ONLY valid drop locations for pieces.
