@@ -55,6 +55,11 @@ All files must follow standardized import and documentation patterns:
 5. **Single Source**: Import from barrel exports, not individual files
    - ✅ `import { X } from "./src/config"`
    - ❌ `import { X } from "./src/config/constants"`
+6. **NO BACKWARDS COMPATIBILITY**: Once code is extracted to a new module:
+   - DO NOT create re-exports in the old location
+   - Update ALL imports immediately to use the new path
+   - We want only ONE way to import each symbol
+   - This prevents confusion and keeps the codebase clean
 
 #### Import Template:
 

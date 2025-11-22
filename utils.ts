@@ -3,7 +3,7 @@
  * Pure helper functions that can be used across the application
  */
 
-import type { Player } from './src/types';
+import type { Player } from "./src/types";
 
 /**
  * Gets a player's display name with fallback
@@ -15,7 +15,10 @@ import type { Player } from './src/types';
  * @example
  * getPlayerName(player, 1) // "Alice" or "Player 1"
  */
-export function getPlayerName(player: Player | undefined, playerId: number): string {
+export function getPlayerName(
+  player: Player | undefined,
+  playerId: number
+): string {
   return player?.name || `Player ${playerId}`;
 }
 
@@ -30,7 +33,10 @@ export function getPlayerName(player: Player | undefined, playerId: number): str
  * getPlayerNameSimple(player) // "Alice" or "Player"
  * getPlayerNameSimple(player, "Unknown") // "Alice" or "Unknown"
  */
-export function getPlayerNameSimple(player: Player | undefined, fallback: string = 'Player'): string {
+export function getPlayerNameSimple(
+  player: Player | undefined,
+  fallback: string = "Player"
+): string {
   return player?.name || fallback;
 }
 
@@ -44,8 +50,11 @@ export function getPlayerNameSimple(player: Player | undefined, fallback: string
  * @example
  * const player = getPlayerById(players, 3)
  */
-export function getPlayerById(players: Player[], playerId: number): Player | undefined {
-  return players.find(p => p.id === playerId);
+export function getPlayerById(
+  players: Player[],
+  playerId: number
+): Player | undefined {
+  return players.find((p) => p.id === playerId);
 }
 
 /**
@@ -58,10 +67,13 @@ export function getPlayerById(players: Player[], playerId: number): Player | und
  * @example
  * formatWinnerNames([1, 3], players) // "Alice, Charlie" or "Player 1, Player 3"
  */
-export function formatWinnerNames(winners: number[], players: Player[]): string {
+export function formatWinnerNames(
+  winners: number[],
+  players: Player[]
+): string {
   return winners
-    .map(id => getPlayerName(getPlayerById(players, id), id))
-    .join(', ');
+    .map((id) => getPlayerName(getPlayerById(players, id), id))
+    .join(", ");
 }
 
 /**
@@ -76,7 +88,10 @@ export function formatWinnerNames(winners: number[], players: Player[]): string 
  * isPlayerDomain("p2_office", 1) // false
  * isPlayerDomain("community_1", 1) // false
  */
-export function isPlayerDomain(locationId: string | undefined, playerId: number): boolean {
+export function isPlayerDomain(
+  locationId: string | undefined,
+  playerId: number
+): boolean {
   if (!locationId) return false;
   return locationId.startsWith(`p${playerId}_`);
 }
@@ -93,5 +108,5 @@ export function isPlayerDomain(locationId: string | undefined, playerId: number)
  */
 export function isCommunityLocation(locationId: string | undefined): boolean {
   if (!locationId) return false;
-  return locationId.includes('community');
+  return locationId.includes("community");
 }

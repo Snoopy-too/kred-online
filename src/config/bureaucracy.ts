@@ -1,9 +1,9 @@
 /**
  * Bureaucracy Configuration
- * 
+ *
  * Purpose: Defines bureaucracy phase menus for different player counts
  * Dependencies: Bureaucracy types from src/types (via game.ts until types are extracted)
- * 
+ *
  * @module config/bureaucracy
  */
 
@@ -12,7 +12,7 @@ import type {
   BureaucracyItemType,
   BureaucracyMoveType,
   PromotionLocationType,
-} from '../../game';
+} from "../../game";
 
 /**
  * BUREAUCRACY MENU - 3 and 4 Player Modes
