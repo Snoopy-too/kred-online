@@ -39,18 +39,24 @@ import {
 } from "./src/config";
 
 // ============================================================================
+// UTILITY IMPORTS - Helper functions
+// ============================================================================
+import {
+  calculatePieceRotation,
+  isPositionInCommunityCircle,
+} from "./src/utils/positioning";
+
+// ============================================================================
 // GAME LOGIC IMPORTS - Functions still in game.ts (to be extracted)
 // ============================================================================
 import {
   initializePlayers,
   initializePieces,
   initializeCampaignPieces,
-  calculatePieceRotation,
   findNearestVacantLocation,
   formatLocationId,
   getLocationIdFromPosition,
   DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
-  isPositionInCommunityCircle,
   validateMovesForTilePlay,
   validateTileRequirements,
   validateTileRequirementsWithImpossibleMoveExceptions,
