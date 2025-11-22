@@ -371,3 +371,43 @@ export const BANK_SPACES_BY_PLAYER_COUNT: { [key: number]: BankSpace[] } = {
   4: FOUR_PLAYER_BANK_SPACES,
   5: FIVE_PLAYER_BANK_SPACES,
 };
+
+// Credibility locations - one per player to display credibility currency
+const THREE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
+  // Player 1: 21.18/15.35, rotation: -35.0°
+  { ownerId: 1, position: { left: 21.18, top: 15.35 }, rotation: -35.00 },
+  // Player 2: 90.30/33.16, rotation: 75.0°
+  { ownerId: 2, position: { left: 90.30, top: 33.16 }, rotation: 75.00 },
+  // Player 3: 40.45/83.68, rotation: 200.0°
+  { ownerId: 3, position: { left: 40.45, top: 83.68 }, rotation: 200.00 },
+];
+
+const FOUR_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
+  // Player 1: 15.97/20.64, rotation: -34.0°
+  { ownerId: 1, position: { left: 15.97, top: 20.64 }, rotation: -34.00 },
+  // Player 2: 82.95/18.65, rotation: 51.0°
+  { ownerId: 2, position: { left: 82.95, top: 18.65 }, rotation: 51.00 },
+  // Player 3: 84.62/82.16, rotation: 136.0°
+  { ownerId: 3, position: { left: 84.62, top: 82.16 }, rotation: 136.00 },
+  // Player 4: 17.53/83.04, rotation: -129.0°
+  { ownerId: 4, position: { left: 17.53, top: 83.04 }, rotation: -129.00 },
+];
+
+const FIVE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
+  // Player 1: 8.11/63.80, rotation: 224.0°
+  { ownerId: 1, position: { left: 8.11, top: 63.80 }, rotation: 224.00 },
+  // Player 2: 18.06/16.34, rotation: -45.0°
+  { ownerId: 2, position: { left: 18.06, top: 16.34 }, rotation: -45.00 },
+  // Player 3: 69.62/11.07, rotation: 15.0°
+  { ownerId: 3, position: { left: 69.62, top: 11.07 }, rotation: 15.00 },
+  // Player 4: 91.28/55.40, rotation: 74.0°
+  { ownerId: 4, position: { left: 91.28, top: 55.40 }, rotation: 74.00 },
+  // Player 5: 52.95/88.41, rotation: 164.0°
+  { ownerId: 5, position: { left: 52.95, top: 88.41 }, rotation: 164.00 },
+];
+
+export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: { [key: number]: BankSpace[] } = {
+  3: THREE_PLAYER_CREDIBILITY_LOCATIONS,
+  4: FOUR_PLAYER_CREDIBILITY_LOCATIONS,
+  5: FIVE_PLAYER_CREDIBILITY_LOCATIONS,
+};

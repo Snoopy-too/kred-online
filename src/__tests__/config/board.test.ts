@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT } from '../../config/board';
+import { DROP_LOCATIONS_BY_PLAYER_COUNT, TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT, CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT } from '../../config/board';
 import { PLAYER_OPTIONS } from '../../config/constants';
 
 describe('DROP_LOCATIONS_BY_PLAYER_COUNT', () => {
@@ -314,6 +314,84 @@ describe('BANK_SPACES_BY_PLAYER_COUNT', () => {
         expect(space.position).toHaveProperty('left');
         expect(space.position).toHaveProperty('top');
         expect(space).toHaveProperty('rotation');
+      });
+    });
+  });
+});
+
+describe('CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT', () => {
+  it('should have credibility locations for all player counts', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      expect(CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount]).toBeDefined();
+      expect(Array.isArray(CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount])).toBe(true);
+    });
+  });
+
+  it('should have exactly one credibility location per player', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const locations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount];
+      expect(locations.length).toBe(playerCount);
+    });
+  });
+
+  it('should have unique owner IDs', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const locations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount];
+      const ownerIds = locations.map(loc => loc.ownerId);
+      const uniqueOwners = new Set(ownerIds);
+
+      expect(uniqueOwners.size).toBe(playerCount);
+    });
+  });
+
+  it('should have owner IDs matching player count', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const locations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount];
+
+      // Each player from 1 to playerCount should have exactly one credibility location
+      for (let playerId = 1; playerId <= playerCount; playerId++) {
+        const playerLocation = locations.find(loc => loc.ownerId === playerId);
+        expect(playerLocation).toBeDefined();
+      }
+    });
+  });
+
+  it('should have valid position coordinates (0-100)', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const locations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount];
+
+      locations.forEach(loc => {
+        expect(loc.position.left).toBeGreaterThanOrEqual(0);
+        expect(loc.position.left).toBeLessThanOrEqual(100);
+        expect(loc.position.top).toBeGreaterThanOrEqual(0);
+        expect(loc.position.top).toBeLessThanOrEqual(100);
+      });
+    });
+  });
+
+  it('should have rotation values', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const locations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount];
+
+      locations.forEach(loc => {
+        expect(typeof loc.rotation).toBe('number');
+        // Rotation can be negative or > 360
+        expect(loc.rotation).toBeGreaterThanOrEqual(-360);
+        expect(loc.rotation).toBeLessThanOrEqual(360);
+      });
+    });
+  });
+
+  it('should have all required properties', () => {
+    PLAYER_OPTIONS.forEach(playerCount => {
+      const locations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount];
+
+      locations.forEach(loc => {
+        expect(loc).toHaveProperty('ownerId');
+        expect(loc).toHaveProperty('position');
+        expect(loc.position).toHaveProperty('left');
+        expect(loc.position).toHaveProperty('top');
+        expect(loc).toHaveProperty('rotation');
       });
     });
   });
