@@ -30,6 +30,8 @@ import {
   RostrumSupport,
   PlayerRostrum,
   ROSTRUM_SUPPORT_RULES,
+  RostrumAdjacency,
+  ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
 } from "./src/config/rules";
 
 // Re-export for backwards compatibility
@@ -45,8 +47,9 @@ export {
   TILE_PLAY_OPTIONS,
   TILE_REQUIREMENTS,
   ROSTRUM_SUPPORT_RULES,
+  ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
 };
-export type { TilePlayOption, TileRequirement, RostrumSupport, PlayerRostrum };
+export type { TilePlayOption, TileRequirement, RostrumSupport, PlayerRostrum, RostrumAdjacency };
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
@@ -354,58 +357,6 @@ export const DROP_LOCATIONS_BY_PLAYER_COUNT: {
   3: THREE_PLAYER_DROP_LOCATIONS,
   4: FOUR_PLAYER_DROP_LOCATIONS,
   5: FIVE_PLAYER_DROP_LOCATIONS,
-};
-
-/**
- * ADJACENCY RULES - Rostrum-to-Rostrum Movement
- *
- * Certain rostrums are adjacent and allow direct piece movement between them.
- * Adjacency is bidirectional (can move in both directions).
- *
- * 3-Player Mode:
- *   - p1_rostrum2 <-> p3_rostrum1
- *   - p3_rostrum2 <-> p2_rostrum1
- *   - p2_rostrum2 <-> p1_rostrum1
- *
- * 4-Player Mode:
- *   - p1_rostrum2 <-> p4_rostrum1
- *   - p4_rostrum2 <-> p3_rostrum1
- *   - p3_rostrum2 <-> p2_rostrum1
- *   - p2_rostrum2 <-> p1_rostrum1
- *
- * 5-Player Mode:
- *   - p1_rostrum2 <-> p5_rostrum1
- *   - p5_rostrum2 <-> p4_rostrum1
- *   - p4_rostrum2 <-> p3_rostrum1
- *   - p3_rostrum2 <-> p2_rostrum1
- *   - p2_rostrum2 <-> p1_rostrum1
- */
-export interface RostrumAdjacency {
-  rostrum1: string;
-  rostrum2: string;
-}
-
-export const ROSTRUM_ADJACENCY_BY_PLAYER_COUNT: {
-  [playerCount: number]: RostrumAdjacency[];
-} = {
-  3: [
-    { rostrum1: "p1_rostrum2", rostrum2: "p3_rostrum1" },
-    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
-    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
-  ],
-  4: [
-    { rostrum1: "p1_rostrum2", rostrum2: "p4_rostrum1" },
-    { rostrum1: "p4_rostrum2", rostrum2: "p3_rostrum1" },
-    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
-    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
-  ],
-  5: [
-    { rostrum1: "p1_rostrum2", rostrum2: "p5_rostrum1" },
-    { rostrum1: "p5_rostrum2", rostrum2: "p4_rostrum1" },
-    { rostrum1: "p4_rostrum2", rostrum2: "p3_rostrum1" },
-    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
-    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
-  ],
 };
 
 /**

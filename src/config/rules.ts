@@ -531,3 +531,64 @@ export const ROSTRUM_SUPPORT_RULES: { [playerId: number]: PlayerRostrum } = {
     office: "p5_office",
   },
 };
+
+/**
+ * ROSTRUM ADJACENCY INTERFACE
+ *
+ * Defines an adjacency relationship between two rostrums.
+ * Adjacency is bidirectional - pieces can move in both directions.
+ */
+export interface RostrumAdjacency {
+  rostrum1: string;
+  rostrum2: string;
+}
+
+/**
+ * ROSTRUM ADJACENCY BY PLAYER COUNT - Rostrum-to-Rostrum Movement
+ *
+ * Certain rostrums are adjacent and allow direct piece movement between them.
+ * Adjacency is bidirectional (can move in both directions).
+ *
+ * Pattern: Each player's rostrum2 connects to another player's rostrum1,
+ * forming a circular chain around the board.
+ *
+ * 3-Player Mode (3 adjacency pairs):
+ *   - p1_rostrum2 <-> p3_rostrum1
+ *   - p3_rostrum2 <-> p2_rostrum1
+ *   - p2_rostrum2 <-> p1_rostrum1
+ *
+ * 4-Player Mode (4 adjacency pairs):
+ *   - p1_rostrum2 <-> p4_rostrum1
+ *   - p4_rostrum2 <-> p3_rostrum1
+ *   - p3_rostrum2 <-> p2_rostrum1
+ *   - p2_rostrum2 <-> p1_rostrum1
+ *
+ * 5-Player Mode (5 adjacency pairs):
+ *   - p1_rostrum2 <-> p5_rostrum1
+ *   - p5_rostrum2 <-> p4_rostrum1
+ *   - p4_rostrum2 <-> p3_rostrum1
+ *   - p3_rostrum2 <-> p2_rostrum1
+ *   - p2_rostrum2 <-> p1_rostrum1
+ */
+export const ROSTRUM_ADJACENCY_BY_PLAYER_COUNT: {
+  [playerCount: number]: RostrumAdjacency[];
+} = {
+  3: [
+    { rostrum1: "p1_rostrum2", rostrum2: "p3_rostrum1" },
+    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
+    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
+  ],
+  4: [
+    { rostrum1: "p1_rostrum2", rostrum2: "p4_rostrum1" },
+    { rostrum1: "p4_rostrum2", rostrum2: "p3_rostrum1" },
+    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
+    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
+  ],
+  5: [
+    { rostrum1: "p1_rostrum2", rostrum2: "p5_rostrum1" },
+    { rostrum1: "p5_rostrum2", rostrum2: "p4_rostrum1" },
+    { rostrum1: "p4_rostrum2", rostrum2: "p3_rostrum1" },
+    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
+    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
+  ],
+};

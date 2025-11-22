@@ -5,7 +5,8 @@ import {
   TilePlayOptionType,
   TILE_PLAY_OPTIONS,
   TILE_REQUIREMENTS,
-  ROSTRUM_SUPPORT_RULES
+  ROSTRUM_SUPPORT_RULES,
+  ROSTRUM_ADJACENCY_BY_PLAYER_COUNT
 } from '../../config/rules';
 
 describe('DEFINED_MOVES Configuration', () => {
@@ -1017,6 +1018,247 @@ describe('ROSTRUM_SUPPORT_RULES Configuration', () => {
       const uniqueSeats = new Set(allSeats);
       expect(allSeats.length).toBe(uniqueSeats.size);
       expect(allSeats).toHaveLength(30); // 5 players × 6 seats
+    });
+  });
+});
+
+describe('ROSTRUM_ADJACENCY_BY_PLAYER_COUNT Configuration', () => {
+  describe('Structure and Completeness', () => {
+    it('should define adjacencies for all player counts (3, 4, 5)', () => {
+      const playerCounts = Object.keys(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT).map(Number);
+      expect(playerCounts).toHaveLength(3);
+      expect(playerCounts).toEqual(expect.arrayContaining([3, 4, 5]));
+    });
+
+    it('should have correct number of adjacencies for each player count', () => {
+      expect(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[3]).toHaveLength(3);
+      expect(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[4]).toHaveLength(4);
+      expect(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[5]).toHaveLength(5);
+    });
+
+    it('should have valid adjacency structure with rostrum1 and rostrum2 fields', () => {
+      Object.values(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT).forEach(adjacencies => {
+        adjacencies.forEach(adjacency => {
+          expect(adjacency).toHaveProperty('rostrum1');
+          expect(adjacency).toHaveProperty('rostrum2');
+          expect(typeof adjacency.rostrum1).toBe('string');
+          expect(typeof adjacency.rostrum2).toBe('string');
+        });
+      });
+    });
+  });
+
+  describe('3-Player Mode Adjacencies', () => {
+    const adjacencies3 = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[3];
+
+    it('should have exactly 3 adjacency pairs', () => {
+      expect(adjacencies3).toHaveLength(3);
+    });
+
+    it('should connect p1_rostrum2 to p3_rostrum1', () => {
+      const adjacency = adjacencies3.find(
+        a => a.rostrum1 === 'p1_rostrum2' && a.rostrum2 === 'p3_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p3_rostrum2 to p2_rostrum1', () => {
+      const adjacency = adjacencies3.find(
+        a => a.rostrum1 === 'p3_rostrum2' && a.rostrum2 === 'p2_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p2_rostrum2 to p1_rostrum1', () => {
+      const adjacency = adjacencies3.find(
+        a => a.rostrum1 === 'p2_rostrum2' && a.rostrum2 === 'p1_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should form a complete circular pattern', () => {
+      // Each player should have their rostrum2 connected to next player's rostrum1
+      expect(adjacencies3[0]).toEqual({ rostrum1: 'p1_rostrum2', rostrum2: 'p3_rostrum1' });
+      expect(adjacencies3[1]).toEqual({ rostrum1: 'p3_rostrum2', rostrum2: 'p2_rostrum1' });
+      expect(adjacencies3[2]).toEqual({ rostrum1: 'p2_rostrum2', rostrum2: 'p1_rostrum1' });
+    });
+
+    it('should only use valid rostrum names from players 1-3', () => {
+      adjacencies3.forEach(adjacency => {
+        // Should start with p1, p2, or p3
+        expect(adjacency.rostrum1).toMatch(/^p[1-3]_rostrum[1-2]$/);
+        expect(adjacency.rostrum2).toMatch(/^p[1-3]_rostrum[1-2]$/);
+      });
+    });
+  });
+
+  describe('4-Player Mode Adjacencies', () => {
+    const adjacencies4 = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[4];
+
+    it('should have exactly 4 adjacency pairs', () => {
+      expect(adjacencies4).toHaveLength(4);
+    });
+
+    it('should connect p1_rostrum2 to p4_rostrum1', () => {
+      const adjacency = adjacencies4.find(
+        a => a.rostrum1 === 'p1_rostrum2' && a.rostrum2 === 'p4_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p4_rostrum2 to p3_rostrum1', () => {
+      const adjacency = adjacencies4.find(
+        a => a.rostrum1 === 'p4_rostrum2' && a.rostrum2 === 'p3_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p3_rostrum2 to p2_rostrum1', () => {
+      const adjacency = adjacencies4.find(
+        a => a.rostrum1 === 'p3_rostrum2' && a.rostrum2 === 'p2_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p2_rostrum2 to p1_rostrum1', () => {
+      const adjacency = adjacencies4.find(
+        a => a.rostrum1 === 'p2_rostrum2' && a.rostrum2 === 'p1_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should form a complete circular pattern', () => {
+      expect(adjacencies4[0]).toEqual({ rostrum1: 'p1_rostrum2', rostrum2: 'p4_rostrum1' });
+      expect(adjacencies4[1]).toEqual({ rostrum1: 'p4_rostrum2', rostrum2: 'p3_rostrum1' });
+      expect(adjacencies4[2]).toEqual({ rostrum1: 'p3_rostrum2', rostrum2: 'p2_rostrum1' });
+      expect(adjacencies4[3]).toEqual({ rostrum1: 'p2_rostrum2', rostrum2: 'p1_rostrum1' });
+    });
+
+    it('should only use valid rostrum names from players 1-4', () => {
+      adjacencies4.forEach(adjacency => {
+        expect(adjacency.rostrum1).toMatch(/^p[1-4]_rostrum[1-2]$/);
+        expect(adjacency.rostrum2).toMatch(/^p[1-4]_rostrum[1-2]$/);
+      });
+    });
+  });
+
+  describe('5-Player Mode Adjacencies', () => {
+    const adjacencies5 = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[5];
+
+    it('should have exactly 5 adjacency pairs', () => {
+      expect(adjacencies5).toHaveLength(5);
+    });
+
+    it('should connect p1_rostrum2 to p5_rostrum1', () => {
+      const adjacency = adjacencies5.find(
+        a => a.rostrum1 === 'p1_rostrum2' && a.rostrum2 === 'p5_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p5_rostrum2 to p4_rostrum1', () => {
+      const adjacency = adjacencies5.find(
+        a => a.rostrum1 === 'p5_rostrum2' && a.rostrum2 === 'p4_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p4_rostrum2 to p3_rostrum1', () => {
+      const adjacency = adjacencies5.find(
+        a => a.rostrum1 === 'p4_rostrum2' && a.rostrum2 === 'p3_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p3_rostrum2 to p2_rostrum1', () => {
+      const adjacency = adjacencies5.find(
+        a => a.rostrum1 === 'p3_rostrum2' && a.rostrum2 === 'p2_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should connect p2_rostrum2 to p1_rostrum1', () => {
+      const adjacency = adjacencies5.find(
+        a => a.rostrum1 === 'p2_rostrum2' && a.rostrum2 === 'p1_rostrum1'
+      );
+      expect(adjacency).toBeDefined();
+    });
+
+    it('should form a complete circular pattern', () => {
+      expect(adjacencies5[0]).toEqual({ rostrum1: 'p1_rostrum2', rostrum2: 'p5_rostrum1' });
+      expect(adjacencies5[1]).toEqual({ rostrum1: 'p5_rostrum2', rostrum2: 'p4_rostrum1' });
+      expect(adjacencies5[2]).toEqual({ rostrum1: 'p4_rostrum2', rostrum2: 'p3_rostrum1' });
+      expect(adjacencies5[3]).toEqual({ rostrum1: 'p3_rostrum2', rostrum2: 'p2_rostrum1' });
+      expect(adjacencies5[4]).toEqual({ rostrum1: 'p2_rostrum2', rostrum2: 'p1_rostrum1' });
+    });
+
+    it('should only use valid rostrum names from players 1-5', () => {
+      adjacencies5.forEach(adjacency => {
+        expect(adjacency.rostrum1).toMatch(/^p[1-5]_rostrum[1-2]$/);
+        expect(adjacency.rostrum2).toMatch(/^p[1-5]_rostrum[1-2]$/);
+      });
+    });
+  });
+
+  describe('Pattern Validation', () => {
+    it('should always connect rostrum2 of one player to rostrum1 of another', () => {
+      Object.values(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT).forEach(adjacencies => {
+        adjacencies.forEach(adjacency => {
+          expect(adjacency.rostrum1).toContain('_rostrum');
+          expect(adjacency.rostrum2).toContain('_rostrum');
+          // rostrum1 should always end in _rostrum2, rostrum2 should always end in _rostrum1
+          expect(adjacency.rostrum1).toMatch(/_rostrum2$/);
+          expect(adjacency.rostrum2).toMatch(/_rostrum1$/);
+        });
+      });
+    });
+
+    it('should never have a rostrum adjacent to itself', () => {
+      Object.values(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT).forEach(adjacencies => {
+        adjacencies.forEach(adjacency => {
+          expect(adjacency.rostrum1).not.toBe(adjacency.rostrum2);
+        });
+      });
+    });
+
+    it('should have no duplicate adjacency pairs within each player count', () => {
+      Object.values(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT).forEach(adjacencies => {
+        const pairStrings = adjacencies.map(a => `${a.rostrum1}-${a.rostrum2}`);
+        const uniquePairs = new Set(pairStrings);
+        expect(pairStrings.length).toBe(uniquePairs.size);
+      });
+    });
+
+    it('should form a complete circular chain for each player count', () => {
+      // 3-player: p1 → p3 → p2 → p1 (circular)
+      const chain3 = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[3];
+      expect(chain3[0].rostrum1).toBe('p1_rostrum2');
+      expect(chain3[2].rostrum2).toBe('p1_rostrum1');
+
+      // 4-player: p1 → p4 → p3 → p2 → p1 (circular)
+      const chain4 = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[4];
+      expect(chain4[0].rostrum1).toBe('p1_rostrum2');
+      expect(chain4[3].rostrum2).toBe('p1_rostrum1');
+
+      // 5-player: p1 → p5 → p4 → p3 → p2 → p1 (circular)
+      const chain5 = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[5];
+      expect(chain5[0].rostrum1).toBe('p1_rostrum2');
+      expect(chain5[4].rostrum2).toBe('p1_rostrum1');
+    });
+  });
+
+  describe('Bidirectional Validation', () => {
+    it('should document bidirectional movement (though not enforced in structure)', () => {
+      // The data structure shows one direction, but the rules state adjacency is bidirectional
+      // This test documents that while we store "rostrum1 → rostrum2",
+      // movement is allowed in both directions: rostrum1 ↔ rostrum2
+      Object.values(ROSTRUM_ADJACENCY_BY_PLAYER_COUNT).forEach(adjacencies => {
+        adjacencies.forEach(adjacency => {
+          // Verify structure exists (even if bidirectionality is handled in game logic)
+          expect(adjacency.rostrum1).toBeTruthy();
+          expect(adjacency.rostrum2).toBeTruthy();
+        });
+      });
     });
   });
 });
