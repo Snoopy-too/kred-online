@@ -1,12 +1,12 @@
 # KRED Refactoring Progress
 
-Last updated: 2025-11-23
+Last updated: 2025-11-22
 
 ## Current Status
 
-**Active Phase**: Phase 2 - Config Extraction ✅ COMPLETE
+**Active Phase**: Phase 3 - Type Extraction ✅ COMPLETE
 **Branch**: `refactoring`
-**Tests Passing**: 337 tests (55 integration + 282 unit)
+**Tests Passing**: 363 tests (55 integration + 308 unit)
 
 ---
 
@@ -51,18 +51,19 @@ Last updated: 2025-11-23
 
 **Total extracted to `src/config/bureaucracy.ts`**: 178 lines, 51 tests
 
+### Phase 3: Type Extraction - Additional Types ✅ COMPLETE
+
+- [x] `src/types/bureaucracy.ts` - 6 type definitions, 12 tests
+  - BureaucracyItemType, BureaucracyMoveType, PromotionLocationType
+  - BureaucracyMenuItem, BureaucracyPurchase, BureaucracyPlayerState
+- [x] `src/types/challenge.ts` - ChallengeState interface, 7 tests
+- [x] `src/types/played-tile.ts` - PlayedTileState interface, 7 tests
+
+**Total extracted in Phase 3**: 3 new type files, 26 tests
+
 ---
 
 ## 🚧 Next Steps
-
-### Phase 3: Type Extraction (Next)
-
-Extract remaining types to `src/types/`:
-
-- [ ] Bureaucracy types (BureaucracyMenuItem, BureaucracyPurchase, etc.)
-- [ ] Challenge types (ChallengeState)
-- [ ] Played tile types (PlayedTileState)
-- [ ] Additional game state types
 
 ### Phase 4: Game Logic Extraction (Planned)
 
@@ -103,12 +104,16 @@ kred-online/
 │   │   ├── rules.ts (5 rule configs: DEFINED_MOVES, TILE_PLAY_OPTIONS, etc.)
 │   │   └── bureaucracy.ts (2 bureaucracy menus)
 │   └── types/
+│       ├── index.ts (barrel export)
 │       ├── game.ts (GameState, DropLocation, BankSpace)
 │       ├── move.ts (Move types)
 │       ├── piece.ts (Piece types)
 │       ├── player.ts (Player types)
-│       └── tile.ts (Tile types)
-├── game.ts (main file - being refactored, now ~3,170 lines)
+│       ├── tile.ts (Tile types)
+│       ├── bureaucracy.ts (6 bureaucracy types) ✨ NEW
+│       ├── challenge.ts (ChallengeState) ✨ NEW
+│       └── played-tile.ts (PlayedTileState) ✨ NEW
+├── game.ts (main file - being refactored, now ~3,134 lines)
 └── REFACTORING_STRATEGY_V2.md (detailed strategy)
 ```
 
@@ -116,28 +121,43 @@ kred-online/
 
 ## Key Metrics
 
+### Phase 2 (Config Extraction)
 - **Lines extracted from game.ts**: ~1,194 lines (422 board + 594 rules + 178 bureaucracy)
-- **Lines remaining in game.ts**: ~3,170 lines (down from ~3,803)
 - **Test coverage added**: 249 new unit tests (40 board + 158 rules + 51 bureaucracy)
-- **Total tests passing**: 337 tests (55 integration + 282 unit)
 - **Config files created**: 6 files (constants, tiles, pieces, board, rules, bureaucracy)
-- **Commits**: 14+ refactoring commits
-- **All tests passing**: ✅ 337/337
+
+### Phase 3 (Type Extraction)
+- **Lines extracted from game.ts**: ~56 lines (bureaucracy + challenge + played-tile types)
+- **Test coverage added**: 26 new unit tests (12 bureaucracy + 7 challenge + 7 played-tile)
+- **Type files created**: 3 files (bureaucracy, challenge, played-tile)
+
+### Overall Progress
+- **Total lines extracted from game.ts**: ~1,250 lines
+- **Lines remaining in game.ts**: ~3,134 lines (down from ~3,803 = 17.6% reduction)
+- **Total tests passing**: 363 tests (55 integration + 308 unit)
+- **Total commits**: 17 refactoring commits (14 config + 3 types)
+- **All tests passing**: ✅ 363/363
 
 ---
 
 ## Progress Summary
 
-**Phase 2 Complete!** 🎉
+**Phase 3 Complete!** 🎉
 
-Successfully extracted all configuration constants from game.ts:
+Successfully completed type extraction from game.ts:
 
+### Phase 2 (Config Extraction) ✅
 - ✅ Basic constants (tiles, pieces, player options)
 - ✅ Board layouts for 3, 4, and 5 players
 - ✅ Game rules (defined moves, tile requirements, rostrum rules)
 - ✅ Bureaucracy menus for different player counts
 
-**Next Phase**: Type extraction to organize TypeScript interfaces and types into dedicated type modules.
+### Phase 3 (Type Extraction) ✅
+- ✅ Bureaucracy types (6 type definitions)
+- ✅ Challenge types (ChallengeState)
+- ✅ Played tile types (PlayedTileState)
+
+**Next Phase**: Game logic extraction - extracting core game functions, validation, and state management to `src/game/`.
 
 ---
 
