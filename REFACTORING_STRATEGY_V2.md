@@ -44,9 +44,10 @@
 All files must follow standardized import and documentation patterns:
 
 #### Import Organization Rules:
+
 1. **Section Headers**: Use clear comment blocks to separate import types
 2. **Barrel Exports**: Every folder gets an `index.ts` that re-exports all modules
-3. **Import Order**: 
+3. **Import Order**:
    - Type-only imports first (`import type { ... }`)
    - Runtime value imports second (enums, functions, constants)
    - Group by source module (types, config, game, rules, utils)
@@ -56,6 +57,7 @@ All files must follow standardized import and documentation patterns:
    - ❌ `import { X } from "./src/config/constants"`
 
 #### Import Template:
+
 ```typescript
 // ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
@@ -67,10 +69,7 @@ import type {
 } from "./src/types";
 
 // Runtime imports (enums/values used at runtime, not just for typing)
-import {
-  EnumName,
-  ConstantName,
-} from "./src/types";
+import { EnumName, ConstantName } from "./src/types";
 
 // ============================================================================
 // CONFIGURATION IMPORTS - Static game configuration data
@@ -92,43 +91,46 @@ import {
 ```
 
 #### File Header Documentation:
+
 Every extracted file must include a header comment:
 
 ```typescript
 /**
  * [Module Name] - [One-line description]
- * 
+ *
  * Purpose: [What this module is responsible for]
  * Dependencies: [What it depends on, if any]
  * Usage: [Common use cases or examples]
- * 
+ *
  * @module [folder]/[filename]
  */
 ```
 
 #### Barrel Export Template (`index.ts`):
+
 ```typescript
 // Barrel file for [module name]
 // [One-sentence description of what this module exports]
 
 // [Category 1] - description
-export * from './file1';
+export * from "./file1";
 
 // [Category 2] - description
-export * from './file2';
+export * from "./file2";
 ```
 
 #### Function Documentation:
+
 All exported functions require JSDoc comments:
 
-```typescript
+````typescript
 /**
  * [Brief description of what function does]
- * 
+ *
  * @param paramName - Description of parameter
  * @returns Description of return value
  * @throws [Optional] What errors might be thrown
- * 
+ *
  * @example
  * ```typescript
  * const result = functionName(value);
@@ -137,15 +139,16 @@ All exported functions require JSDoc comments:
 export function functionName(paramName: Type): ReturnType {
   // Implementation
 }
-```
+````
 
 #### Constant Documentation:
+
 Complex constants and configuration objects need explanatory comments:
 
 ```typescript
 /**
  * [Constant Name] - What it represents and why it exists
- * 
+ *
  * Structure: [Explain the data structure if complex]
  * Usage: [When/how this should be used]
  */
@@ -371,6 +374,7 @@ describe('App smoke tests', () => {
 **Goal**: All static data in `src/config/`
 
 **Status**:
+
 - ✅ `src/config/constants.ts` - DONE (TOTAL_TILES, PLAYER_OPTIONS, BOARD_IMAGE_URLS)
 - ✅ `src/config/pieces.ts` - DONE (PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT)
 - ✅ `src/config/tiles.ts` - DONE (TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES)

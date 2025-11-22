@@ -1,5 +1,14 @@
-// Board layout configuration
-import { DropLocation, TileReceivingSpace, BankSpace } from '../../game';
+/**
+ * Board Layout Configuration
+ * 
+ * Purpose: Defines all valid drop locations, tile spaces, bank spaces, and credibility
+ *          locations for different player counts (3, 4, 5 players)
+ * Dependencies: Types from src/types
+ * 
+ * @module config/board
+ */
+
+import type { DropLocation, TileReceivingSpace, BankSpace } from '../types';
 
 // These are the ONLY valid drop locations for pieces.
 const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [

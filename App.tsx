@@ -1,33 +1,57 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  PLAYER_OPTIONS,
-  BOARD_IMAGE_URLS,
-  initializePlayers,
-  initializePieces,
-  initializeCampaignPieces,
-  PIECE_COUNTS_BY_PLAYER_COUNT,
-  PIECE_TYPES,
+
+// ============================================================================
+// TYPE IMPORTS - TypeScript interfaces and type definitions
+// ============================================================================
+import type {
   Tile,
   Player,
   GameState,
   Piece,
   BoardTile,
-  calculatePieceRotation,
-  findNearestVacantLocation,
-  TILE_SPACES_BY_PLAYER_COUNT,
   TileReceivingSpace,
+  BankSpace,
+  TrackedMove,
+} from './src/types';
+
+// Types still in game.ts (to be extracted in Phase 3)
+import type {
+  PlayedTileState,
+  BureaucracyMenuItem,
+  BureaucracyPurchase,
+  BureaucracyPlayerState,
+  BureaucracyMoveType,
+} from './game';
+
+// ============================================================================
+// CONFIGURATION IMPORTS - Static game configuration data
+// ============================================================================
+import {
+  PLAYER_OPTIONS,
+  BOARD_IMAGE_URLS,
+  PIECE_COUNTS_BY_PLAYER_COUNT,
+  PIECE_TYPES,
+  TILE_SPACES_BY_PLAYER_COUNT,
   BANK_SPACES_BY_PLAYER_COUNT,
   TILE_KREDCOIN_VALUES,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
-  BankSpace,
   PLAYER_PERSPECTIVE_ROTATIONS,
+} from './src/config';
+
+// ============================================================================
+// GAME LOGIC IMPORTS - Functions still in game.ts (to be extracted)
+// ============================================================================
+import {
+  initializePlayers,
+  initializePieces,
+  initializeCampaignPieces,
+  calculatePieceRotation,
+  findNearestVacantLocation,
   formatLocationId,
   getLocationIdFromPosition,
   DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
   isPositionInCommunityCircle,
-  TrackedMove,
-  PlayedTileState,
   validateMovesForTilePlay,
   validateTileRequirements,
   validateTileRequirementsWithImpossibleMoveExceptions,
@@ -37,10 +61,6 @@ import {
   validateSingleMove,
   areSeatsAdjacent,
   handleCredibilityLoss,
-  BureaucracyMenuItem,
-  BureaucracyPurchase,
-  BureaucracyPlayerState,
-  BureaucracyMoveType,
   calculatePlayerKredcoin,
   getBureaucracyTurnOrder,
   getBureaucracyMenu,
@@ -53,6 +73,7 @@ import {
   checkBureaucracyWinCondition,
   validatePieceMovement,
 } from './game';
+
 import { ALERTS, TIMEOUTS, DEFAULTS } from './constants';
 import { getPlayerName, getPlayerNameSimple, getPlayerById, formatWinnerNames, isPlayerDomain, isCommunityLocation } from './utils';
 

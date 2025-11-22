@@ -3,7 +3,7 @@
  * Pure helper functions that can be used across the application
  */
 
-import { Player } from './game';
+import type { Player } from './src/types';
 
 /**
  * Gets a player's display name with fallback

@@ -5,30 +5,27 @@ import type {
   // Piece types - game pieces (marks, heels, pawns)
   Piece,
   GamePieceInfo,
-  
+
   // Tile types - game tiles and tile spaces
   Tile,
   BoardTile,
   TileReceivingSpace,
-  
+
   // Player types - player data structures
   Player,
-  
+
   // Game state types - phases and locations
   GameState,
   DropLocation,
   BankSpace,
-  
+
   // Move tracking types - move validation and tracking
   TrackedMove,
   DefinedMove,
 } from "./src/types";
 
 // Enum/value imports that are used at runtime (not just for typing)
-import {
-  DefinedMoveType,
-  MoveRequirementType,
-} from "./src/types";
+import { DefinedMoveType, MoveRequirementType } from "./src/types";
 
 // ============================================================================
 // CONFIGURATION IMPORTS - Static game configuration data
@@ -38,15 +35,15 @@ import {
   TOTAL_TILES,
   PLAYER_OPTIONS,
   BOARD_IMAGE_URLS,
-  
+
   // Tile configuration - images and kredcoin values
   TILE_IMAGE_URLS,
   TILE_KREDCOIN_VALUES,
-  
+
   // Piece configuration - types and counts by player count
   PIECE_TYPES,
   PIECE_COUNTS_BY_PLAYER_COUNT,
-  
+
   // Game rules - move definitions, tile requirements, rostrum rules
   DEFINED_MOVES,
   TilePlayOptionType,
@@ -59,30 +56,11 @@ import {
   ROSTRUM_SUPPORT_RULES,
   RostrumAdjacency,
   ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
-  
+
   // Bureaucracy configuration - menus for different player counts
   THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
   FIVE_PLAYER_BUREAUCRACY_MENU,
 } from "./src/config";
-
-// Re-export for backwards compatibility
-export {
-  TILE_IMAGE_URLS,
-  TILE_KREDCOIN_VALUES,
-  PLAYER_OPTIONS,
-  BOARD_IMAGE_URLS,
-  PIECE_TYPES,
-  PIECE_COUNTS_BY_PLAYER_COUNT,
-  DEFINED_MOVES,
-  TilePlayOptionType,
-  TILE_PLAY_OPTIONS,
-  TILE_REQUIREMENTS,
-  ROSTRUM_SUPPORT_RULES,
-  ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
-  THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
-  FIVE_PLAYER_BUREAUCRACY_MENU,
-};
-export type { TilePlayOption, TileRequirement, RostrumSupport, PlayerRostrum, RostrumAdjacency };
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
