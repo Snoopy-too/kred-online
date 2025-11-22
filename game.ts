@@ -20,6 +20,23 @@ import {
 } from "./src/config/constants";
 import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from "./src/config/tiles";
 import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from "./src/config/pieces";
+import {
+  DEFINED_MOVES,
+  TilePlayOptionType,
+  TilePlayOption,
+  TILE_PLAY_OPTIONS,
+  TileRequirement,
+  TILE_REQUIREMENTS,
+  RostrumSupport,
+  PlayerRostrum,
+  ROSTRUM_SUPPORT_RULES,
+  RostrumAdjacency,
+  ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
+} from "./src/config/rules";
+import {
+  THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
+  FIVE_PLAYER_BUREAUCRACY_MENU,
+} from "./src/config/bureaucracy";
 
 // Re-export for backwards compatibility
 export {
@@ -29,7 +46,16 @@ export {
   BOARD_IMAGE_URLS,
   PIECE_TYPES,
   PIECE_COUNTS_BY_PLAYER_COUNT,
+  DEFINED_MOVES,
+  TilePlayOptionType,
+  TILE_PLAY_OPTIONS,
+  TILE_REQUIREMENTS,
+  ROSTRUM_SUPPORT_RULES,
+  ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
+  THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
+  FIVE_PLAYER_BUREAUCRACY_MENU,
 };
+export type { TilePlayOption, TileRequirement, RostrumSupport, PlayerRostrum, RostrumAdjacency };
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
@@ -340,158 +366,6 @@ export const DROP_LOCATIONS_BY_PLAYER_COUNT: {
 };
 
 /**
- * GAME RULE: Seat-to-Rostrum Support Mapping
- *
- * Each player has 2 rostrums. The 6 seats for each player are divided into two groups of 3.
- * A player may only move a piece from their seats into a rostrum if ALL 3 supporting seats are full.
- * If all 3 supporting seats for a rostrum become vacant, any piece at that rostrum must be moved
- * to one of the supporting seats.
- *
- * Support structure (same for all player counts: 3, 4, 5 players):
- * - Seats 1-3 support Rostrum 1
- * - Seats 4-6 support Rostrum 2
- */
-export interface RostrumSupport {
-  rostrum: string; // e.g., 'p1_rostrum1'
-  supportingSeats: string[]; // e.g., ['p1_seat1', 'p1_seat2', 'p1_seat3']
-}
-
-export interface PlayerRostrum {
-  playerId: number;
-  rostrums: RostrumSupport[];
-  office: string; // e.g., 'p1_office'
-}
-
-/**
- * Comprehensive mapping of rostrums to their supporting seats for all player counts.
- * The structure is the same regardless of player count (3, 4, or 5 players).
- */
-export const ROSTRUM_SUPPORT_RULES: { [playerId: number]: PlayerRostrum } = {
-  1: {
-    playerId: 1,
-    rostrums: [
-      {
-        rostrum: "p1_rostrum1",
-        supportingSeats: ["p1_seat1", "p1_seat2", "p1_seat3"],
-      },
-      {
-        rostrum: "p1_rostrum2",
-        supportingSeats: ["p1_seat4", "p1_seat5", "p1_seat6"],
-      },
-    ],
-    office: "p1_office",
-  },
-  2: {
-    playerId: 2,
-    rostrums: [
-      {
-        rostrum: "p2_rostrum1",
-        supportingSeats: ["p2_seat1", "p2_seat2", "p2_seat3"],
-      },
-      {
-        rostrum: "p2_rostrum2",
-        supportingSeats: ["p2_seat4", "p2_seat5", "p2_seat6"],
-      },
-    ],
-    office: "p2_office",
-  },
-  3: {
-    playerId: 3,
-    rostrums: [
-      {
-        rostrum: "p3_rostrum1",
-        supportingSeats: ["p3_seat1", "p3_seat2", "p3_seat3"],
-      },
-      {
-        rostrum: "p3_rostrum2",
-        supportingSeats: ["p3_seat4", "p3_seat5", "p3_seat6"],
-      },
-    ],
-    office: "p3_office",
-  },
-  4: {
-    playerId: 4,
-    rostrums: [
-      {
-        rostrum: "p4_rostrum1",
-        supportingSeats: ["p4_seat1", "p4_seat2", "p4_seat3"],
-      },
-      {
-        rostrum: "p4_rostrum2",
-        supportingSeats: ["p4_seat4", "p4_seat5", "p4_seat6"],
-      },
-    ],
-    office: "p4_office",
-  },
-  5: {
-    playerId: 5,
-    rostrums: [
-      {
-        rostrum: "p5_rostrum1",
-        supportingSeats: ["p5_seat1", "p5_seat2", "p5_seat3"],
-      },
-      {
-        rostrum: "p5_rostrum2",
-        supportingSeats: ["p5_seat4", "p5_seat5", "p5_seat6"],
-      },
-    ],
-    office: "p5_office",
-  },
-};
-
-/**
- * ADJACENCY RULES - Rostrum-to-Rostrum Movement
- *
- * Certain rostrums are adjacent and allow direct piece movement between them.
- * Adjacency is bidirectional (can move in both directions).
- *
- * 3-Player Mode:
- *   - p1_rostrum2 <-> p3_rostrum1
- *   - p3_rostrum2 <-> p2_rostrum1
- *   - p2_rostrum2 <-> p1_rostrum1
- *
- * 4-Player Mode:
- *   - p1_rostrum2 <-> p4_rostrum1
- *   - p4_rostrum2 <-> p3_rostrum1
- *   - p3_rostrum2 <-> p2_rostrum1
- *   - p2_rostrum2 <-> p1_rostrum1
- *
- * 5-Player Mode:
- *   - p1_rostrum2 <-> p5_rostrum1
- *   - p5_rostrum2 <-> p4_rostrum1
- *   - p4_rostrum2 <-> p3_rostrum1
- *   - p3_rostrum2 <-> p2_rostrum1
- *   - p2_rostrum2 <-> p1_rostrum1
- */
-export interface RostrumAdjacency {
-  rostrum1: string;
-  rostrum2: string;
-}
-
-export const ROSTRUM_ADJACENCY_BY_PLAYER_COUNT: {
-  [playerCount: number]: RostrumAdjacency[];
-} = {
-  3: [
-    { rostrum1: "p1_rostrum2", rostrum2: "p3_rostrum1" },
-    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
-    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
-  ],
-  4: [
-    { rostrum1: "p1_rostrum2", rostrum2: "p4_rostrum1" },
-    { rostrum1: "p4_rostrum2", rostrum2: "p3_rostrum1" },
-    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
-    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
-  ],
-  5: [
-    { rostrum1: "p1_rostrum2", rostrum2: "p5_rostrum1" },
-    { rostrum1: "p5_rostrum2", rostrum2: "p4_rostrum1" },
-    { rostrum1: "p4_rostrum2", rostrum2: "p3_rostrum1" },
-    { rostrum1: "p3_rostrum2", rostrum2: "p2_rostrum1" },
-    { rostrum1: "p2_rostrum2", rostrum2: "p1_rostrum1" },
-  ],
-};
-
-/**
  * BASE GAME RULES - Piece Movement Restrictions
  *
  * 1. ROSTRUM OCCUPATION:
@@ -614,101 +488,7 @@ export const ROSTRUM_ADJACENCY_BY_PLAYER_COUNT: {
  */
 // (DefinedMoveType, MoveRequirementType, DefinedMove moved to src/types/move.ts)
 
-/**
- * Complete definition of all Defined Moves available in the game.
- * These moves are triggered by playing tiles during the game.
- */
-/**
- * DEFINED MOVES
- *
- * (M) moves affect pieces originating in the player's own domain
- * (O) moves affect pieces originating in an opponent's domain
- */
-export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
-  [DefinedMoveType.REMOVE]: {
-    type: DefinedMoveType.REMOVE,
-    category: "O",
-    requirement: MoveRequirementType.OPTIONAL,
-    description:
-      "(O) Remove – Take a Mark or a Heel from a seat in an opponent's domain and return it to the community.",
-    options: [
-      "a. Take a Mark or Heel from an opponent's seat",
-      "b. Return the piece to the community",
-    ],
-    canTargetOwnDomain: false,
-    canTargetOpponentDomain: true,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.ADVANCE]: {
-    type: DefinedMoveType.ADVANCE,
-    category: "M",
-    requirement: MoveRequirementType.MANDATORY,
-    description: "(M) Advance – Player's choice of ONE of the following",
-    options: [
-      "a. Take a piece from the community and add it to an open seat in their domain",
-      "b. Take a piece from a seat in their domain and place it into the open Rostrum that that seat supports",
-      "c. Take a piece from a Rostrum in their domain and place it into the office in their domain",
-    ],
-    canTargetOwnDomain: true,
-    canTargetOpponentDomain: false,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.INFLUENCE]: {
-    type: DefinedMoveType.INFLUENCE,
-    category: "O",
-    requirement: MoveRequirementType.OPTIONAL,
-    description:
-      "(O) Influence – A player may move another player's piece from a seat to an adjacent seat (even if that seat is in another player's domain), OR from an opponent's rostrum to an adjacent rostrum in another player's domain.",
-    options: [
-      "a. Move another player's piece from a seat to an adjacent seat",
-      "b. Move another player's piece from a rostrum to an adjacent rostrum in another player's domain",
-    ],
-    canTargetOwnDomain: false,
-    canTargetOpponentDomain: true,
-    affectsCommunity: false,
-  },
-  [DefinedMoveType.ASSIST]: {
-    type: DefinedMoveType.ASSIST,
-    category: "O",
-    requirement: MoveRequirementType.OPTIONAL,
-    description:
-      "(O) Assist – A player may add a piece from the community to an opponent's vacant seat.",
-    options: [
-      "a. Take a piece from the community and add it to an opponent's vacant seat",
-    ],
-    canTargetOwnDomain: false,
-    canTargetOpponentDomain: true,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.WITHDRAW]: {
-    type: DefinedMoveType.WITHDRAW,
-    category: "M",
-    requirement: MoveRequirementType.MANDATORY,
-    description:
-      "(M) Withdraw – A player MUST do one of the following UNLESS they have 0 pieces in their domain",
-    options: [
-      "a. Move a piece from an office to a vacant rostrum in their domain",
-      "b. Move a piece from a rostrum in their domain to a vacant seat in their domain",
-      "c. Move a piece from a seat in their domain to the community",
-    ],
-    canTargetOwnDomain: true,
-    canTargetOpponentDomain: false,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.ORGANIZE]: {
-    type: DefinedMoveType.ORGANIZE,
-    category: "M",
-    requirement: MoveRequirementType.MANDATORY,
-    description: "(M) Organize – A player must do one of the following",
-    options: [
-      "a. Move a piece from a seat in their domain to an adjacent seat, even if it ends up in an opponent's domain",
-      "b. Move a piece from a rostrum in their domain to an adjacent rostrum in an opponent's domain",
-    ],
-    canTargetOwnDomain: true,
-    canTargetOpponentDomain: true,
-    affectsCommunity: false,
-  },
-};
+// (DEFINED_MOVES moved to src/config/rules.ts)
 
 /**
  * TILE PLAY OPTIONS - What a Player Can Do When Challenged
@@ -732,78 +512,7 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
  * Note: After executing their chosen option(s), the receiving player is then eligible to
  * reject or challenge the tile play (mechanisms to be implemented later).
  */
-export enum TilePlayOptionType {
-  NO_MOVE = "NO_MOVE",
-  ONE_OPTIONAL = "ONE_OPTIONAL",
-  ONE_MANDATORY = "ONE_MANDATORY",
-  ONE_OPTIONAL_AND_ONE_MANDATORY = "ONE_OPTIONAL_AND_ONE_MANDATORY",
-}
-
-export interface TilePlayOption {
-  optionType: TilePlayOptionType;
-  description: string;
-  allowedMoveTypes: DefinedMoveType[];
-  maxOptionalMoves: number;
-  maxMandatoryMoves: number;
-  requiresAction: boolean;
-}
-
-/**
- * Complete definition of all tile play options available to a receiving player.
- * The receiving player must choose exactly ONE of these options when challenged with a tile.
- */
-export const TILE_PLAY_OPTIONS: {
-  [key in TilePlayOptionType]: TilePlayOption;
-} = {
-  [TilePlayOptionType.NO_MOVE]: {
-    optionType: TilePlayOptionType.NO_MOVE,
-    description: "Do nothing. The tile play is complete.",
-    allowedMoveTypes: [],
-    maxOptionalMoves: 0,
-    maxMandatoryMoves: 0,
-    requiresAction: false,
-  },
-  [TilePlayOptionType.ONE_OPTIONAL]: {
-    optionType: TilePlayOptionType.ONE_OPTIONAL,
-    description: "Execute one Optional move (REMOVE, INFLUENCE, or ASSIST)",
-    allowedMoveTypes: [
-      DefinedMoveType.REMOVE,
-      DefinedMoveType.INFLUENCE,
-      DefinedMoveType.ASSIST,
-    ],
-    maxOptionalMoves: 1,
-    maxMandatoryMoves: 0,
-    requiresAction: true,
-  },
-  [TilePlayOptionType.ONE_MANDATORY]: {
-    optionType: TilePlayOptionType.ONE_MANDATORY,
-    description: "Execute one Mandatory move (ADVANCE, WITHDRAW, or ORGANIZE)",
-    allowedMoveTypes: [
-      DefinedMoveType.ADVANCE,
-      DefinedMoveType.WITHDRAW,
-      DefinedMoveType.ORGANIZE,
-    ],
-    maxOptionalMoves: 0,
-    maxMandatoryMoves: 1,
-    requiresAction: true,
-  },
-  [TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY]: {
-    optionType: TilePlayOptionType.ONE_OPTIONAL_AND_ONE_MANDATORY,
-    description:
-      "Execute one Optional move AND one Mandatory move in any order",
-    allowedMoveTypes: [
-      DefinedMoveType.REMOVE,
-      DefinedMoveType.INFLUENCE,
-      DefinedMoveType.ASSIST,
-      DefinedMoveType.ADVANCE,
-      DefinedMoveType.WITHDRAW,
-      DefinedMoveType.ORGANIZE,
-    ],
-    maxOptionalMoves: 1,
-    maxMandatoryMoves: 1,
-    requiresAction: true,
-  },
-};
+// (TilePlayOptionType, TilePlayOption, TILE_PLAY_OPTIONS moved to src/config/rules.ts)
 
 /**
  * Helper function to check if a move type is allowed within a tile play option.
@@ -847,197 +556,7 @@ export function getMoveRequirement(
  * 5. All requirements must be completed for the tile to be unrejectable.
  *    - If only some requirements are met, the tile can be rejected.
  */
-export interface TileRequirement {
-  tileId: string;
-  requiredMoves: DefinedMoveType[];
-  description: string;
-  canBeRejected: boolean; // false = cannot be rejected if requirements met or impossible
-}
-
-/**
- * Complete mapping of all tile IDs to their movement requirements.
- *
- * Tiles are identified by their SVG filenames (01.svg through 24.svg) plus the Blank tile.
- * Each tile specifies the exact moves that MUST be executed by the receiving player.
- */
-export const TILE_REQUIREMENTS: { [tileId: string]: TileRequirement } = {
-  // Tiles 01-02: Require Remove (O) and Advance (M)
-  "01": {
-    tileId: "01",
-    requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ADVANCE],
-    description: "(O) Remove and (M) Advance",
-    canBeRejected: false,
-  },
-  "02": {
-    tileId: "02",
-    requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ADVANCE],
-    description: "(O) Remove and (M) Advance",
-    canBeRejected: false,
-  },
-
-  // Tiles 03-04: Require Influence (O) and Advance (M)
-  "03": {
-    tileId: "03",
-    requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.ADVANCE],
-    description: "(O) Influence and (M) Advance",
-    canBeRejected: false,
-  },
-  "04": {
-    tileId: "04",
-    requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.ADVANCE],
-    description: "(O) Influence and (M) Advance",
-    canBeRejected: false,
-  },
-
-  // Tiles 05-06: Require only Advance (M)
-  "05": {
-    tileId: "05",
-    requiredMoves: [DefinedMoveType.ADVANCE],
-    description: "(M) Advance",
-    canBeRejected: false,
-  },
-  "06": {
-    tileId: "06",
-    requiredMoves: [DefinedMoveType.ADVANCE],
-    description: "(M) Advance",
-    canBeRejected: false,
-  },
-
-  // Tiles 07-08: Require Assist (O) and Advance (M)
-  "07": {
-    tileId: "07",
-    requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ADVANCE],
-    description: "(O) Assist and (M) Advance",
-    canBeRejected: false,
-  },
-  "08": {
-    tileId: "08",
-    requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ADVANCE],
-    description: "(O) Assist and (M) Advance",
-    canBeRejected: false,
-  },
-
-  // Tiles 09-10: Require Remove (O) and Organize (M)
-  "09": {
-    tileId: "09",
-    requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ORGANIZE],
-    description: "(O) Remove and (M) Organize",
-    canBeRejected: false,
-  },
-  "10": {
-    tileId: "10",
-    requiredMoves: [DefinedMoveType.REMOVE, DefinedMoveType.ORGANIZE],
-    description: "(O) Remove and (M) Organize",
-    canBeRejected: false,
-  },
-
-  // Tile 11: Require only Influence (O)
-  "11": {
-    tileId: "11",
-    requiredMoves: [DefinedMoveType.INFLUENCE],
-    description: "(O) Influence",
-    canBeRejected: false,
-  },
-
-  // Tile 12: Require only Organize (M)
-  "12": {
-    tileId: "12",
-    requiredMoves: [DefinedMoveType.ORGANIZE],
-    description: "(M) Organize",
-    canBeRejected: false,
-  },
-
-  // Tiles 13-14: Require Assist (O) and Organize (M)
-  "13": {
-    tileId: "13",
-    requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ORGANIZE],
-    description: "(O) Assist and (M) Organize",
-    canBeRejected: false,
-  },
-  "14": {
-    tileId: "14",
-    requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.ORGANIZE],
-    description: "(O) Assist and (M) Organize",
-    canBeRejected: false,
-  },
-
-  // Tiles 15-16: Require only Remove (O)
-  "15": {
-    tileId: "15",
-    requiredMoves: [DefinedMoveType.REMOVE],
-    description: "(O) Remove",
-    canBeRejected: false,
-  },
-  "16": {
-    tileId: "16",
-    requiredMoves: [DefinedMoveType.REMOVE],
-    description: "(O) Remove",
-    canBeRejected: false,
-  },
-
-  // Tiles 17-18: Require Influence (O) and Withdraw (M)
-  "17": {
-    tileId: "17",
-    requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.WITHDRAW],
-    description: "(O) Influence and (M) Withdraw",
-    canBeRejected: false,
-  },
-  "18": {
-    tileId: "18",
-    requiredMoves: [DefinedMoveType.INFLUENCE, DefinedMoveType.WITHDRAW],
-    description: "(O) Influence and (M) Withdraw",
-    canBeRejected: false,
-  },
-
-  // Tiles 19-21: Require only Withdraw (M)
-  "19": {
-    tileId: "19",
-    requiredMoves: [DefinedMoveType.WITHDRAW],
-    description: "(M) Withdraw",
-    canBeRejected: false,
-  },
-  "20": {
-    tileId: "20",
-    requiredMoves: [DefinedMoveType.WITHDRAW],
-    description: "(M) Withdraw",
-    canBeRejected: false,
-  },
-  "21": {
-    tileId: "21",
-    requiredMoves: [DefinedMoveType.WITHDRAW],
-    description: "(M) Withdraw",
-    canBeRejected: false,
-  },
-
-  // Tiles 22-24: Require Assist (O) and Withdraw (M)
-  "22": {
-    tileId: "22",
-    requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.WITHDRAW],
-    description: "(O) Assist and (M) Withdraw",
-    canBeRejected: false,
-  },
-  "23": {
-    tileId: "23",
-    requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.WITHDRAW],
-    description: "(O) Assist and (M) Withdraw",
-    canBeRejected: false,
-  },
-  "24": {
-    tileId: "24",
-    requiredMoves: [DefinedMoveType.ASSIST, DefinedMoveType.WITHDRAW],
-    description: "(O) Assist and (M) Withdraw",
-    canBeRejected: false,
-  },
-
-  // Blank tile (5-player mode only) - wild tile
-  BLANK: {
-    tileId: "BLANK",
-    requiredMoves: [],
-    description:
-      'Blank - Wild tile. The player may perform one "O" move and/or one "M" move, or no move at all.',
-    canBeRejected: true, // Can be rejected if moves don't match allowed patterns
-  },
-};
+// (TileRequirement, TILE_REQUIREMENTS moved to src/config/rules.ts)
 
 /**
  * Gets the tile requirements for a specific tile ID.
@@ -1301,158 +820,6 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: {
   4: FOUR_PLAYER_CREDIBILITY_LOCATIONS,
   5: FIVE_PLAYER_CREDIBILITY_LOCATIONS,
 };
-
-// --- Game Constants ---
-
-// Bureaucracy menu for 3 and 4 player modes
-export const THREE_FOUR_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
-  {
-    id: "promote_office",
-    type: "PROMOTION",
-    promotionLocation: "OFFICE",
-    price: 18,
-    description:
-      "Promote a piece in the Office from Mark to Heel OR Heel to Pawn",
-  },
-  {
-    id: "move_assist",
-    type: "MOVE",
-    moveType: "ASSIST",
-    price: 15,
-    description: "",
-  },
-  {
-    id: "move_remove",
-    type: "MOVE",
-    moveType: "REMOVE",
-    price: 15,
-    description: "",
-  },
-  {
-    id: "move_influence",
-    type: "MOVE",
-    moveType: "INFLUENCE",
-    price: 15,
-    description: "",
-  },
-  {
-    id: "promote_rostrum",
-    type: "PROMOTION",
-    promotionLocation: "ROSTRUM",
-    price: 12,
-    description:
-      "Promote a piece in a Rostrum from Mark to Heel OR Heel to Pawn",
-  },
-  {
-    id: "move_advance",
-    type: "MOVE",
-    moveType: "ADVANCE",
-    price: 9,
-    description: "",
-  },
-  {
-    id: "move_withdraw",
-    type: "MOVE",
-    moveType: "WITHDRAW",
-    price: 9,
-    description: "",
-  },
-  {
-    id: "move_organize",
-    type: "MOVE",
-    moveType: "ORGANIZE",
-    price: 9,
-    description: "",
-  },
-  {
-    id: "promote_seat",
-    type: "PROMOTION",
-    promotionLocation: "SEAT",
-    price: 6,
-    description: "Promote a piece in a Seat from Mark to Heel OR Heel to Pawn",
-  },
-  {
-    id: "credibility",
-    type: "CREDIBILITY",
-    price: 3,
-    description: "Restore one notch to your Credibility",
-  },
-];
-
-// Bureaucracy menu for 5 player mode
-export const FIVE_PLAYER_BUREAUCRACY_MENU: BureaucracyMenuItem[] = [
-  {
-    id: "promote_office",
-    type: "PROMOTION",
-    promotionLocation: "OFFICE",
-    price: 12,
-    description:
-      "Promote a piece in the Office from Mark to Heel OR Heel to Pawn",
-  },
-  {
-    id: "move_assist",
-    type: "MOVE",
-    moveType: "ASSIST",
-    price: 10,
-    description: "",
-  },
-  {
-    id: "move_remove",
-    type: "MOVE",
-    moveType: "REMOVE",
-    price: 10,
-    description: "",
-  },
-  {
-    id: "move_influence",
-    type: "MOVE",
-    moveType: "INFLUENCE",
-    price: 10,
-    description: "",
-  },
-  {
-    id: "promote_rostrum",
-    type: "PROMOTION",
-    promotionLocation: "ROSTRUM",
-    price: 8,
-    description:
-      "Promote a piece in a Rostrum from Mark to Heel OR Heel to Pawn",
-  },
-  {
-    id: "move_advance",
-    type: "MOVE",
-    moveType: "ADVANCE",
-    price: 6,
-    description: "",
-  },
-  {
-    id: "move_withdraw",
-    type: "MOVE",
-    moveType: "WITHDRAW",
-    price: 6,
-    description: "",
-  },
-  {
-    id: "move_organize",
-    type: "MOVE",
-    moveType: "ORGANIZE",
-    price: 6,
-    description: "",
-  },
-  {
-    id: "promote_seat",
-    type: "PROMOTION",
-    promotionLocation: "SEAT",
-    price: 4,
-    description: "Promote a piece in a Seat from Mark to Heel OR Heel to Pawn",
-  },
-  {
-    id: "credibility",
-    type: "CREDIBILITY",
-    price: 2,
-    description: "Restore one notch to your Credibility",
-  },
-];
 
 // --- Utility Functions ---
 
