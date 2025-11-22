@@ -20,6 +20,7 @@ import {
 } from "./src/config/constants";
 import { TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES } from "./src/config/tiles";
 import { PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT } from "./src/config/pieces";
+import { DEFINED_MOVES } from "./src/config/rules";
 
 // Re-export for backwards compatibility
 export {
@@ -29,6 +30,7 @@ export {
   BOARD_IMAGE_URLS,
   PIECE_TYPES,
   PIECE_COUNTS_BY_PLAYER_COUNT,
+  DEFINED_MOVES,
 };
 
 // --- Type Definitions ---
@@ -614,101 +616,7 @@ export const ROSTRUM_ADJACENCY_BY_PLAYER_COUNT: {
  */
 // (DefinedMoveType, MoveRequirementType, DefinedMove moved to src/types/move.ts)
 
-/**
- * Complete definition of all Defined Moves available in the game.
- * These moves are triggered by playing tiles during the game.
- */
-/**
- * DEFINED MOVES
- *
- * (M) moves affect pieces originating in the player's own domain
- * (O) moves affect pieces originating in an opponent's domain
- */
-export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
-  [DefinedMoveType.REMOVE]: {
-    type: DefinedMoveType.REMOVE,
-    category: "O",
-    requirement: MoveRequirementType.OPTIONAL,
-    description:
-      "(O) Remove – Take a Mark or a Heel from a seat in an opponent's domain and return it to the community.",
-    options: [
-      "a. Take a Mark or Heel from an opponent's seat",
-      "b. Return the piece to the community",
-    ],
-    canTargetOwnDomain: false,
-    canTargetOpponentDomain: true,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.ADVANCE]: {
-    type: DefinedMoveType.ADVANCE,
-    category: "M",
-    requirement: MoveRequirementType.MANDATORY,
-    description: "(M) Advance – Player's choice of ONE of the following",
-    options: [
-      "a. Take a piece from the community and add it to an open seat in their domain",
-      "b. Take a piece from a seat in their domain and place it into the open Rostrum that that seat supports",
-      "c. Take a piece from a Rostrum in their domain and place it into the office in their domain",
-    ],
-    canTargetOwnDomain: true,
-    canTargetOpponentDomain: false,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.INFLUENCE]: {
-    type: DefinedMoveType.INFLUENCE,
-    category: "O",
-    requirement: MoveRequirementType.OPTIONAL,
-    description:
-      "(O) Influence – A player may move another player's piece from a seat to an adjacent seat (even if that seat is in another player's domain), OR from an opponent's rostrum to an adjacent rostrum in another player's domain.",
-    options: [
-      "a. Move another player's piece from a seat to an adjacent seat",
-      "b. Move another player's piece from a rostrum to an adjacent rostrum in another player's domain",
-    ],
-    canTargetOwnDomain: false,
-    canTargetOpponentDomain: true,
-    affectsCommunity: false,
-  },
-  [DefinedMoveType.ASSIST]: {
-    type: DefinedMoveType.ASSIST,
-    category: "O",
-    requirement: MoveRequirementType.OPTIONAL,
-    description:
-      "(O) Assist – A player may add a piece from the community to an opponent's vacant seat.",
-    options: [
-      "a. Take a piece from the community and add it to an opponent's vacant seat",
-    ],
-    canTargetOwnDomain: false,
-    canTargetOpponentDomain: true,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.WITHDRAW]: {
-    type: DefinedMoveType.WITHDRAW,
-    category: "M",
-    requirement: MoveRequirementType.MANDATORY,
-    description:
-      "(M) Withdraw – A player MUST do one of the following UNLESS they have 0 pieces in their domain",
-    options: [
-      "a. Move a piece from an office to a vacant rostrum in their domain",
-      "b. Move a piece from a rostrum in their domain to a vacant seat in their domain",
-      "c. Move a piece from a seat in their domain to the community",
-    ],
-    canTargetOwnDomain: true,
-    canTargetOpponentDomain: false,
-    affectsCommunity: true,
-  },
-  [DefinedMoveType.ORGANIZE]: {
-    type: DefinedMoveType.ORGANIZE,
-    category: "M",
-    requirement: MoveRequirementType.MANDATORY,
-    description: "(M) Organize – A player must do one of the following",
-    options: [
-      "a. Move a piece from a seat in their domain to an adjacent seat, even if it ends up in an opponent's domain",
-      "b. Move a piece from a rostrum in their domain to an adjacent rostrum in an opponent's domain",
-    ],
-    canTargetOwnDomain: true,
-    canTargetOpponentDomain: true,
-    affectsCommunity: false,
-  },
-};
+// (DEFINED_MOVES moved to src/config/rules.ts)
 
 /**
  * TILE PLAY OPTIONS - What a Player Can Do When Challenged
