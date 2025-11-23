@@ -130,6 +130,13 @@ import {
   // Win conditions - game victory checking
   checkPlayerWinCondition,
   checkBureaucracyWinCondition,
+
+  // Adjacency rules - seat and player positioning logic
+  getNextPlayerClockwise,
+  getPrevPlayerClockwise,
+  areSeatsAdjacent,
+  getAdjacentSeats,
+  canMoveFromCommunity,
 } from "./src/rules";
 
 // Re-export game functions for backwards compatibility
@@ -147,6 +154,11 @@ export {
   handleCredibilityLoss,
   checkPlayerWinCondition,
   checkBureaucracyWinCondition,
+  getNextPlayerClockwise,
+  getPrevPlayerClockwise,
+  areSeatsAdjacent,
+  getAdjacentSeats,
+  canMoveFromCommunity,
 };
 
 // --- Type Definitions ---
@@ -1575,182 +1587,6 @@ export function validateTileRequirementsWithImpossibleMoveExceptions(
     missingMoves: missingMoves,
     impossibleMoves: impossibleMoves,
   };
-}
-
-/**
- * Gets the next player in clockwise order around the table.
- * 3-player: 1→3→2→1
- * 4-player: 1→2→3→4→1
- * 5-player: 1→2→3→4→5→1
- */
-function getNextPlayerClockwise(playerId: number, playerCount: number): number {
-  if (playerCount === 3) {
-    // Special case for 3 players: 1→3→2→1
-    return playerId === 1 ? 3 : playerId === 3 ? 2 : 1;
-  } else {
-    // For 4 and 5 players: sequential
-    return (playerId % playerCount) + 1;
-  }
-}
-
-/**
- * Gets the previous player in clockwise order around the table (counter-clockwise).
- * 3-player: 1←3←2←1 (or 1→2→3→1 backward)
- * 4-player: 1←2←3←4←1
- * 5-player: 1←2←3←4←5←1
- */
-function getPrevPlayerClockwise(playerId: number, playerCount: number): number {
-  if (playerCount === 3) {
-    // Special case for 3 players: 1←3←2 means prev of 1 is 2, prev of 3 is 1, prev of 2 is 3
-    return playerId === 1 ? 2 : playerId === 2 ? 3 : 1;
-  } else {
-    // For 4 and 5 players: sequential
-    return playerId === 1 ? playerCount : playerId - 1;
-  }
-}
-
-/**
- * Determines if two seats are adjacent in the seating arrangement.
- * Seats are numbered 1-6 around each player's domain, and adjacent means:
- * - Same player: seat 1 next to 2, 2 next to 3, 3 next to 4, 4 next to 5, 5 next to 6
- * - Wraps to other players: player X seat6 adjacent to next player's seat1
- *
- * @param seatId1 First seat ID (e.g., 'p1_seat1')
- * @param seatId2 Second seat ID (e.g., 'p2_seat6')
- * @param playerCount Total number of players (3, 4, or 5)
- * @returns True if the seats are adjacent
- */
-export function areSeatsAdjacent(
-  seatId1: string,
-  seatId2: string,
-  playerCount: number
-): boolean {
-  // Extract player ID and seat number from location IDs
-  const match1 = seatId1.match(/p(\d+)_seat(\d)/);
-  const match2 = seatId2.match(/p(\d+)_seat(\d)/);
-
-  if (!match1 || !match2) return false;
-
-  const player1 = parseInt(match1[1]);
-  const seat1 = parseInt(match1[2]);
-  const player2 = parseInt(match2[1]);
-  const seat2 = parseInt(match2[2]);
-
-  // Same player - seats must be consecutive
-  if (player1 === player2) {
-    return Math.abs(seat1 - seat2) === 1;
-  }
-
-  // Different players - check if they're at the boundary (wrapping around the table)
-  const nextPlayer = getNextPlayerClockwise(player1, playerCount);
-  const prevPlayer = getPrevPlayerClockwise(player1, playerCount);
-
-  // Forward wrap: Player X seat6 is adjacent to next player's seat1
-  if (player2 === nextPlayer && seat1 === 6 && seat2 === 1) {
-    return true;
-  }
-
-  // Forward wrap (reversed): Player X seat1 is adjacent to next player's seat6
-  if (player2 === nextPlayer && seat1 === 1 && seat2 === 6) {
-    return true;
-  }
-
-  // Backward wrap: Player X seat1 is adjacent to previous player's seat6
-  if (player2 === prevPlayer && seat1 === 1 && seat2 === 6) {
-    return true;
-  }
-
-  // Backward wrap (reversed): Player X seat6 is adjacent to previous player's seat1
-  if (player2 === prevPlayer && seat1 === 6 && seat2 === 1) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Gets all adjacent seats to a given seat.
- * Used for validating INFLUENCE and ORGANIZE moves.
- *
- * @param seatId The seat ID (e.g., 'p1_seat3')
- * @param playerCount Total number of players
- * @returns Array of adjacent seat IDs
- */
-export function getAdjacentSeats(
-  seatId: string,
-  playerCount: number
-): string[] {
-  const match = seatId.match(/p(\d+)_seat(\d)/);
-  if (!match) return [];
-
-  const player = parseInt(match[1]);
-  const seat = parseInt(match[2]);
-  const adjacent: string[] = [];
-
-  // Same player, lower seat number
-  if (seat > 1) {
-    adjacent.push(`p${player}_seat${seat - 1}`);
-  } else if (seat === 1) {
-    // Wrap to previous player's seat 6
-    const prevPlayer = getPrevPlayerClockwise(player, playerCount);
-    adjacent.push(`p${prevPlayer}_seat6`);
-  }
-
-  // Same player, higher seat number
-  if (seat < 6) {
-    adjacent.push(`p${player}_seat${seat + 1}`);
-  } else if (seat === 6) {
-    // Wrap to next player's seat 1
-    const nextPlayer = getNextPlayerClockwise(player, playerCount);
-    adjacent.push(`p${nextPlayer}_seat1`);
-  }
-
-  return adjacent;
-}
-
-/**
- * Checks if a piece can be moved from community based on community occupancy rules.
- * Rules:
- * - If Marks occupy community: Heels and Pawns cannot be moved from community
- * - If Heels occupy community: Pawns cannot be moved from community
- * - Marks can always be moved from community
- * - Pending pieces (moved to community but not yet accepted) are ignored in the check
- */
-function canMoveFromCommunity(
-  piece: Piece,
-  pieces: Piece[],
-  pendingCommunityPieceIds?: Set<string>
-): boolean {
-  const pieceName = piece.name.toLowerCase();
-
-  // Marks can always be moved from community
-  if (pieceName === "mark") return true;
-
-  // Check if any Marks exist in community (excluding pending pieces)
-  const marksInCommunity = pieces.some(
-    (p) =>
-      p.locationId?.includes("community") &&
-      p.name.toLowerCase() === "mark" &&
-      (!pendingCommunityPieceIds || !pendingCommunityPieceIds.has(p.id))
-  );
-
-  // If Marks in community, Heels and Pawns cannot move
-  if (marksInCommunity) return false;
-
-  // If moving a Pawn, check if Heels are in community (excluding pending pieces)
-  if (pieceName === "pawn") {
-    const heelsInCommunity = pieces.some(
-      (p) =>
-        p.locationId?.includes("community") &&
-        p.name.toLowerCase() === "heel" &&
-        (!pendingCommunityPieceIds || !pendingCommunityPieceIds.has(p.id))
-    );
-    // Pawns can only move if no Heels in community
-    return !heelsInCommunity;
-  }
-
-  // Heels can move if no Marks in community (already checked above)
-  return true;
 }
 
 /**
