@@ -110,6 +110,15 @@ import {
   getChallengeOrder,
 } from "./src/game";
 
+// ============================================================================
+// RULES IMPORTS - Game rules enforcement
+// ============================================================================
+import {
+  // Credibility system - credibility loss and deduction
+  deductCredibility,
+  handleCredibilityLoss,
+} from "./src/rules";
+
 // Re-export game functions for backwards compatibility
 export {
   initializePlayers,
@@ -117,6 +126,8 @@ export {
   initializeCampaignPieces,
   createGameStateSnapshot,
   getChallengeOrder,
+  deductCredibility,
+  handleCredibilityLoss,
 };
 
 // --- Type Definitions ---
@@ -2264,63 +2275,6 @@ export function validateSingleMove(
   }
 }
 
-/**
- * Deducts credibility from a player (minimum 0)
- */
-export function deductCredibility(
-  players: Player[],
-  playerId: number
-): Player[] {
-  return players.map((p) =>
-    p.id === playerId
-      ? { ...p, credibility: Math.max(0, p.credibility - 1) }
-      : p
-  );
-}
-
-/**
- * Calculates which players should lose credibility based on the rejection reason
- * @param reason - 'rejected' | 'challenged_failed' | 'challenge_unsuccessful'
- * @returns Function that takes players and returns updated players with credibility deducted
- */
-export function handleCredibilityLoss(
-  reason:
-    | "tile_rejected_by_receiver"
-    | "tile_failed_challenge"
-    | "unsuccessful_challenge"
-    | "did_not_reject_when_challenged",
-  tilePlayerId: number,
-  challengerId?: number,
-  receiverId?: number
-): (players: Player[]) => Player[] {
-  return (players: Player[]) => {
-    switch (reason) {
-      case "tile_rejected_by_receiver":
-        // Tile player loses 1 credibility when receiving player rejects their tile
-        // (and tile didn't meet requirements perfectly)
-        return deductCredibility(players, tilePlayerId);
-
-      case "tile_failed_challenge":
-        // Tile player loses 1 credibility when another player successfully challenges
-        // (tile didn't meet requirements perfectly)
-        return deductCredibility(players, tilePlayerId);
-
-      case "unsuccessful_challenge":
-        // Challenger loses 1 credibility when they challenge but tile was perfect
-        return challengerId
-          ? deductCredibility(players, challengerId)
-          : players;
-
-      case "did_not_reject_when_challenged":
-        // Receiver loses 1 credibility if they don't reject a tile that fails the challenge
-        // (was played to them, didn't reject, another player challenged and succeeded)
-        return receiverId ? deductCredibility(players, receiverId) : players;
-
-      default:
-        return players;
-    }
-  };
-}
 
 // ============================================================================
 // BUREAUCRACY PHASE FUNCTIONS
