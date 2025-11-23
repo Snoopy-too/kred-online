@@ -3,3 +3,6 @@
 
 // Credibility system - credibility loss and deduction
 export * from "./credibility";
+
+// Win conditions - game victory checking
+export * from "./win-conditions";
