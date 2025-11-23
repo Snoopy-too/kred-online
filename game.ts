@@ -22,6 +22,20 @@ import type {
   // Move tracking types - move validation and tracking
   TrackedMove,
   DefinedMove,
+
+  // Bureaucracy types - bureaucracy phase data structures
+  BureaucracyItemType,
+  BureaucracyMoveType,
+  PromotionLocationType,
+  BureaucracyMenuItem,
+  BureaucracyPurchase,
+  BureaucracyPlayerState,
+
+  // Challenge types - challenge system data structures
+  ChallengeState,
+
+  // Played tile types - tile play tracking
+  PlayedTileState,
 } from "./src/types";
 
 // Enum/value imports that are used at runtime (not just for typing)
@@ -62,69 +76,34 @@ import {
   FIVE_PLAYER_BUREAUCRACY_MENU,
 } from "./src/config";
 
+// ============================================================================
+// UTILITY IMPORTS - Helper functions for positioning, formatting, etc.
+// ============================================================================
+import {
+  // Positioning utilities - coordinate and rotation calculations
+  BOARD_CENTERS,
+  isPositionInCommunityCircle,
+  calculatePieceRotation,
+} from "./src/utils/positioning";
+
+import {
+  // Formatting utilities - display string formatting
+  formatLocationId,
+} from "./src/utils/formatting";
+
+import {
+  // Array utilities - array manipulation helpers
+  shuffle,
+} from "./src/utils/array";
+
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
 // (Player type moved to src/types/player.ts)
 // (GameState, DropLocation, BankSpace moved to src/types/game.ts)
 // (Move types moved to src/types/move.ts)
 
-// Represents a tile that has been played but not yet fully resolved
-export interface PlayedTileState {
-  tileId: string;
-  playerId: number; // Player who played the tile
-  receivingPlayerId: number; // Player who received the tile
-  playedAt: number; // Timestamp when played
-  movesPerformed: TrackedMove[]; // Moves made by the player during play
-  gameStateSnapshot: {
-    pieces: Piece[];
-    boardTiles: BoardTile[];
-  };
-}
 
-// Challenge information
-export interface ChallengeState {
-  status: "PENDING" | "CHALLENGED" | "RESOLVED";
-  challengedByPlayerId?: number;
-  acceptedByReceivingPlayer: boolean;
-}
 
-// Bureaucracy Phase Types
-export type BureaucracyItemType = "MOVE" | "PROMOTION" | "CREDIBILITY";
-export type BureaucracyMoveType =
-  | "ADVANCE"
-  | "WITHDRAW"
-  | "ORGANIZE"
-  | "ASSIST"
-  | "REMOVE"
-  | "INFLUENCE";
-export type PromotionLocationType = "OFFICE" | "ROSTRUM" | "SEAT";
-
-export interface BureaucracyMenuItem {
-  id: string;
-  type: BureaucracyItemType;
-  moveType?: BureaucracyMoveType;
-  promotionLocation?: PromotionLocationType;
-  price: number;
-  description: string;
-}
-
-export interface BureaucracyPurchase {
-  playerId: number;
-  item: BureaucracyMenuItem;
-  pieceId?: string;
-  fromLocationId?: string;
-  toLocationId?: string;
-  timestamp: number;
-  completed: boolean;
-}
-
-export interface BureaucracyPlayerState {
-  playerId: number;
-  initialKredcoin: number;
-  remainingKredcoin: number;
-  turnComplete: boolean;
-  purchases: BureaucracyPurchase[];
-}
 
 // These are the ONLY valid drop locations for pieces.
 const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -827,57 +806,7 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: {
 };
 
 // --- Utility Functions ---
-
-const BOARD_CENTERS: { [playerCount: number]: { left: number; top: number } } =
-  {
-    3: { left: 50.44, top: 44.01 },
-    4: { left: 49.94, top: 51.56 },
-    5: { left: 47.97, top: 47.07 },
-  };
-
-/**
- * Calculates the rotation of a piece so its top points away from the board center.
- * Pieces in seats, rostrums, and offices are rotated to point outward from the board center.
- * Community pieces and free placement pieces have no rotation (0 degrees).
- * @param position The position of the piece in percentage { top, left }.
- * @param playerCount The number of players in the game.
- * @param locationId Optional location ID to check if it's a community or free placement location.
- * @returns The rotation in degrees.
- */
-export function isPositionInCommunityCircle(position: {
-  top: number;
-  left: number;
-}): boolean {
-  const communityCenter = { left: 50, top: 50 };
-  const communityRadius = 15;
-  const dx = position.left - communityCenter.left;
-  const dy = position.top - communityCenter.top;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  return distance <= communityRadius;
-}
-
-export function calculatePieceRotation(
-  position: { top: number; left: number },
-  playerCount: number,
-  locationId?: string
-): number {
-  // Community pieces, free placement, and offices have no rotation
-  if (
-    locationId &&
-    (locationId.startsWith("community") ||
-      locationId === "free_placement" ||
-      locationId.includes("office"))
-  ) {
-    return 0;
-  }
-
-  const boardCenter = BOARD_CENTERS[playerCount] || { left: 50, top: 50 };
-  const dx = position.left - boardCenter.left;
-  const dy = position.top - boardCenter.top;
-  const angleRadians = Math.atan2(dy, dx);
-  // Convert radians to degrees and add 90 to orient the top of the piece away from the board center
-  return angleRadians * (180 / Math.PI) + 90;
-}
+// (Positioning functions moved to src/utils/positioning.ts)
 
 /**
  * For a given player count, finds the nearest valid and vacant drop location.
@@ -1474,24 +1403,7 @@ export function validateAdjacentRostrumMovement(
   return { isAllowed: true, reason: "Adjacent rostrum movement is valid" };
 }
 
-/**
- * Shuffles an array in place.
- * @param array The array to shuffle.
- */
-function shuffle<T>(array: T[]): T[] {
-  let currentIndex = array.length;
-  let randomIndex;
-
-  while (currentIndex !== 0) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-    [array[currentIndex], array[randomIndex]] = [
-      array[randomIndex],
-      array[currentIndex],
-    ];
-  }
-  return array;
-}
+// (shuffle function moved to src/utils/array.ts)
 
 /**
  * Creates the initial set of game pieces.

@@ -4,9 +4,10 @@ Last updated: 2025-11-23
 
 ## Current Status
 
-**Active Phase**: Phase 2 - Config Extraction ✅ COMPLETE
+**Active Phase**: Phase 3 Complete - Ready for Phase 4 ✅
 **Branch**: `refactoring`
-**Tests Passing**: 337 tests (55 integration + 282 unit)
+**Tests Passing**: 425 tests (55 integration + 370 unit)
+**PR #5**: Phase 3 Type & Utility Extraction - Merged ✅
 
 ---
 
@@ -51,20 +52,41 @@ Last updated: 2025-11-23
 
 **Total extracted to `src/config/bureaucracy.ts`**: 178 lines, 51 tests
 
+### Phase 3: Type Extraction - Additional Types ✅ COMPLETE
+
+- [x] `src/types/bureaucracy.ts` - 6 type definitions, 12 tests
+  - BureaucracyItemType, BureaucracyMoveType, PromotionLocationType
+  - BureaucracyMenuItem, BureaucracyPurchase, BureaucracyPlayerState
+- [x] `src/types/challenge.ts` - ChallengeState interface, 7 tests
+- [x] `src/types/played-tile.ts` - PlayedTileState interface, 7 tests
+
+**Total extracted in Phase 3**: 3 new type files, 26 tests
+
+### Phase 3b: Utils Extraction - Pure Utility Functions ✅ COMPLETE
+
+- [x] `src/utils/positioning.ts` - 3 exports, 24 tests
+  - BOARD_CENTERS constant
+  - isPositionInCommunityCircle() function
+  - calculatePieceRotation() function
+- [x] `src/utils/formatting.ts` - formatLocationId() function, 26 tests
+- [x] `src/utils/array.ts` - shuffle() function, 12 tests
+- [x] `src/utils/index.ts` - barrel export for all utils
+
+**Total extracted in Phase 3b**: 3 new util files + barrel export, 62 tests
+
 ---
 
 ## 🚧 Next Steps
 
-### Phase 3: Type Extraction (Next)
+### Phase 4: Game Initialization Logic (Next)
 
-Extract remaining types to `src/types/`:
+Extract to `src/game/`:
 
-- [ ] Bureaucracy types (BureaucracyMenuItem, BureaucracyPurchase, etc.)
-- [ ] Challenge types (ChallengeState)
-- [ ] Played tile types (PlayedTileState)
-- [ ] Additional game state types
+- [ ] initializePlayers() - Creates players with dealt hands
+- [ ] initializePieces() - Sets up pieces for drafting phase
+- [ ] initializeCampaignPieces() - Initializes pieces for campaign
 
-### Phase 4: Game Logic Extraction (Planned)
+### Phase 5: Game Logic Extraction (Planned)
 
 Extract to `src/game/`:
 
@@ -103,12 +125,21 @@ kred-online/
 │   │   ├── rules.ts (5 rule configs: DEFINED_MOVES, TILE_PLAY_OPTIONS, etc.)
 │   │   └── bureaucracy.ts (2 bureaucracy menus)
 │   └── types/
+│       ├── index.ts (barrel export)
 │       ├── game.ts (GameState, DropLocation, BankSpace)
 │       ├── move.ts (Move types)
 │       ├── piece.ts (Piece types)
 │       ├── player.ts (Player types)
-│       └── tile.ts (Tile types)
-├── game.ts (main file - being refactored, now ~3,170 lines)
+│       ├── tile.ts (Tile types)
+│       ├── bureaucracy.ts (6 bureaucracy types) ✨ NEW
+│       ├── challenge.ts (ChallengeState) ✨ NEW
+│       └── played-tile.ts (PlayedTileState) ✨ NEW
+│   └── utils/
+│       ├── index.ts (barrel export) ✨ NEW
+│       ├── positioning.ts (rotation, community circle) ✨ NEW
+│       ├── formatting.ts (formatLocationId) ✨ NEW
+│       └── array.ts (shuffle) ✨ NEW
+├── game.ts (main file - being refactored, now ~3,087 lines)
 └── REFACTORING_STRATEGY_V2.md (detailed strategy)
 ```
 
@@ -116,28 +147,60 @@ kred-online/
 
 ## Key Metrics
 
+### Phase 2 (Config Extraction)
+
 - **Lines extracted from game.ts**: ~1,194 lines (422 board + 594 rules + 178 bureaucracy)
-- **Lines remaining in game.ts**: ~3,170 lines (down from ~3,803)
 - **Test coverage added**: 249 new unit tests (40 board + 158 rules + 51 bureaucracy)
-- **Total tests passing**: 337 tests (55 integration + 282 unit)
 - **Config files created**: 6 files (constants, tiles, pieces, board, rules, bureaucracy)
-- **Commits**: 14+ refactoring commits
-- **All tests passing**: ✅ 337/337
+
+### Phase 3 (Type Extraction)
+
+- **Lines extracted from game.ts**: ~56 lines (bureaucracy + challenge + played-tile types)
+- **Test coverage added**: 26 new unit tests (12 bureaucracy + 7 challenge + 7 played-tile)
+- **Type files created**: 3 files (bureaucracy, challenge, played-tile)
+
+### Phase 3b (Utils Extraction)
+
+- **Lines extracted from game.ts**: ~86 lines (positioning + formatting + array utilities)
+- **Test coverage added**: 62 new unit tests (24 positioning + 26 formatting + 12 array)
+- **Util files created**: 4 files (positioning, formatting, array, index)
+
+### Overall Progress
+
+- **Total lines extracted from game.ts**: ~1,336 lines
+- **Lines remaining in game.ts**: ~3,087 lines (down from ~3,803 = 18.8% reduction)
+- **Total tests passing**: 425 tests (55 integration + 370 unit)
+- **Total commits**: 22 refactoring commits (14 config + 3 types + 5 utils)
+- **All tests passing**: ✅ 425/425
 
 ---
 
 ## Progress Summary
 
-**Phase 2 Complete!** 🎉
+**Phase 3b Complete!** 🎉
 
-Successfully extracted all configuration constants from game.ts:
+Successfully completed utility function extraction from game.ts:
+
+### Phase 2 (Config Extraction) ✅
 
 - ✅ Basic constants (tiles, pieces, player options)
 - ✅ Board layouts for 3, 4, and 5 players
 - ✅ Game rules (defined moves, tile requirements, rostrum rules)
 - ✅ Bureaucracy menus for different player counts
 
-**Next Phase**: Type extraction to organize TypeScript interfaces and types into dedicated type modules.
+### Phase 3 (Type Extraction) ✅
+
+- ✅ Bureaucracy types (6 type definitions)
+- ✅ Challenge types (ChallengeState)
+- ✅ Played tile types (PlayedTileState)
+
+### Phase 3b (Utils Extraction) ✅
+
+- ✅ Positioning utilities (BOARD_CENTERS, calculatePieceRotation, isPositionInCommunityCircle)
+- ✅ Formatting utilities (formatLocationId)
+- ✅ Array utilities (shuffle)
+
+**Next Phase**: Game initialization logic - extracting game setup functions (initializePlayers, initializePieces, initializeCampaignPieces) to `src/game/`.
 
 ---
 
@@ -145,5 +208,10 @@ Successfully extracted all configuration constants from game.ts:
 
 - Following test-first approach: write tests → extract → verify → commit
 - Each extraction is atomic and independently committed
-- Backwards compatibility maintained via re-exports in game.ts
+- NO backwards compatibility re-exports (single import path per symbol)
 - All changes pushed to feature branch
+
+### Recent Merges
+
+- **PR #4**: Phase 2c & 2d - Rules & Bureaucracy Config (209 tests) ✅ Merged
+- **PR #5**: Phase 3 - Type & Utility Extraction (88 tests) ✅ Merged
