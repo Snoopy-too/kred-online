@@ -104,10 +104,20 @@ import {
   initializePlayers,
   initializePieces,
   initializeCampaignPieces,
+
+  // State snapshot functions - game state management and challenge order
+  createGameStateSnapshot,
+  getChallengeOrder,
 } from "./src/game";
 
-// Re-export game initialization functions for backwards compatibility
-export { initializePlayers, initializePieces, initializeCampaignPieces };
+// Re-export game functions for backwards compatibility
+export {
+  initializePlayers,
+  initializePieces,
+  initializeCampaignPieces,
+  createGameStateSnapshot,
+  getChallengeOrder,
+};
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
@@ -1708,47 +1718,6 @@ export function validateTileRequirementsWithImpossibleMoveExceptions(
     missingMoves: missingMoves,
     impossibleMoves: impossibleMoves,
   };
-}
-
-/**
- * Creates a snapshot of the current game state for later restoration.
- * @param pieces Current pieces on board
- * @param boardTiles Current board tiles
- * @returns Snapshot of game state
- */
-export function createGameStateSnapshot(
-  pieces: Piece[],
-  boardTiles: BoardTile[]
-): PlayedTileState["gameStateSnapshot"] {
-  return {
-    pieces: pieces.map((p) => ({ ...p })),
-    boardTiles: boardTiles.map((t) => ({ ...t })),
-  };
-}
-
-/**
- * Determines the order of players for challenging, starting clockwise from the tile player.
- * @param tilePlayerId The player who played the tile
- * @param playerCount Total number of players
- * @returns Array of player IDs in challenge order
- */
-export function getChallengeOrder(
-  tilePlayerId: number,
-  playerCount: number,
-  receivingPlayerId?: number
-): number[] {
-  const challengeOrder: number[] = [];
-
-  // Start from the next player clockwise from the tile player
-  for (let i = 1; i < playerCount; i++) {
-    const playerId = ((tilePlayerId - 1 + i) % playerCount) + 1;
-    // Skip the tile player (giver) and the receiving player (only players not involved can challenge)
-    if (playerId !== tilePlayerId && playerId !== receivingPlayerId) {
-      challengeOrder.push(playerId);
-    }
-  }
-
-  return challengeOrder;
 }
 
 /**
