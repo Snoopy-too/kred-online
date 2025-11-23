@@ -6,3 +6,6 @@ export * from "./initialization";
 
 // State snapshots - game state management and challenge order
 export * from "./state-snapshots";
+
+// Location utilities - position and location ID management
+export * from "./locations";

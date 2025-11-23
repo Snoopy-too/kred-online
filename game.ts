@@ -58,6 +58,9 @@ import {
   PIECE_TYPES,
   PIECE_COUNTS_BY_PLAYER_COUNT,
 
+  // Board layout - drop locations by player count
+  DROP_LOCATIONS_BY_PLAYER_COUNT,
+
   // Game rules - move definitions, tile requirements, rostrum rules
   DEFINED_MOVES,
   TilePlayOptionType,
@@ -108,6 +111,12 @@ import {
   // State snapshot functions - game state management and challenge order
   createGameStateSnapshot,
   getChallengeOrder,
+
+  // Location utilities - position and location ID management
+  findNearestVacantLocation,
+  getLocationIdFromPosition,
+  getPlayerIdFromLocationId,
+  isLocationOwnedByPlayer,
 } from "./src/game";
 
 // ============================================================================
@@ -130,6 +139,10 @@ export {
   initializeCampaignPieces,
   createGameStateSnapshot,
   getChallengeOrder,
+  findNearestVacantLocation,
+  getLocationIdFromPosition,
+  getPlayerIdFromLocationId,
+  isLocationOwnedByPlayer,
   deductCredibility,
   handleCredibilityLoss,
   checkPlayerWinCondition,
@@ -847,179 +860,6 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: {
 
 // --- Utility Functions ---
 // (Positioning functions moved to src/utils/positioning.ts)
-
-/**
- * For a given player count, finds the nearest valid and vacant drop location.
- * @param dropPosition The position where the user tried to drop the piece.
- * @param allPieces The list of all pieces currently on the board.
- * @param playerCount The number of players.
- * @returns The position and ID of the nearest vacant spot, or null if all are occupied or too far away.
- */
-export function findNearestVacantLocation(
-  dropPosition: { top: number; left: number },
-  allPieces: Piece[],
-  playerCount: number
-): { position: { top: number; left: number }; id: string } | null {
-  const validLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount];
-  if (!validLocations || validLocations.length === 0) {
-    return null;
-  }
-
-  // Find the list of locations that have at least one open slot.
-  const vacantLocations = validLocations.filter((loc) => {
-    // Count how many total slots are defined at this exact coordinate.
-    const capacityAtCoord = validLocations.filter(
-      (otherLoc) =>
-        Math.abs(otherLoc.position.left - loc.position.left) < 0.01 &&
-        Math.abs(otherLoc.position.top - loc.position.top) < 0.01
-    ).length;
-
-    // Count how many pieces are already at this exact coordinate.
-    const piecesAtCoord = allPieces.filter(
-      (piece) =>
-        Math.abs(piece.position.left - loc.position.left) < 0.01 &&
-        Math.abs(piece.position.top - loc.position.top) < 0.01
-    ).length;
-
-    return piecesAtCoord < capacityAtCoord;
-  });
-
-  if (vacantLocations.length === 0) {
-    return null; // No vacant spots available
-  }
-
-  // Distance calculation function
-  const calculateDistance = (
-    pos1: { left: number; top: number },
-    pos2: { left: number; top: number }
-  ): number => {
-    return Math.sqrt(
-      Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2)
-    );
-  };
-
-  // Find the nearest location using consistent distance thresholds
-  let nearestLocation: DropLocation | null = null;
-  let minDistance = Infinity;
-
-  for (const loc of vacantLocations) {
-    const distance = calculateDistance(dropPosition, loc.position);
-
-    // Determine the maximum distance threshold based on location type
-    let maxDistance = 12.0; // Default for regular locations (seats)
-    if (loc.id.includes("community")) {
-      maxDistance = 9.0; // Community locations are easier to target
-    } else if (loc.id.includes("rostrum") || loc.id.includes("office")) {
-      maxDistance = 15.0; // Rostrums and offices get a larger drop radius for better UX
-    }
-
-    // Check if this location is within its type's threshold and closer than previous nearest
-    if (distance < maxDistance && distance < minDistance) {
-      minDistance = distance;
-      nearestLocation = loc;
-    }
-  }
-
-  if (nearestLocation) {
-    return { position: nearestLocation.position, id: nearestLocation.id };
-  }
-
-  return null;
-}
-
-/**
- * Given a position, finds the ID of the closest drop location.
- * @param position The position to check.
- * @param playerCount The number of players.
- * @returns The string ID of the location, or null.
- */
-export function getLocationIdFromPosition(
-  position: { top: number; left: number },
-  playerCount: number
-): string | null {
-  const allLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount];
-  if (!allLocations) return null;
-
-  let closestLocationId: string | null = null;
-  let minDistance = Infinity;
-
-  const calculateDistance = (
-    pos1: { left: number; top: number },
-    pos2: { left: number; top: number }
-  ): number => {
-    return Math.sqrt(
-      Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2)
-    );
-  };
-
-  for (const loc of allLocations) {
-    if (
-      Math.abs(loc.position.left - position.left) < 0.01 &&
-      Math.abs(loc.position.top - position.top) < 0.01
-    ) {
-      return loc.id;
-    }
-    const distance = calculateDistance(position, loc.position);
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestLocationId = loc.id;
-    }
-  }
-
-  return minDistance < 5.0 ? closestLocationId : null;
-}
-
-/**
- * Formats a location ID string into a human-readable format.
- * @param locationId The location ID (e.g., 'p1_seat4').
- * @returns A formatted string (e.g., "Player 1's seat 4").
- */
-export function formatLocationId(locationId: string): string {
-  if (!locationId) return "an unknown location";
-
-  const parts = locationId.split("_");
-  if (parts.length < 2) return locationId;
-
-  const playerId = parts[0].replace("p", "");
-  const locationName = parts.slice(1).join(" ");
-
-  if (locationName === "office") {
-    return `Player ${playerId}'s office`;
-  }
-
-  const match = locationName.match(/(\D+)(\d+)/);
-  if (match) {
-    const [, type, num] = match;
-    return `Player ${playerId}'s ${type} ${num}`;
-  }
-
-  return `Player ${playerId}'s ${locationName}`;
-}
-
-/**
- * Extracts the player ID from a location ID (e.g., 'p1_seat1' -> 1).
- * @param locationId The location ID to parse.
- * @returns The player ID as a number, or null if not a player-owned location.
- */
-export function getPlayerIdFromLocationId(locationId: string): number | null {
-  if (!locationId) return null;
-  const match = locationId.match(/^p(\d+)_/);
-  return match ? parseInt(match[1], 10) : null;
-}
-
-/**
- * Checks if a location is owned by a specific player (seat, rostrum, or office).
- * @param locationId The location ID to check.
- * @param playerId The player ID to verify ownership.
- * @returns True if the location belongs to the player.
- */
-export function isLocationOwnedByPlayer(
-  locationId: string,
-  playerId: number
-): boolean {
-  const ownerId = getPlayerIdFromLocationId(locationId);
-  return ownerId === playerId;
-}
 
 /**
  * Gets the player's rostrum rules.
