@@ -1,13 +1,13 @@
 # KRED Refactoring Progress
 
-Last updated: 2025-11-23
+Last updated: 2025-11-24
 
 ## Current Status
 
-**Active Phase**: Phase 3 Complete - Ready for Phase 4 ✅
+**Active Phase**: Phase 4 Complete - Ready for Phase 5 ✅
 **Branch**: `refactoring`
-**Tests Passing**: 425 tests (55 integration + 370 unit)
-**PR #5**: Phase 3 Type & Utility Extraction - Merged ✅
+**Tests Passing**: 459 tests (55 integration + 404 unit)
+**PR #6**: Phase 4 Game Initialization Extraction - Merged ✅
 
 ---
 
@@ -74,19 +74,21 @@ Last updated: 2025-11-23
 
 **Total extracted in Phase 3b**: 3 new util files + barrel export, 62 tests
 
+### Phase 4: Game Initialization Logic ✅ COMPLETE
+
+- [x] `src/game/initialization.ts` - 3 initialization functions, 34 tests
+  - initializePlayers() - Creates players with shuffled, dealt hands
+  - initializePieces() - Sets up Mark pieces at seats 1, 3, 5 for drafting
+  - initializeCampaignPieces() - Initializes all pieces for campaign start
+- [x] `src/game/index.ts` - barrel export for game module
+
+**Total extracted in Phase 4**: 373 lines, 34 tests
+
 ---
 
 ## 🚧 Next Steps
 
-### Phase 4: Game Initialization Logic (Next)
-
-Extract to `src/game/`:
-
-- [ ] initializePlayers() - Creates players with dealt hands
-- [ ] initializePieces() - Sets up pieces for drafting phase
-- [ ] initializeCampaignPieces() - Initializes pieces for campaign
-
-### Phase 5: Game Logic Extraction (Planned)
+### Phase 5: Game Logic Extraction (Next)
 
 Extract to `src/game/`:
 
@@ -139,7 +141,10 @@ kred-online/
 │       ├── positioning.ts (rotation, community circle) ✨ NEW
 │       ├── formatting.ts (formatLocationId) ✨ NEW
 │       └── array.ts (shuffle) ✨ NEW
-├── game.ts (main file - being refactored, now ~3,087 lines)
+│   └── game/
+│       ├── index.ts (barrel export) ✨ NEW
+│       └── initialization.ts (player & piece setup) ✨ NEW
+├── game.ts (main file - being refactored, now ~2,841 lines)
 └── REFACTORING_STRATEGY_V2.md (detailed strategy)
 ```
 
@@ -165,21 +170,27 @@ kred-online/
 - **Test coverage added**: 62 new unit tests (24 positioning + 26 formatting + 12 array)
 - **Util files created**: 4 files (positioning, formatting, array, index)
 
+### Phase 4 (Game Initialization)
+
+- **Lines extracted from game.ts**: ~246 lines (initializePlayers + initializePieces + initializeCampaignPieces)
+- **Test coverage added**: 34 new unit tests
+- **Game files created**: 2 files (initialization, index)
+
 ### Overall Progress
 
-- **Total lines extracted from game.ts**: ~1,336 lines
-- **Lines remaining in game.ts**: ~3,087 lines (down from ~3,803 = 18.8% reduction)
-- **Total tests passing**: 425 tests (55 integration + 370 unit)
-- **Total commits**: 22 refactoring commits (14 config + 3 types + 5 utils)
-- **All tests passing**: ✅ 425/425
+- **Total lines extracted from game.ts**: ~1,582 lines
+- **Lines remaining in game.ts**: ~2,841 lines (down from ~3,803 = 25.3% reduction)
+- **Total tests passing**: 459 tests (55 integration + 404 unit)
+- **Total commits**: 24 refactoring commits (14 config + 3 types + 5 utils + 2 game init)
+- **All tests passing**: ✅ 459/459
 
 ---
 
 ## Progress Summary
 
-**Phase 3b Complete!** 🎉
+**Phase 4 Complete!** 🎉
 
-Successfully completed utility function extraction from game.ts:
+Successfully completed game initialization logic extraction from game.ts:
 
 ### Phase 2 (Config Extraction) ✅
 
@@ -200,13 +211,28 @@ Successfully completed utility function extraction from game.ts:
 - ✅ Formatting utilities (formatLocationId)
 - ✅ Array utilities (shuffle)
 
-**Next Phase**: Game initialization logic - extracting game setup functions (initializePlayers, initializePieces, initializeCampaignPieces) to `src/game/`.
+### Phase 4 (Game Initialization) ✅
+
+- ✅ initializePlayers() - Creates players with shuffled, dealt hands
+- ✅ initializePieces() - Sets up Mark pieces at seats 1, 3, 5 for drafting
+- ✅ initializeCampaignPieces() - Initializes all pieces for campaign start
+
+**Next Phase**: Game logic extraction - extracting core game functions, validation logic, and state management to `src/game/`.
 
 ---
 
 ## Notes
 
 - Following test-first approach: write tests → extract → verify → commit
+- Each extraction is atomic and independently committed
+- NO backwards compatibility re-exports (single import path per symbol)
+- All changes pushed to feature branch
+
+### Recent Merges
+
+- **PR #4**: Phase 2c & 2d - Rules & Bureaucracy Config (209 tests) ✅ Merged
+- **PR #5**: Phase 3 - Type & Utility Extraction (88 tests) ✅ Merged
+- **PR #6**: Phase 4 - Game Initialization (34 tests) ✅ Merged
 - Each extraction is atomic and independently committed
 - NO backwards compatibility re-exports (single import path per symbol)
 - All changes pushed to feature branch
