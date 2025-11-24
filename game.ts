@@ -137,6 +137,17 @@ import {
   areSeatsAdjacent,
   getAdjacentSeats,
   canMoveFromCommunity,
+
+  // Rostrum rules - support requirements and adjacency
+  getPlayerRostrumRules,
+  getRostrumSupportRule,
+  countPiecesInSeats,
+  areSupportingSeatsFullForRostrum,
+  countPiecesInPlayerRostrums,
+  areBothRostrumsFilledForPlayer,
+  areRostrumsAdjacent,
+  getAdjacentRostrum,
+  validateAdjacentRostrumMovement,
 } from "./src/rules";
 
 // Re-export game functions for backwards compatibility
@@ -159,6 +170,15 @@ export {
   areSeatsAdjacent,
   getAdjacentSeats,
   canMoveFromCommunity,
+  getPlayerRostrumRules,
+  getRostrumSupportRule,
+  countPiecesInSeats,
+  areSupportingSeatsFullForRostrum,
+  countPiecesInPlayerRostrums,
+  areBothRostrumsFilledForPlayer,
+  areRostrumsAdjacent,
+  getAdjacentRostrum,
+  validateAdjacentRostrumMovement,
 };
 
 // --- Type Definitions ---
@@ -872,101 +892,7 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: {
 
 // --- Utility Functions ---
 // (Positioning functions moved to src/utils/positioning.ts)
-
-/**
- * Gets the player's rostrum rules.
- * @param playerId The player ID (1-5).
- * @returns The PlayerRostrum object containing rostrum support rules and office location.
- */
-export function getPlayerRostrumRules(playerId: number): PlayerRostrum | null {
-  return ROSTRUM_SUPPORT_RULES[playerId] || null;
-}
-
-/**
- * Finds the rostrum support rule for a specific rostrum ID.
- * @param rostrumId The rostrum ID (e.g., 'p1_rostrum1').
- * @returns The RostrumSupport object, or null if not found.
- */
-export function getRostrumSupportRule(
-  rostrumId: string
-): RostrumSupport | null {
-  const playerId = getPlayerIdFromLocationId(rostrumId);
-  if (!playerId) return null;
-
-  const playerRules = getPlayerRostrumRules(playerId);
-  if (!playerRules) return null;
-
-  return playerRules.rostrums.find((r) => r.rostrum === rostrumId) || null;
-}
-
-/**
- * Counts how many pieces currently occupy a set of seats.
- * @param seatIds The seat IDs to check.
- * @param pieces The current pieces on the board.
- * @returns The number of pieces in the specified seats.
- */
-export function countPiecesInSeats(seatIds: string[], pieces: Piece[]): number {
-  return pieces.filter(
-    (piece) => piece.locationId && seatIds.includes(piece.locationId)
-  ).length;
-}
-
-/**
- * Checks if all supporting seats for a rostrum are full.
- * @param rostrumId The rostrum ID to check.
- * @param pieces The current pieces on the board.
- * @returns True if all 3 supporting seats are occupied.
- */
-export function areSupportingSeatsFullForRostrum(
-  rostrumId: string,
-  pieces: Piece[]
-): boolean {
-  const rule = getRostrumSupportRule(rostrumId);
-  if (!rule) return false;
-
-  const occupiedCount = countPiecesInSeats(rule.supportingSeats, pieces);
-  return occupiedCount === rule.supportingSeats.length; // All 3 seats must be full
-}
-
-/**
- * Counts how many pieces occupy a player's rostrums.
- * @param playerId The player ID.
- * @param pieces The current pieces on the board.
- * @returns The number of pieces in the player's rostrums.
- */
-export function countPiecesInPlayerRostrums(
-  playerId: number,
-  pieces: Piece[]
-): number {
-  const playerRules = getPlayerRostrumRules(playerId);
-  if (!playerRules) return 0;
-
-  const rostrumIds = playerRules.rostrums.map((r) => r.rostrum);
-  return pieces.filter(
-    (piece) => piece.locationId && rostrumIds.includes(piece.locationId)
-  ).length;
-}
-
-/**
- * Checks if both of a player's rostrums are filled (at least one piece in each).
- * @param playerId The player ID.
- * @param pieces The current pieces on the board.
- * @returns True if both rostrums contain at least one piece.
- */
-export function areBothRostrumsFilledForPlayer(
-  playerId: number,
-  pieces: Piece[]
-): boolean {
-  const playerRules = getPlayerRostrumRules(playerId);
-  if (!playerRules) return false;
-
-  for (const rostrumRule of playerRules.rostrums) {
-    const haspiece = pieces.some((p) => p.locationId === rostrumRule.rostrum);
-    if (!haspiece) return false; // At least one rostrum is empty
-  }
-
-  return true; // Both rostrums have pieces
-}
+// (Rostrum functions moved to src/rules/rostrum.ts)
 
 /**
  * Checks if a piece can be moved to a specific location based on game rules.
@@ -1187,114 +1113,7 @@ export function validateMoveType(
   return "UNKNOWN";
 }
 
-/**
- * Checks if two rostrums are adjacent (connected).
- * @param rostrum1 The first rostrum ID.
- * @param rostrum2 The second rostrum ID.
- * @param playerCount The number of players (3, 4, or 5).
- * @returns True if the rostrums are adjacent.
- */
-export function areRostrumsAdjacent(
-  rostrum1: string,
-  rostrum2: string,
-  playerCount: number
-): boolean {
-  const adjacencies = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[playerCount];
-  if (!adjacencies) return false;
-
-  return adjacencies.some(
-    (adj) =>
-      (adj.rostrum1 === rostrum1 && adj.rostrum2 === rostrum2) ||
-      (adj.rostrum1 === rostrum2 && adj.rostrum2 === rostrum1)
-  );
-}
-
-/**
- * Gets the adjacent rostrum for a given rostrum, if one exists.
- * @param rostrumId The rostrum ID to find the adjacent rostrum for.
- * @param playerCount The number of players (3, 4, or 5).
- * @returns The ID of the adjacent rostrum, or null if none exists.
- */
-export function getAdjacentRostrum(
-  rostrumId: string,
-  playerCount: number
-): string | null {
-  const adjacencies = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[playerCount];
-  if (!adjacencies) return null;
-
-  const adjacency = adjacencies.find(
-    (adj) => adj.rostrum1 === rostrumId || adj.rostrum2 === rostrumId
-  );
-
-  if (!adjacency) return null;
-
-  return adjacency.rostrum1 === rostrumId
-    ? adjacency.rostrum2
-    : adjacency.rostrum1;
-}
-
-/**
- * Validates if a piece can move between two adjacent rostrums.
- *
- * ADJACENCY MOVEMENT RULES:
- * - Both rostrums must be adjacent
- * - The destination rostrum must have all supporting seats full (or be an opponent's adjacent rostrum)
- * - Only the owner of the source rostrum can initiate the move
- *
- * @param sourceRostrumId The rostrum the piece is moving from.
- * @param targetRostrumId The rostrum the piece is moving to.
- * @param movingPlayerId The ID of the player making the move.
- * @param playerCount The number of players.
- * @param pieces The current pieces on the board.
- * @returns An object with { isAllowed: boolean, reason: string }
- */
-export function validateAdjacentRostrumMovement(
-  sourceRostrumId: string,
-  targetRostrumId: string,
-  movingPlayerId: number,
-  playerCount: number,
-  pieces: Piece[]
-): { isAllowed: boolean; reason: string } {
-  // Check if rostrums are adjacent
-  if (!areRostrumsAdjacent(sourceRostrumId, targetRostrumId, playerCount)) {
-    return {
-      isAllowed: false,
-      reason: `${formatLocationId(sourceRostrumId)} and ${formatLocationId(
-        targetRostrumId
-      )} are not adjacent`,
-    };
-  }
-
-  const sourcePlayerId = getPlayerIdFromLocationId(sourceRostrumId);
-  const targetPlayerId = getPlayerIdFromLocationId(targetRostrumId);
-
-  // Only the owner of the source rostrum can move pieces out of it
-  if (sourcePlayerId !== movingPlayerId) {
-    return {
-      isAllowed: false,
-      reason: `Cannot move opponent's piece from ${formatLocationId(
-        sourceRostrumId
-      )}`,
-    };
-  }
-
-  // The destination rostrum must have all supporting seats full
-  if (!areSupportingSeatsFullForRostrum(targetRostrumId, pieces)) {
-    const rule = getRostrumSupportRule(targetRostrumId);
-    if (rule) {
-      const occupied = countPiecesInSeats(rule.supportingSeats, pieces);
-      return {
-        isAllowed: false,
-        reason: `Cannot move to ${formatLocationId(
-          targetRostrumId
-        )} - only ${occupied}/3 supporting seats are full`,
-      };
-    }
-  }
-
-  return { isAllowed: true, reason: "Adjacent rostrum movement is valid" };
-}
-
+// (areRostrumsAdjacent, getAdjacentRostrum, validateAdjacentRostrumMovement moved to src/rules/rostrum.ts)
 // (shuffle function moved to src/utils/array.ts)
 
 // Default piece positions for campaign start

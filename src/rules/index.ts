@@ -9,3 +9,6 @@ export * from "./win-conditions";
 
 // Adjacency rules - seat and player positioning logic
 export * from "./adjacency";
+
+// Rostrum rules - support requirements and adjacency
+export * from "./rostrum";
