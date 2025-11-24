@@ -12,3 +12,6 @@ export * from "./adjacency";
 
 // Rostrum rules - support requirements and adjacency
 export * from "./rostrum";
+
+// Movement validation - piece movement rules and move type determination
+export * from "./movement";
