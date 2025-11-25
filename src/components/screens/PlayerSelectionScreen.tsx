@@ -1,13 +1,13 @@
 /**
  * PlayerSelectionScreen Component
- * 
+ *
  * Game setup screen where players select the number of players (3, 4, or 5)
  * and configure game options like test mode and phase skipping.
- * 
+ *
  * @component
  * @example
  * ```tsx
- * <PlayerSelectionScreen 
+ * <PlayerSelectionScreen
  *   onStartGame={(playerCount, isTestMode, skipDraft, skipCampaign) => {
  *     console.log('Starting game with', playerCount, 'players');
  *   }}

@@ -1,6 +1,6 @@
 /**
  * Tests for DraftingScreen component
- * 
+ *
  * Screen for the drafting phase where players select tiles from their hand.
  */
 

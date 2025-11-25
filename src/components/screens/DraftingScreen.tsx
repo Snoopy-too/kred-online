@@ -1,10 +1,10 @@
 /**
  * DraftingScreen Component
- * 
+ *
  * Screen for the drafting phase where players select tiles from their hand.
  * Each player takes turns selecting one tile to keep from their current hand,
  * then passes the remaining tiles to the next player.
- * 
+ *
  * @component
  * @example
  * ```tsx

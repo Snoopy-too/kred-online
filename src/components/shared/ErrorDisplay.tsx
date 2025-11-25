@@ -1,9 +1,9 @@
 /**
  * ErrorDisplay Component
- * 
+ *
  * A simple error boundary UI component that displays when the game fails to load.
  * Provides a user-friendly error message and a reload button.
- * 
+ *
  * @component
  * @example
  * ```tsx
