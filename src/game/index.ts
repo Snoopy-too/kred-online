@@ -12,3 +12,6 @@ export * from "./locations";
 
 // Tile validation - tile requirement checking and validation
 export * from "./tile-validation";
+
+// Complex validation logic - move and tile play validation
+export * from "./validation";

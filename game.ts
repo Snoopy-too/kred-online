@@ -125,6 +125,12 @@ import {
   tileHasRequirements,
   areAllTileRequirementsMet,
   canTileBeRejected,
+
+  // Complex validation functions - move and tile play validation
+  validateMovesForTilePlay,
+  validateTileRequirements,
+  validateTileRequirementsWithImpossibleMoveExceptions,
+  validateSingleMove,
 } from "./src/game";
 
 // ============================================================================
@@ -213,6 +219,10 @@ export {
   validateInfluenceMove,
   validateAssistMove,
   validateOrganizeMove,
+  validateMovesForTilePlay,
+  validateTileRequirements,
+  validateTileRequirementsWithImpossibleMoveExceptions,
+  validateSingleMove,
 };
 
 // --- Type Definitions ---
@@ -925,236 +935,6 @@ export const DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT: {
     { name: "Pawn", displayName: "P5", position: { left: 37.9, top: 54.1 } },
   ],
 };
-
-// ============================================================================
-// MOVE VALIDATION AND TRACKING FUNCTIONS
-// ============================================================================
-
-/**
- * Validates that moves performed match the allowed categories during tile play.
- * During tile play, a player may perform up to 2 moves with the following restrictions:
- * - Only allowed combinations: One of (Assist, Remove, Influence) + one of (Advance, Withdraw, Organize)
- * - Cannot combine moves within the same group
- * @param movesPerformed Array of tracked moves
- * @returns Object with isValid boolean and error message if invalid
- */
-export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
-  isValid: boolean;
-  error?: string;
-} {
-  console.log("=== validateMovesForTilePlay ===");
-  console.log("Total moves:", movesPerformed.length);
-  console.log(
-    "Moves:",
-    movesPerformed.map((m) => ({ moveType: m.moveType, category: m.category }))
-  );
-
-  if (movesPerformed.length > 2) {
-    console.log("VALIDATION FAILED: More than 2 moves");
-    return { isValid: false, error: "Maximum 2 moves allowed per tile play" };
-  }
-
-  const oMoveCount = movesPerformed.filter((m) => m.category === "O").length;
-  const mMoveCount = movesPerformed.filter((m) => m.category === "M").length;
-
-  console.log("O-moves count:", oMoveCount);
-  console.log("M-moves count:", mMoveCount);
-
-  if (oMoveCount > 1) {
-    console.log("VALIDATION FAILED: More than 1 O-move");
-    return {
-      isValid: false,
-      error: "You may NOT perform 2 actions of the same category",
-    };
-  }
-
-  if (mMoveCount > 1) {
-    console.log("VALIDATION FAILED: More than 1 M-move");
-    return {
-      isValid: false,
-      error: "You may NOT perform 2 actions of the same category",
-    };
-  }
-
-  console.log("VALIDATION PASSED");
-  return { isValid: true };
-}
-
-/**
- * Checks if all required moves for a tile have been performed.
- * @param tileId The tile ID
- * @param movesPerformed Array of moves performed
- * @returns Object with isMet boolean and which required moves are missing
- */
-export function validateTileRequirements(
-  tileId: string,
-  movesPerformed: TrackedMove[]
-): {
-  isMet: boolean;
-  requiredMoves: DefinedMoveType[];
-  performedMoves: DefinedMoveType[];
-  missingMoves: DefinedMoveType[];
-} {
-  const requirements = getTileRequirements(tileId);
-  const performedMoveTypes = movesPerformed.map((m) => m.moveType);
-
-  const missingMoves = requirements.requiredMoves.filter(
-    (required) => !performedMoveTypes.includes(required)
-  );
-
-  return {
-    isMet: missingMoves.length === 0,
-    requiredMoves: requirements.requiredMoves,
-    performedMoves: performedMoveTypes,
-    missingMoves: missingMoves,
-  };
-}
-
-/**
- * Validates tile requirements considering impossible moves.
- * If a required move cannot be performed due to external conditions (empty domain, all seats full),
- * that requirement is automatically considered fulfilled.
- */
-export function validateTileRequirementsWithImpossibleMoveExceptions(
-  tileId: string,
-  movesPerformed: TrackedMove[],
-  tilePlayerId: number,
-  piecesAtTurnStart: Piece[],
-  currentPieces: Piece[],
-  allPlayers: Player[],
-  playerCount: number
-): {
-  isMet: boolean;
-  requiredMoves: DefinedMoveType[];
-  performedMoves: DefinedMoveType[];
-  missingMoves: DefinedMoveType[];
-  impossibleMoves: DefinedMoveType[];
-} {
-  const requirements = getTileRequirements(tileId);
-  const performedMoveTypes = movesPerformed.map((m) => m.moveType);
-
-  // Check which moves are actually impossible
-  const impossibleMoves: DefinedMoveType[] = [];
-
-  // Check for WITHDRAW impossibility: domain empty at turn start
-  if (requirements.requiredMoves.includes(DefinedMoveType.WITHDRAW)) {
-    const domainWasEmptyAtTurnStart = piecesAtTurnStart.every((p) => {
-      if (!p.locationId) return true;
-      const locationPrefix = `p${tilePlayerId}_`;
-      return !p.locationId.startsWith(locationPrefix);
-    });
-
-    if (
-      domainWasEmptyAtTurnStart &&
-      !performedMoveTypes.includes(DefinedMoveType.WITHDRAW)
-    ) {
-      impossibleMoves.push(DefinedMoveType.WITHDRAW);
-    }
-  }
-
-  // Check for ASSIST impossibility: all opponent seats are full
-  if (requirements.requiredMoves.includes(DefinedMoveType.ASSIST)) {
-    let allOpponentSeatsAreFull = true;
-
-    // Check each opponent's seats
-    for (const otherPlayer of allPlayers) {
-      if (otherPlayer.id !== tilePlayerId) {
-        // Count vacant seats for this opponent
-        const opponentSeats = currentPieces.filter(
-          (p) =>
-            p.locationId && p.locationId.includes(`p${otherPlayer.id}_seat`)
-        );
-        const maxSeats = 6; // Assuming 6 seats per player
-
-        if (opponentSeats.length < maxSeats) {
-          allOpponentSeatsAreFull = false;
-          break;
-        }
-      }
-    }
-
-    if (
-      allOpponentSeatsAreFull &&
-      !performedMoveTypes.includes(DefinedMoveType.ASSIST)
-    ) {
-      impossibleMoves.push(DefinedMoveType.ASSIST);
-    }
-  }
-
-  // Calculate missing moves, excluding impossible ones
-  const missingMoves = requirements.requiredMoves.filter(
-    (required) =>
-      !performedMoveTypes.includes(required) &&
-      !impossibleMoves.includes(required)
-  );
-
-  return {
-    isMet: missingMoves.length === 0,
-    requiredMoves: requirements.requiredMoves,
-    performedMoves: performedMoveTypes,
-    missingMoves: missingMoves,
-    impossibleMoves: impossibleMoves,
-  };
-}
-
-/**
- * Validates a single move based on its type and game state.
- * Returns detailed information about the move's validity.
- */
-export function validateSingleMove(
-  move: TrackedMove,
-  playerId: number,
-  pieces: Piece[],
-  playerCount: number
-): {
-  isValid: boolean;
-  reason: string;
-} {
-  switch (move.moveType) {
-    case DefinedMoveType.ADVANCE:
-      return {
-        isValid: validateAdvanceMove(move, playerId, pieces),
-        reason:
-          "This ADVANCE move is not available until support seats/rostrums are full",
-      };
-
-    case DefinedMoveType.WITHDRAW:
-      return {
-        isValid: validateWithdrawMove(move, playerId, pieces),
-        reason: "WITHDRAW move validation",
-      };
-
-    case DefinedMoveType.REMOVE:
-      return {
-        isValid: validateRemoveMove(move, playerId, pieces, playerCount),
-        reason: "REMOVE move validation",
-      };
-
-    case DefinedMoveType.INFLUENCE:
-      return {
-        isValid: validateInfluenceMove(move, playerId, pieces, playerCount),
-        reason: "INFLUENCE move validation",
-      };
-
-    case DefinedMoveType.ASSIST:
-      return {
-        isValid: validateAssistMove(move, playerId, pieces, playerCount),
-        reason: "ASSIST move validation",
-      };
-
-    case DefinedMoveType.ORGANIZE:
-      return {
-        isValid: validateOrganizeMove(move, playerId, pieces),
-        reason: "ORGANIZE move validation",
-      };
-
-    default:
-      return {
-        isValid: false,
-        reason: "Unknown move type",
-      };
-  }
-}
 
 // ============================================================================
 // BUREAUCRACY PHASE FUNCTIONS
