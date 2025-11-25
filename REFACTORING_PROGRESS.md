@@ -1,13 +1,13 @@
 # KRED Refactoring Progress
 
-Last updated: 2025-11-24
+Last updated: 2025-11-25
 
 ## Current Status
 
-**Active Phase**: Phase 4 Complete - Ready for Phase 5 ✅
+**Active Phase**: Phase 5 Complete - Ready for Phase 6 ✅
 **Branch**: `refactoring`
-**Tests Passing**: 459 tests (55 integration + 404 unit)
-**PR #6**: Phase 4 Game Initialization Extraction - Merged ✅
+**Tests Passing**: 606 tests (55 integration + 551 unit)
+**PR #7**: Phase 5 Game Logic & Rules Extraction - Merged ✅
 
 ---
 
@@ -84,25 +84,58 @@ Last updated: 2025-11-24
 
 **Total extracted in Phase 4**: 373 lines, 34 tests
 
+### Phase 5: Game Logic & Rules Extraction ✅ COMPLETE
+
+#### Game Logic (src/game/)
+- [x] `src/game/state-snapshots.ts` - 2 functions, 21 tests
+  - createGameStateSnapshot() - Deep copy of game state
+  - getChallengeOrder() - Challenge order calculation
+- [x] `src/game/locations.ts` - 4 functions, 23 tests
+  - findNearestVacantLocation() - Find vacant drop locations
+  - getLocationIdFromPosition() - Position-to-location mapping
+  - getPlayerIdFromLocationId() - Extract player ID from location
+  - isLocationOwnedByPlayer() - Check location ownership
+
+#### Rules (src/rules/)
+- [x] `src/rules/credibility.ts` - 2 functions, 13 tests
+  - deductCredibility() - Reduce player credibility
+  - handleCredibilityLoss() - Process credibility loss scenarios
+- [x] `src/rules/win-conditions.ts` - 2 functions, 21 tests
+  - checkPlayerWinCondition() - Verify player victory
+  - checkBureaucracyWinCondition() - Check bureaucracy phase winners
+- [x] `src/rules/adjacency.ts` - 5 functions, 16 tests
+  - getNextPlayerClockwise() - Next player in turn order
+  - getPrevPlayerClockwise() - Previous player in turn order
+  - areSeatsAdjacent() - Check seat adjacency
+  - getAdjacentSeats() - Get adjacent seat IDs
+  - canMoveFromCommunity() - Community hierarchy rules
+- [x] `src/rules/rostrum.ts` - 9 functions, 27 tests
+  - getPlayerRostrumRules() - Get rostrum configuration
+  - getRostrumSupportRule() - Get support seat requirements
+  - countPiecesInSeats() - Count pieces in seats
+  - areSupportingSeatsFullForRostrum() - Check rostrum accessibility
+  - countPiecesInPlayerRostrums() - Count pieces in both rostrums
+  - areBothRostrumsFilledForPlayer() - Check office accessibility
+  - areRostrumsAdjacent() - Check rostrum adjacency
+  - getAdjacentRostrum() - Get connected rostrum
+  - validateAdjacentRostrumMovement() - Validate rostrum-to-rostrum moves
+- [x] `src/rules/movement.ts` - 2 functions, 26 tests
+  - validatePieceMovement() - Validate piece movement rules
+  - validateMoveType() - Determine move type (ADVANCE, ASSIST, etc.)
+- [x] `src/rules/index.ts` - barrel export for rules module
+
+**Total extracted in Phase 5**: 872 lines, 147 tests (26 functions across 7 modules)
+
 ---
 
 ## 🚧 Next Steps
 
-### Phase 5: Game Logic Extraction (Next)
+### Phase 6: React Hooks & Components (Next)
 
-Extract to `src/game/`:
+Extract to `src/hooks/` and `src/components/`:
 
-- [ ] Core game functions
-- [ ] Validation logic
-- [ ] State management
-
-### Phase 5: Rules Engine (Planned)
-
-Extract to `src/rules/`:
-
-- [ ] Move validation
-- [ ] Tile placement rules
-- [ ] Rostrum support logic
+- [ ] Custom React hooks (useGameState, useDragAndDrop, etc.)
+- [ ] Screen components (PlayerSelection, Drafting, Campaign, Bureaucracy)
 
 ---
 
@@ -112,13 +145,32 @@ Extract to `src/rules/`:
 kred-online/
 ├── src/
 │   ├── __tests__/
-│   │   └── config/
-│   │       ├── constants.test.ts (9 tests)
-│   │       ├── tiles.test.ts (9 tests)
-│   │       ├── pieces.test.ts (15 tests)
-│   │       ├── board.test.ts (40 tests)
-│   │       ├── rules.test.ts (158 tests)
-│   │       └── bureaucracy.test.ts (51 tests)
+│   │   ├── config/
+│   │   │   ├── constants.test.ts (9 tests)
+│   │   │   ├── tiles.test.ts (9 tests)
+│   │   │   ├── pieces.test.ts (15 tests)
+│   │   │   ├── board.test.ts (40 tests)
+│   │   │   ├── rules.test.ts (158 tests)
+│   │   │   └── bureaucracy.test.ts (51 tests)
+│   │   ├── game/
+│   │   │   ├── initialization.test.ts (34 tests)
+│   │   │   ├── state-snapshots.test.ts (21 tests)
+│   │   │   └── locations.test.ts (23 tests)
+│   │   ├── rules/
+│   │   │   ├── credibility.test.ts (13 tests)
+│   │   │   ├── win-conditions.test.ts (21 tests)
+│   │   │   ├── adjacency.test.ts (16 tests)
+│   │   │   ├── rostrum.test.ts (27 tests)
+│   │   │   └── movement.test.ts (26 tests)
+│   │   ├── types/
+│   │   │   ├── bureaucracy.test.ts (12 tests)
+│   │   │   ├── challenge.test.ts (7 tests)
+│   │   │   └── played-tile.test.ts (7 tests)
+│   │   ├── utils/
+│   │   │   ├── positioning.test.ts (24 tests)
+│   │   │   ├── formatting.test.ts (26 tests)
+│   │   │   └── array.test.ts (12 tests)
+│   │   └── *.test.tsx (55 integration tests)
 │   ├── config/
 │   │   ├── constants.ts (PLAYER_OPTIONS, BOARD_IMAGE_URLS, TOTAL_TILES)
 │   │   ├── tiles.ts (TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES)
@@ -126,6 +178,18 @@ kred-online/
 │   │   ├── board.ts (5 board layout configs)
 │   │   ├── rules.ts (5 rule configs: DEFINED_MOVES, TILE_PLAY_OPTIONS, etc.)
 │   │   └── bureaucracy.ts (2 bureaucracy menus)
+│   ├── game/
+│   │   ├── index.ts (barrel export)
+│   │   ├── initialization.ts (3 functions)
+│   │   ├── state-snapshots.ts (2 functions)
+│   │   └── locations.ts (4 functions)
+│   ├── rules/
+│   │   ├── index.ts (barrel export)
+│   │   ├── credibility.ts (2 functions)
+│   │   ├── win-conditions.ts (2 functions)
+│   │   ├── adjacency.ts (5 functions)
+│   │   ├── rostrum.ts (9 functions)
+│   │   └── movement.ts (2 functions)
 │   └── types/
 │       ├── index.ts (barrel export)
 │       ├── game.ts (GameState, DropLocation, BankSpace)
@@ -133,18 +197,15 @@ kred-online/
 │       ├── piece.ts (Piece types)
 │       ├── player.ts (Player types)
 │       ├── tile.ts (Tile types)
-│       ├── bureaucracy.ts (6 bureaucracy types) ✨ NEW
-│       ├── challenge.ts (ChallengeState) ✨ NEW
-│       └── played-tile.ts (PlayedTileState) ✨ NEW
+│       ├── bureaucracy.ts (6 bureaucracy types)
+│       ├── challenge.ts (ChallengeState)
+│       └── played-tile.ts (PlayedTileState)
 │   └── utils/
-│       ├── index.ts (barrel export) ✨ NEW
-│       ├── positioning.ts (rotation, community circle) ✨ NEW
-│       ├── formatting.ts (formatLocationId) ✨ NEW
-│       └── array.ts (shuffle) ✨ NEW
-│   └── game/
-│       ├── index.ts (barrel export) ✨ NEW
-│       └── initialization.ts (player & piece setup) ✨ NEW
-├── game.ts (main file - being refactored, now ~2,841 lines)
+│       ├── index.ts (barrel export)
+│       ├── positioning.ts (rotation, community circle)
+│       ├── formatting.ts (formatLocationId)
+│       └── array.ts (shuffle)
+├── game.ts (main file - being refactored, now ~1,933 lines)
 └── REFACTORING_STRATEGY_V2.md (detailed strategy)
 ```
 
@@ -176,21 +237,29 @@ kred-online/
 - **Test coverage added**: 34 new unit tests
 - **Game files created**: 2 files (initialization, index)
 
+### Phase 5 (Game Logic & Rules)
+
+- **Lines extracted from game.ts**: ~872 lines (state-snapshots + locations + 5 rules modules)
+- **Test coverage added**: 147 new unit tests (21 + 23 + 13 + 21 + 16 + 27 + 26)
+- **Game files created**: 2 files (state-snapshots, locations)
+- **Rules files created**: 6 files (credibility, win-conditions, adjacency, rostrum, movement, index)
+- **Functions extracted**: 26 functions across 7 modules
+
 ### Overall Progress
 
-- **Total lines extracted from game.ts**: ~1,582 lines
-- **Lines remaining in game.ts**: ~2,841 lines (down from ~3,803 = 25.3% reduction)
-- **Total tests passing**: 459 tests (55 integration + 404 unit)
-- **Total commits**: 24 refactoring commits (14 config + 3 types + 5 utils + 2 game init)
-- **All tests passing**: ✅ 459/459
+- **Total lines extracted from game.ts**: ~2,454 lines (1,194 config + 56 types + 86 utils + 246 init + 872 logic/rules)
+- **Lines remaining in game.ts**: ~1,933 lines (down from ~3,803 = 49.2% reduction)
+- **Total tests passing**: 606 tests (55 integration + 551 unit)
+- **Total commits**: 32 refactoring commits (14 config + 3 types + 5 utils + 2 game init + 8 logic/rules)
+- **All tests passing**: ✅ 606/606
 
 ---
 
 ## Progress Summary
 
-**Phase 4 Complete!** 🎉
+**Phase 5 Complete!** 🎉
 
-Successfully completed game initialization logic extraction from game.ts:
+Successfully completed game logic and rules extraction from game.ts:
 
 ### Phase 2 (Config Extraction) ✅
 
@@ -217,7 +286,17 @@ Successfully completed game initialization logic extraction from game.ts:
 - ✅ initializePieces() - Sets up Mark pieces at seats 1, 3, 5 for drafting
 - ✅ initializeCampaignPieces() - Initializes all pieces for campaign start
 
-**Next Phase**: Game logic extraction - extracting core game functions, validation logic, and state management to `src/game/`.
+### Phase 5 (Game Logic & Rules) ✅
+
+- ✅ Game state snapshots - Deep copy and challenge order
+- ✅ Location utilities - Finding, mapping, and checking locations
+- ✅ Credibility system - Deduction and loss handling
+- ✅ Win conditions - Campaign and bureaucracy victory checks
+- ✅ Adjacency rules - Seat adjacency and community hierarchy
+- ✅ Rostrum logic - Support rules, accessibility, and movement validation
+- ✅ Movement validation - Piece movement rules and move type determination
+
+**Next Phase**: React hooks and component extraction to improve code organization and reusability.
 
 ---
 
@@ -225,13 +304,15 @@ Successfully completed game initialization logic extraction from game.ts:
 
 - Following test-first approach: write tests → extract → verify → commit
 - Each extraction is atomic and independently committed
-- NO backwards compatibility re-exports (single import path per symbol)
+- Backwards compatibility maintained via re-exports in game.ts
 - All changes pushed to feature branch
 
 ### Recent Merges
 
 - **PR #4**: Phase 2c & 2d - Rules & Bureaucracy Config (209 tests) ✅ Merged
 - **PR #5**: Phase 3 - Type & Utility Extraction (88 tests) ✅ Merged
+- **PR #6**: Phase 4 - Game Initialization (34 tests) ✅ Merged
+- **PR #7**: Phase 5 - Game Logic & Rules (147 tests) ✅ Merged
 - **PR #6**: Phase 4 - Game Initialization (34 tests) ✅ Merged
 - Each extraction is atomic and independently committed
 - NO backwards compatibility re-exports (single import path per symbol)
