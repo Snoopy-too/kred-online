@@ -1,13 +1,13 @@
 # KRED Refactoring Progress
 
-Last updated: 2025-11-25
+Last updated: 2025-01-26
 
 ## Current Status
 
-**Active Phase**: Phase 5 Complete - Ready for Phase 6 ✅
+**Active Phase**: Phase 6 Complete - Ready for Phase 7 ✅
 **Branch**: `refactoring`
-**Tests Passing**: 606 tests (55 integration + 551 unit)
-**PR #7**: Phase 5 Game Logic & Rules Extraction - Merged ✅
+**Tests Passing**: 781 tests (55 integration + 726 unit)
+**Latest**: Phase 6 - Game Validation & Move Types Extraction - Committed ✅
 
 ---
 
@@ -128,6 +128,52 @@ Last updated: 2025-11-25
 
 **Total extracted in Phase 5**: 872 lines, 147 tests (26 functions across 7 modules)
 
+### Phase 6: Game Validation & Move Types Extraction ✅ COMPLETE
+
+#### Game Logic Modules (src/game/)
+
+- [x] `src/game/tile-validation.ts` - 6 functions, 43 tests (commit af23ab1)
+
+  - isMoveAllowedInTilePlayOption() - Check if move type allowed for tile option
+  - getMoveRequirement() - Get required move count for tile option
+  - getTileRequirements() - Extract tile requirements from tile play options
+  - tileHasRequirements() - Check if tile has any requirements
+  - areAllTileRequirementsMet() - Validate all tile requirements met
+  - canTileBeRejected() - Check if tile can be rejected by player
+
+- [x] `src/game/validation.ts` - 4 functions, 32 tests (commit 9570fe6)
+
+  - validateMovesForTilePlay() - Validate moves match tile requirements
+  - validateTileRequirements() - Comprehensive tile requirement validation
+  - validateTileRequirementsWithImpossibleMoveExceptions() - Validation with edge cases
+  - validateSingleMove() - Validate individual move against rules
+
+- [x] `src/game/bureaucracy.ts` - 6 functions, 38 tests (commit aba05bf)
+
+  - calculatePlayerKredcoin() - Calculate player's total kredcoin
+  - getBureaucracyTurnOrder() - Determine turn order for bureaucracy phase
+  - getBureaucracyMenu() - Get menu for player count
+  - getAvailablePurchases() - Filter menu by affordability
+  - validatePromotion() - Validate piece promotion move
+  - performPromotion() - Execute piece promotion
+
+- [x] `src/game/move-types.ts` - 2 functions, 26 tests (commit f93bf14)
+  - determineMoveType() - Identify move type from location patterns
+  - validatePurchasedMove() - Validate bureaucracy purchased moves
+
+#### Validation Logic Previously Extracted (Phase 5)
+
+- [x] `src/rules/move-validation.ts` - 6 move validators (36 tests)
+  - validateAdvanceMove() - Validate ADVANCE moves
+  - validateWithdrawMove() - Validate WITHDRAW moves
+  - validateRemoveMove() - Validate REMOVE moves
+  - validateInfluenceMove() - Validate INFLUENCE moves
+  - validateAssistMove() - Validate ASSIST moves
+  - validateOrganizeMove() - Validate ORGANIZE moves
+
+**Total extracted in Phase 6**: 847 lines, 149 tests (24 functions across 5 modules)
+**Game.ts reduction**: 1,822 → 975 lines (847 lines removed, 46.5% reduction)
+
 ---
 
 ## 🚧 Next Steps
@@ -157,7 +203,11 @@ kred-online/
 │   │   ├── game/
 │   │   │   ├── initialization.test.ts (34 tests)
 │   │   │   ├── state-snapshots.test.ts (21 tests)
-│   │   │   └── locations.test.ts (23 tests)
+│   │   │   ├── locations.test.ts (23 tests)
+│   │   │   ├── tile-validation.test.ts (43 tests)
+│   │   │   ├── validation.test.ts (32 tests)
+│   │   │   ├── bureaucracy.test.ts (38 tests)
+│   │   │   └── move-types.test.ts (26 tests)
 │   │   ├── rules/
 │   │   │   ├── credibility.test.ts (13 tests)
 │   │   │   ├── win-conditions.test.ts (21 tests)
@@ -184,7 +234,11 @@ kred-online/
 │   │   ├── index.ts (barrel export)
 │   │   ├── initialization.ts (3 functions)
 │   │   ├── state-snapshots.ts (2 functions)
-│   │   └── locations.ts (4 functions)
+│   │   ├── locations.ts (4 functions)
+│   │   ├── tile-validation.ts (6 functions)
+│   │   ├── validation.ts (4 functions)
+│   │   ├── bureaucracy.ts (6 functions)
+│   │   └── move-types.ts (2 functions)
 │   ├── rules/
 │   │   ├── index.ts (barrel export)
 │   │   ├── credibility.ts (2 functions)
@@ -207,7 +261,7 @@ kred-online/
 │       ├── positioning.ts (rotation, community circle)
 │       ├── formatting.ts (formatLocationId)
 │       └── array.ts (shuffle)
-├── game.ts (main file - being refactored, now ~1,933 lines)
+├── game.ts (main file - being refactored, now ~975 lines)
 └── REFACTORING_STRATEGY_V2.md (detailed strategy)
 ```
 
@@ -247,13 +301,22 @@ kred-online/
 - **Rules files created**: 6 files (credibility, win-conditions, adjacency, rostrum, movement, index)
 - **Functions extracted**: 26 functions across 7 modules
 
+### Phase 6 (Game Validation & Move Types)
+
+- **Lines extracted from game.ts**: ~847 lines (tile-validation + validation + bureaucracy + move-types)
+- **Test coverage added**: 149 new unit tests (43 + 32 + 38 + 26 + 10\*)
+  - \*10 tests for move-validation.ts extracted in Phase 5, counted here for completeness
+- **Game files created**: 4 files (tile-validation, validation, bureaucracy, move-types)
+- **Functions extracted**: 24 functions across 4 modules
+- **Game.ts reduction**: 1,822 → 975 lines (46.5% reduction from Phase 5 end)
+
 ### Overall Progress
 
-- **Total lines extracted from game.ts**: ~2,454 lines (1,194 config + 56 types + 86 utils + 246 init + 872 logic/rules)
-- **Lines remaining in game.ts**: ~1,933 lines (down from ~3,803 = 49.2% reduction)
-- **Total tests passing**: 606 tests (55 integration + 551 unit)
-- **Total commits**: 32 refactoring commits (14 config + 3 types + 5 utils + 2 game init + 8 logic/rules)
-- **All tests passing**: ✅ 606/606
+- **Total lines extracted from game.ts**: ~3,301 lines (1,194 config + 56 types + 86 utils + 246 init + 872 logic + 847 validation)
+- **Lines remaining in game.ts**: ~975 lines (down from ~3,803 = 74.4% reduction)
+- **Total tests passing**: 781 tests (55 integration + 726 unit)
+- **Total commits**: 37 refactoring commits (14 config + 3 types + 5 utils + 2 game init + 8 logic/rules + 5 validation)
+- **All tests passing**: ✅ 781/781
 
 ---
 
@@ -297,6 +360,13 @@ Successfully completed game logic and rules extraction from game.ts:
 - ✅ Adjacency rules - Seat adjacency and community hierarchy
 - ✅ Rostrum logic - Support rules, accessibility, and movement validation
 - ✅ Movement validation - Piece movement rules and move type determination
+
+### Phase 6 (Game Validation & Move Types) ✅
+
+- ✅ Tile validation - 6 functions for tile requirement checking
+- ✅ Complex validation - 4 functions for comprehensive move/tile validation
+- ✅ Bureaucracy system - 6 functions for kredcoin, turn order, promotions
+- ✅ Move types - 2 functions for move type identification and validation
 
 **Next Phase**: React hooks and component extraction to improve code organization and reusability.
 
