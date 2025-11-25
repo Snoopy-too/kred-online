@@ -87,6 +87,7 @@ Last updated: 2025-11-25
 ### Phase 5: Game Logic & Rules Extraction ✅ COMPLETE
 
 #### Game Logic (src/game/)
+
 - [x] `src/game/state-snapshots.ts` - 2 functions, 21 tests
   - createGameStateSnapshot() - Deep copy of game state
   - getChallengeOrder() - Challenge order calculation
@@ -97,6 +98,7 @@ Last updated: 2025-11-25
   - isLocationOwnedByPlayer() - Check location ownership
 
 #### Rules (src/rules/)
+
 - [x] `src/rules/credibility.ts` - 2 functions, 13 tests
   - deductCredibility() - Reduce player credibility
   - handleCredibilityLoss() - Process credibility loss scenarios

@@ -117,6 +117,14 @@ import {
   getLocationIdFromPosition,
   getPlayerIdFromLocationId,
   isLocationOwnedByPlayer,
+
+  // Tile validation functions - tile requirement checking and validation
+  isMoveAllowedInTilePlayOption,
+  getMoveRequirement,
+  getTileRequirements,
+  tileHasRequirements,
+  areAllTileRequirementsMet,
+  canTileBeRejected,
 } from "./src/game";
 
 // ============================================================================
@@ -165,6 +173,12 @@ export {
   getLocationIdFromPosition,
   getPlayerIdFromLocationId,
   isLocationOwnedByPlayer,
+  isMoveAllowedInTilePlayOption,
+  getMoveRequirement,
+  getTileRequirements,
+  tileHasRequirements,
+  areAllTileRequirementsMet,
+  canTileBeRejected,
   deductCredibility,
   handleCredibilityLoss,
   checkPlayerWinCondition,
@@ -192,9 +206,6 @@ export {
 // (Player type moved to src/types/player.ts)
 // (GameState, DropLocation, BankSpace moved to src/types/game.ts)
 // (Move types moved to src/types/move.ts)
-
-
-
 
 // These are the ONLY valid drop locations for pieces.
 const THREE_PLAYER_DROP_LOCATIONS: DropLocation[] = [
@@ -589,131 +600,9 @@ export const DROP_LOCATIONS_BY_PLAYER_COUNT: {
  */
 // (TilePlayOptionType, TilePlayOption, TILE_PLAY_OPTIONS moved to src/config/rules.ts)
 
-/**
- * Helper function to check if a move type is allowed within a tile play option.
- * @param moveType The move type to check.
- * @param optionType The tile play option selected.
- * @returns True if the move type is allowed within that option.
- */
-export function isMoveAllowedInTilePlayOption(
-  moveType: DefinedMoveType,
-  optionType: TilePlayOptionType
-): boolean {
-  const option = TILE_PLAY_OPTIONS[optionType];
-  if (!option) return false;
-  return option.allowedMoveTypes.includes(moveType);
-}
-
-/**
- * Helper function to determine if a move is Optional or Mandatory.
- * @param moveType The move type to classify.
- * @returns The MoveRequirementType of this move.
- */
-export function getMoveRequirement(
-  moveType: DefinedMoveType
-): MoveRequirementType {
-  const move = DEFINED_MOVES[moveType];
-  return move ? move.requirement : MoveRequirementType.OPTIONAL;
-}
-
-/**
- * TILE REQUIREMENTS - Specific Moves Required by Each Tile
- *
- * Each tile (except the Blank tile) requires specific move(s) to be made by the receiving player.
- *
- * CRITICAL RULES:
- * 1. If a tile's requirements are played correctly by the player, it CANNOT be rejected.
- * 2. A correctly played tile is NOT AFFECTED by challenges.
- * 3. If the board state makes one or both requirements impossible to execute, the tile also
- *    CANNOT be rejected and is NOT AFFECTED by challenges.
- * 4. The BLANK TILE (5-player mode only) requires the player to make NO moves.
- *    - If they make ANY moves with the blank tile, those moves ARE AFFECTED by rejection/challenges.
- * 5. All requirements must be completed for the tile to be unrejectable.
- *    - If only some requirements are met, the tile can be rejected.
- */
-// (TileRequirement, TILE_REQUIREMENTS moved to src/config/rules.ts)
-
-/**
- * Gets the tile requirements for a specific tile ID.
- * @param tileId The tile ID (e.g., '01', '24', 'BLANK').
- * @returns The TileRequirement object, or null if tile not found.
- */
-export function getTileRequirements(tileId: string): TileRequirement | null {
-  return TILE_REQUIREMENTS[tileId] || null;
-}
-
-/**
- * Checks if a tile has specific move requirements.
- * @param tileId The tile ID to check.
- * @returns True if the tile has required moves (non-empty).
- */
-export function tileHasRequirements(tileId: string): boolean {
-  const requirements = getTileRequirements(tileId);
-  return requirements ? requirements.requiredMoves.length > 0 : false;
-}
-
-/**
- * Checks if all required moves for a tile have been completed.
- * @param tileId The tile ID being played.
- * @param executedMoves The moves that were actually executed.
- * @returns True if all required moves were executed.
- */
-export function areAllTileRequirementsMet(
-  tileId: string,
-  executedMoves: DefinedMoveType[]
-): boolean {
-  const requirements = getTileRequirements(tileId);
-  if (!requirements || requirements.requiredMoves.length === 0) {
-    return true; // No requirements (like Blank tile with no moves)
-  }
-
-  // All required moves must be present in executedMoves
-  return requirements.requiredMoves.every((requiredMove) =>
-    executedMoves.includes(requiredMove)
-  );
-}
-
-/**
- * Determines if a tile play can be rejected based on execution.
- *
- * REJECTION RULES:
- * - If all required moves were executed: tile CANNOT be rejected
- * - If it's impossible to execute requirements (board state): tile CANNOT be rejected
- * - If some moves were not executed (but were possible): tile CAN be rejected
- * - For Blank tile: if NO moves were made: tile CANNOT be rejected
- * - For Blank tile: if ANY moves were made: tile CAN be rejected
- *
- * @param tileId The tile ID being played.
- * @param executedMoves The moves that were executed.
- * @param wasExecutionPossible Whether the requirements were possible to execute.
- * @returns True if the tile can be rejected.
- */
-export function canTileBeRejected(
-  tileId: string,
-  executedMoves: DefinedMoveType[],
-  wasExecutionPossible: boolean
-): boolean {
-  const requirements = getTileRequirements(tileId);
-  if (!requirements) return true; // Unknown tile, default to rejectable
-
-  // If requirements were impossible to execute, tile cannot be rejected
-  if (!wasExecutionPossible) {
-    return false;
-  }
-
-  // If all requirements were met, tile cannot be rejected
-  if (areAllTileRequirementsMet(tileId, executedMoves)) {
-    return false;
-  }
-
-  // Blank tile can be rejected only if moves were made
-  if (tileId === "BLANK") {
-    return executedMoves.length > 0;
-  }
-
-  // If some (but not all) requirements were met, tile can be rejected
-  return true;
-}
+// Tile validation functions (isMoveAllowedInTilePlayOption, getMoveRequirement,
+// getTileRequirements, tileHasRequirements, areAllTileRequirementsMet, canTileBeRejected)
+// moved to src/game/tile-validation.ts
 
 export const PLAYER_PERSPECTIVE_ROTATIONS: {
   [playerCount: number]: { [playerId: number]: number };
@@ -1561,7 +1450,6 @@ export function validateSingleMove(
       };
   }
 }
-
 
 // ============================================================================
 // BUREAUCRACY PHASE FUNCTIONS

@@ -5,6 +5,7 @@ A digital implementation of the KRED board game built with React and TypeScript.
 ## About
 
 KRED is a strategic board game featuring:
+
 - **3-5 player support** with dynamic board layouts
 - **Three game phases**: Player Selection → Drafting → Campaign → Bureaucracy
 - **Strategic piece movement** with Marks, Heels, and Pawns
@@ -37,6 +38,7 @@ KRED is a strategic board game featuring:
 ### Development
 
 Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -46,16 +48,19 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Testing
 
 Run all tests:
+
 ```bash
 npm test
 ```
 
 Run tests with UI:
+
 ```bash
 npm run test:ui
 ```
 
 Run tests with coverage:
+
 ```bash
 npm run test:coverage
 ```
@@ -63,11 +68,13 @@ npm run test:coverage
 ### Build
 
 Build for production:
+
 ```bash
 npm run build
 ```
 
 Preview production build:
+
 ```bash
 npm run preview
 ```
@@ -134,6 +141,7 @@ This project follows a test-driven, incremental refactoring approach:
 ### Refactoring Progress
 
 Track the ongoing refactoring in [REFACTORING_PROGRESS.md](REFACTORING_PROGRESS.md):
+
 - **Phase 2**: Config extraction - 6 modules, 282 tests ✅
 - **Phase 3**: Type extraction - 3 modules, 26 tests ✅
 - **Phase 4**: Game initialization - 1 module, 34 tests ✅
@@ -144,22 +152,26 @@ See [REFACTORING_STRATEGY_V2.md](REFACTORING_STRATEGY_V2.md) for the complete re
 ## Game Features
 
 ### Player Selection
+
 - Choose 3, 4, or 5 players
 - Test mode for debugging
 - Options to skip phases
 
 ### Drafting Phase
+
 - Players draft tiles from a shared pool
 - Keep/discard mechanics
 - Strategic hand building
 
 ### Campaign Phase
+
 - Play tiles for other players
 - Move pieces (Marks, Heels, Pawns) on the board
 - Challenge system with credibility
 - Win conditions based on piece positions
 
 ### Bureaucracy Phase
+
 - Purchase moves, promotions, and credibility
 - Strategic resource management
 - Additional win conditions

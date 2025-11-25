@@ -9,16 +9,19 @@
 ## Current State Analysis
 
 ### Files to Refactor
+
 - `game.ts`: 1,933 lines (down from 3,803, 49.2% reduction so far)
 - `App.tsx`: 7,782 lines (will be Phase 7)
 
 ### Completed Phases
+
 - ✅ Phase 1-4: Config, Types, Utils, Initialization (606 tests)
 - ✅ Phase 5: Core game logic & rules (state-snapshots, locations, credibility, win-conditions, adjacency, rostrum, movement)
 
 ### Remaining Functions in game.ts (24 functions)
 
 #### Tile Validation Logic (6 functions)
+
 1. `isMoveAllowedInTilePlayOption()` - Check if move type allowed in tile play option
 2. `getMoveRequirement()` - Get move requirement from tile requirements
 3. `getTileRequirements()` - Get tile requirements by tile ID
@@ -27,6 +30,7 @@
 6. `canTileBeRejected()` - Check if tile can be rejected
 
 #### Move Validation Logic (9 functions)
+
 7. `validateMovesForTilePlay()` - Validate moves for tile play
 8. `validateTileRequirements()` - Validate tile requirements
 9. `validateTileRequirementsWithImpossibleMoveExceptions()` - Extended tile requirement validation
@@ -39,6 +43,7 @@
 16. `validateSingleMove()` - Validate single move
 
 #### Bureaucracy Logic (6 functions)
+
 17. `calculatePlayerKredcoin()` - Calculate player kredcoin
 18. `getBureaucracyTurnOrder()` - Get turn order for bureaucracy phase
 19. `getBureaucracyMenu()` - Get bureaucracy menu by player count
@@ -47,6 +52,7 @@
 22. `performPromotion()` - Execute promotion
 
 #### Move Type Logic (2 functions)
+
 23. `determineMoveType()` - Determine move type from source/destination
 24. `validatePurchasedMove()` - Validate purchased move in bureaucracy
 
@@ -55,9 +61,11 @@
 ## Phase 6 Extraction Plan
 
 ### Phase 6a: Tile Validation (6 functions) - PRIORITY 1
+
 **Module**: `src/game/tile-validation.ts`
 
 Extract tile requirement checking and validation:
+
 - [ ] `getTileRequirements()`
 - [ ] `tileHasRequirements()`
 - [ ] `isMoveAllowedInTilePlayOption()`
@@ -68,9 +76,11 @@ Extract tile requirement checking and validation:
 **Estimated**: ~150 lines, 20-25 tests
 
 ### Phase 6b: Move Validation - Specific Move Types (6 functions) - PRIORITY 2
+
 **Module**: `src/rules/move-validation.ts` (extend existing)
 
 Extract specific move type validators:
+
 - [ ] `validateAdvanceMove()`
 - [ ] `validateWithdrawMove()`
 - [ ] `validateRemoveMove()`
@@ -81,9 +91,11 @@ Extract specific move type validators:
 **Estimated**: ~300 lines, 30-35 tests
 
 ### Phase 6c: Complex Validation Logic (3 functions) - PRIORITY 3
+
 **Module**: `src/game/validation.ts`
 
 Extract complex validation functions:
+
 - [ ] `validateMovesForTilePlay()`
 - [ ] `validateTileRequirements()`
 - [ ] `validateTileRequirementsWithImpossibleMoveExceptions()`
@@ -92,9 +104,11 @@ Extract complex validation functions:
 **Estimated**: ~200 lines, 25-30 tests
 
 ### Phase 6d: Bureaucracy System (6 functions) - PRIORITY 4
+
 **Module**: `src/game/bureaucracy.ts`
 
 Extract bureaucracy phase logic:
+
 - [ ] `calculatePlayerKredcoin()`
 - [ ] `getBureaucracyTurnOrder()`
 - [ ] `getBureaucracyMenu()`
@@ -105,9 +119,11 @@ Extract bureaucracy phase logic:
 **Estimated**: ~250 lines, 30-35 tests
 
 ### Phase 6e: Move Type Utilities (2 functions) - PRIORITY 5
+
 **Module**: `src/game/move-types.ts`
 
 Extract move type determination:
+
 - [ ] `determineMoveType()`
 - [ ] `validatePurchasedMove()`
 
@@ -118,6 +134,7 @@ Extract move type determination:
 ## Extraction Order (Step-by-Step)
 
 ### Session 1: Tile Validation (Phase 6a)
+
 1. Create `src/__tests__/game/tile-validation.test.ts`
 2. Write tests for all 6 functions
 3. Create `src/game/tile-validation.ts`
@@ -132,6 +149,7 @@ Extract move type determination:
 **Checkpoint**: 6 commits, ~150 lines extracted, 20-25 new tests
 
 ### Session 2: Specific Move Validators (Phase 6b)
+
 1. Create `src/__tests__/rules/move-validation.test.ts`
 2. Write tests for all 6 validators
 3. Create `src/rules/move-validation.ts` (or extend existing)
@@ -146,6 +164,7 @@ Extract move type determination:
 **Checkpoint**: 6 commits, ~300 lines extracted, 30-35 new tests
 
 ### Session 3: Complex Validation (Phase 6c)
+
 1. Create `src/__tests__/game/validation.test.ts`
 2. Write tests for all 4 functions
 3. Create `src/game/validation.ts`
@@ -158,6 +177,7 @@ Extract move type determination:
 **Checkpoint**: 4 commits, ~200 lines extracted, 25-30 new tests
 
 ### Session 4: Bureaucracy Logic (Phase 6d)
+
 1. Create `src/__tests__/game/bureaucracy.test.ts`
 2. Write tests for all 6 functions
 3. Create `src/game/bureaucracy.ts`
@@ -172,6 +192,7 @@ Extract move type determination:
 **Checkpoint**: 6 commits, ~250 lines extracted, 30-35 new tests
 
 ### Session 5: Move Type Utils (Phase 6e)
+
 1. Create `src/__tests__/game/move-types.test.ts`
 2. Write tests for both functions
 3. Create `src/game/move-types.ts`
@@ -186,6 +207,7 @@ Extract move type determination:
 ## Expected Outcomes
 
 ### After Phase 6 Completion
+
 - **game.ts size**: ~900-1,000 lines (from 1,933, another ~900 lines removed)
 - **Total reduction**: ~75% from original 3,803 lines
 - **New tests**: ~120-145 tests (total ~720-750 tests)
@@ -193,6 +215,7 @@ Extract move type determination:
 - **Total commits**: ~24 atomic commits
 
 ### File Structure After Phase 6
+
 ```
 src/
 ├── game/
@@ -219,6 +242,7 @@ src/
 ## Success Criteria
 
 Each extraction must pass:
+
 - [ ] All existing tests pass (606 currently)
 - [ ] New tests pass for extracted function
 - [ ] Build succeeds (`npm run build`)
@@ -233,16 +257,20 @@ Each extraction must pass:
 ## Risk Mitigation
 
 ### Potential Issues
+
 1. **Circular dependencies**: tile-validation may depend on move validation
+
    - Solution: Extract in correct order, use type-only imports where possible
 
 2. **Complex interdependencies**: Functions may call each other
+
    - Solution: Extract together or ensure proper imports
 
 3. **Test coverage gaps**: Some functions may lack tests
    - Solution: Write tests first before extraction
 
 ### Rollback Strategy
+
 - Each commit is atomic and can be reverted independently
 - Keep backup branch before starting: `git checkout -b backup-phase-6`
 
@@ -251,7 +279,9 @@ Each extraction must pass:
 ## Next Steps After Phase 6
 
 ### Phase 7: React Component Extraction
+
 After game.ts is reduced to ~900-1,000 lines of core state management:
+
 1. Extract screen components from App.tsx
 2. Create custom hooks for state management
 3. Extract UI components to `src/components/`

@@ -9,3 +9,6 @@ export * from "./state-snapshots";
 
 // Location utilities - position and location ID management
 export * from "./locations";
+
+// Tile validation - tile requirement checking and validation
+export * from "./tile-validation";
