@@ -18,3 +18,6 @@ export * from "./validation";
 
 // Bureaucracy system - kredcoin calculation, turn order, and promotions
 export * from "./bureaucracy";
+
+// Move type utilities - move type determination and validation
+export * from "./move-types";

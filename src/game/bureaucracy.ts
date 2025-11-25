@@ -1,6 +1,6 @@
 /**
  * Bureaucracy Module
- * 
+ *
  * Handles all Bureaucracy phase logic including:
  * - Kredcoin calculation from bureaucracy tiles
  * - Turn order determination

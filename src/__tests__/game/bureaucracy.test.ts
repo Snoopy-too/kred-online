@@ -12,10 +12,7 @@ import type { PromotionLocationType } from "../../types/bureaucracy";
 import type { Tile } from "../../types/tile";
 
 // Helper to create test player
-function createPlayer(
-  id: number,
-  bureaucracyTiles: Tile[] = []
-): Player {
+function createPlayer(id: number, bureaucracyTiles: Tile[] = []): Player {
   return {
     id,
     hand: [],
@@ -57,7 +54,11 @@ describe("calculatePlayerKredcoin", () => {
 
   it("should calculate kredcoin for player with multiple tiles", () => {
     // Tiles 1 (1), 2 (2), 3 (0) = 3 total
-    const player = createPlayer(1, [{ id: 1, url: "" }, { id: 2, url: "" }, { id: 3, url: "" }]);
+    const player = createPlayer(1, [
+      { id: 1, url: "" },
+      { id: 2, url: "" },
+      { id: 3, url: "" },
+    ]);
     const kredcoin = calculatePlayerKredcoin(player);
     expect(kredcoin).toBe(3);
   });
@@ -71,7 +72,11 @@ describe("calculatePlayerKredcoin", () => {
 
   it("should handle mix of different value tiles", () => {
     // 1 (1) + 10 (2) + 24 (9) = 12
-    const player = createPlayer(1, [{ id: 1, url: "" }, { id: 10, url: "" }, { id: 24, url: "" }]);
+    const player = createPlayer(1, [
+      { id: 1, url: "" },
+      { id: 10, url: "" },
+      { id: 24, url: "" },
+    ]);
     const kredcoin = calculatePlayerKredcoin(player);
     expect(kredcoin).toBe(12);
   });
@@ -208,7 +213,15 @@ describe("getAvailablePurchases", () => {
 
   it("should return empty array when no items are affordable", () => {
     const available = getAvailablePurchases(
-      [{ id: "item", description: "Item", price: 10, type: "PROMOTION", promotionLocation: "SEAT" }],
+      [
+        {
+          id: "item",
+          description: "Item",
+          price: 10,
+          type: "PROMOTION",
+          promotionLocation: "SEAT",
+        },
+      ],
       5
     );
     expect(available.length).toBe(0);
