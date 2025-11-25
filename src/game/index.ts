@@ -15,3 +15,6 @@ export * from "./tile-validation";
 
 // Complex validation logic - move and tile play validation
 export * from "./validation";
+
+// Bureaucracy system - kredcoin calculation, turn order, and promotions
+export * from "./bureaucracy";
