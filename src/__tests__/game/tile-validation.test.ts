@@ -18,7 +18,7 @@ import {
 
 describe("Tile Validation", () => {
   describe("isMoveAllowedInTilePlayOption", () => {
-    it('returns true when move type is allowed in ONE_OPTIONAL option', () => {
+    it("returns true when move type is allowed in ONE_OPTIONAL option", () => {
       expect(
         isMoveAllowedInTilePlayOption(
           DefinedMoveType.REMOVE,
@@ -37,7 +37,7 @@ describe("Tile Validation", () => {
       ).toBe(false);
     });
 
-    it('returns false for INFLUENCE in ONE_MANDATORY option', () => {
+    it("returns false for INFLUENCE in ONE_MANDATORY option", () => {
       expect(
         isMoveAllowedInTilePlayOption(
           DefinedMoveType.INFLUENCE,
@@ -64,7 +64,7 @@ describe("Tile Validation", () => {
       ).toBe(false);
     });
 
-    it('returns false for WITHDRAW in ONE_OPTIONAL', () => {
+    it("returns false for WITHDRAW in ONE_OPTIONAL", () => {
       expect(
         isMoveAllowedInTilePlayOption(
           DefinedMoveType.WITHDRAW,
@@ -84,7 +84,7 @@ describe("Tile Validation", () => {
   });
 
   describe("getMoveRequirement", () => {
-    it('returns OPTIONAL for INFLUENCE move', () => {
+    it("returns OPTIONAL for INFLUENCE move", () => {
       expect(getMoveRequirement(DefinedMoveType.INFLUENCE)).toBe(
         MoveRequirementType.OPTIONAL
       );
@@ -96,7 +96,7 @@ describe("Tile Validation", () => {
       );
     });
 
-    it('returns MANDATORY for ORGANIZE move', () => {
+    it("returns MANDATORY for ORGANIZE move", () => {
       expect(getMoveRequirement(DefinedMoveType.ORGANIZE)).toBe(
         MoveRequirementType.MANDATORY
       );

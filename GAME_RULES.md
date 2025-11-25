@@ -1,7 +1,7 @@
 # KRED Game Rules
 
 > **Source**: [Official KRED Manual](https://flyingdutchmen.online/KRED/manual)
-> 
+>
 > **Purpose**: This document provides a reference for game mechanics and tile requirements to ensure the digital implementation matches the official rules.
 
 ## Critical Tile Rules
@@ -13,6 +13,7 @@ From the official manual:
 > **If one or both of the actions on a tile are impossible due to the current state of the board, such actions may be forgone and the play will still be considered honest if challenged.**
 
 **Key Rules**:
+
 1. If a tile's requirements are played correctly by the player, it **CANNOT be rejected**
 2. A correctly played tile is **NOT AFFECTED by challenges**
 3. If the board state makes one or both requirements **impossible to execute**, the tile also **CANNOT be rejected** and is **NOT AFFECTED by challenges**
@@ -26,10 +27,11 @@ From the official manual:
 From the official manual:
 
 > **When this tile is played, the Receiver will have no choice but to accept and any legal move will be considered honest. If challenged, the Challenger will incur one notch on their credibility and the Mover will restore one.**
-> 
+>
 > **The blank tile cannot be used to achieve a winning setup.**
 
 **Implementation Notes**:
+
 - BLANK tile: No required moves
 - If no moves made → tile CANNOT be rejected
 - If ANY moves made → tile CAN be rejected
@@ -41,29 +43,35 @@ From the official manual:
 From the official manual's "How the Pieces Move" section:
 
 ### Advance (Mandatory)
+
 - Add one Mark from Community to vacant Seat (or Heel if no Marks available)
 - Once all 3 Seats of a Faction are occupied, advance piece to Rostrum
 - If both Rostrums occupied, can advance from Rostrum to Office
 
 ### Remove (Optional)
+
 - Remove one Mark from opponent's Seat to Community
 - Cannot remove from Rostrums or Offices
 - Cannot remove Pawns or Heels
 
 ### Influence (Optional)
+
 - Move opponent's Mark or Heel one space left or right
 - Can move between Domains (including into your own)
 - Cannot Influence Pawns
 
 ### Assist (Optional)
+
 - Add one Mark from Community to opponent's vacant Seat (or Heel if no Marks available)
 
 ### Withdraw (Mandatory)
+
 - Withdraw piece from your Seat back to Community, OR
 - Move piece from your Rostrum down to vacant Seat, OR
 - Move piece from your Office down to vacant Rostrum
 
 ### Organize (Mandatory)
+
 - Move one of your pieces one space left or right
 - Cannot move between Rostrums
 - Can transfer piece to adjacent player's Rostrum or Seat
@@ -77,6 +85,7 @@ From the official manual:
 ## Tile Play Options
 
 Based on the game rules, tiles can require:
+
 - **NO_MOVE**: No moves allowed
 - **ONE_OPTIONAL**: One move from the optional moves (REMOVE, INFLUENCE, ASSIST)
 - **ONE_MANDATORY**: One move from the mandatory moves (ADVANCE, WITHDRAW, ORGANIZE)

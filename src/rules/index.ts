@@ -15,3 +15,6 @@ export * from "./rostrum";
 
 // Movement validation - piece movement rules and move type determination
 export * from "./movement";
+
+// Move validation - specific move type validators (ADVANCE, WITHDRAW, etc.)
+export * from "./move-validation";
