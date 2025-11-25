@@ -58,6 +58,9 @@ import {
   PIECE_TYPES,
   PIECE_COUNTS_BY_PLAYER_COUNT,
 
+  // Board layout - drop locations by player count
+  DROP_LOCATIONS_BY_PLAYER_COUNT,
+
   // Game rules - move definitions, tile requirements, rostrum rules
   DEFINED_MOVES,
   TilePlayOptionType,
@@ -104,10 +107,85 @@ import {
   initializePlayers,
   initializePieces,
   initializeCampaignPieces,
+
+  // State snapshot functions - game state management and challenge order
+  createGameStateSnapshot,
+  getChallengeOrder,
+
+  // Location utilities - position and location ID management
+  findNearestVacantLocation,
+  getLocationIdFromPosition,
+  getPlayerIdFromLocationId,
+  isLocationOwnedByPlayer,
 } from "./src/game";
 
-// Re-export game initialization functions for backwards compatibility
-export { initializePlayers, initializePieces, initializeCampaignPieces };
+// ============================================================================
+// RULES IMPORTS - Game rules enforcement
+// ============================================================================
+import {
+  // Credibility system - credibility loss and deduction
+  deductCredibility,
+  handleCredibilityLoss,
+
+  // Win conditions - game victory checking
+  checkPlayerWinCondition,
+  checkBureaucracyWinCondition,
+
+  // Adjacency rules - seat and player positioning logic
+  getNextPlayerClockwise,
+  getPrevPlayerClockwise,
+  areSeatsAdjacent,
+  getAdjacentSeats,
+  canMoveFromCommunity,
+
+  // Rostrum rules - support requirements and adjacency
+  getPlayerRostrumRules,
+  getRostrumSupportRule,
+  countPiecesInSeats,
+  areSupportingSeatsFullForRostrum,
+  countPiecesInPlayerRostrums,
+  areBothRostrumsFilledForPlayer,
+  areRostrumsAdjacent,
+  getAdjacentRostrum,
+  validateAdjacentRostrumMovement,
+
+  // Movement validation - piece movement rules and move type determination
+  validatePieceMovement,
+  validateMoveType,
+} from "./src/rules";
+
+// Re-export game functions for backwards compatibility
+export {
+  initializePlayers,
+  initializePieces,
+  initializeCampaignPieces,
+  createGameStateSnapshot,
+  getChallengeOrder,
+  findNearestVacantLocation,
+  getLocationIdFromPosition,
+  getPlayerIdFromLocationId,
+  isLocationOwnedByPlayer,
+  deductCredibility,
+  handleCredibilityLoss,
+  checkPlayerWinCondition,
+  checkBureaucracyWinCondition,
+  getNextPlayerClockwise,
+  getPrevPlayerClockwise,
+  areSeatsAdjacent,
+  getAdjacentSeats,
+  canMoveFromCommunity,
+  getPlayerRostrumRules,
+  getRostrumSupportRule,
+  countPiecesInSeats,
+  areSupportingSeatsFullForRostrum,
+  countPiecesInPlayerRostrums,
+  areBothRostrumsFilledForPlayer,
+  areRostrumsAdjacent,
+  getAdjacentRostrum,
+  validateAdjacentRostrumMovement,
+  validatePieceMovement,
+  validateMoveType,
+};
 
 // --- Type Definitions ---
 // (Tile types moved to src/types/tile.ts)
@@ -820,602 +898,8 @@ export const CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT: {
 
 // --- Utility Functions ---
 // (Positioning functions moved to src/utils/positioning.ts)
-
-/**
- * For a given player count, finds the nearest valid and vacant drop location.
- * @param dropPosition The position where the user tried to drop the piece.
- * @param allPieces The list of all pieces currently on the board.
- * @param playerCount The number of players.
- * @returns The position and ID of the nearest vacant spot, or null if all are occupied or too far away.
- */
-export function findNearestVacantLocation(
-  dropPosition: { top: number; left: number },
-  allPieces: Piece[],
-  playerCount: number
-): { position: { top: number; left: number }; id: string } | null {
-  const validLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount];
-  if (!validLocations || validLocations.length === 0) {
-    return null;
-  }
-
-  // Find the list of locations that have at least one open slot.
-  const vacantLocations = validLocations.filter((loc) => {
-    // Count how many total slots are defined at this exact coordinate.
-    const capacityAtCoord = validLocations.filter(
-      (otherLoc) =>
-        Math.abs(otherLoc.position.left - loc.position.left) < 0.01 &&
-        Math.abs(otherLoc.position.top - loc.position.top) < 0.01
-    ).length;
-
-    // Count how many pieces are already at this exact coordinate.
-    const piecesAtCoord = allPieces.filter(
-      (piece) =>
-        Math.abs(piece.position.left - loc.position.left) < 0.01 &&
-        Math.abs(piece.position.top - loc.position.top) < 0.01
-    ).length;
-
-    return piecesAtCoord < capacityAtCoord;
-  });
-
-  if (vacantLocations.length === 0) {
-    return null; // No vacant spots available
-  }
-
-  // Distance calculation function
-  const calculateDistance = (
-    pos1: { left: number; top: number },
-    pos2: { left: number; top: number }
-  ): number => {
-    return Math.sqrt(
-      Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2)
-    );
-  };
-
-  // Find the nearest location using consistent distance thresholds
-  let nearestLocation: DropLocation | null = null;
-  let minDistance = Infinity;
-
-  for (const loc of vacantLocations) {
-    const distance = calculateDistance(dropPosition, loc.position);
-
-    // Determine the maximum distance threshold based on location type
-    let maxDistance = 12.0; // Default for regular locations (seats)
-    if (loc.id.includes("community")) {
-      maxDistance = 9.0; // Community locations are easier to target
-    } else if (loc.id.includes("rostrum") || loc.id.includes("office")) {
-      maxDistance = 15.0; // Rostrums and offices get a larger drop radius for better UX
-    }
-
-    // Check if this location is within its type's threshold and closer than previous nearest
-    if (distance < maxDistance && distance < minDistance) {
-      minDistance = distance;
-      nearestLocation = loc;
-    }
-  }
-
-  if (nearestLocation) {
-    return { position: nearestLocation.position, id: nearestLocation.id };
-  }
-
-  return null;
-}
-
-/**
- * Given a position, finds the ID of the closest drop location.
- * @param position The position to check.
- * @param playerCount The number of players.
- * @returns The string ID of the location, or null.
- */
-export function getLocationIdFromPosition(
-  position: { top: number; left: number },
-  playerCount: number
-): string | null {
-  const allLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount];
-  if (!allLocations) return null;
-
-  let closestLocationId: string | null = null;
-  let minDistance = Infinity;
-
-  const calculateDistance = (
-    pos1: { left: number; top: number },
-    pos2: { left: number; top: number }
-  ): number => {
-    return Math.sqrt(
-      Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2)
-    );
-  };
-
-  for (const loc of allLocations) {
-    if (
-      Math.abs(loc.position.left - position.left) < 0.01 &&
-      Math.abs(loc.position.top - position.top) < 0.01
-    ) {
-      return loc.id;
-    }
-    const distance = calculateDistance(position, loc.position);
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestLocationId = loc.id;
-    }
-  }
-
-  return minDistance < 5.0 ? closestLocationId : null;
-}
-
-/**
- * Formats a location ID string into a human-readable format.
- * @param locationId The location ID (e.g., 'p1_seat4').
- * @returns A formatted string (e.g., "Player 1's seat 4").
- */
-export function formatLocationId(locationId: string): string {
-  if (!locationId) return "an unknown location";
-
-  const parts = locationId.split("_");
-  if (parts.length < 2) return locationId;
-
-  const playerId = parts[0].replace("p", "");
-  const locationName = parts.slice(1).join(" ");
-
-  if (locationName === "office") {
-    return `Player ${playerId}'s office`;
-  }
-
-  const match = locationName.match(/(\D+)(\d+)/);
-  if (match) {
-    const [, type, num] = match;
-    return `Player ${playerId}'s ${type} ${num}`;
-  }
-
-  return `Player ${playerId}'s ${locationName}`;
-}
-
-/**
- * Extracts the player ID from a location ID (e.g., 'p1_seat1' -> 1).
- * @param locationId The location ID to parse.
- * @returns The player ID as a number, or null if not a player-owned location.
- */
-export function getPlayerIdFromLocationId(locationId: string): number | null {
-  if (!locationId) return null;
-  const match = locationId.match(/^p(\d+)_/);
-  return match ? parseInt(match[1], 10) : null;
-}
-
-/**
- * Checks if a location is owned by a specific player (seat, rostrum, or office).
- * @param locationId The location ID to check.
- * @param playerId The player ID to verify ownership.
- * @returns True if the location belongs to the player.
- */
-export function isLocationOwnedByPlayer(
-  locationId: string,
-  playerId: number
-): boolean {
-  const ownerId = getPlayerIdFromLocationId(locationId);
-  return ownerId === playerId;
-}
-
-/**
- * Gets the player's rostrum rules.
- * @param playerId The player ID (1-5).
- * @returns The PlayerRostrum object containing rostrum support rules and office location.
- */
-export function getPlayerRostrumRules(playerId: number): PlayerRostrum | null {
-  return ROSTRUM_SUPPORT_RULES[playerId] || null;
-}
-
-/**
- * Finds the rostrum support rule for a specific rostrum ID.
- * @param rostrumId The rostrum ID (e.g., 'p1_rostrum1').
- * @returns The RostrumSupport object, or null if not found.
- */
-export function getRostrumSupportRule(
-  rostrumId: string
-): RostrumSupport | null {
-  const playerId = getPlayerIdFromLocationId(rostrumId);
-  if (!playerId) return null;
-
-  const playerRules = getPlayerRostrumRules(playerId);
-  if (!playerRules) return null;
-
-  return playerRules.rostrums.find((r) => r.rostrum === rostrumId) || null;
-}
-
-/**
- * Counts how many pieces currently occupy a set of seats.
- * @param seatIds The seat IDs to check.
- * @param pieces The current pieces on the board.
- * @returns The number of pieces in the specified seats.
- */
-export function countPiecesInSeats(seatIds: string[], pieces: Piece[]): number {
-  return pieces.filter(
-    (piece) => piece.locationId && seatIds.includes(piece.locationId)
-  ).length;
-}
-
-/**
- * Checks if all supporting seats for a rostrum are full.
- * @param rostrumId The rostrum ID to check.
- * @param pieces The current pieces on the board.
- * @returns True if all 3 supporting seats are occupied.
- */
-export function areSupportingSeatsFullForRostrum(
-  rostrumId: string,
-  pieces: Piece[]
-): boolean {
-  const rule = getRostrumSupportRule(rostrumId);
-  if (!rule) return false;
-
-  const occupiedCount = countPiecesInSeats(rule.supportingSeats, pieces);
-  return occupiedCount === rule.supportingSeats.length; // All 3 seats must be full
-}
-
-/**
- * Counts how many pieces occupy a player's rostrums.
- * @param playerId The player ID.
- * @param pieces The current pieces on the board.
- * @returns The number of pieces in the player's rostrums.
- */
-export function countPiecesInPlayerRostrums(
-  playerId: number,
-  pieces: Piece[]
-): number {
-  const playerRules = getPlayerRostrumRules(playerId);
-  if (!playerRules) return 0;
-
-  const rostrumIds = playerRules.rostrums.map((r) => r.rostrum);
-  return pieces.filter(
-    (piece) => piece.locationId && rostrumIds.includes(piece.locationId)
-  ).length;
-}
-
-/**
- * Checks if both of a player's rostrums are filled (at least one piece in each).
- * @param playerId The player ID.
- * @param pieces The current pieces on the board.
- * @returns True if both rostrums contain at least one piece.
- */
-export function areBothRostrumsFilledForPlayer(
-  playerId: number,
-  pieces: Piece[]
-): boolean {
-  const playerRules = getPlayerRostrumRules(playerId);
-  if (!playerRules) return false;
-
-  for (const rostrumRule of playerRules.rostrums) {
-    const haspiece = pieces.some((p) => p.locationId === rostrumRule.rostrum);
-    if (!haspiece) return false; // At least one rostrum is empty
-  }
-
-  return true; // Both rostrums have pieces
-}
-
-/**
- * Checks if a piece can be moved to a specific location based on game rules.
- *
- * RULES:
- * 1. Pieces can only be moved to rostrums if ALL supporting seats are full
- * 2. Pieces can only be moved to a player's office if BOTH rostrums are filled
- * 3. Opponents cannot move a piece to another player's rostrum or office
- * 4. Opponents cannot move a piece FROM another player's rostrum or office
- * 5. Community spaces are always accessible (no restrictions)
- *
- * @param pieceId The ID of the piece being moved.
- * @param currentLocationId The current location of the piece.
- * @param targetLocationId The target location for the piece.
- * @param movingPlayerId The ID of the player making the move.
- * @param pieces The current pieces on the board.
- * @returns An object with { isAllowed: boolean, reason: string }
- */
-export function validatePieceMovement(
-  pieceId: string,
-  currentLocationId: string | undefined,
-  targetLocationId: string,
-  movingPlayerId: number,
-  pieces: Piece[]
-): { isAllowed: boolean; reason: string } {
-  // Community locations are always accessible
-  if (targetLocationId.includes("community")) {
-    return {
-      isAllowed: true,
-      reason: "Community spaces are always accessible",
-    };
-  }
-
-  const targetPlayerId = getPlayerIdFromLocationId(targetLocationId);
-  if (!targetPlayerId) {
-    return {
-      isAllowed: true,
-      reason: "Location has no ownership restrictions",
-    };
-  }
-
-  const currentPlayerId = currentLocationId
-    ? getPlayerIdFromLocationId(currentLocationId)
-    : null;
-  const isOwnPiece =
-    currentPlayerId === movingPlayerId || movingPlayerId === targetPlayerId;
-
-  // --- RULE: Players may NOT move pieces between hierarchy levels within a domain ---
-  // For OPPONENT domains: Block seat ↔ rostrum, rostrum ↔ office, seat ↔ office
-  // For OWN domain: Block rostrum1 ↔ rostrum2 (lateral rostrum movement)
-  if (currentPlayerId && targetPlayerId && currentPlayerId === targetPlayerId) {
-    const sourceIsSeat = currentLocationId?.includes("seat");
-    const sourceIsRostrum = currentLocationId?.includes("rostrum");
-    const sourceIsOffice = currentLocationId?.includes("office");
-    const targetIsSeat = targetLocationId.includes("seat");
-    const targetIsRostrum = targetLocationId.includes("rostrum");
-    const targetIsOffice = targetLocationId.includes("office");
-
-    // RULE 1: Block opponent hierarchy movements (vertical hierarchy changes)
-    if (currentPlayerId !== movingPlayerId) {
-      const crossingHierarchy =
-        (sourceIsSeat && (targetIsRostrum || targetIsOffice)) ||
-        (sourceIsRostrum && (targetIsSeat || targetIsOffice)) ||
-        (sourceIsOffice && (targetIsSeat || targetIsRostrum));
-
-      if (crossingHierarchy) {
-        return {
-          isAllowed: false,
-          reason: `Cannot move opponent's piece between hierarchy levels (from ${formatLocationId(
-            currentLocationId
-          )} to ${formatLocationId(targetLocationId)})`,
-        };
-      }
-    }
-
-    // RULE 2: Block own rostrum-to-rostrum movements (lateral at same level)
-    if (
-      currentPlayerId === movingPlayerId &&
-      sourceIsRostrum &&
-      targetIsRostrum
-    ) {
-      // Check if moving between rostrum1 and rostrum2
-      if (currentLocationId !== targetLocationId) {
-        return {
-          isAllowed: false,
-          reason: `Cannot move piece between your own rostrums (from ${formatLocationId(
-            currentLocationId
-          )} to ${formatLocationId(targetLocationId)})`,
-        };
-      }
-    }
-  }
-
-  // --- Moving to a ROSTRUM ---
-  if (targetLocationId.includes("rostrum")) {
-    if (targetPlayerId !== movingPlayerId) {
-      return {
-        isAllowed: false,
-        reason: `Cannot move a piece to opponent's rostrum`,
-      };
-    }
-
-    // RULE 1: Check if all supporting seats are full
-    if (!areSupportingSeatsFullForRostrum(targetLocationId, pieces)) {
-      const rule = getRostrumSupportRule(targetLocationId);
-      if (rule) {
-        const occupied = countPiecesInSeats(rule.supportingSeats, pieces);
-        return {
-          isAllowed: false,
-          reason: `Cannot move to ${formatLocationId(
-            targetLocationId
-          )} - only ${occupied}/3 supporting seats are full`,
-        };
-      }
-    }
-
-    return { isAllowed: true, reason: "All supporting seats are full" };
-  }
-
-  // --- Moving to an OFFICE ---
-  if (targetLocationId.includes("office")) {
-    if (targetPlayerId !== movingPlayerId) {
-      return {
-        isAllowed: false,
-        reason: `Cannot move a piece to opponent's office`,
-      };
-    }
-
-    // RULE 2: Check if both rostrums are filled
-    if (!areBothRostrumsFilledForPlayer(targetPlayerId, pieces)) {
-      return {
-        isAllowed: false,
-        reason: `Cannot move to office - not both rostrums are filled yet`,
-      };
-    }
-
-    return { isAllowed: true, reason: "Both rostrums are filled" };
-  }
-
-  // All other moves are valid
-  return { isAllowed: true, reason: "Move is valid" };
-}
-
-/**
- * Validates if a piece movement is legal and returns the move type.
- * Returns the move type or 'UNKNOWN' if the move is illegal.
- */
-export function validateMoveType(
-  fromLocationId: string | undefined,
-  toLocationId: string | undefined,
-  movingPlayerId: number,
-  currentPiece: Piece,
-  allPieces: Piece[],
-  playerCount: number
-): string {
-  if (!fromLocationId || !toLocationId) return "UNKNOWN";
-
-  const isCommunity = (loc?: string) => loc?.includes("community");
-  const isSeat = (loc?: string) => loc?.includes("_seat");
-  const isRostrum = (loc?: string) => loc?.includes("_rostrum");
-  const isOffice = (loc?: string) => loc?.includes("_office");
-  const getPlayerFromLocation = (loc?: string): number | null => {
-    const match = loc?.match(/p(\d+)_/);
-    return match ? parseInt(match[1]) : null;
-  };
-
-  // Rule 1: Community → Seat/Rostrum/Office = ADVANCE or ASSIST
-  if (
-    isCommunity(fromLocationId) &&
-    (isSeat(toLocationId) || isRostrum(toLocationId) || isOffice(toLocationId))
-  ) {
-    const ownerPlayer = getPlayerFromLocation(toLocationId);
-    return ownerPlayer === movingPlayerId ? "ADVANCE" : "ASSIST";
-  }
-  // Rule 2: Seat → Community = WITHDRAW
-  else if (isSeat(fromLocationId) && isCommunity(toLocationId)) {
-    return "WITHDRAW";
-  }
-  // Rule 3: Seat → Seat = ORGANIZE or INFLUENCE (only if adjacent)
-  else if (isSeat(fromLocationId) && isSeat(toLocationId)) {
-    if (areSeatsAdjacent(fromLocationId, toLocationId, playerCount)) {
-      const fromPlayer = getPlayerFromLocation(fromLocationId);
-      return fromPlayer === movingPlayerId ? "ORGANIZE" : "INFLUENCE";
-    }
-    return "UNKNOWN"; // Non-adjacent seat moves are illegal
-  }
-  // Rule 4: Seat → Rostrum = ADVANCE
-  else if (isSeat(fromLocationId) && isRostrum(toLocationId)) {
-    return "ADVANCE";
-  }
-  // Rule 5: Rostrum → Seat = WITHDRAW
-  else if (isRostrum(fromLocationId) && isSeat(toLocationId)) {
-    return "WITHDRAW";
-  }
-  // Rule 6: Rostrum → Office = ADVANCE
-  else if (isRostrum(fromLocationId) && isOffice(toLocationId)) {
-    return "ADVANCE";
-  }
-  // Rule 7: Rostrum → Community = WITHDRAW
-  else if (isRostrum(fromLocationId) && isCommunity(toLocationId)) {
-    return "WITHDRAW";
-  }
-  // Rule 8: Rostrum → Rostrum = ORGANIZE or INFLUENCE
-  else if (isRostrum(fromLocationId) && isRostrum(toLocationId)) {
-    const fromPlayer = getPlayerFromLocation(fromLocationId);
-    return fromPlayer === movingPlayerId ? "ORGANIZE" : "INFLUENCE";
-  }
-  // Rule 9: Office → Rostrum = WITHDRAW
-  else if (isOffice(fromLocationId) && isRostrum(toLocationId)) {
-    return "WITHDRAW";
-  }
-  // Rule 10: Office → Community = WITHDRAW
-  else if (isOffice(fromLocationId) && isCommunity(toLocationId)) {
-    return "WITHDRAW";
-  }
-
-  // All other moves are illegal
-  return "UNKNOWN";
-}
-
-/**
- * Checks if two rostrums are adjacent (connected).
- * @param rostrum1 The first rostrum ID.
- * @param rostrum2 The second rostrum ID.
- * @param playerCount The number of players (3, 4, or 5).
- * @returns True if the rostrums are adjacent.
- */
-export function areRostrumsAdjacent(
-  rostrum1: string,
-  rostrum2: string,
-  playerCount: number
-): boolean {
-  const adjacencies = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[playerCount];
-  if (!adjacencies) return false;
-
-  return adjacencies.some(
-    (adj) =>
-      (adj.rostrum1 === rostrum1 && adj.rostrum2 === rostrum2) ||
-      (adj.rostrum1 === rostrum2 && adj.rostrum2 === rostrum1)
-  );
-}
-
-/**
- * Gets the adjacent rostrum for a given rostrum, if one exists.
- * @param rostrumId The rostrum ID to find the adjacent rostrum for.
- * @param playerCount The number of players (3, 4, or 5).
- * @returns The ID of the adjacent rostrum, or null if none exists.
- */
-export function getAdjacentRostrum(
-  rostrumId: string,
-  playerCount: number
-): string | null {
-  const adjacencies = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[playerCount];
-  if (!adjacencies) return null;
-
-  const adjacency = adjacencies.find(
-    (adj) => adj.rostrum1 === rostrumId || adj.rostrum2 === rostrumId
-  );
-
-  if (!adjacency) return null;
-
-  return adjacency.rostrum1 === rostrumId
-    ? adjacency.rostrum2
-    : adjacency.rostrum1;
-}
-
-/**
- * Validates if a piece can move between two adjacent rostrums.
- *
- * ADJACENCY MOVEMENT RULES:
- * - Both rostrums must be adjacent
- * - The destination rostrum must have all supporting seats full (or be an opponent's adjacent rostrum)
- * - Only the owner of the source rostrum can initiate the move
- *
- * @param sourceRostrumId The rostrum the piece is moving from.
- * @param targetRostrumId The rostrum the piece is moving to.
- * @param movingPlayerId The ID of the player making the move.
- * @param playerCount The number of players.
- * @param pieces The current pieces on the board.
- * @returns An object with { isAllowed: boolean, reason: string }
- */
-export function validateAdjacentRostrumMovement(
-  sourceRostrumId: string,
-  targetRostrumId: string,
-  movingPlayerId: number,
-  playerCount: number,
-  pieces: Piece[]
-): { isAllowed: boolean; reason: string } {
-  // Check if rostrums are adjacent
-  if (!areRostrumsAdjacent(sourceRostrumId, targetRostrumId, playerCount)) {
-    return {
-      isAllowed: false,
-      reason: `${formatLocationId(sourceRostrumId)} and ${formatLocationId(
-        targetRostrumId
-      )} are not adjacent`,
-    };
-  }
-
-  const sourcePlayerId = getPlayerIdFromLocationId(sourceRostrumId);
-  const targetPlayerId = getPlayerIdFromLocationId(targetRostrumId);
-
-  // Only the owner of the source rostrum can move pieces out of it
-  if (sourcePlayerId !== movingPlayerId) {
-    return {
-      isAllowed: false,
-      reason: `Cannot move opponent's piece from ${formatLocationId(
-        sourceRostrumId
-      )}`,
-    };
-  }
-
-  // The destination rostrum must have all supporting seats full
-  if (!areSupportingSeatsFullForRostrum(targetRostrumId, pieces)) {
-    const rule = getRostrumSupportRule(targetRostrumId);
-    if (rule) {
-      const occupied = countPiecesInSeats(rule.supportingSeats, pieces);
-      return {
-        isAllowed: false,
-        reason: `Cannot move to ${formatLocationId(
-          targetRostrumId
-        )} - only ${occupied}/3 supporting seats are full`,
-      };
-    }
-  }
-
-  return { isAllowed: true, reason: "Adjacent rostrum movement is valid" };
-}
-
+// (Rostrum functions moved to src/rules/rostrum.ts)
+// (Movement validation functions moved to src/rules/movement.ts)
 // (shuffle function moved to src/utils/array.ts)
 
 // Default piece positions for campaign start
@@ -1708,223 +1192,6 @@ export function validateTileRequirementsWithImpossibleMoveExceptions(
     missingMoves: missingMoves,
     impossibleMoves: impossibleMoves,
   };
-}
-
-/**
- * Creates a snapshot of the current game state for later restoration.
- * @param pieces Current pieces on board
- * @param boardTiles Current board tiles
- * @returns Snapshot of game state
- */
-export function createGameStateSnapshot(
-  pieces: Piece[],
-  boardTiles: BoardTile[]
-): PlayedTileState["gameStateSnapshot"] {
-  return {
-    pieces: pieces.map((p) => ({ ...p })),
-    boardTiles: boardTiles.map((t) => ({ ...t })),
-  };
-}
-
-/**
- * Determines the order of players for challenging, starting clockwise from the tile player.
- * @param tilePlayerId The player who played the tile
- * @param playerCount Total number of players
- * @returns Array of player IDs in challenge order
- */
-export function getChallengeOrder(
-  tilePlayerId: number,
-  playerCount: number,
-  receivingPlayerId?: number
-): number[] {
-  const challengeOrder: number[] = [];
-
-  // Start from the next player clockwise from the tile player
-  for (let i = 1; i < playerCount; i++) {
-    const playerId = ((tilePlayerId - 1 + i) % playerCount) + 1;
-    // Skip the tile player (giver) and the receiving player (only players not involved can challenge)
-    if (playerId !== tilePlayerId && playerId !== receivingPlayerId) {
-      challengeOrder.push(playerId);
-    }
-  }
-
-  return challengeOrder;
-}
-
-/**
- * Gets the next player in clockwise order around the table.
- * 3-player: 1→3→2→1
- * 4-player: 1→2→3→4→1
- * 5-player: 1→2→3→4→5→1
- */
-function getNextPlayerClockwise(playerId: number, playerCount: number): number {
-  if (playerCount === 3) {
-    // Special case for 3 players: 1→3→2→1
-    return playerId === 1 ? 3 : playerId === 3 ? 2 : 1;
-  } else {
-    // For 4 and 5 players: sequential
-    return (playerId % playerCount) + 1;
-  }
-}
-
-/**
- * Gets the previous player in clockwise order around the table (counter-clockwise).
- * 3-player: 1←3←2←1 (or 1→2→3→1 backward)
- * 4-player: 1←2←3←4←1
- * 5-player: 1←2←3←4←5←1
- */
-function getPrevPlayerClockwise(playerId: number, playerCount: number): number {
-  if (playerCount === 3) {
-    // Special case for 3 players: 1←3←2 means prev of 1 is 2, prev of 3 is 1, prev of 2 is 3
-    return playerId === 1 ? 2 : playerId === 2 ? 3 : 1;
-  } else {
-    // For 4 and 5 players: sequential
-    return playerId === 1 ? playerCount : playerId - 1;
-  }
-}
-
-/**
- * Determines if two seats are adjacent in the seating arrangement.
- * Seats are numbered 1-6 around each player's domain, and adjacent means:
- * - Same player: seat 1 next to 2, 2 next to 3, 3 next to 4, 4 next to 5, 5 next to 6
- * - Wraps to other players: player X seat6 adjacent to next player's seat1
- *
- * @param seatId1 First seat ID (e.g., 'p1_seat1')
- * @param seatId2 Second seat ID (e.g., 'p2_seat6')
- * @param playerCount Total number of players (3, 4, or 5)
- * @returns True if the seats are adjacent
- */
-export function areSeatsAdjacent(
-  seatId1: string,
-  seatId2: string,
-  playerCount: number
-): boolean {
-  // Extract player ID and seat number from location IDs
-  const match1 = seatId1.match(/p(\d+)_seat(\d)/);
-  const match2 = seatId2.match(/p(\d+)_seat(\d)/);
-
-  if (!match1 || !match2) return false;
-
-  const player1 = parseInt(match1[1]);
-  const seat1 = parseInt(match1[2]);
-  const player2 = parseInt(match2[1]);
-  const seat2 = parseInt(match2[2]);
-
-  // Same player - seats must be consecutive
-  if (player1 === player2) {
-    return Math.abs(seat1 - seat2) === 1;
-  }
-
-  // Different players - check if they're at the boundary (wrapping around the table)
-  const nextPlayer = getNextPlayerClockwise(player1, playerCount);
-  const prevPlayer = getPrevPlayerClockwise(player1, playerCount);
-
-  // Forward wrap: Player X seat6 is adjacent to next player's seat1
-  if (player2 === nextPlayer && seat1 === 6 && seat2 === 1) {
-    return true;
-  }
-
-  // Forward wrap (reversed): Player X seat1 is adjacent to next player's seat6
-  if (player2 === nextPlayer && seat1 === 1 && seat2 === 6) {
-    return true;
-  }
-
-  // Backward wrap: Player X seat1 is adjacent to previous player's seat6
-  if (player2 === prevPlayer && seat1 === 1 && seat2 === 6) {
-    return true;
-  }
-
-  // Backward wrap (reversed): Player X seat6 is adjacent to previous player's seat1
-  if (player2 === prevPlayer && seat1 === 6 && seat2 === 1) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Gets all adjacent seats to a given seat.
- * Used for validating INFLUENCE and ORGANIZE moves.
- *
- * @param seatId The seat ID (e.g., 'p1_seat3')
- * @param playerCount Total number of players
- * @returns Array of adjacent seat IDs
- */
-export function getAdjacentSeats(
-  seatId: string,
-  playerCount: number
-): string[] {
-  const match = seatId.match(/p(\d+)_seat(\d)/);
-  if (!match) return [];
-
-  const player = parseInt(match[1]);
-  const seat = parseInt(match[2]);
-  const adjacent: string[] = [];
-
-  // Same player, lower seat number
-  if (seat > 1) {
-    adjacent.push(`p${player}_seat${seat - 1}`);
-  } else if (seat === 1) {
-    // Wrap to previous player's seat 6
-    const prevPlayer = getPrevPlayerClockwise(player, playerCount);
-    adjacent.push(`p${prevPlayer}_seat6`);
-  }
-
-  // Same player, higher seat number
-  if (seat < 6) {
-    adjacent.push(`p${player}_seat${seat + 1}`);
-  } else if (seat === 6) {
-    // Wrap to next player's seat 1
-    const nextPlayer = getNextPlayerClockwise(player, playerCount);
-    adjacent.push(`p${nextPlayer}_seat1`);
-  }
-
-  return adjacent;
-}
-
-/**
- * Checks if a piece can be moved from community based on community occupancy rules.
- * Rules:
- * - If Marks occupy community: Heels and Pawns cannot be moved from community
- * - If Heels occupy community: Pawns cannot be moved from community
- * - Marks can always be moved from community
- * - Pending pieces (moved to community but not yet accepted) are ignored in the check
- */
-function canMoveFromCommunity(
-  piece: Piece,
-  pieces: Piece[],
-  pendingCommunityPieceIds?: Set<string>
-): boolean {
-  const pieceName = piece.name.toLowerCase();
-
-  // Marks can always be moved from community
-  if (pieceName === "mark") return true;
-
-  // Check if any Marks exist in community (excluding pending pieces)
-  const marksInCommunity = pieces.some(
-    (p) =>
-      p.locationId?.includes("community") &&
-      p.name.toLowerCase() === "mark" &&
-      (!pendingCommunityPieceIds || !pendingCommunityPieceIds.has(p.id))
-  );
-
-  // If Marks in community, Heels and Pawns cannot move
-  if (marksInCommunity) return false;
-
-  // If moving a Pawn, check if Heels are in community (excluding pending pieces)
-  if (pieceName === "pawn") {
-    const heelsInCommunity = pieces.some(
-      (p) =>
-        p.locationId?.includes("community") &&
-        p.name.toLowerCase() === "heel" &&
-        (!pendingCommunityPieceIds || !pendingCommunityPieceIds.has(p.id))
-    );
-    // Pawns can only move if no Heels in community
-    return !heelsInCommunity;
-  }
-
-  // Heels can move if no Marks in community (already checked above)
-  return true;
 }
 
 /**
@@ -2295,63 +1562,6 @@ export function validateSingleMove(
   }
 }
 
-/**
- * Deducts credibility from a player (minimum 0)
- */
-export function deductCredibility(
-  players: Player[],
-  playerId: number
-): Player[] {
-  return players.map((p) =>
-    p.id === playerId
-      ? { ...p, credibility: Math.max(0, p.credibility - 1) }
-      : p
-  );
-}
-
-/**
- * Calculates which players should lose credibility based on the rejection reason
- * @param reason - 'rejected' | 'challenged_failed' | 'challenge_unsuccessful'
- * @returns Function that takes players and returns updated players with credibility deducted
- */
-export function handleCredibilityLoss(
-  reason:
-    | "tile_rejected_by_receiver"
-    | "tile_failed_challenge"
-    | "unsuccessful_challenge"
-    | "did_not_reject_when_challenged",
-  tilePlayerId: number,
-  challengerId?: number,
-  receiverId?: number
-): (players: Player[]) => Player[] {
-  return (players: Player[]) => {
-    switch (reason) {
-      case "tile_rejected_by_receiver":
-        // Tile player loses 1 credibility when receiving player rejects their tile
-        // (and tile didn't meet requirements perfectly)
-        return deductCredibility(players, tilePlayerId);
-
-      case "tile_failed_challenge":
-        // Tile player loses 1 credibility when another player successfully challenges
-        // (tile didn't meet requirements perfectly)
-        return deductCredibility(players, tilePlayerId);
-
-      case "unsuccessful_challenge":
-        // Challenger loses 1 credibility when they challenge but tile was perfect
-        return challengerId
-          ? deductCredibility(players, challengerId)
-          : players;
-
-      case "did_not_reject_when_challenged":
-        // Receiver loses 1 credibility if they don't reject a tile that fails the challenge
-        // (was played to them, didn't reject, another player challenged and succeeded)
-        return receiverId ? deductCredibility(players, receiverId) : players;
-
-      default:
-        return players;
-    }
-  };
-}
 
 // ============================================================================
 // BUREAUCRACY PHASE FUNCTIONS
@@ -2578,88 +1788,6 @@ export function performPromotion(
   });
 
   return { pieces: updatedPieces, success: true };
-}
-
-/**
- * Checks if a player has achieved the win condition
- *
- * Win Condition Requirements:
- * 1. Office: Must contain a Pawn (exactly 1)
- * 2. Rostrum 1: Must contain a Heel
- * 3. Rostrum 2: Must contain a Heel
- * 4. All 6 Seats: Must be occupied (can be any piece type: Mark, Heel, or Pawn)
- *
- * Total: 9 pieces in specific positions (1 Pawn in office + 2 Heels in rostrums + 6 pieces in seats)
- *
- * @param playerId - The player ID to check (1-5)
- * @param pieces - Current state of all pieces on the board
- * @returns true if player has won, false otherwise
- */
-export function checkPlayerWinCondition(
-  playerId: number,
-  pieces: Piece[]
-): boolean {
-  // Check Office: must have a Pawn
-  const officeLocation = `p${playerId}_office`;
-  const officePiece = pieces.find((p) => p.locationId === officeLocation);
-  if (!officePiece || officePiece.name !== "Pawn") {
-    return false;
-  }
-
-  // Check Rostrums: both must have Heels
-  const rostrum1Location = `p${playerId}_rostrum1`;
-  const rostrum2Location = `p${playerId}_rostrum2`;
-  const rostrum1Piece = pieces.find((p) => p.locationId === rostrum1Location);
-  const rostrum2Piece = pieces.find((p) => p.locationId === rostrum2Location);
-
-  if (!rostrum1Piece || rostrum1Piece.name !== "Heel") {
-    return false;
-  }
-  if (!rostrum2Piece || rostrum2Piece.name !== "Heel") {
-    return false;
-  }
-
-  // Check all 6 seats: all must be occupied
-  for (let i = 1; i <= 6; i++) {
-    const seatLocation = `p${playerId}_seat${i}`;
-    const seatPiece = pieces.find((p) => p.locationId === seatLocation);
-    if (!seatPiece) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/**
- * Checks for win condition - used in both Campaign and Bureaucracy phases
- *
- * When Called:
- * - Campaign Phase: When receiver starts their turn (after tile play workflow completes)
- * - Bureaucracy Phase: After all players complete their Bureaucracy turns
- *
- * Win Detection:
- * - Single winner: Returns array with one player ID [playerId]
- * - Draw (multiple winners): Returns array with multiple player IDs [id1, id2, ...]
- * - No winner: Returns empty array []
- *
- * @param players - All players in the game
- * @param pieces - Current state of all pieces on the board
- * @returns Array of winning player IDs (empty if no winner)
- */
-export function checkBureaucracyWinCondition(
-  players: Player[],
-  pieces: Piece[]
-): number[] {
-  const winners: number[] = [];
-
-  for (const player of players) {
-    if (checkPlayerWinCondition(player.id, pieces)) {
-      winners.push(player.id);
-    }
-  }
-
-  return winners;
 }
 
 /**
