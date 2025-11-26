@@ -83,7 +83,7 @@ import {
 // ============================================================================
 // HOOKS IMPORTS - Custom React hooks
 // ============================================================================
-import { useAlerts, useBoardDisplay, useTestMode, useBonusMoves } from "./src/hooks";
+import { useAlerts, useBoardDisplay, useTestMode, useBonusMoves, useMoveTracking } from "./src/hooks";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -166,13 +166,6 @@ const App: React.FC = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [lastDroppedPosition, setLastDroppedPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
-  const [lastDroppedPieceId, setLastDroppedPieceId] = useState<string | null>(
-    null
-  );
   const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
   const [revealedTileId, setRevealedTileId] = useState<string | null>(null);
 
@@ -190,8 +183,6 @@ const App: React.FC = () => {
     useState(false);
   const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
 
-  const [piecesAtTurnStart, setPiecesAtTurnStart] = useState<Piece[]>([]);
-
   // State for new tile play workflow
   const [playedTile, setPlayedTile] = useState<{
     tileId: string;
@@ -208,28 +199,6 @@ const App: React.FC = () => {
   const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
   const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
   const [tileRejected, setTileRejected] = useState(false);
-  const [piecesBeforeBonusMove, setPiecesBeforeBonusMove] = useState<Piece[]>(
-    []
-  );
-  const [piecesAtCorrectionStart, setPiecesAtCorrectionStart] = useState<
-    Piece[]
-  >([]);
-  const [showMoveCheckResult, setShowMoveCheckResult] = useState(false);
-  const [moveCheckResult, setMoveCheckResult] = useState<{
-    isMet: boolean;
-    requiredMoves: TrackedMove[];
-    performedMoves: TrackedMove[];
-    missingMoves: TrackedMove[];
-    hasExtraMoves: boolean;
-    extraMoves: string[];
-    moveValidations?: Array<{
-      moveType: string;
-      isValid: boolean;
-      reason: string;
-      fromLocationId?: string;
-      toLocationId?: string;
-    }>;
-  } | null>(null);
 
   // State for Take Advantage (challenge reward)
   const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
@@ -308,10 +277,24 @@ const App: React.FC = () => {
     setShowPerfectTileModal,
   } = useBonusMoves();
 
-  // State for tracking moved pieces this turn (one move per piece restriction)
-  const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(
-    new Set()
-  );
+  const {
+    piecesAtTurnStart,
+    piecesBeforeBonusMove,
+    piecesAtCorrectionStart,
+    movedPiecesThisTurn,
+    lastDroppedPosition,
+    lastDroppedPieceId,
+    showMoveCheckResult,
+    moveCheckResult,
+    setPiecesAtTurnStart,
+    setPiecesBeforeBonusMove,
+    setPiecesAtCorrectionStart,
+    setMovedPiecesThisTurn,
+    setLastDroppedPosition,
+    setLastDroppedPieceId,
+    setShowMoveCheckResult,
+    setMoveCheckResult,
+  } = useMoveTracking();
 
   // Bureaucracy Phase State
   const [bureaucracyStates, setBureaucracyStates] = useState<
