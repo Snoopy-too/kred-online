@@ -81,6 +81,11 @@ import {
 } from "./game";
 
 // ============================================================================
+// HOOKS IMPORTS - Custom React hooks
+// ============================================================================
+import { useAlerts } from "./src/hooks";
+
+// ============================================================================
 // COMPONENT IMPORTS - Extracted React components
 // ============================================================================
 import ErrorDisplay from "./src/components/shared/ErrorDisplay";
@@ -192,12 +197,6 @@ const App: React.FC = () => {
   const [showChallengeRevealModal, setShowChallengeRevealModal] =
     useState(false);
   const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
-  const [placerViewingTileId, setPlacerViewingTileId] = useState<string | null>(
-    null
-  );
-  const [giveReceiverViewingTileId, setGiveReceiverViewingTileId] = useState<
-    string | null
-  >(null);
 
   // State for Game Log
   const [gameLog, setGameLog] = useState<string[]>([]);
@@ -256,10 +255,6 @@ const App: React.FC = () => {
   } | null>(null);
 
   const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
-  const [challengeResultMessage, setChallengeResultMessage] = useState<
-    string | null
-  >(null);
-  const [tilePlayerMustWithdraw, setTilePlayerMustWithdraw] = useState(false);
 
   // State for Take Advantage (challenge reward)
   const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
@@ -284,32 +279,23 @@ const App: React.FC = () => {
   const [takeAdvantageValidationError, setTakeAdvantageValidationError] =
     useState<string | null>(null);
 
-  // State for custom alert modals
-  const [alertModal, setAlertModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: "error" | "warning" | "info";
-  }>({
-    isOpen: false,
-    title: "",
-    message: "",
-    type: "info",
-  });
-
-  // Helper function to show styled alert modals
-  const showAlert = (
-    title: string,
-    message: string,
-    type: "error" | "warning" | "info" = "info"
-  ) => {
-    setAlertModal({
-      isOpen: true,
-      title,
-      message,
-      type,
-    });
-  };
+  // ============================================================================
+  // CUSTOM HOOKS - Extract state management into hooks
+  // ============================================================================
+  const {
+    alertModal,
+    challengeResultMessage,
+    tilePlayerMustWithdraw,
+    placerViewingTileId,
+    giveReceiverViewingTileId,
+    showAlert,
+    closeAlert,
+    setAlertModal,
+    setChallengeResultMessage,
+    setTilePlayerMustWithdraw,
+    setPlacerViewingTileId,
+    setGiveReceiverViewingTileId,
+  } = useAlerts();
 
   // State for tracking moved pieces this turn (one move per piece restriction)
   const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(
@@ -360,10 +346,6 @@ const App: React.FC = () => {
     isOpen: false,
     remainingKredcoin: 0,
   });
-
-  const closeAlert = () => {
-    setAlertModal((prev) => ({ ...prev, isOpen: false }));
-  };
 
   const handleStartGame = (
     count: number,
