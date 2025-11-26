@@ -1241,7 +1241,96 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
           )}
         </div>
 
-        {/* Right Column: Supply & Log - will be added in next sub-phase */}
+        {/* Right Column: Supply & Log */}
+        <div className="w-full lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
+          <div className="lg:sticky lg:top-8 flex flex-col gap-8">
+            {/* New Game Button */}
+            <button
+              onClick={onNewGame}
+              className="w-full px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-md"
+            >
+              New Game
+            </button>
+
+            {/* Game Log */}
+            <div>
+              <button
+                onClick={() => setIsGameLogExpanded(!isGameLogExpanded)}
+                className="w-full text-left mb-4 flex items-center justify-between"
+              >
+                <h2 className="text-2xl font-bold text-slate-200">Game Log</h2>
+                <span className="text-slate-400 text-xl">
+                  {isGameLogExpanded ? "▼" : "▶"}
+                </span>
+              </button>
+              {isGameLogExpanded && (
+                <div
+                  ref={logContainerRef}
+                  className="h-64 bg-gray-800/50 rounded-lg border border-gray-700 p-4 overflow-y-auto text-sm"
+                >
+                  {gameLog.length === 0 ? (
+                    <p className="text-slate-400 text-center italic m-auto">
+                      No actions logged yet.
+                    </p>
+                  ) : (
+                    [...gameLog].reverse().map((entry, index) => (
+                      <p
+                        key={gameLog.length - 1 - index}
+                        className={`text-slate-300 mb-2 ${
+                          entry.startsWith("---")
+                            ? "font-bold text-cyan-300 mt-2 border-b border-gray-600 pb-2"
+                            : ""
+                        }`}
+                      >
+                        {entry}
+                      </p>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bonus Move Notification */}
+            {showBonusMoveModal && bonusMovePlayerId !== null && (
+              <div className="mt-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 shadow-2xl border-2 border-green-400 animate-pulse">
+                <h2 className="text-3xl font-extrabold text-white mb-3 text-center">
+                  🎉 BONUS MOVE!
+                </h2>
+                <p className="text-green-100 mb-3 text-center font-semibold">
+                  Player {bonusMovePlayerId}, you already had 3 Credibility!
+                </p>
+                <div className="bg-green-800/50 rounded-lg p-4 mb-4">
+                  <p className="text-green-100 text-sm mb-2">
+                    You correctly rejected an imperfect tile. Take a bonus{" "}
+                    <span className="text-yellow-300 font-bold">ADVANCE</span>{" "}
+                    move:
+                  </p>
+                  <ul className="text-green-200 text-xs space-y-1 list-disc list-inside">
+                    <li>From Community to Seat</li>
+                    <li>From Seat to Rostrum</li>
+                    <li>From Rostrum to Office</li>
+                  </ul>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={onResetBonusMove}
+                    className="w-full px-6 py-2 bg-amber-600 text-white font-semibold text-base rounded-lg hover:bg-amber-500 transition-colors shadow-md"
+                  >
+                    Reset Piece
+                  </button>
+                  <button
+                    onClick={onBonusMoveComplete}
+                    className="w-full px-6 py-3 bg-white text-green-700 font-bold text-lg rounded-lg hover:bg-green-50 transition-colors shadow-lg hover:shadow-xl"
+                  >
+                    ✓ Continue Game
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Test mode controls and modals will be added in next sub-phases */}
+          </div>
+        </div>
       </div>
     </main>
   );
