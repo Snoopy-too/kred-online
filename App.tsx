@@ -91,6 +91,7 @@ import {
   useMoveTracking,
   useTilePlayWorkflow,
   useChallengeFlow,
+  useBureaucracy,
 } from "./src/hooks";
 
 // ============================================================================
@@ -302,41 +303,33 @@ const App: React.FC = () => {
     setTakeAdvantageValidationError,
   } = useChallengeFlow();
 
-  // Bureaucracy Phase State
-  const [bureaucracyStates, setBureaucracyStates] = useState<
-    BureaucracyPlayerState[]
-  >([]);
-  const [bureaucracyTurnOrder, setBureaucracyTurnOrder] = useState<number[]>(
-    []
-  );
-  const [currentBureaucracyPlayerIndex, setCurrentBureaucracyPlayerIndex] =
-    useState(0);
-  const [currentBureaucracyPurchase, setCurrentBureaucracyPurchase] =
-    useState<BureaucracyPurchase | null>(null);
-  const [showBureaucracyMenu, setShowBureaucracyMenu] = useState(true);
-  const [bureaucracyValidationError, setBureaucracyValidationError] = useState<
-    string | null
-  >(null);
-  const [bureaucracyMoves, setBureaucracyMoves] = useState<TrackedMove[]>([]);
-  const [bureaucracySnapshot, setBureaucracySnapshot] = useState<{
-    pieces: Piece[];
-    boardTiles: BoardTile[];
-  } | null>(null);
-  const [showBureaucracyMoveCheckResult, setShowBureaucracyMoveCheckResult] =
-    useState(false);
-  const [bureaucracyMoveCheckResult, setBureaucracyMoveCheckResult] = useState<{
-    isValid: boolean;
-    reason: string;
-  } | null>(null);
-
-  // State for tracking pieces moved to community that are "pending" until acceptance/challenge resolved
-  const [pendingCommunityPieces, setPendingCommunityPieces] = useState<
-    Set<string>
-  >(new Set());
-
-  // State for phase transition message
-  const [showBureaucracyTransition, setShowBureaucracyTransition] =
-    useState(false);
+  // Bureaucracy Phase State (from useBureaucracy hook)
+  const {
+    bureaucracyStates,
+    bureaucracyTurnOrder,
+    currentBureaucracyPlayerIndex,
+    currentBureaucracyPurchase,
+    showBureaucracyMenu,
+    bureaucracyValidationError,
+    bureaucracyMoves,
+    bureaucracySnapshot,
+    showBureaucracyMoveCheckResult,
+    bureaucracyMoveCheckResult,
+    pendingCommunityPieces,
+    showBureaucracyTransition,
+    setBureaucracyStates,
+    setBureaucracyTurnOrder,
+    setCurrentBureaucracyPlayerIndex,
+    setCurrentBureaucracyPurchase,
+    setShowBureaucracyMenu,
+    setBureaucracyValidationError,
+    setBureaucracyMoves,
+    setBureaucracySnapshot,
+    setShowBureaucracyMoveCheckResult,
+    setBureaucracyMoveCheckResult,
+    setPendingCommunityPieces,
+    setShowBureaucracyTransition,
+  } = useBureaucracy();
 
   // State for finish turn confirmation
   const [showFinishTurnConfirm, setShowFinishTurnConfirm] = useState<{
