@@ -1240,6 +1240,74 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </div>
             </div>
           )}
+
+          {/* Test Mode Controls */}
+          {isTestMode && (
+            <div className="mt-8 space-y-4">
+              {/* Board Rotation Toggle */}
+              <div className="bg-gray-700 rounded-lg p-4 mt-4">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={boardRotationEnabled}
+                    onChange={(e) => setBoardRotationEnabled(e.target.checked)}
+                    className="w-5 h-5 accent-cyan-500"
+                  />
+                  <span className="text-slate-200 font-semibold">
+                    Board Rotation
+                  </span>
+                  <span className="text-xs text-slate-400 ml-auto">
+                    {boardRotationEnabled ? "(ON)" : "(OFF)"}
+                  </span>
+                </label>
+                <p className="text-xs text-slate-400 mt-2">
+                  When ON, the board rotates to show each player's perspective.
+                  When OFF, the board stays fixed.
+                </p>
+              </div>
+
+              {/* Grid Overlay Toggle */}
+              <div className="bg-gray-700 rounded-lg p-4">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showGridOverlay}
+                    onChange={(e) => setShowGridOverlay(e.target.checked)}
+                    className="w-5 h-5 accent-cyan-500"
+                  />
+                  <span className="text-slate-200 font-semibold">
+                    Grid Overlay
+                  </span>
+                  <span className="text-xs text-slate-400 ml-auto">
+                    {showGridOverlay ? "(ON)" : "(OFF)"}
+                  </span>
+                </label>
+                <p className="text-xs text-slate-400 mt-2">
+                  When ON, displays a 2% grid overlay on the board to help with
+                  tile placement. When OFF, the grid is hidden.
+                </p>
+              </div>
+
+              {/* Check Move Button */}
+              {playedTile &&
+                (gameState === "TILE_PLAYED" ||
+                  gameState === "CORRECTION_REQUIRED") && (
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <button
+                      onClick={() => onCheckMove?.()}
+                      className="w-full px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-lg"
+                    >
+                      ✓ Check Move
+                    </button>
+                    <p className="text-xs text-slate-400 mt-2">
+                      {gameState === "CORRECTION_REQUIRED"
+                        ? "Validate if corrections satisfy the tile requirements."
+                        : "Validate if the moves satisfy the tile requirements."}
+                    </p>
+                  </div>
+                )}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Supply & Log */}

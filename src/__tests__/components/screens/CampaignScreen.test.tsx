@@ -310,22 +310,22 @@ describe("CampaignScreen", () => {
     expect(screen.getByText(/Take Advantage/)).toBeInTheDocument();
   });
 
-  it("should call onResetTurn when undo button is clicked", () => {
-    render(<CampaignScreen {...defaultProps} hasPlayedTileThisTurn={true} />);
-    const undoButton = screen.getByText(/Undo/);
-    fireEvent.click(undoButton);
+  it("should call onResetTurn when reset turn button is clicked", () => {
+    render(<CampaignScreen {...defaultProps} gameState="TILE_PLAYED" />);
+    const resetButton = screen.getByText(/Reset Turn/);
+    fireEvent.click(resetButton);
     expect(mockOnResetTurn).toHaveBeenCalledTimes(1);
   });
 
   it("should toggle board rotation when checkbox is clicked", () => {
-    render(<CampaignScreen {...defaultProps} />);
+    render(<CampaignScreen {...defaultProps} isTestMode={true} />);
     const checkbox = screen.getByRole("checkbox", { name: /Board Rotation/ });
     fireEvent.click(checkbox);
     expect(mockSetBoardRotationEnabled).toHaveBeenCalledWith(true);
   });
 
   it("should toggle grid overlay when checkbox is clicked", () => {
-    render(<CampaignScreen {...defaultProps} />);
+    render(<CampaignScreen {...defaultProps} isTestMode={true} />);
     const checkbox = screen.getByRole("checkbox", { name: /Grid Overlay/ });
     fireEvent.click(checkbox);
     expect(mockSetShowGridOverlay).toHaveBeenCalledWith(true);
