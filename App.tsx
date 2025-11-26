@@ -83,7 +83,7 @@ import {
 // ============================================================================
 // HOOKS IMPORTS - Custom React hooks
 // ============================================================================
-import { useAlerts, useBoardDisplay } from "./src/hooks";
+import { useAlerts, useBoardDisplay, useTestMode } from "./src/hooks";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -166,8 +166,6 @@ const App: React.FC = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [credibilityRotationAdjustments, setCredibilityRotationAdjustments] =
-    useState<{ [playerId: number]: number }>({});
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{
     top: number;
     left: number;
@@ -192,17 +190,7 @@ const App: React.FC = () => {
     useState(false);
   const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
 
-  // State for Game Log
-  const [gameLog, setGameLog] = useState<string[]>([]);
   const [piecesAtTurnStart, setPiecesAtTurnStart] = useState<Piece[]>([]);
-
-  // State for collapsible test mode modules
-  const [isGameLogExpanded, setIsGameLogExpanded] = useState(true);
-  const [isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded] =
-    useState(false);
-  const [isCredibilityRulesExpanded, setIsCredibilityRulesExpanded] =
-    useState(false);
-  const [isPieceTrackerExpanded, setIsPieceTrackerExpanded] = useState(false);
 
   // State for new tile play workflow
   const [playedTile, setPlayedTile] = useState<{
@@ -299,6 +287,22 @@ const App: React.FC = () => {
     setShowGridOverlay,
     setDummyTile,
   } = useBoardDisplay();
+
+  const {
+    gameLog,
+    isGameLogExpanded,
+    isCredibilityAdjusterExpanded,
+    isCredibilityRulesExpanded,
+    isPieceTrackerExpanded,
+    credibilityRotationAdjustments,
+    addGameLog,
+    setGameLog,
+    setIsGameLogExpanded,
+    setIsCredibilityAdjusterExpanded,
+    setIsCredibilityRulesExpanded,
+    setIsPieceTrackerExpanded,
+    setCredibilityRotationAdjustments,
+  } = useTestMode();
 
   // State for tracking moved pieces this turn (one move per piece restriction)
   const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(
@@ -883,10 +887,6 @@ const App: React.FC = () => {
       }
     }
     return logs;
-  };
-
-  const addGameLog = (message: string) => {
-    setGameLog((prev) => [...prev, message]);
   };
 
   const addCredibilityLossLog = (
