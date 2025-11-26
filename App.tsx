@@ -83,7 +83,7 @@ import {
 // ============================================================================
 // HOOKS IMPORTS - Custom React hooks
 // ============================================================================
-import { useAlerts } from "./src/hooks";
+import { useAlerts, useBoardDisplay } from "./src/hooks";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -166,12 +166,6 @@ const App: React.FC = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [dummyTile, setDummyTile] = useState<{
-    position: { top: number; left: number };
-    rotation: number;
-  } | null>(null);
-  const [boardRotationEnabled, setBoardRotationEnabled] = useState(true);
-  const [showGridOverlay, setShowGridOverlay] = useState(false);
   const [credibilityRotationAdjustments, setCredibilityRotationAdjustments] =
     useState<{ [playerId: number]: number }>({});
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{
@@ -296,6 +290,15 @@ const App: React.FC = () => {
     setPlacerViewingTileId,
     setGiveReceiverViewingTileId,
   } = useAlerts();
+
+  const {
+    boardRotationEnabled,
+    showGridOverlay,
+    dummyTile,
+    setBoardRotationEnabled,
+    setShowGridOverlay,
+    setDummyTile,
+  } = useBoardDisplay();
 
   // State for tracking moved pieces this turn (one move per piece restriction)
   const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(
