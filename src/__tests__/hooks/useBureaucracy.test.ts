@@ -214,7 +214,11 @@ describe("useBureaucracy", () => {
       };
 
       act(() => {
-        result.current.selectMenuItem(expensiveItem, mockPieces, mockBoardTiles);
+        result.current.selectMenuItem(
+          expensiveItem,
+          mockPieces,
+          mockBoardTiles
+        );
       });
 
       expect(result.current.currentBureaucracyPurchase).toBeNull();
@@ -290,7 +294,12 @@ describe("useBureaucracy", () => {
       });
 
       act(() => {
-        result.current.completePurchase(mockPlayers, mockPieces, mockBoardTiles, 3);
+        result.current.completePurchase(
+          mockPlayers,
+          mockPieces,
+          mockBoardTiles,
+          3
+        );
       });
 
       const currentPlayerId = result.current.bureaucracyTurnOrder[0];
@@ -322,7 +331,12 @@ describe("useBureaucracy", () => {
       });
 
       act(() => {
-        result.current.completePurchase(mockPlayers, mockPieces, mockBoardTiles, 3);
+        result.current.completePurchase(
+          mockPlayers,
+          mockPieces,
+          mockBoardTiles,
+          3
+        );
       });
 
       const currentPlayerId = result.current.bureaucracyTurnOrder[0];
@@ -355,7 +369,12 @@ describe("useBureaucracy", () => {
       expect(result.current.showBureaucracyMenu).toBe(false);
 
       act(() => {
-        result.current.completePurchase(mockPlayers, mockPieces, mockBoardTiles, 3);
+        result.current.completePurchase(
+          mockPlayers,
+          mockPieces,
+          mockBoardTiles,
+          3
+        );
       });
 
       expect(result.current.showBureaucracyMenu).toBe(true);
@@ -410,7 +429,9 @@ describe("useBureaucracy", () => {
         result.current.nextBureaucracyPlayer();
       });
 
-      expect(result.current.currentBureaucracyPlayerIndex).toBe(initialIndex + 1);
+      expect(result.current.currentBureaucracyPlayerIndex).toBe(
+        initialIndex + 1
+      );
       expect(result.current.showBureaucracyMenu).toBe(true);
     });
 
@@ -465,9 +486,9 @@ describe("useBureaucracy", () => {
       });
 
       expect(result.current.showFinishTurnConfirm.isOpen).toBe(true);
-      expect(result.current.showFinishTurnConfirm.remainingKredcoin).toBeGreaterThan(
-        0
-      );
+      expect(
+        result.current.showFinishTurnConfirm.remainingKredcoin
+      ).toBeGreaterThan(0);
     });
   });
 

@@ -295,7 +295,9 @@ export function useBureaucracy() {
    * @param playerId - The player ID
    * @returns Player's bureaucracy state or undefined
    */
-  const getPlayerState = (playerId: number): BureaucracyPlayerState | undefined => {
+  const getPlayerState = (
+    playerId: number
+  ): BureaucracyPlayerState | undefined => {
     return bureaucracyStates.find((s) => s.playerId === playerId);
   };
 

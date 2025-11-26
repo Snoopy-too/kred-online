@@ -83,7 +83,7 @@ import {
 // ============================================================================
 // HOOKS IMPORTS - Custom React hooks
 // ============================================================================
-import { useAlerts, useBoardDisplay, useTestMode } from "./src/hooks";
+import { useAlerts, useBoardDisplay, useTestMode, useBonusMoves } from "./src/hooks";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -208,11 +208,6 @@ const App: React.FC = () => {
   const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
   const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
   const [tileRejected, setTileRejected] = useState(false);
-  const [showBonusMoveModal, setShowBonusMoveModal] = useState(false);
-  const [bonusMovePlayerId, setBonusMovePlayerId] = useState<number | null>(
-    null
-  );
-  const [bonusMoveWasCompleted, setBonusMoveWasCompleted] = useState(false);
   const [piecesBeforeBonusMove, setPiecesBeforeBonusMove] = useState<Piece[]>(
     []
   );
@@ -235,8 +230,6 @@ const App: React.FC = () => {
       toLocationId?: string;
     }>;
   } | null>(null);
-
-  const [showPerfectTileModal, setShowPerfectTileModal] = useState(false);
 
   // State for Take Advantage (challenge reward)
   const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
@@ -303,6 +296,17 @@ const App: React.FC = () => {
     setIsPieceTrackerExpanded,
     setCredibilityRotationAdjustments,
   } = useTestMode();
+
+  const {
+    showBonusMoveModal,
+    bonusMovePlayerId,
+    bonusMoveWasCompleted,
+    showPerfectTileModal,
+    setShowBonusMoveModal,
+    setBonusMovePlayerId,
+    setBonusMoveWasCompleted,
+    setShowPerfectTileModal,
+  } = useBonusMoves();
 
   // State for tracking moved pieces this turn (one move per piece restriction)
   const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(
