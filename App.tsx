@@ -168,7 +168,7 @@ const App: React.FC = () => {
   // ============================================================================
   // CUSTOM HOOKS - Extract state management into hooks
   // ============================================================================
-  
+
   // Core game state (useGameState hook)
   const {
     gameState,
