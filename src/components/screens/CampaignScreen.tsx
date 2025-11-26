@@ -434,6 +434,218 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     }
   };
 
+  /**
+   * Handle drop on board (pieces, tiles, dummy tile)
+   */
+  const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDropIndicator(null);
+    const boardTileId = e.dataTransfer.getData("boardTileId");
+    const pieceId = e.dataTransfer.getData("pieceId");
+    const tileIdStr = e.dataTransfer.getData("tileId");
+    const isDummyTile = e.dataTransfer.getData("dummyTile");
+
+    const boardRect = e.currentTarget.getBoundingClientRect();
+    const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+    const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+
+    let left = rawLeft;
+    let top = rawTop;
+    if (boardRotation !== 0) {
+      const angleRad = -boardRotation * (Math.PI / 180);
+      const centerX = 50;
+      const centerY = 50;
+      const translatedX = rawLeft - centerX;
+      const translatedY = rawTop - centerY;
+      const rotatedX =
+        translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY =
+        translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      left = rotatedX + centerX;
+      top = rotatedY + centerY;
+    }
+
+    // Handle dummy tile drops
+    if (isDummyTile && dummyTile) {
+      setDummyTile({
+        position: { top, left },
+        rotation: dummyTile.rotation,
+      });
+      return;
+    }
+
+    if (boardTileId && isTestMode) {
+      onBoardTileMove(boardTileId, { top, left });
+      return;
+    }
+
+    // Free placement mode: allow tiles to be placed anywhere without snapping
+    if (tileIdStr && !hasPlayedTileThisTurn) {
+      const currentPlayer = players.find((p) => p.id === currentPlayerId);
+      if (currentPlayer) {
+        const freeTileSpace: TileReceivingSpace = {
+          ownerId: currentPlayerId,
+          position: { left, top },
+          rotation: 0,
+        };
+        onPlaceTile(parseInt(tileIdStr, 10), freeTileSpace);
+        return;
+      }
+    }
+
+    // Regular piece placement with snapping
+    const snappedLocation = findNearestVacantLocation(
+      { top, left },
+      pieces,
+      playerCount
+    );
+
+    if (snappedLocation && pieceId) {
+      onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
+    }
+  };
+
+  /**
+   * Handle drop on designated tile space
+   */
+  const handleDropOnTileSpace = (
+    e: React.DragEvent<HTMLDivElement>,
+    space?: TileReceivingSpace
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const tileIdStr = e.dataTransfer.getData("tileId");
+    if (tileIdStr && !hasPlayedTileThisTurn && space) {
+      // Normal mode: drop on fixed tile space
+      onPlaceTile(parseInt(tileIdStr, 10), space);
+    }
+  };
+
+  /**
+   * Handle starting to drag a piece
+   */
+  const handleDragStartPiece = (
+    e: React.DragEvent<HTMLImageElement>,
+    pieceId: string
+  ) => {
+    e.dataTransfer.setData("pieceId", pieceId);
+    e.dataTransfer.effectAllowed = "move";
+    const piece = pieces.find((p) => p.id === pieceId);
+    if (piece) {
+      setDraggedPieceInfo({
+        name: piece.name,
+        imageUrl: piece.imageUrl,
+        pieceId: piece.id,
+        locationId: piece.locationId,
+      });
+    }
+  };
+
+  /**
+   * Handle ending piece drag
+   */
+  const handleDragEndPiece = () => {
+    setDraggedPieceInfo(null);
+    setDropIndicator(null);
+  };
+
+  /**
+   * Handle starting to drag a tile from hand
+   */
+  const handleDragStartTile = (
+    e: React.DragEvent<HTMLDivElement>,
+    tileId: number
+  ) => {
+    e.dataTransfer.setData("tileId", tileId.toString());
+    e.dataTransfer.effectAllowed = "move";
+    setIsDraggingTile(true);
+  };
+
+  /**
+   * Handle starting to drag a board tile (test mode)
+   */
+  const handleDragStartBoardTile = (
+    e: React.DragEvent<HTMLDivElement>,
+    boardTileId: string
+  ) => {
+    e.dataTransfer.setData("boardTileId", boardTileId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  /**
+   * Handle starting to drag dummy tile (test mode)
+   */
+  const handleDragStartDummyTile = (e: React.DragEvent<HTMLDivElement>) => {
+    e.dataTransfer.setData("dummyTile", "true");
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  /**
+   * Handle ending dummy tile drag
+   */
+  const handleDragEndDummyTile = () => {
+    setDropIndicator(null);
+  };
+
+  /**
+   * Rotate dummy tile (test mode)
+   */
+  const handleRotateDummyTile = (degrees: number) => {
+    if (dummyTile) {
+      setDummyTile({
+        ...dummyTile,
+        rotation: (dummyTile.rotation + degrees) % 360,
+      });
+    }
+  };
+
+  // ============================================================================
+  // COMPUTED VALUES FOR RENDERING
+  // ============================================================================
+  const currentPlayer = players.find((p) => p.id === currentPlayerId);
+  
+  // Check if it's the current player's turn for a decision (accept/reject or challenge)
+  // In test mode, always show decision dialogs so player can control all players
+  // NEW WORKFLOW: Uses playedTile for PENDING_ACCEPTANCE
+  // OLD WORKFLOW: Uses tileTransaction for PENDING_CHALLENGE
+  const isMyTurnForDecision =
+    isTestMode ||
+    (gameState === "PENDING_ACCEPTANCE" &&
+      playedTile &&
+      currentPlayerId === playedTile.receivingPlayerId) ||
+    (gameState === "PENDING_ACCEPTANCE" &&
+      !playedTile &&
+      currentPlayerId === tileTransaction?.receiverId) ||
+    (gameState === "PENDING_CHALLENGE" &&
+      bystanders[bystanderIndex]?.id === currentPlayerId);
+
+  const showWaitingOverlay =
+    (gameState === "PENDING_ACCEPTANCE" || gameState === "PENDING_CHALLENGE") &&
+    !isMyTurnForDecision;
+
+  let waitingMessage = "";
+  let waitingPlayerId = undefined;
+  if (showWaitingOverlay) {
+    if (gameState === "PENDING_ACCEPTANCE") {
+      waitingPlayerId =
+        playedTile?.receivingPlayerId || tileTransaction?.receiverId;
+      waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
+    } else if (gameState === "PENDING_CHALLENGE") {
+      waitingPlayerId = bystanders[bystanderIndex]?.id;
+      waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
+    }
+  }
+
+  let indicatorSizeClass = "";
+  if (dropIndicator) {
+    if (dropIndicator.name === "Heel")
+      indicatorSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
+    else if (dropIndicator.name === "Pawn")
+      indicatorSizeClass = "w-16 h-16 sm:w-20 sm:h-20";
+    else indicatorSizeClass = "w-10 h-10 sm:w-14 sm:h-14"; // Mark
+  }
+  const indicatorScaleStyle = dropIndicator ? { transform: "scale(0.84)" } : {};
+
   // Component JSX will be added in subsequent sub-phases
   return <div>CampaignScreen - To be implemented</div>;
 };
