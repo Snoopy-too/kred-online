@@ -1,464 +1,129 @@
 # KRED Refactoring Progress
 
-Last updated: 2025-11-27
-
-## Current Status
-
-**Active Phase**: Phase 7g Complete - Custom Hooks Extracted ✅
+**Last Updated**: November 27, 2025
+**Status**: Phase 7 Complete ✅
+**Tests**: 1,056 passing
 **Branch**: `refactoring`
-**Tests Passing**: 862 tests (55 integration + 807 unit)
-**Latest**: Phase 7g - Custom Hooks Extraction - Complete ✅
 
 ---
 
-## ✅ Completed
+## Summary
 
-### Phase 1: Test Infrastructure
-
-- [x] Vitest setup with 88 passing tests
-- [x] Integration tests (55 tests)
-- [x] Unit tests for initial configs (33 tests)
-
-### Phase 2a: Config Extraction - Constants
-
-- [x] `src/config/constants.ts` - PLAYER_OPTIONS, BOARD_IMAGE_URLS, TOTAL_TILES (9 tests)
-- [x] `src/config/tiles.ts` - TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES (9 tests)
-- [x] `src/config/pieces.ts` - PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT (15 tests)
-
-### Phase 2b: Config Extraction - Board Layout
-
-- [x] `DROP_LOCATIONS_BY_PLAYER_COUNT` - 245 lines, 11 tests
-- [x] `TILE_SPACES_BY_PLAYER_COUNT` - 32 lines, 7 tests
-- [x] `BANK_SPACES_BY_PLAYER_COUNT` - 101 lines, 10 tests
-- [x] `CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT` - 38 lines, 7 tests
-- [x] `PLAYER_PERSPECTIVE_ROTATIONS` - 6 lines, 5 tests
-
-**Total extracted to `src/config/board.ts`**: 422 lines, 40 tests
-
-### Phase 2c: Config Extraction - Rules
-
-- [x] `DEFINED_MOVES` - 43 tests
-- [x] `TILE_PLAY_OPTIONS` - 31 tests
-- [x] `TILE_REQUIREMENTS` - 32 tests
-- [x] `ROSTRUM_SUPPORT_RULES` - 23 tests
-- [x] `ROSTRUM_ADJACENCY_BY_PLAYER_COUNT` - 29 tests
-
-**Total extracted to `src/config/rules.ts`**: 594 lines, 158 tests
-
-### Phase 2d: Config Extraction - Bureaucracy
-
-- [x] `THREE_FOUR_PLAYER_BUREAUCRACY_MENU` - 25 tests
-- [x] `FIVE_PLAYER_BUREAUCRACY_MENU` - 26 tests
-
-**Total extracted to `src/config/bureaucracy.ts`**: 178 lines, 51 tests
-
-### Phase 3: Type Extraction - Additional Types ✅ COMPLETE
-
-- [x] `src/types/bureaucracy.ts` - 6 type definitions, 12 tests
-  - BureaucracyItemType, BureaucracyMoveType, PromotionLocationType
-  - BureaucracyMenuItem, BureaucracyPurchase, BureaucracyPlayerState
-- [x] `src/types/challenge.ts` - ChallengeState interface, 7 tests
-- [x] `src/types/played-tile.ts` - PlayedTileState interface, 7 tests
-
-**Total extracted in Phase 3**: 3 new type files, 26 tests
-
-### Phase 3b: Utils Extraction - Pure Utility Functions ✅ COMPLETE
-
-- [x] `src/utils/positioning.ts` - 3 exports, 24 tests
-  - BOARD_CENTERS constant
-  - isPositionInCommunityCircle() function
-  - calculatePieceRotation() function
-- [x] `src/utils/formatting.ts` - formatLocationId() function, 26 tests
-- [x] `src/utils/array.ts` - shuffle() function, 12 tests
-- [x] `src/utils/index.ts` - barrel export for all utils
-
-**Total extracted in Phase 3b**: 3 new util files + barrel export, 62 tests
-
-### Phase 4: Game Initialization Logic ✅ COMPLETE
-
-- [x] `src/game/initialization.ts` - 3 initialization functions, 34 tests
-  - initializePlayers() - Creates players with shuffled, dealt hands
-  - initializePieces() - Sets up Mark pieces at seats 1, 3, 5 for drafting
-  - initializeCampaignPieces() - Initializes all pieces for campaign start
-- [x] `src/game/index.ts` - barrel export for game module
-
-**Total extracted in Phase 4**: 373 lines, 34 tests
-
-### Phase 5: Game Logic & Rules Extraction ✅ COMPLETE
-
-#### Game Logic (src/game/)
-
-- [x] `src/game/state-snapshots.ts` - 2 functions, 21 tests
-  - createGameStateSnapshot() - Deep copy of game state
-  - getChallengeOrder() - Challenge order calculation
-- [x] `src/game/locations.ts` - 4 functions, 23 tests
-  - findNearestVacantLocation() - Find vacant drop locations
-  - getLocationIdFromPosition() - Position-to-location mapping
-  - getPlayerIdFromLocationId() - Extract player ID from location
-  - isLocationOwnedByPlayer() - Check location ownership
-
-#### Rules (src/rules/)
-
-- [x] `src/rules/credibility.ts` - 2 functions, 13 tests
-  - deductCredibility() - Reduce player credibility
-  - handleCredibilityLoss() - Process credibility loss scenarios
-- [x] `src/rules/win-conditions.ts` - 2 functions, 21 tests
-  - checkPlayerWinCondition() - Verify player victory
-  - checkBureaucracyWinCondition() - Check bureaucracy phase winners
-- [x] `src/rules/adjacency.ts` - 5 functions, 16 tests
-  - getNextPlayerClockwise() - Next player in turn order
-  - getPrevPlayerClockwise() - Previous player in turn order
-  - areSeatsAdjacent() - Check seat adjacency
-  - getAdjacentSeats() - Get adjacent seat IDs
-  - canMoveFromCommunity() - Community hierarchy rules
-- [x] `src/rules/rostrum.ts` - 9 functions, 27 tests
-  - getPlayerRostrumRules() - Get rostrum configuration
-  - getRostrumSupportRule() - Get support seat requirements
-  - countPiecesInSeats() - Count pieces in seats
-  - areSupportingSeatsFullForRostrum() - Check rostrum accessibility
-  - countPiecesInPlayerRostrums() - Count pieces in both rostrums
-  - areBothRostrumsFilledForPlayer() - Check office accessibility
-  - areRostrumsAdjacent() - Check rostrum adjacency
-  - getAdjacentRostrum() - Get connected rostrum
-  - validateAdjacentRostrumMovement() - Validate rostrum-to-rostrum moves
-- [x] `src/rules/movement.ts` - 2 functions, 26 tests
-  - validatePieceMovement() - Validate piece movement rules
-  - validateMoveType() - Determine move type (ADVANCE, ASSIST, etc.)
-- [x] `src/rules/index.ts` - barrel export for rules module
-
-**Total extracted in Phase 5**: 872 lines, 147 tests (26 functions across 7 modules)
-
-### Phase 6: Game Validation & Move Types Extraction ✅ COMPLETE
-
-#### Game Logic Modules (src/game/)
-
-- [x] `src/game/tile-validation.ts` - 6 functions, 43 tests (commit af23ab1)
-
-  - isMoveAllowedInTilePlayOption() - Check if move type allowed for tile option
-  - getMoveRequirement() - Get required move count for tile option
-  - getTileRequirements() - Extract tile requirements from tile play options
-  - tileHasRequirements() - Check if tile has any requirements
-  - areAllTileRequirementsMet() - Validate all tile requirements met
-  - canTileBeRejected() - Check if tile can be rejected by player
-
-- [x] `src/game/validation.ts` - 4 functions, 32 tests (commit 9570fe6)
-
-  - validateMovesForTilePlay() - Validate moves match tile requirements
-  - validateTileRequirements() - Comprehensive tile requirement validation
-  - validateTileRequirementsWithImpossibleMoveExceptions() - Validation with edge cases
-  - validateSingleMove() - Validate individual move against rules
-
-- [x] `src/game/bureaucracy.ts` - 6 functions, 38 tests (commit aba05bf)
-
-  - calculatePlayerKredcoin() - Calculate player's total kredcoin
-  - getBureaucracyTurnOrder() - Determine turn order for bureaucracy phase
-  - getBureaucracyMenu() - Get menu for player count
-  - getAvailablePurchases() - Filter menu by affordability
-  - validatePromotion() - Validate piece promotion move
-  - performPromotion() - Execute piece promotion
-
-- [x] `src/game/move-types.ts` - 2 functions, 26 tests (commit f93bf14)
-  - determineMoveType() - Identify move type from location patterns
-  - validatePurchasedMove() - Validate bureaucracy purchased moves
-
-#### Validation Logic Previously Extracted (Phase 5)
-
-- [x] `src/rules/move-validation.ts` - 6 move validators (36 tests)
-  - validateAdvanceMove() - Validate ADVANCE moves
-  - validateWithdrawMove() - Validate WITHDRAW moves
-  - validateRemoveMove() - Validate REMOVE moves
-  - validateInfluenceMove() - Validate INFLUENCE moves
-  - validateAssistMove() - Validate ASSIST moves
-  - validateOrganizeMove() - Validate ORGANIZE moves
-
-**Total extracted in Phase 6**: 847 lines, 149 tests (24 functions across 5 modules)
-**Game.ts reduction**: 1,822 → 975 lines (847 lines removed, 46.5% reduction)
+The KRED online game refactoring is complete through Phase 7. The codebase has been reorganized from two monolithic files (game.ts and App.tsx) into a well-structured modular architecture with comprehensive test coverage.
 
 ---
 
-## 🚧 Next Steps
+## Completed Phases
 
-### Phase 6: React Hooks & Components (Next)
+### ✅ Phase 1: Test Infrastructure
+- Vitest + React Testing Library setup
+- Initial smoke and integration tests
+- **Result**: 88 tests
 
-Extract to `src/hooks/` and `src/components/`:
+### ✅ Phase 2: Config Extraction
+- Static configuration moved to `src/config/`
+- 6 config files: constants, tiles, pieces, board, rules, bureaucracy
+- **Result**: 1,194 lines, 282 tests
 
-- [ ] Custom React hooks (useGameState, useDragAndDrop, etc.)
-- [ ] Screen components (PlayerSelection, Drafting, Campaign, Bureaucracy)
+### ✅ Phase 3: Type Extraction
+- TypeScript interfaces moved to `src/types/`
+- 9 type files covering all game entities
+- **Result**: 26 tests
 
----
+### ✅ Phase 3b: Utils Extraction
+- Pure utilities moved to `src/utils/`
+- positioning, formatting, array utilities
+- **Result**: 62 tests
 
-## File Structure (Current)
+### ✅ Phase 4: Game Initialization
+- Initialization functions to `src/game/initialization.ts`
+- **Result**: 34 tests
 
-```
-kred-online/
-├── src/
-│   ├── __tests__/
-│   │   ├── config/
-│   │   │   ├── constants.test.ts (9 tests)
-│   │   │   ├── tiles.test.ts (9 tests)
-│   │   │   ├── pieces.test.ts (15 tests)
-│   │   │   ├── board.test.ts (40 tests)
-│   │   │   ├── rules.test.ts (158 tests)
-│   │   │   └── bureaucracy.test.ts (51 tests)
-│   │   ├── components/
-│   │   │   └── screens/
-│   │   │       └── CampaignScreen.test.tsx (20 tests)
-│   │   ├── game/
-│   │   │   ├── initialization.test.ts (34 tests)
-│   │   │   ├── state-snapshots.test.ts (21 tests)
-│   │   │   ├── locations.test.ts (23 tests)
-│   │   │   ├── tile-validation.test.ts (43 tests)
-│   │   │   ├── validation.test.ts (32 tests)
-│   │   │   ├── bureaucracy.test.ts (38 tests)
-│   │   │   └── move-types.test.ts (26 tests)
-│   │   ├── rules/
-│   │   │   ├── credibility.test.ts (13 tests)
-│   │   │   ├── win-conditions.test.ts (21 tests)
-│   │   │   ├── adjacency.test.ts (16 tests)
-│   │   │   ├── rostrum.test.ts (27 tests)
-│   │   │   └── movement.test.ts (26 tests)
-│   │   ├── types/
-│   │   │   ├── bureaucracy.test.ts (12 tests)
-│   │   │   ├── challenge.test.ts (7 tests)
-│   │   │   └── played-tile.test.ts (7 tests)
-│   │   ├── utils/
-│   │   │   ├── positioning.test.ts (24 tests)
-│   │   │   ├── formatting.test.ts (26 tests)
-│   │   │   ├── array.test.ts (12 tests)
-│   │   └── *.test.tsx (55 integration tests)
-│   ├── components/
-│   │   └── screens/
-│   │       └── CampaignScreen.tsx (2,425 lines)
-│   ├── config/
-│   │   ├── constants.ts (PLAYER_OPTIONS, BOARD_IMAGE_URLS, TOTAL_TILES)
-│   │   ├── tiles.ts (TILE_IMAGE_URLS, TILE_KREDCOIN_VALUES)
-│   │   ├── pieces.ts (PIECE_TYPES, PIECE_COUNTS_BY_PLAYER_COUNT)
-│   │   ├── board.ts (5 board layout configs)
-│   │   ├── rules.ts (5 rule configs: DEFINED_MOVES, TILE_PLAY_OPTIONS, etc.)
-│   │   └── bureaucracy.ts (2 bureaucracy menus)
-│   ├── game/
-│   │   ├── index.ts (barrel export)
-│   │   ├── initialization.ts (3 functions)
-│   │   ├── state-snapshots.ts (2 functions)
-│   │   ├── locations.ts (4 functions)
-│   │   ├── tile-validation.ts (6 functions)
-│   │   ├── validation.ts (4 functions)
-│   │   ├── bureaucracy.ts (6 functions)
-│   │   └── move-types.ts (2 functions)
-│   ├── rules/
-│   │   ├── index.ts (barrel export)
-│   │   ├── credibility.ts (2 functions)
-│   │   ├── win-conditions.ts (2 functions)
-│   │   ├── adjacency.ts (5 functions)
-│   │   ├── rostrum.ts (9 functions)
-│   │   └── movement.ts (2 functions)
-│   └── types/
-│       ├── index.ts (barrel export)
-│       ├── game.ts (GameState, DropLocation, BankSpace)
-│       ├── move.ts (Move types)
-│       ├── piece.ts (Piece types)
-│       ├── player.ts (Player types)
-│       ├── tile.ts (Tile types)
-│       ├── bureaucracy.ts (6 bureaucracy types)
-│       ├── challenge.ts (ChallengeState)
-│       └── played-tile.ts (PlayedTileState)
-│   └── utils/
-│       ├── index.ts (barrel export)
-│       ├── positioning.ts (rotation, community circle)
-│       ├── formatting.ts (formatLocationId)
-│       └── array.ts (shuffle)
-├── game.ts (main file - being refactored, now ~975 lines)
-└── REFACTORING_STRATEGY_V2.md (detailed strategy)
-```
+### ✅ Phase 5: Game Logic & Rules
+- Game logic to `src/game/` (state-snapshots, locations)
+- Rules to `src/rules/` (credibility, win-conditions, adjacency, rostrum, movement)
+- **Result**: 872 lines, 147 tests
+
+### ✅ Phase 6: Validation & Move Types
+- Complex validation to `src/game/`
+- tile-validation, validation, bureaucracy, move-types
+- **Result**: 847 lines, 149 tests
+
+### ✅ Phase 7: React Components & Hooks
+- Screen components to `src/components/screens/`
+- 9 custom hooks to `src/hooks/`
+- **Result**: 2,700+ lines from App.tsx, 214 hook tests
 
 ---
 
 ## Key Metrics
 
-### Phase 2 (Config Extraction)
-
-- **Lines extracted from game.ts**: ~1,194 lines (422 board + 594 rules + 178 bureaucracy)
-- **Test coverage added**: 249 new unit tests (40 board + 158 rules + 51 bureaucracy)
-- **Config files created**: 6 files (constants, tiles, pieces, board, rules, bureaucracy)
-
-### Phase 3 (Type Extraction)
-
-- **Lines extracted from game.ts**: ~56 lines (bureaucracy + challenge + played-tile types)
-- **Test coverage added**: 26 new unit tests (12 bureaucracy + 7 challenge + 7 played-tile)
-- **Type files created**: 3 files (bureaucracy, challenge, played-tile)
-
-### Phase 3b (Utils Extraction)
-
-- **Lines extracted from game.ts**: ~86 lines (positioning + formatting + array utilities)
-- **Test coverage added**: 62 new unit tests (24 positioning + 26 formatting + 12 array)
-- **Util files created**: 4 files (positioning, formatting, array, index)
-
-### Phase 4 (Game Initialization)
-
-- **Lines extracted from game.ts**: ~246 lines (initializePlayers + initializePieces + initializeCampaignPieces)
-- **Test coverage added**: 34 new unit tests
-- **Game files created**: 2 files (initialization, index)
-
-### Phase 5 (Game Logic & Rules)
-
-- **Lines extracted from game.ts**: ~872 lines (state-snapshots + locations + 5 rules modules)
-- **Test coverage added**: 147 new unit tests (21 + 23 + 13 + 21 + 16 + 27 + 26)
-- **Game files created**: 2 files (state-snapshots, locations)
-- **Rules files created**: 6 files (credibility, win-conditions, adjacency, rostrum, movement, index)
-- **Functions extracted**: 26 functions across 7 modules
-
-### Phase 6 (Game Validation & Move Types)
-
-- **Lines extracted from game.ts**: ~847 lines (tile-validation + validation + bureaucracy + move-types)
-- **Test coverage added**: 149 new unit tests (43 + 32 + 38 + 26 + 10\*)
-  - \*10 tests for move-validation.ts extracted in Phase 5, counted here for completeness
-- **Game files created**: 4 files (tile-validation, validation, bureaucracy, move-types)
-- **Functions extracted**: 24 functions across 4 modules
-- **Game.ts reduction**: 1,822 → 975 lines (46.5% reduction from Phase 5 end)
-
-### Phase 7e (CampaignScreen Component Extraction) ✅ COMPLETE
-
-- **Lines extracted from App.tsx**: 2,695 lines (component definition + implementation)
-- **Component created**: `src/components/screens/CampaignScreen.tsx` (2,425 lines)
-- **Test coverage**: 20 component tests (all 842 tests passing)
-- **App.tsx reduction**: 6,821 → 4,126 lines (39.5% reduction)
-- **Sub-phases completed**: 11 atomic commits
-  - 7e.1-7e.7: Component structure (props, state, handlers, board, hand, panel)
-  - 7e.8-7e.10: All modals and test mode controls
-  - 7e.11: App.tsx integration
-- **Commits**: 11 commits (763b65d → 14fd7aa)
-- **Build**: ✅ Passing (334.27 kB)
-
-### Phase 7g (Custom Hooks Extraction) ✅ COMPLETE
-
-- **Hooks created**: 9 custom hooks in `src/hooks/`
-- **Total hook lines**: 1,785 lines
-- **New tests added**: 20 tests (useBureaucracy)
-- **Tests passing**: 862/862 (100%)
-- **App.tsx**: 4,109 lines (hooks integrated, state organized)
-
-**Hooks integrated:**
-| Hook | Lines | State Variables | Commit |
-|------|-------|-----------------|--------|
-| useAlerts | 74 | 5 | 981c4d4 |
-| useBoardDisplay | 55 | 3 | 21dddfe |
-| useTestMode | 92 | 6 | a3d321e |
-| useBonusMoves | 100 | 4 | 6926ef3 |
-| useMoveTracking | 195 | 8 | be26ca5 |
-| useTilePlayWorkflow | 242 | 8 | 87449ef |
-| useChallengeFlow | 287 | 15 | b382555 |
-| useBureaucracy | 386 | 12 | 34ea690 |
-| useGameState | 273 | 9 | 1cdb927 |
-
-### Overall Progress
-
-- **Total lines extracted from game.ts**: ~3,301 lines (1,194 config + 56 types + 86 utils + 246 init + 872 logic + 847 validation)
-- **Lines remaining in game.ts**: ~975 lines (down from ~3,803 = 74.4% reduction)
-- **Total lines extracted from App.tsx**: 2,695 lines (CampaignScreen component)
-- **Lines remaining in App.tsx**: 4,109 lines (down from 6,821 = 39.8% reduction)
-- **Custom hooks created**: 9 hooks, 1,785 lines total
-- **Total tests passing**: 862 tests (55 integration + 807 unit)
-- **Total commits**: 57+ refactoring commits
-- **All tests passing**: ✅ 862/862 (100%)
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| game.ts | 3,803 lines | 975 lines | -74% |
+| App.tsx | 6,821 lines | 4,109 lines | -40% |
+| Tests | 0 | 1,056 | +1,056 |
+| Modules | 2 files | 46 files | Modular |
 
 ---
 
-## Progress Summary
+## Module Structure
 
-**Phase 7e Complete!** 🎉
-
-Successfully extracted CampaignScreen component from App.tsx - the largest and most complex component in the codebase!
-
-### Phase 2 (Config Extraction) ✅
-
-- ✅ Basic constants (tiles, pieces, player options)
-- ✅ Board layouts for 3, 4, and 5 players
-- ✅ Game rules (defined moves, tile requirements, rostrum rules)
-- ✅ Bureaucracy menus for different player counts
-
-### Phase 3 (Type Extraction) ✅
-
-- ✅ Bureaucracy types (6 type definitions)
-- ✅ Challenge types (ChallengeState)
-- ✅ Played tile types (PlayedTileState)
-
-### Phase 3b (Utils Extraction) ✅
-
-- ✅ Positioning utilities (BOARD_CENTERS, calculatePieceRotation, isPositionInCommunityCircle)
-- ✅ Formatting utilities (formatLocationId)
-- ✅ Array utilities (shuffle)
-
-### Phase 4 (Game Initialization) ✅
-
-- ✅ initializePlayers() - Creates players with shuffled, dealt hands
-- ✅ initializePieces() - Sets up Mark pieces at seats 1, 3, 5 for drafting
-- ✅ initializeCampaignPieces() - Initializes all pieces for campaign start
-
-### Phase 5 (Game Logic & Rules) ✅
-
-- ✅ Game state snapshots - Deep copy and challenge order
-- ✅ Location utilities - Finding, mapping, and checking locations
-- ✅ Credibility system - Deduction and loss handling
-- ✅ Win conditions - Campaign and bureaucracy victory checks
-- ✅ Adjacency rules - Seat adjacency and community hierarchy
-- ✅ Rostrum logic - Support rules, accessibility, and movement validation
-- ✅ Movement validation - Piece movement rules and move type determination
-
-### Phase 6 (Game Validation & Move Types) ✅
-
-- ✅ Tile validation - 6 functions for tile requirement checking
-- ✅ Complex validation - 4 functions for comprehensive move/tile validation
-- ✅ Bureaucracy system - 6 functions for kredcoin, turn order, promotions
-- ✅ Move types - 2 functions for move type identification and validation
-
-### Phase 7e (CampaignScreen Component Extraction) ✅
-
-- ✅ Component props interface and shell (7e.1)
-- ✅ State hooks and utility functions (7e.2)
-- ✅ Drag-and-drop event handlers (7e.3)
-- ✅ Board container with rotation and overlays (7e.4)
-- ✅ Board pieces and tiles rendering (7e.5)
-- ✅ Player hand UI with controls (7e.6)
-- ✅ Side panel (New Game, Game Log, modals) (7e.7)
-- ✅ All modals (Challenge, Receiver, Take Advantage, etc.) (7e.8-7e.10)
-- ✅ Test mode controls (Board Rotation, Grid Overlay, Check Move) (7e.8-7e.10)
-- ✅ App.tsx integration and cleanup (7e.11)
-- ✅ Fixed all 13 test failures (842/842 passing)
-
-### Phase 7g (Custom Hooks Extraction) ✅
-
-- ✅ Created 9 custom hooks in src/hooks/
-- ✅ useAlerts, useBoardDisplay, useTestMode (standalone)
-- ✅ useGameState (foundation hook)
-- ✅ useMoveTracking, useTilePlayWorkflow (dependent)
-- ✅ useBonusMoves, useChallengeFlow, useBureaucracy (dependent)
-- ✅ All hooks integrated into App.tsx
-- ✅ 20 new tests for useBureaucracy
-- ✅ 862/862 tests passing
-
-**Next Phase**: Phase 8 - Extract game logic functions from App.tsx
+```
+src/
+├── config/          # 6 files - Static configuration
+├── types/           # 9 files - TypeScript interfaces
+├── utils/           # 4 files - Pure utility functions
+├── game/            # 8 files - Game logic
+├── rules/           # 6 files - Game rules
+├── hooks/           # 10 files - React hooks
+├── components/
+│   ├── screens/     # 4 files - Screen components
+│   └── shared/      # 1 file - Shared components
+└── __tests__/       # 46 test files
+```
 
 ---
 
-## Notes
+## Test Distribution
 
-- Following test-first approach: write tests → extract → verify → commit
-- Each extraction is atomic and independently committed
-- Backwards compatibility maintained via re-exports in game.ts
-- All changes pushed to feature branch
+| Category | Tests |
+|----------|-------|
+| Config | 282 |
+| Types | 26 |
+| Utils | 62 |
+| Game | 217 |
+| Rules | 103 |
+| Hooks | 214 |
+| Components | 20 |
+| Integration | 55 |
+| Other | 77 |
+| **Total** | **1,056** |
 
-### Recent Merges
+---
 
-- **PR #4**: Phase 2c & 2d - Rules & Bureaucracy Config (209 tests) ✅ Merged
-- **PR #5**: Phase 3 - Type & Utility Extraction (88 tests) ✅ Merged
-- **PR #6**: Phase 4 - Game Initialization (34 tests) ✅ Merged
-- **PR #7**: Phase 5 - Game Logic & Rules (147 tests) ✅ Merged
-- **PR #6**: Phase 4 - Game Initialization (34 tests) ✅ Merged
-- Each extraction is atomic and independently committed
-- NO backwards compatibility re-exports (single import path per symbol)
-- All changes pushed to feature branch
+## Future Work (Optional)
 
-### Recent Merges
+The refactoring goals have been achieved. The following phases are optional:
 
-- **PR #4**: Phase 2c & 2d - Rules & Bureaucracy Config (209 tests) ✅ Merged
-- **PR #5**: Phase 3 - Type & Utility Extraction (88 tests) ✅ Merged
+- **Phase 8**: Handler extraction (~50 functions in App.tsx)
+- **Phase 9**: Performance optimization
+- **Phase 10**: Documentation & Storybook
+- **Phase 11**: Multiplayer support
+
+See REFACTORING_STRATEGY_V2.md for details.
+
+---
+
+## Git History
+
+The refactoring was done across 60+ atomic commits, each verified with:
+- `npm run build` ✅
+- `npm run test` ✅  
+- Manual smoke test ✅
+
+This approach ensured the game remained functional throughout the entire process.
+
+---
+
+*Refactoring completed November 27, 2025*
