@@ -1,13 +1,13 @@
 # KRED Refactoring Progress
 
-Last updated: 2025-11-26
+Last updated: 2025-11-27
 
 ## Current Status
 
-**Active Phase**: Phase 7e Complete - CampaignScreen Extracted ✅
+**Active Phase**: Phase 7g Complete - Custom Hooks Extracted ✅
 **Branch**: `refactoring`
-**Tests Passing**: 842 tests (55 integration + 787 unit)
-**Latest**: Phase 7e - CampaignScreen Component Extraction - Complete ✅
+**Tests Passing**: 862 tests (55 integration + 807 unit)
+**Latest**: Phase 7g - Custom Hooks Extraction - Complete ✅
 
 ---
 
@@ -329,15 +329,37 @@ kred-online/
 - **Commits**: 11 commits (763b65d → 14fd7aa)
 - **Build**: ✅ Passing (334.27 kB)
 
+### Phase 7g (Custom Hooks Extraction) ✅ COMPLETE
+
+- **Hooks created**: 9 custom hooks in `src/hooks/`
+- **Total hook lines**: 1,785 lines
+- **New tests added**: 20 tests (useBureaucracy)
+- **Tests passing**: 862/862 (100%)
+- **App.tsx**: 4,109 lines (hooks integrated, state organized)
+
+**Hooks integrated:**
+| Hook | Lines | State Variables | Commit |
+|------|-------|-----------------|--------|
+| useAlerts | 74 | 5 | 981c4d4 |
+| useBoardDisplay | 55 | 3 | 21dddfe |
+| useTestMode | 92 | 6 | a3d321e |
+| useBonusMoves | 100 | 4 | 6926ef3 |
+| useMoveTracking | 195 | 8 | be26ca5 |
+| useTilePlayWorkflow | 242 | 8 | 87449ef |
+| useChallengeFlow | 287 | 15 | b382555 |
+| useBureaucracy | 386 | 12 | 34ea690 |
+| useGameState | 273 | 9 | 1cdb927 |
+
 ### Overall Progress
 
 - **Total lines extracted from game.ts**: ~3,301 lines (1,194 config + 56 types + 86 utils + 246 init + 872 logic + 847 validation)
 - **Lines remaining in game.ts**: ~975 lines (down from ~3,803 = 74.4% reduction)
 - **Total lines extracted from App.tsx**: 2,695 lines (CampaignScreen component)
-- **Lines remaining in App.tsx**: 4,126 lines (down from 6,821 = 39.5% reduction)
-- **Total tests passing**: 842 tests (55 integration + 787 unit)
-- **Total commits**: 48 refactoring commits (14 config + 3 types + 5 utils + 2 init + 8 logic + 5 validation + 11 components)
-- **All tests passing**: ✅ 842/842 (100%)
+- **Lines remaining in App.tsx**: 4,109 lines (down from 6,821 = 39.8% reduction)
+- **Custom hooks created**: 9 hooks, 1,785 lines total
+- **Total tests passing**: 862 tests (55 integration + 807 unit)
+- **Total commits**: 57+ refactoring commits
+- **All tests passing**: ✅ 862/862 (100%)
 
 ---
 
@@ -403,7 +425,18 @@ Successfully extracted CampaignScreen component from App.tsx - the largest and m
 - ✅ App.tsx integration and cleanup (7e.11)
 - ✅ Fixed all 13 test failures (842/842 passing)
 
-**Next Phase**: Phase 7f - Extract DraftingScreen and BureaucracyScreen components
+### Phase 7g (Custom Hooks Extraction) ✅
+
+- ✅ Created 9 custom hooks in src/hooks/
+- ✅ useAlerts, useBoardDisplay, useTestMode (standalone)
+- ✅ useGameState (foundation hook)
+- ✅ useMoveTracking, useTilePlayWorkflow (dependent)
+- ✅ useBonusMoves, useChallengeFlow, useBureaucracy (dependent)
+- ✅ All hooks integrated into App.tsx
+- ✅ 20 new tests for useBureaucracy
+- ✅ 862/862 tests passing
+
+**Next Phase**: Phase 8 - Extract game logic functions from App.tsx
 
 ---
 
