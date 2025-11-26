@@ -92,6 +92,7 @@ import {
   useTilePlayWorkflow,
   useChallengeFlow,
   useBureaucracy,
+  useGameState,
 } from "./src/hooks";
 
 // ============================================================================
@@ -164,21 +165,32 @@ import CampaignScreen from "./src/components/screens/CampaignScreen";
  *     If winner → GAME OVER (alert shown)
  */
 const App: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState>("PLAYER_SELECTION");
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [pieces, setPieces] = useState<Piece[]>([]);
-  const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
-  const [bankedTiles, setBankedTiles] = useState<
-    (BoardTile & { faceUp: boolean })[]
-  >([]);
-  const [playerCount, setPlayerCount] = useState<number>(0);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [draftRound, setDraftRound] = useState(1);
-  const [isTestMode, setIsTestMode] = useState(false);
-
   // ============================================================================
   // CUSTOM HOOKS - Extract state management into hooks
   // ============================================================================
+  
+  // Core game state (useGameState hook)
+  const {
+    gameState,
+    players,
+    pieces,
+    boardTiles,
+    bankedTiles,
+    playerCount,
+    currentPlayerIndex,
+    draftRound,
+    isTestMode,
+    setGameState,
+    setPlayers,
+    setPieces,
+    setBoardTiles,
+    setBankedTiles,
+    setPlayerCount,
+    setCurrentPlayerIndex,
+    setDraftRound,
+    setIsTestMode,
+  } = useGameState();
+
   const {
     alertModal,
     challengeResultMessage,
