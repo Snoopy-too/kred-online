@@ -1,7 +1,7 @@
 # KRED Refactoring Progress
 
 **Last Updated**: November 27, 2025
-**Status**: Phase 7 Complete ✅
+**Status**: Phase 7 Complete ✅ | Phase 8 Planned
 **Tests**: 1,056 passing
 **Branch**: `refactoring`
 
@@ -102,12 +102,33 @@ src/
 
 ---
 
+## Next Phase
+
+### 🔄 Phase 8: Handler Extraction (In Planning)
+
+Extract ~50 handler functions from App.tsx into organized modules.
+
+**Goal**: App.tsx reduced from 4,109 → ~1,500 lines
+
+| Module | Handlers | Lines |
+|--------|----------|-------|
+| gameFlowHandlers.ts | 3 | ~175 |
+| pieceMovementHandlers.ts | 5 | ~225 |
+| turnHandlers.ts | 5 | ~175 |
+| tilePlayHandlers.ts | 9 | ~500 |
+| challengeHandlers.ts | 8 | ~400 |
+| bureaucracyHandlers.ts | 12 | ~400 |
+| takeAdvantageHandlers.ts | 13 | ~350 |
+
+**Architecture**: Factory pattern with dependency injection
+
+See `PHASE_8_PLAN.md` for detailed execution plan.
+
+---
+
 ## Future Work (Optional)
 
-The refactoring goals have been achieved. The following phases are optional:
-
-- **Phase 8**: Handler extraction (~50 functions in App.tsx)
-- **Phase 9**: Performance optimization
+- **Phase 9**: Performance optimization (useMemo, useCallback, code splitting)
 - **Phase 10**: Documentation & Storybook
 - **Phase 11**: Multiplayer support
 
