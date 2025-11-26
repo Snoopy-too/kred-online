@@ -83,7 +83,15 @@ import {
 // ============================================================================
 // HOOKS IMPORTS - Custom React hooks
 // ============================================================================
-import { useAlerts, useBoardDisplay, useTestMode, useBonusMoves, useMoveTracking, useTilePlayWorkflow } from "./src/hooks";
+import {
+  useAlerts,
+  useBoardDisplay,
+  useTestMode,
+  useBonusMoves,
+  useMoveTracking,
+  useTilePlayWorkflow,
+  useChallengeFlow,
+} from "./src/hooks";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -166,35 +174,6 @@ const App: React.FC = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [bystanders, setBystanders] = useState<Player[]>([]);
-  const [bystanderIndex, setBystanderIndex] = useState(0);
-  const [isPrivatelyViewing, setIsPrivatelyViewing] = useState(false);
-  const [showChallengeRevealModal, setShowChallengeRevealModal] =
-    useState(false);
-  const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
-
-  // State for Take Advantage (challenge reward)
-  const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
-  const [takeAdvantageChallengerId, setTakeAdvantageChallengerId] = useState<
-    number | null
-  >(null);
-  const [
-    takeAdvantageChallengerCredibility,
-    setTakeAdvantageChallengerCredibility,
-  ] = useState<number>(0);
-  const [showTakeAdvantageTileSelection, setShowTakeAdvantageTileSelection] =
-    useState(false);
-  const [selectedTilesForAdvantage, setSelectedTilesForAdvantage] = useState<
-    Tile[]
-  >([]);
-  const [totalKredcoinForAdvantage, setTotalKredcoinForAdvantage] = useState(0);
-  const [showTakeAdvantageMenu, setShowTakeAdvantageMenu] = useState(false);
-  const [takeAdvantagePurchase, setTakeAdvantagePurchase] =
-    useState<BureaucracyPurchase | null>(null);
-  const [takeAdvantagePiecesSnapshot, setTakeAdvantagePiecesSnapshot] =
-    useState<Piece[]>([]);
-  const [takeAdvantageValidationError, setTakeAdvantageValidationError] =
-    useState<string | null>(null);
 
   // ============================================================================
   // CUSTOM HOOKS - Extract state management into hooks
@@ -289,6 +268,39 @@ const App: React.FC = () => {
     setCurrentChallengerIndex,
     setTileRejected,
   } = useTilePlayWorkflow();
+
+  const {
+    bystanders,
+    bystanderIndex,
+    isPrivatelyViewing,
+    showChallengeRevealModal,
+    challengedTile,
+    showTakeAdvantageModal,
+    takeAdvantageChallengerId,
+    takeAdvantageChallengerCredibility,
+    showTakeAdvantageTileSelection,
+    selectedTilesForAdvantage,
+    totalKredcoinForAdvantage,
+    showTakeAdvantageMenu,
+    takeAdvantagePurchase,
+    takeAdvantagePiecesSnapshot,
+    takeAdvantageValidationError,
+    setBystanders,
+    setBystanderIndex,
+    setIsPrivatelyViewing,
+    setShowChallengeRevealModal,
+    setChallengedTile,
+    setShowTakeAdvantageModal,
+    setTakeAdvantageChallengerId,
+    setTakeAdvantageChallengerCredibility,
+    setShowTakeAdvantageTileSelection,
+    setSelectedTilesForAdvantage,
+    setTotalKredcoinForAdvantage,
+    setShowTakeAdvantageMenu,
+    setTakeAdvantagePurchase,
+    setTakeAdvantagePiecesSnapshot,
+    setTakeAdvantageValidationError,
+  } = useChallengeFlow();
 
   // Bureaucracy Phase State
   const [bureaucracyStates, setBureaucracyStates] = useState<
