@@ -45,7 +45,10 @@ import {
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation } from "../../../game";
 import { validatePieceMovement } from "../../../game";
-import { getBureaucracyMenu, getAvailablePurchases } from "../../game/bureaucracy";
+import {
+  getBureaucracyMenu,
+  getAvailablePurchases,
+} from "../../game/bureaucracy";
 
 // ============================================================================
 // COMPONENT

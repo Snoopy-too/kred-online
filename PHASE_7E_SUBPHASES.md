@@ -414,21 +414,19 @@ git reset --hard HEAD~1  # Undo last commit
 
 **Sub-Phase Checklist**:
 
-- [ ] 7e.1: Base component with props interface
-- [ ] 7e.2: State hooks and utilities
-- [ ] 7e.3: Drag-and-drop handlers
-- [ ] 7e.4: Board container and overlays
-- [ ] 7e.5: Board pieces and tiles
-- [ ] 7e.6: Player hand UI
-- [ ] 7e.7: Side panel controls
-- [ ] 7e.8: Waiting and receiver modals
-- [ ] 7e.9: Challenge and take advantage modals
-- [ ] 7e.10: Final modals and piece tracker
-- [ ] 7e.11: Update App.tsx integration
+- [x] 7e.1: Base component with props interface (commit 763b65d)
+- [x] 7e.2: State hooks and utilities (commit a287640)
+- [x] 7e.3: Drag-and-drop handlers (commit 0aafa82)
+- [x] 7e.4: Board container and overlays (commit d851d72)
+- [x] 7e.5: Board pieces and tiles (commit 3df9fad)
+- [x] 7e.6: Player hand UI (commit d552a3a)
+- [x] 7e.7: Side panel controls (commit 69bc5fb)
+- [x] 7e.8-7e.10: All modals and test controls (commits 290e359, 54ae49a, e888059)
+- [x] 7e.11: Update App.tsx integration (commit 14fd7aa)
 
-**Total Commits**: 11 atomic commits
-**Estimated Time**: 45-60 minutes (4-5 min per sub-phase)
-**Risk Mitigation**: Test-driven, incremental, reversible
+**Total Commits**: 11 commits (10 for Phase 7e)
+**Actual Time**: ~2 hours (including test debugging)
+**Risk Mitigation**: Test-driven, incremental, reversible - SUCCESS!
 
 ---
 
@@ -437,11 +435,21 @@ git reset --hard HEAD~1  # Undo last commit
 Phase 7e complete when:
 
 - ✅ All 11 sub-phases committed
-- ✅ CampaignScreen.tsx exists (~2,800 lines)
-- ✅ App.tsx reduced to ~4,077 lines
-- ✅ All 842 tests passing (822 + 20 new)
-- ✅ Build succeeds
-- ✅ All changes pushed to GitHub
+- ✅ CampaignScreen.tsx exists (2,425 lines)
+- ✅ App.tsx reduced to 4,126 lines (from 6,821)
+- ✅ All 842 tests passing (100%)
+- ✅ Build succeeds (334.27 kB)
+- ✅ All changes committed to refactoring branch
 - ✅ No broken imports or dependencies
 
-**Next Phase**: 7f - Extract board components
+**Phase 7e: COMPLETE! ✅**
+
+**Achievements**:
+
+- Extracted largest component (2,425 lines)
+- Reduced App.tsx by 39.5% (2,695 lines removed)
+- Fixed all 13 test failures (829→842 passing)
+- Maintained 100% test pass rate
+- All modals, test controls, and features working
+
+**Next Phase**: 7f - Extract DraftingScreen and BureaucracyScreen components

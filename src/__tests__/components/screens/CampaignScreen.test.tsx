@@ -252,7 +252,9 @@ describe("CampaignScreen", () => {
   });
 
   it("should show perfect tile modal when showPerfectTileModal is true", () => {
-    const { container } = render(<CampaignScreen {...defaultProps} showPerfectTileModal={true} />);
+    const { container } = render(
+      <CampaignScreen {...defaultProps} showPerfectTileModal={true} />
+    );
     // Modal content may not be fully implemented yet
     expect(container).toBeTruthy();
   });
@@ -309,7 +311,9 @@ describe("CampaignScreen", () => {
       boardTileId: "board_tile_1",
       tile: mockTile,
     };
-    const { container } = render(<CampaignScreen {...defaultProps} tileTransaction={transaction} />);
+    const { container } = render(
+      <CampaignScreen {...defaultProps} tileTransaction={transaction} />
+    );
     // Transaction modal should render
     expect(container).toBeTruthy();
   });
