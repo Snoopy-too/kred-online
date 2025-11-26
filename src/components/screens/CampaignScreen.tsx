@@ -1106,7 +1106,142 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
             {/* More content will be added in next sub-phases */}
           </div>
+
+          {/* Player Hand Section */}
+          <div className="w-full max-w-5xl mt-8 relative z-50">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-slate-200">
+                Player {currentPlayerId}'s Hand
+              </h2>
+              <div className="flex gap-2">
+                {(gameState === "TILE_PLAYED" ||
+                  movedPiecesThisTurn.size > 0) &&
+                  gameState !== "CORRECTION_REQUIRED" &&
+                  !showBonusMoveModal && (
+                    <button
+                      onClick={onResetTurn}
+                      className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
+                    >
+                      Reset Turn
+                    </button>
+                  )}
+                {gameState === "CORRECTION_REQUIRED" && playedTile && (
+                  <button
+                    onClick={onResetPiecesCorrection}
+                    className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
+                  >
+                    Reset Pieces
+                  </button>
+                )}
+                <button
+                  onClick={onEndTurn}
+                  disabled={
+                    (gameState !== "CAMPAIGN" &&
+                      gameState !== "TILE_PLAYED" &&
+                      gameState !== "CORRECTION_REQUIRED") ||
+                    (gameState === "CAMPAIGN" && !hasPlayedTileThisTurn)
+                  }
+                  className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  End Turn
+                </button>
+              </div>
+            </div>
+            <p
+              className={`text-center mb-4 ${
+                gameState === "CORRECTION_REQUIRED"
+                  ? "text-yellow-400 font-semibold"
+                  : hasPlayedTileThisTurn
+                  ? "text-slate-400"
+                  : "text-white"
+              }`}
+            >
+              {gameState === "CORRECTION_REQUIRED"
+                ? "Your tile was rejected. The tile requirements are shown above. Move your pieces to fulfill them, then click End Turn."
+                : hasPlayedTileThisTurn
+                ? "You have played a tile this turn."
+                : "Drag a tile to another player's receiving area on the board."}
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 p-4 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
+              {currentPlayer?.keptTiles.map((tile) => (
+                <div
+                  key={tile.id}
+                  draggable={!hasPlayedTileThisTurn}
+                  onDragStart={(e) => handleDragStartTile(e, tile.id)}
+                  onDragEnd={() => setIsDraggingTile(false)}
+                  className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 ${
+                    hasPlayedTileThisTurn || gameState !== "CAMPAIGN"
+                      ? "cursor-not-allowed opacity-60"
+                      : "cursor-grab"
+                  }`}
+                >
+                  <img
+                    src={tile.url}
+                    alt={`Tile ${tile.id}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Test Mode: Other Players */}
+          {isTestMode && (
+            <div className="w-full max-w-5xl mt-4">
+              <h3 className="text-xl font-bold text-center text-slate-300 mb-2">
+                Other Players (Test Mode)
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {players
+                  .filter((p) => p.id !== currentPlayerId)
+                  .map((player) => (
+                    <details
+                      key={player.id}
+                      className="bg-gray-800/50 p-3 rounded-lg border border-gray-700 cursor-pointer"
+                    >
+                      <summary className="font-semibold text-lg text-slate-100">
+                        Player {player.id}'s Tiles ({player.keptTiles.length})
+                      </summary>
+                      <div className="mt-4">
+                        <h4 className="font-semibold text-md text-slate-300">
+                          Playable Hand:
+                        </h4>
+                        <div className="flex flex-wrap justify-center gap-2 pt-2">
+                          {player.keptTiles.map((tile) => (
+                            <div
+                              key={tile.id}
+                              className="bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300"
+                            >
+                              <img
+                                src={tile.url}
+                                alt={`Tile ${tile.id}`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <h4 className="font-semibold text-md text-slate-300">
+                          Bureaucracy Tiles ({player.bureaucracyTiles.length}):
+                        </h4>
+                        <div className="flex flex-wrap justify-center gap-2 pt-2">
+                          {player.bureaucracyTiles.map((tile) => (
+                            <div
+                              key={`buro-${tile.id}`}
+                              className="bg-gray-700 w-12 h-24 p-1 rounded-md shadow-inner border-2 border-yellow-400"
+                            ></div>
+                          ))}
+                        </div>
+                      </div>
+                    </details>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Right Column: Supply & Log - will be added in next sub-phase */}
       </div>
     </main>
   );
