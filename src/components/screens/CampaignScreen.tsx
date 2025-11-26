@@ -837,7 +837,274 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </div>
             ))}
 
-            {/* Board tiles, pieces, etc. will be added in next sub-phase */}
+            {/* Board Tiles */}
+            {boardTiles.map((boardTile) => {
+              const isPlacer = boardTile.placerId === currentPlayerId;
+              const isTransactionalTile =
+                boardTile.id === tileTransaction?.boardTileId;
+              const isReceiver =
+                currentPlayerId === tileTransaction?.receiverId;
+              const isPubliclyRevealed = revealedTileId === boardTile.id;
+
+              // NEW WORKFLOW: Check if this tile is being played (in TILE_PLAYED or PENDING_ACCEPTANCE state)
+              const isPlayedTile =
+                playedTile &&
+                boardTile.tile.id.toString().padStart(2, "0") ===
+                  playedTile.tileId &&
+                boardTile.placerId === playedTile.playerId &&
+                boardTile.ownerId === playedTile.receivingPlayerId;
+              const isTilePlayedButNotYetAccepted =
+                isPlayedTile &&
+                (gameState === "TILE_PLAYED" ||
+                  gameState === "PENDING_ACCEPTANCE" ||
+                  gameState === "CORRECTION_REQUIRED");
+
+              // Receiver's private view logic (during PENDING_ACCEPTANCE)
+              const showReceiverPrivateView =
+                isPrivatelyViewing && isTransactionalTile && isReceiver;
+
+              // Placer's private view logic (during CAMPAIGN, before ending turn)
+              const canPlacerClickToView =
+                isPlacer && isTransactionalTile && gameState === "CAMPAIGN";
+              const showPlacerPrivateView =
+                placerViewingTileId === boardTile.id;
+
+              // NEW RULE: Giver and receiver can toggle to see the tile face-up by clicking
+              const isGiverOrReceiver =
+                isPlacer ||
+                (isPlayedTile &&
+                  currentPlayerId === playedTile.receivingPlayerId);
+              const currentPlayer = players.find(
+                (p) => p.id === currentPlayerId
+              );
+              const currentPlayerCredibility = currentPlayer?.credibility ?? 3;
+              // Players with 0 credibility cannot view received tiles
+              const receiverCanViewTile = currentPlayerCredibility > 0;
+              const canGiverReceiverToggleView =
+                isTilePlayedButNotYetAccepted &&
+                isGiverOrReceiver &&
+                (isPlacer || receiverCanViewTile);
+              const showGiverReceiverView =
+                canGiverReceiverToggleView &&
+                giveReceiverViewingTileId === boardTile.id;
+
+              // CORRECTION_REQUIRED: Show tile face-up for placer to see requirements
+              const showCorrectionView =
+                isPlayedTile && gameState === "CORRECTION_REQUIRED" && isPlacer;
+
+              const isRevealed =
+                isPubliclyRevealed ||
+                showReceiverPrivateView ||
+                showPlacerPrivateView ||
+                showGiverReceiverView ||
+                showCorrectionView;
+
+              // During tile play workflow, show white back unless it's being viewed by giver/receiver
+              const shouldShowWhiteBack =
+                isTilePlayedButNotYetAccepted && !showGiverReceiverView;
+
+              const handleTileClick = () => {
+                if (canPlacerClickToView) {
+                  onPlacerViewTile(boardTile.id);
+                } else if (canGiverReceiverToggleView) {
+                  onSetGiveReceiverViewingTileId(
+                    giveReceiverViewingTileId === boardTile.id
+                      ? null
+                      : boardTile.id
+                  );
+                }
+              };
+
+              const isTileClickable =
+                canPlacerClickToView || canGiverReceiverToggleView;
+
+              return (
+                <div
+                  key={boardTile.id}
+                  draggable={
+                    isTestMode && !isTransactionalTile && !isPlayedTile
+                  }
+                  onDragStart={
+                    isTestMode && !isTransactionalTile && !isPlayedTile
+                      ? (e) => handleDragStartBoardTile(e, boardTile.id)
+                      : undefined
+                  }
+                  onClick={isTileClickable ? handleTileClick : undefined}
+                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${
+                    !isRevealed && !shouldShowWhiteBack
+                      ? ""
+                      : "bg-stone-100 p-1"
+                  }`}
+                  style={{
+                    top: `${boardTile.position.top}%`,
+                    left: `${boardTile.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${
+                      boardTile.rotation || 0
+                    }deg)`,
+                    cursor: isTileClickable ? "pointer" : "default",
+                  }}
+                  aria-label={
+                    isTileClickable
+                      ? "Click to toggle tile visibility"
+                      : "A placed, face-down tile"
+                  }
+                >
+                  {shouldShowWhiteBack ? (
+                    // Show white back for tile in play
+                    <div className="w-full h-full bg-white rounded-lg border-2 border-gray-400 shadow-inner"></div>
+                  ) : !isRevealed ? (
+                    // Show gray back for old workflow tiles
+                    <div className="w-full h-full bg-gray-700 rounded-lg border-2 border-white shadow-inner"></div>
+                  ) : (
+                    // Show tile face for revealed tiles
+                    <img
+                      src={boardTile.tile.url}
+                      alt={`Tile ${boardTile.tile.id}`}
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Banked Tiles */}
+            {bankedTiles.map((bankedTile) => (
+              <div
+                key={bankedTile.id}
+                className="absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1"
+                style={{
+                  top: `${bankedTile.position.top}%`,
+                  left: `${bankedTile.position.left}%`,
+                  transform: `translate(-50%, -50%) rotate(${
+                    bankedTile.rotation || 0
+                  }deg)`,
+                }}
+              >
+                {bankedTile.faceUp ? (
+                  // Rejected tile - face up
+                  <img
+                    src={bankedTile.tile.url}
+                    alt={`Banked Tile ${bankedTile.tile.id}`}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  // Accepted tile - face down (white back)
+                  <div className="w-full h-full bg-white rounded-lg border-2 border-white shadow-inner"></div>
+                )}
+              </div>
+            ))}
+
+            {/* Credibility Display */}
+            {(() => {
+              const credibilityLocations =
+                CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+              return credibilityLocations.map((location) => {
+                const player = players.find((p) => p.id === location.ownerId);
+                const credibilityValue = player?.credibility ?? 3;
+                const adjustment =
+                  credibilityRotationAdjustments[location.ownerId] || 0;
+                const finalRotation = (location.rotation || 0) + adjustment;
+                const credibilityImage = `./images/${credibilityValue}_credibility.svg`;
+
+                return (
+                  <div
+                    key={`credibility_${location.ownerId}_${credibilityValue}`}
+                    className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
+                    style={{
+                      width: "5.283rem",
+                      height: "5.283rem",
+                      top: `${location.position.top}%`,
+                      left: `${location.position.left}%`,
+                      transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
+                    }}
+                  >
+                    <img
+                      src={credibilityImage}
+                      alt={`Credibility for Player ${location.ownerId}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                );
+              });
+            })()}
+
+            {/* Pieces */}
+            {pieces.map((piece) => {
+              let pieceSizeClass = "w-10 h-10 sm:w-14 sm:h-14"; // Mark
+              if (piece.name === "Heel")
+                pieceSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
+              if (piece.name === "Pawn")
+                pieceSizeClass = "w-16 h-16 sm:w-20 sm:h-20";
+
+              // Apply size reduction for different player counts
+              const scaleMultiplier =
+                playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
+              const baseScale = 0.798;
+              const finalScale = baseScale * scaleMultiplier;
+
+              // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
+              // Check both position AND locationId to avoid false positives for seats near the community
+              const isInCommunity =
+                piece.locationId?.startsWith("community") || false;
+              const communityCounterRotation = isInCommunity
+                ? -boardRotation
+                : 0;
+
+              // Check if this piece has been moved this turn
+              const hasMoved = movedPiecesThisTurn.has(piece.id);
+
+              return (
+                <img
+                  key={piece.id}
+                  src={piece.imageUrl}
+                  alt={piece.name}
+                  draggable="true"
+                  onDragStart={(e) => handleDragStartPiece(e, piece.id)}
+                  onDragEnd={handleDragEndPiece}
+                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
+                    hasMoved
+                      ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
+                      : ""
+                  }`}
+                  style={{
+                    position: "absolute",
+                    top: `${piece.position.top}%`,
+                    left: `${piece.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${
+                      piece.rotation + communityCounterRotation
+                    }deg) scale(${finalScale})`,
+                    cursor: "grab",
+                    filter: hasMoved
+                      ? "brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))"
+                      : undefined,
+                  }}
+                  aria-hidden="true"
+                />
+              );
+            })}
+
+            {/* Dummy Tile (Test Mode) */}
+            {isTestMode && dummyTile && (
+              <div
+                draggable
+                onDragStart={handleDragStartDummyTile}
+                onDragEnd={handleDragEndDummyTile}
+                className="absolute w-12 h-24 rounded-lg shadow-xl bg-indigo-500/30 border-2 border-indigo-400 border-dashed"
+                style={{
+                  top: `${dummyTile.position.top}%`,
+                  left: `${dummyTile.position.left}%`,
+                  transform: `translate(-50%, -50%) rotate(${dummyTile.rotation}deg)`,
+                  cursor: "grab",
+                }}
+                aria-label="Dummy tile"
+              >
+                <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs pointer-events-none">
+                  D
+                </div>
+              </div>
+            )}
+
+            {/* More content will be added in next sub-phases */}
           </div>
         </div>
       </div>
