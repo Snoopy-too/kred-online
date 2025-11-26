@@ -83,7 +83,7 @@ import {
 // ============================================================================
 // HOOKS IMPORTS - Custom React hooks
 // ============================================================================
-import { useAlerts, useBoardDisplay, useTestMode, useBonusMoves, useMoveTracking } from "./src/hooks";
+import { useAlerts, useBoardDisplay, useTestMode, useBonusMoves, useMoveTracking, useTilePlayWorkflow } from "./src/hooks";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -166,39 +166,12 @@ const App: React.FC = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [draftRound, setDraftRound] = useState(1);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
-  const [revealedTileId, setRevealedTileId] = useState<string | null>(null);
-
-  // State for new acceptance/challenge flow
-  const [tileTransaction, setTileTransaction] = useState<{
-    placerId: number;
-    receiverId: number;
-    boardTileId: string;
-    tile: Tile;
-  } | null>(null);
   const [bystanders, setBystanders] = useState<Player[]>([]);
   const [bystanderIndex, setBystanderIndex] = useState(0);
   const [isPrivatelyViewing, setIsPrivatelyViewing] = useState(false);
   const [showChallengeRevealModal, setShowChallengeRevealModal] =
     useState(false);
   const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
-
-  // State for new tile play workflow
-  const [playedTile, setPlayedTile] = useState<{
-    tileId: string;
-    playerId: number;
-    receivingPlayerId: number;
-    movesPerformed: TrackedMove[];
-    originalPieces: Piece[];
-    originalBoardTiles: BoardTile[];
-  } | null>(null);
-  const [movesThisTurn, setMovesThisTurn] = useState<TrackedMove[]>([]);
-  const [receiverAcceptance, setReceiverAcceptance] = useState<boolean | null>(
-    null
-  ); // null = awaiting decision, true = accepted, false = rejected
-  const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
-  const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
-  const [tileRejected, setTileRejected] = useState(false);
 
   // State for Take Advantage (challenge reward)
   const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
@@ -295,6 +268,27 @@ const App: React.FC = () => {
     setShowMoveCheckResult,
     setMoveCheckResult,
   } = useMoveTracking();
+
+  const {
+    playedTile,
+    movesThisTurn,
+    hasPlayedTileThisTurn,
+    revealedTileId,
+    tileTransaction,
+    receiverAcceptance,
+    challengeOrder,
+    currentChallengerIndex,
+    tileRejected,
+    setPlayedTile,
+    setMovesThisTurn,
+    setHasPlayedTileThisTurn,
+    setRevealedTileId,
+    setTileTransaction,
+    setReceiverAcceptance,
+    setChallengeOrder,
+    setCurrentChallengerIndex,
+    setTileRejected,
+  } = useTilePlayWorkflow();
 
   // Bureaucracy Phase State
   const [bureaucracyStates, setBureaucracyStates] = useState<
