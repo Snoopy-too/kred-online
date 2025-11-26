@@ -318,7 +318,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
-  
+
   /**
    * Calculate Kredcoin for a player (only face-down tiles in bank count)
    */
@@ -603,7 +603,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // COMPUTED VALUES FOR RENDERING
   // ============================================================================
   const currentPlayer = players.find((p) => p.id === currentPlayerId);
-  
+
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
   // In test mode, always show decision dialogs so player can control all players
   // NEW WORKFLOW: Uses playedTile for PENDING_ACCEPTANCE
@@ -646,8 +646,203 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   }
   const indicatorScaleStyle = dropIndicator ? { transform: "scale(0.84)" } : {};
 
-  // Component JSX will be added in subsequent sub-phases
-  return <div>CampaignScreen - To be implemented</div>;
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+  return (
+    <main className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
+        {/* Main Content (Board, Hand, etc.) */}
+        <div
+          className="flex-1 flex flex-col items-center min-w-0"
+          style={{
+            perspective: "1200px",
+            perspectiveOrigin: "50% 100%",
+          }}
+        >
+          {/* Turn Title */}
+          <div className="w-full max-w-5xl text-center mb-4 relative z-50">
+            <div className="inline-block bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-cyan-300 tracking-wide">
+                Player {currentPlayerId}'s Turn
+              </h2>
+            </div>
+          </div>
+
+          {/* Game Board */}
+          <div
+            className="w-full max-w-5xl aspect-[1/1] transition-transform duration-1000 ease-in-out hover:scale-105 relative"
+            onDragOver={handleDragOverBoard}
+            onDrop={handleDropOnBoard}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                onRevealTile(null);
+              }
+            }}
+            onMouseMove={handleMouseMoveOnBoard}
+            onMouseLeave={handleMouseLeaveBoard}
+            style={{
+              transform: `rotate(${boardRotation}deg)`,
+              transformStyle: "preserve-3d",
+              transformOrigin: "center center",
+            }}
+          >
+            {/* Board Image */}
+            <img
+              src={BOARD_IMAGE_URLS[playerCount]}
+              alt={`A ${playerCount}-player game board`}
+              className="w-full h-full object-contain relative z-0"
+            />
+
+            {/* Grid Overlay */}
+            {showGridOverlay && (
+              <>
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`,
+                    backgroundSize: "2% 2%",
+                    pointerEvents: "none",
+                  }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="absolute inset-0 text-white/50 text-[8px] sm:text-xs pointer-events-none z-20"
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div
+                      key={`x-${i}`}
+                      className="absolute"
+                      style={{
+                        left: `${(i + 1) * 10}%`,
+                        top: "0.5%",
+                        transform: "translateX(-50%)",
+                      }}
+                    >
+                      {(i + 1) * 10}
+                    </div>
+                  ))}
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div
+                      key={`y-${i}`}
+                      className="absolute"
+                      style={{
+                        top: `${(i + 1) * 10}%`,
+                        left: "0.5%",
+                        transform: "translateY(-50%)",
+                      }}
+                    >
+                      {(i + 1) * 10}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Test Mode Coordinates */}
+            {isTestMode && boardMousePosition && (
+              <div
+                className="absolute top-2 right-2 bg-gray-900/70 text-white text-xs p-2 rounded-md pointer-events-none shadow-lg backdrop-blur-sm z-10"
+                style={{
+                  transform: `rotate(${-boardRotation}deg) translateZ(0)`,
+                }}
+                aria-hidden="true"
+              >
+                <p className="font-mono">
+                  X: {boardMousePosition.x.toFixed(2)}%
+                </p>
+                <p className="font-mono">
+                  Y: {boardMousePosition.y.toFixed(2)}%
+                </p>
+              </div>
+            )}
+
+            {/* Drop Indicator */}
+            {dropIndicator && (
+              <>
+                {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
+                <div
+                  className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
+                  style={{
+                    top: `${dropIndicator.position.top}%`,
+                    left: `${dropIndicator.position.left}%`,
+                    width: "80px",
+                    height: "80px",
+                    transform: "translate(-50%, -50%)",
+                    backgroundColor:
+                      dropIndicator.isValid === false
+                        ? "rgba(239, 68, 68, 0.3)"
+                        : "rgba(34, 197, 94, 0.3)",
+                    boxShadow:
+                      dropIndicator.isValid === false
+                        ? "0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)"
+                        : "0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)",
+                    border:
+                      dropIndicator.isValid === false
+                        ? "2px solid rgba(239, 68, 68, 0.6)"
+                        : "2px solid rgba(34, 197, 94, 0.6)",
+                  }}
+                  aria-hidden="true"
+                />
+                {/* Drop indicator piece preview */}
+                <div
+                  className={`${indicatorSizeClass} absolute pointer-events-none transition-all duration-100 ease-in-out`}
+                  style={{
+                    top: `${dropIndicator.position.top}%`,
+                    left: `${dropIndicator.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
+                    filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))",
+                    opacity: 0.7,
+                  }}
+                  aria-hidden="true"
+                >
+                  <img
+                    src={dropIndicator.imageUrl}
+                    alt=""
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Tile Receiving Spaces */}
+            {unoccupiedSpaces.map((space) => (
+              <div
+                key={`space-${space.ownerId}`}
+                onDrop={(e) => handleDropOnTileSpace(e, space)}
+                onDragOver={handleDragOver}
+                className={`absolute w-12 h-24 rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all duration-300
+                  ${
+                    isDraggingTile
+                      ? "border-cyan-400 bg-cyan-500/20 scale-105 border-solid"
+                      : "border-cyan-400/50"
+                  }`}
+                style={{
+                  top: `${space.position.top}%`,
+                  left: `${space.position.left}%`,
+                  transform: `translate(-50%, -50%) rotate(${space.rotation}deg)`,
+                }}
+              >
+                <div
+                  style={{
+                    transform: `rotate(${-space.rotation - boardRotation}deg)`,
+                  }}
+                  className={`font-semibold text-xs leading-tight ${
+                    isDraggingTile ? "text-cyan-200" : "text-cyan-400/70"
+                  }`}
+                >
+                  <div>Drop Tile</div> <div>For P{space.ownerId}</div>
+                </div>
+              </div>
+            ))}
+
+            {/* Board tiles, pieces, etc. will be added in next sub-phase */}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 };
 
 export default CampaignScreen;
