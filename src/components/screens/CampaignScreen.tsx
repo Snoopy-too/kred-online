@@ -45,6 +45,7 @@ import {
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation } from "../../../game";
 import { validatePieceMovement } from "../../../game";
+import { getBureaucracyMenu, getAvailablePurchases } from "../../game/bureaucracy";
 
 // ============================================================================
 // COMPONENT
@@ -1332,6 +1333,1023 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
           </div>
         </div>
       </div>
+
+      {/* --- Overlays --- */}
+      {showChallengeRevealModal && challengedTile && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border-2 border-red-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-sm w-full">
+            <h2 className="text-4xl font-extrabold text-red-500 mb-2">
+              CHALLENGED!
+            </h2>
+            <p className="text-slate-300 mb-4">
+              The placed tile has been revealed to all players.
+            </p>
+            <div className="bg-stone-100 w-20 h-40 p-1 rounded-lg shadow-lg border-2 border-gray-300 mx-auto mb-6">
+              <img
+                src={challengedTile.url}
+                alt={`Tile ${challengedTile.id}`}
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <button
+              onClick={onContinueAfterChallenge}
+              className="px-8 py-3 bg-indigo-600 text-white font-bold text-lg rounded-lg hover:bg-indigo-500 transition-colors shadow-md hover:shadow-lg"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Receiver Decision Modal (when not privately viewing) */}
+      {isMyTurnForDecision &&
+        gameState === "PENDING_ACCEPTANCE" &&
+        !isPrivatelyViewing &&
+        !showBonusMoveModal &&
+        receiverAcceptance === null && (
+          <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 p-4">
+            <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full pointer-events-auto">
+              <h2 className="text-3xl font-bold text-cyan-300 mb-2">
+                Your Decision
+              </h2>
+              {(() => {
+                const currentPlayer = players.find(
+                  (p) => p.id === currentPlayerId
+                );
+                const hasZeroCredibility =
+                  (currentPlayer?.credibility ?? 3) === 0;
+                if (hasZeroCredibility) {
+                  return (
+                    <p className="text-red-400 font-semibold mb-4">
+                      ⚠️ You have 0 Credibility - You must accept this tile!
+                    </p>
+                  );
+                }
+                return (
+                  <p className="text-slate-300 mb-6">{`Player ${
+                    playedTile?.playerId || tileTransaction?.placerId
+                  } has played a tile to you. You can either accept or reject it.`}</p>
+                );
+              })()}
+              {(() => {
+                const currentPlayer = players.find(
+                  (p) => p.id === currentPlayerId
+                );
+                const hasZeroCredibility =
+                  (currentPlayer?.credibility ?? 3) === 0;
+                if (hasZeroCredibility) {
+                  return (
+                    <p className="text-red-400 text-sm mb-4 font-semibold">
+                      You may not view tiles
+                    </p>
+                  );
+                }
+                return (
+                  <p className="text-slate-400 text-sm mb-4">
+                    Click on the tile to view it
+                  </p>
+                );
+              })()}
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                {(() => {
+                  const currentPlayer = players.find(
+                    (p) => p.id === currentPlayerId
+                  );
+                  const hasZeroCredibility =
+                    (currentPlayer?.credibility ?? 3) === 0;
+                  return (
+                    <button
+                      onClick={() =>
+                        playedTile
+                          ? onReceiverAcceptanceDecision(false)
+                          : onReceiverDecision("reject")
+                      }
+                      disabled={hasZeroCredibility}
+                      className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md w-full sm:w-auto ${
+                        hasZeroCredibility
+                          ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
+                          : "bg-red-700 text-white hover:bg-red-600"
+                      }`}
+                    >
+                      Reject Tile
+                    </button>
+                  );
+                })()}
+                <button
+                  onClick={() =>
+                    playedTile
+                      ? onReceiverAcceptanceDecision(true)
+                      : onReceiverDecision("accept")
+                  }
+                  className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md w-full sm:w-auto"
+                >
+                  Accept Tile
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* Bystander Challenge Modal */}
+      {isMyTurnForDecision && gameState === "PENDING_CHALLENGE" && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full">
+            <h2 className="text-3xl font-bold text-cyan-300 mb-2">
+              Challenge or Pass?
+            </h2>
+            {(() => {
+              const currentPlayer = players.find(
+                (p) => p.id === currentPlayerId
+              );
+              const hasZeroCredibility =
+                (currentPlayer?.credibility ?? 3) === 0;
+              if (hasZeroCredibility) {
+                return (
+                  <p className="text-red-400 font-semibold mb-4">
+                    ⚠️ You have 0 Credibility - You can only Pass!
+                  </p>
+                );
+              }
+              return (
+                <p className="text-slate-300 mb-6">{`Player ${
+                  playedTile?.receivingPlayerId || tileTransaction?.receiverId
+                } accepted the tile from Player ${
+                  playedTile?.playerId || tileTransaction?.placerId
+                }.`}</p>
+              );
+            })()}
+            <div className="flex justify-center items-center gap-4">
+              {(() => {
+                const currentPlayer = players.find(
+                  (p) => p.id === currentPlayerId
+                );
+                const hasZeroCredibility =
+                  (currentPlayer?.credibility ?? 3) === 0;
+                return (
+                  <button
+                    onClick={() =>
+                      playedTile
+                        ? onChallengerDecision(true)
+                        : onBystanderDecision("challenge")
+                    }
+                    disabled={hasZeroCredibility}
+                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md ${
+                      hasZeroCredibility
+                        ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
+                        : "bg-red-600 text-white hover:bg-red-500"
+                    }`}
+                  >
+                    Challenge
+                  </button>
+                );
+              })()}
+              <button
+                onClick={() =>
+                  playedTile
+                    ? onChallengerDecision(false)
+                    : onBystanderDecision("pass")
+                }
+                className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md"
+              >
+                Pass
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Take Advantage Initial Choice Modal */}
+      {showTakeAdvantageModal && takeAdvantageChallengerId !== null && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border-2 border-green-500 rounded-lg p-8 max-w-lg shadow-2xl">
+            <h2 className="text-3xl font-bold text-green-400 mb-6 text-center">
+              Challenge Successful! 🎯
+            </h2>
+
+            {/* Credibility = 3 Message */}
+            {takeAdvantageChallengerCredibility === 3 ? (
+              <>
+                <p className="text-slate-200 text-lg mb-4 text-center leading-relaxed">
+                  You have full credibility. Would you like to use one of the
+                  tiles in your bank to purchase an action?
+                </p>
+                <p className="text-slate-400 text-sm mb-8 text-center italic">
+                  Click Yes to view your funding. You can cancel if you change
+                  your mind.
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={onTakeAdvantageYes}
+                    className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={onTakeAdvantageDecline}
+                    className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    No Thanks
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* Credibility < 3 Message */
+              <>
+                <p className="text-slate-200 text-lg mb-8 text-center leading-relaxed">
+                  Would you like to recover 1 notch to your credibility or use a
+                  banked tile to purchase a move?
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={onRecoverCredibility}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Recover Credibility
+                  </button>
+                  <button
+                    onClick={onPurchaseMove}
+                    className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Purchase Move
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Take Advantage Tile Selection Screen */}
+      {showTakeAdvantageTileSelection && takeAdvantageChallengerId !== null && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gray-800 border-2 border-yellow-500 rounded-lg p-8 max-w-4xl w-full my-8 shadow-2xl">
+            <h2 className="text-3xl font-bold text-yellow-400 mb-4 text-center">
+              Select Tiles from Your Bank
+            </h2>
+            <p className="text-slate-300 text-center mb-2">
+              Choose one or more tiles to use for purchasing an action.
+            </p>
+            <p className="text-slate-400 text-center text-sm mb-6">
+              Click tiles to select/deselect. Selected tiles will be removed
+              from your bank after purchase.
+            </p>
+
+            {/* Current Selection Summary */}
+            <div className="bg-gray-700/50 border border-yellow-500/30 rounded-lg p-4 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-200 font-semibold">
+                  Selected: {selectedTilesForAdvantage.length} tile(s)
+                </span>
+                <span className="text-yellow-400 text-2xl font-bold">
+                  Total: ₭-{totalKredcoinForAdvantage}
+                </span>
+              </div>
+            </div>
+
+            {/* Tile Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+              {players
+                .find((p) => p.id === takeAdvantageChallengerId)
+                ?.bureaucracyTiles.map((tile) => {
+                  const isSelected = selectedTilesForAdvantage.some(
+                    (t) => t.id === tile.id
+                  );
+                  const tileValue = TILE_KREDCOIN_VALUES[tile.id] || 0;
+
+                  return (
+                    <button
+                      key={tile.id}
+                      onClick={() => onToggleTileSelection(tile)}
+                      className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${
+                        isSelected
+                          ? "border-yellow-400 ring-4 ring-yellow-400/50 scale-105"
+                          : "border-gray-300 hover:border-yellow-300"
+                      }`}
+                    >
+                      <img
+                        src={tile.url}
+                        alt={`Tile ${tile.id}`}
+                        className="w-full h-full object-contain"
+                      />
+                      {/* Kredcoin Value Badge */}
+                      <div
+                        className={`absolute top-1 right-1 px-2 py-1 rounded text-xs font-bold ${
+                          isSelected
+                            ? "bg-yellow-400 text-gray-900"
+                            : "bg-gray-700 text-yellow-400"
+                        }`}
+                      >
+                        ₭-{tileValue}
+                      </div>
+                      {/* Selection Checkmark */}
+                      {isSelected && (
+                        <div className="absolute top-1 left-1 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center">
+                          <span className="text-white text-sm font-bold">
+                            ✓
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+
+            {/* No tiles message */}
+            {players.find((p) => p.id === takeAdvantageChallengerId)
+              ?.bureaucracyTiles.length === 0 && (
+              <p className="text-red-400 text-center text-lg mb-6">
+                You have no tiles in your bank. Cannot purchase an action.
+              </p>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={onConfirmTileSelection}
+                disabled={selectedTilesForAdvantage.length === 0}
+                className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${
+                  selectedTilesForAdvantage.length === 0
+                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-500 text-white hover:scale-105"
+                }`}
+              >
+                Continue with {selectedTilesForAdvantage.length} tile(s) (₭-
+                {totalKredcoinForAdvantage})
+              </button>
+              <button
+                onClick={onCancelTileSelection}
+                className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Take Advantage Action Menu */}
+      {showTakeAdvantageMenu && takeAdvantageChallengerId !== null && (
+        <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 overflow-y-auto">
+          <div className="w-full max-w-7xl my-8 px-4">
+            <div className="bg-gray-900 rounded-lg shadow-2xl border-2 border-yellow-600 p-6">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h2 className="text-3xl font-bold text-yellow-400 mb-2">
+                  Take Advantage
+                </h2>
+                <p className="text-xl text-slate-200">
+                  Player {takeAdvantageChallengerId}'s Reward
+                </p>
+                <div className="mt-2 text-lg">
+                  <span className="text-yellow-400 font-bold">
+                    Available Kredcoin: ₭-{totalKredcoinForAdvantage}
+                  </span>
+                </div>
+                <p className="text-slate-400 text-sm mt-1">
+                  You can make ONE purchase with your selected tiles
+                </p>
+              </div>
+
+              {/* Validation Error Display */}
+              {takeAdvantageValidationError && (
+                <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 mb-4">
+                  <p className="text-red-200 text-center font-semibold">
+                    {takeAdvantageValidationError}
+                  </p>
+                </div>
+              )}
+
+              {/* Main Content: Board and Menu Side by Side */}
+              <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
+                {/* Board Section */}
+                <div className="w-full lg:w-2/3">
+                  <div className="relative aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
+                    <div
+                      className="absolute inset-0 w-full h-full transition-transform duration-500"
+                      style={{
+                        transform: `rotate(${(() => {
+                          const rotationMap =
+                            PLAYER_PERSPECTIVE_ROTATIONS[playerCount];
+                          return rotationMap?.[takeAdvantageChallengerId] || 0;
+                        })()}deg)`,
+                      }}
+                      onDragOver={handleDragOverBoard}
+                      onDrop={handleDropOnBoard}
+                      onMouseLeave={handleMouseLeaveBoard}
+                    >
+                      <img
+                        src={BOARD_IMAGE_URLS[playerCount]}
+                        alt={`${playerCount}-player board`}
+                        className="absolute inset-0 w-full h-full object-contain"
+                        draggable={false}
+                      />
+
+                      {/* Drop indicator */}
+                      {dropIndicator && (
+                        <>
+                          {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
+                          <div
+                            className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
+                            style={{
+                              top: `${dropIndicator.position.top}%`,
+                              left: `${dropIndicator.position.left}%`,
+                              width: "80px",
+                              height: "80px",
+                              transform: "translate(-50%, -50%)",
+                              backgroundColor:
+                                dropIndicator.isValid === false
+                                  ? "rgba(239, 68, 68, 0.3)"
+                                  : "rgba(34, 197, 94, 0.3)",
+                              boxShadow:
+                                dropIndicator.isValid === false
+                                  ? "0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)"
+                                  : "0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)",
+                              border:
+                                dropIndicator.isValid === false
+                                  ? "2px solid rgba(239, 68, 68, 0.6)"
+                                  : "2px solid rgba(34, 197, 94, 0.6)",
+                            }}
+                            aria-hidden="true"
+                          />
+                          {/* Drop indicator piece preview */}
+                          <div
+                            className="absolute pointer-events-none transition-all duration-100 ease-in-out"
+                            style={{
+                              top: `${dropIndicator.position.top}%`,
+                              left: `${dropIndicator.position.left}%`,
+                              width:
+                                dropIndicator.name === "Pawn"
+                                  ? "80px"
+                                  : dropIndicator.name === "Heel"
+                                  ? "64px"
+                                  : "56px",
+                              height:
+                                dropIndicator.name === "Pawn"
+                                  ? "80px"
+                                  : dropIndicator.name === "Heel"
+                                  ? "64px"
+                                  : "56px",
+                              transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
+                              filter:
+                                "drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))",
+                              opacity: 0.7,
+                            }}
+                            aria-hidden="true"
+                          >
+                            <img
+                              src={dropIndicator.imageUrl}
+                              alt=""
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Render pieces */}
+                      {pieces.map((piece) => {
+                        let pieceSizeClass = "w-10 h-10 sm:w-14 sm:h-14";
+                        if (piece.name === "Heel")
+                          pieceSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
+                        if (piece.name === "Pawn")
+                          pieceSizeClass = "w-16 h-16 sm:w-20 sm:h-20";
+
+                        const scaleMultiplier =
+                          playerCount === 3
+                            ? 0.85
+                            : playerCount === 5
+                            ? 0.9
+                            : 1;
+                        const baseScale = 0.798;
+                        const finalScale = baseScale * scaleMultiplier;
+
+                        const isInCommunity =
+                          piece.locationId?.startsWith("community") || false;
+                        const rotationMap =
+                          PLAYER_PERSPECTIVE_ROTATIONS[playerCount];
+                        const boardRotation =
+                          rotationMap?.[takeAdvantageChallengerId] || 0;
+                        const communityCounterRotation = isInCommunity
+                          ? -boardRotation
+                          : 0;
+
+                        const isPromotionPurchase =
+                          takeAdvantagePurchase?.item.type === "PROMOTION";
+                        const isDraggable =
+                          !isPromotionPurchase &&
+                          takeAdvantagePurchase?.item.type === "MOVE";
+
+                        return (
+                          <img
+                            key={piece.id}
+                            src={piece.imageUrl}
+                            alt={piece.name}
+                            draggable={isDraggable}
+                            onDragStart={(e) => {
+                              if (isDraggable) {
+                                handleDragStartPiece(e, piece.id);
+                              }
+                            }}
+                            onDragEnd={handleDragEndPiece}
+                            onClick={() => {
+                              if (isPromotionPurchase) {
+                                onTakeAdvantagePiecePromote(piece.id);
+                              }
+                            }}
+                            className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
+                              isPromotionPurchase
+                                ? "cursor-pointer hover:scale-110"
+                                : isDraggable
+                                ? "cursor-grab active:cursor-grabbing"
+                                : "cursor-default"
+                            }`}
+                            style={{
+                              position: "absolute",
+                              top: `${piece.position.top}%`,
+                              left: `${piece.position.left}%`,
+                              transform: `translate(-50%, -50%) rotate(${
+                                piece.rotation + communityCounterRotation
+                              }deg) scale(${finalScale})`,
+                            }}
+                            aria-hidden="true"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Menu Section */}
+                <div className="w-full lg:w-1/3">
+                  {!takeAdvantagePurchase ? (
+                    /* Actions Menu */
+                    <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
+                      <h3 className="text-2xl font-bold text-center mb-4 text-yellow-400">
+                        Actions
+                      </h3>
+                      <div className="space-y-3">
+                        {(() => {
+                          const menu = getBureaucracyMenu(playerCount);
+                          const affordableItems = getAvailablePurchases(
+                            menu,
+                            totalKredcoinForAdvantage
+                          );
+                          const currentPlayer = players.find(
+                            (p) => p.id === takeAdvantageChallengerId
+                          );
+
+                          return (
+                            <>
+                              {/* Move items in two rows of three */}
+                              {menu.some((item) => item.type === "MOVE") && (
+                                <>
+                                  {/* First row: Assist, Remove, Influence */}
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {menu
+                                      .filter(
+                                        (item) =>
+                                          item.type === "MOVE" &&
+                                          [
+                                            "ASSIST",
+                                            "REMOVE",
+                                            "INFLUENCE",
+                                          ].includes(item.moveType || "")
+                                      )
+                                      .map((item) => {
+                                        const canAfford = affordableItems.some(
+                                          (ai) => ai.id === item.id
+                                        );
+                                        return (
+                                          <button
+                                            key={item.id}
+                                            onClick={() =>
+                                              canAfford &&
+                                              onSelectTakeAdvantageAction(item)
+                                            }
+                                            disabled={!canAfford}
+                                            className={`p-2 rounded-lg border-2 transition-all ${
+                                              canAfford
+                                                ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                                : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                            }`}
+                                          >
+                                            <div className="text-center">
+                                              <span className="font-bold text-sm block mb-1">
+                                                {item.moveType}
+                                              </span>
+                                              <span
+                                                className={`text-base font-bold ${
+                                                  canAfford
+                                                    ? "text-yellow-400"
+                                                    : "text-gray-600"
+                                                }`}
+                                              >
+                                                ₭-{item.price}
+                                              </span>
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                  </div>
+
+                                  {/* Second row: Advance, Withdraw, Organize */}
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {menu
+                                      .filter(
+                                        (item) =>
+                                          item.type === "MOVE" &&
+                                          [
+                                            "ADVANCE",
+                                            "WITHDRAW",
+                                            "ORGANIZE",
+                                          ].includes(item.moveType || "")
+                                      )
+                                      .map((item) => {
+                                        const canAfford = affordableItems.some(
+                                          (ai) => ai.id === item.id
+                                        );
+                                        return (
+                                          <button
+                                            key={item.id}
+                                            onClick={() =>
+                                              canAfford &&
+                                              onSelectTakeAdvantageAction(item)
+                                            }
+                                            disabled={!canAfford}
+                                            className={`p-2 rounded-lg border-2 transition-all ${
+                                              canAfford
+                                                ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                                : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                            }`}
+                                          >
+                                            <div className="text-center">
+                                              <span className="font-bold text-sm block mb-1">
+                                                {item.moveType}
+                                              </span>
+                                              <span
+                                                className={`text-base font-bold ${
+                                                  canAfford
+                                                    ? "text-yellow-400"
+                                                    : "text-gray-600"
+                                                }`}
+                                              >
+                                                ₭-{item.price}
+                                              </span>
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Non-move items (Promotion, Credibility) */}
+                              {menu
+                                .filter((item) => item.type !== "MOVE")
+                                .map((item) => {
+                                  const canAfford = affordableItems.some(
+                                    (ai) => ai.id === item.id
+                                  );
+                                  const isCredibilityAtMax =
+                                    item.type === "CREDIBILITY" &&
+                                    currentPlayer &&
+                                    currentPlayer.credibility >= 3;
+                                  const isEnabled =
+                                    canAfford && !isCredibilityAtMax;
+
+                                  return (
+                                    <button
+                                      key={item.id}
+                                      onClick={() =>
+                                        isEnabled &&
+                                        onSelectTakeAdvantageAction(item)
+                                      }
+                                      disabled={!isEnabled}
+                                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                                        isEnabled
+                                          ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                          : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                      }`}
+                                    >
+                                      <div className="flex justify-between items-center mb-2">
+                                        <span className="font-bold text-lg">
+                                          {item.type === "PROMOTION" &&
+                                            `Promote ${item.promotionLocation}`}
+                                          {item.type === "CREDIBILITY" &&
+                                            "Restore Credibility"}
+                                        </span>
+                                        <span
+                                          className={`text-xl font-bold ${
+                                            isEnabled
+                                              ? "text-yellow-400"
+                                              : "text-gray-600"
+                                          }`}
+                                        >
+                                          ₭-{item.price}
+                                        </span>
+                                      </div>
+                                      {item.description && (
+                                        <p className="text-sm text-gray-300">
+                                          {item.description}
+                                        </p>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Cancel Button */}
+                      <div className="mt-6">
+                        <button
+                          onClick={onCancelTileSelection}
+                          className="w-full px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Action Execution Panel */
+                    <div className="bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
+                      <h3 className="text-2xl font-bold text-center mb-4 text-blue-300">
+                        Perform Your Action
+                      </h3>
+                      <p className="text-center text-lg mb-6">
+                        {takeAdvantagePurchase.item.type === "PROMOTION" && (
+                          <>
+                            Promote a piece in the{" "}
+                            <span className="font-bold text-yellow-400">
+                              {takeAdvantagePurchase.item.promotionLocation}
+                            </span>
+                          </>
+                        )}
+                        {takeAdvantagePurchase.item.type === "MOVE" && (
+                          <>
+                            Perform a{" "}
+                            <span className="font-bold text-yellow-400">
+                              {takeAdvantagePurchase.item.moveType}
+                            </span>{" "}
+                            move
+                          </>
+                        )}
+                        {takeAdvantagePurchase.item.type === "CREDIBILITY" && (
+                          <>Your credibility has been restored</>
+                        )}
+                      </p>
+
+                      <div className="flex gap-4 justify-center">
+                        <button
+                          onClick={onResetTakeAdvantageAction}
+                          className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          onClick={onDoneTakeAdvantageAction}
+                          className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWaitingOverlay && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4">
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 p-6 rounded-xl text-center shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-200 animate-pulse">
+              {waitingMessage}
+            </h2>
+          </div>
+        </div>
+      )}
+
+      {/* Move Check Result Modal */}
+      {showMoveCheckResult && moveCheckResult && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div className="bg-gray-800 border-2 border-gray-700 p-8 rounded-xl text-center shadow-2xl max-w-lg w-full">
+            <div className="mb-8">
+              {!moveCheckResult.isMet ? (
+                <div className="text-center">
+                  <div className="text-9xl text-red-500 font-bold mb-4">✕</div>
+                  <h2 className="text-4xl font-bold text-red-400 mb-2">
+                    Requirements Not Met
+                  </h2>
+                  <p className="text-lg text-red-300">
+                    The moves do not satisfy the tile requirements.
+                  </p>
+                </div>
+              ) : moveCheckResult.hasExtraMoves ? (
+                <div className="text-center">
+                  <div className="text-9xl text-yellow-400 font-bold mb-4">
+                    ⚠️
+                  </div>
+                  <h2 className="text-4xl font-bold text-yellow-300 mb-2">
+                    Requirements Met
+                  </h2>
+                  <p className="text-lg text-yellow-200">
+                    But extra non-required moves were performed.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="text-9xl text-green-500 font-bold mb-4">
+                    ✓
+                  </div>
+                  <h2 className="text-4xl font-bold text-green-400 mb-2">
+                    Requirements Met!
+                  </h2>
+                  <p className="text-lg text-green-300">
+                    All tile requirements have been satisfied.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Details Section */}
+            <div className="bg-gray-700/50 rounded-lg p-6 mb-6 text-left space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-cyan-300 mb-2">
+                  Required Moves:
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {moveCheckResult.requiredMoves.length > 0 ? (
+                    moveCheckResult.requiredMoves.map((move, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded"
+                      >
+                        {move}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">
+                      No specific moves required
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-cyan-300 mb-2">
+                  Moves Performed:
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {moveCheckResult.performedMoves.length > 0 ? (
+                    moveCheckResult.performedMoves.map((move, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-green-600 text-white text-sm font-semibold rounded"
+                      >
+                        {move}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">
+                      No moves performed
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {moveCheckResult.missingMoves.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-red-400 mb-2">
+                    Missing Moves:
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {moveCheckResult.missingMoves.map((move, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded"
+                      >
+                        {move}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {moveCheckResult.hasExtraMoves &&
+                moveCheckResult.extraMoves.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-yellow-400 mb-2">
+                      Extra Moves (Not Required):
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {moveCheckResult.extraMoves.map((move, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-yellow-600 text-white text-sm font-semibold rounded"
+                        >
+                          {move}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Individual Move Validations - Only show if there are issues or multiple moves */}
+              {moveCheckResult.moveValidations &&
+                moveCheckResult.moveValidations.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-cyan-300 mb-2">
+                      Move Details:
+                    </h3>
+                    <div className="space-y-2">
+                      {moveCheckResult.moveValidations.map(
+                        (validation, index) => (
+                          <div
+                            key={index}
+                            className={`p-3 rounded border-l-4 ${
+                              validation.isValid
+                                ? "bg-green-900/30 border-green-500"
+                                : "bg-red-900/30 border-red-500"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span
+                                className={`text-lg font-bold ${
+                                  validation.isValid
+                                    ? "text-green-400"
+                                    : "text-red-400"
+                                }`}
+                              >
+                                {validation.isValid ? "✓" : "✕"}
+                              </span>
+                              <span
+                                className={`font-semibold ${
+                                  validation.isValid
+                                    ? "text-green-300"
+                                    : "text-white"
+                                }`}
+                              >
+                                {validation.moveType}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-300 ml-7">
+                              {validation.fromLocationId && (
+                                <>
+                                  FROM:{" "}
+                                  <span className="text-cyan-400">
+                                    {validation.fromLocationId}
+                                  </span>
+                                  {validation.toLocationId && (
+                                    <>
+                                      {" → TO: "}
+                                      <span className="text-cyan-400">
+                                        {validation.toLocationId}
+                                      </span>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </p>
+                            {!validation.isValid && (
+                              <p className="text-xs text-red-300 ml-7 mt-1">
+                                {validation.reason}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => onCloseMoveCheckResult?.()}
+              className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${
+                !moveCheckResult.isMet
+                  ? "bg-red-600 hover:bg-red-500"
+                  : moveCheckResult.hasExtraMoves
+                  ? "bg-yellow-600 hover:bg-yellow-500"
+                  : "bg-green-600 hover:bg-green-500"
+              }`}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
