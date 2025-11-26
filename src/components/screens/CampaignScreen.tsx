@@ -11,7 +11,7 @@
  * @module components/screens/CampaignScreen
  */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 // ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
@@ -269,7 +269,172 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   onDoneTakeAdvantageAction,
   onTakeAdvantagePiecePromote,
 }) => {
-  // Component implementation will be added in subsequent sub-phases
+  // ============================================================================
+  // STATE HOOKS
+  // ============================================================================
+  const [isDraggingTile, setIsDraggingTile] = useState(false);
+  const [boardMousePosition, setBoardMousePosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [draggedPieceInfo, setDraggedPieceInfo] = useState<{
+    name: string;
+    imageUrl: string;
+    pieceId: string;
+    locationId?: string;
+  } | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{
+    position: { top: number; left: number };
+    rotation: number;
+    name: string;
+    imageUrl: string;
+    isValid?: boolean;
+  } | null>(null);
+
+  // ============================================================================
+  // DERIVED STATE & CALCULATIONS
+  // ============================================================================
+  const boardRotation = boardRotationEnabled
+    ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0
+    : 0;
+
+  const tileSpaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+  const occupiedOwnerIds = new Set(boardTiles.map((bt) => bt.ownerId));
+  const unoccupiedSpaces = tileSpaces.filter(
+    (space) => !occupiedOwnerIds.has(space.ownerId)
+  );
+
+  const logContainerRef = useRef<HTMLDivElement>(null);
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = 0;
+    }
+  }, [gameLog]);
+
+  // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
+  
+  /**
+   * Calculate Kredcoin for a player (only face-down tiles in bank count)
+   */
+  const calculatePlayerKredcoin = (playerId: number): number => {
+    const playerBankedTiles = bankedTiles.filter(
+      (bt) => bt.ownerId === playerId && !bt.faceUp
+    );
+    return playerBankedTiles.reduce((total, bankedTile) => {
+      const tileValue = TILE_KREDCOIN_VALUES[bankedTile.tile.id] || 0;
+      return total + tileValue;
+    }, 0);
+  };
+
+  /**
+   * Track mouse position on board (test mode only)
+   */
+  const handleMouseMoveOnBoard = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isTestMode) return;
+    const boardRect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+    const y = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+
+    const clampedX = Math.max(0, Math.min(100, x));
+    const clampedY = Math.max(0, Math.min(100, y));
+
+    setBoardMousePosition({ x: clampedX, y: clampedY });
+  };
+
+  /**
+   * Clear mouse position when leaving board
+   */
+  const handleMouseLeaveBoard = () => {
+    if (isTestMode) {
+      setBoardMousePosition(null);
+    }
+    setDropIndicator(null);
+  };
+
+  /**
+   * Basic drag over handler
+   */
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  /**
+   * Handle drag over board with snap indicator
+   */
+  const handleDragOverBoard = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!draggedPieceInfo) {
+      if (dropIndicator) setDropIndicator(null);
+      return;
+    }
+
+    const boardRect = e.currentTarget.getBoundingClientRect();
+    const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+    const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+
+    let left = rawLeft;
+    let top = rawTop;
+    if (boardRotation !== 0) {
+      const angleRad = -boardRotation * (Math.PI / 180);
+      const centerX = 50;
+      const centerY = 50;
+      const translatedX = rawLeft - centerX;
+      const translatedY = rawTop - centerY;
+      const rotatedX =
+        translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY =
+        translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      left = rotatedX + centerX;
+      top = rotatedY + centerY;
+    }
+
+    const snappedLocation = findNearestVacantLocation(
+      { top, left },
+      pieces,
+      playerCount
+    );
+
+    if (snappedLocation) {
+      const newRotation = calculatePieceRotation(
+        snappedLocation.position,
+        playerCount,
+        snappedLocation.id
+      );
+
+      // Validate if the move is allowed
+      const validation = validatePieceMovement(
+        draggedPieceInfo.pieceId,
+        draggedPieceInfo.locationId,
+        snappedLocation.id,
+        currentPlayerId,
+        pieces
+      );
+
+      if (
+        !dropIndicator ||
+        dropIndicator.position.top !== snappedLocation.position.top ||
+        dropIndicator.position.left !== snappedLocation.position.left
+      ) {
+        setDropIndicator({
+          position: snappedLocation.position,
+          rotation: newRotation,
+          name: draggedPieceInfo.name,
+          imageUrl: draggedPieceInfo.imageUrl,
+          isValid: validation.isAllowed,
+        });
+      }
+    } else {
+      if (dropIndicator) setDropIndicator(null);
+    }
+  };
+
+  // Component JSX will be added in subsequent sub-phases
   return <div>CampaignScreen - To be implemented</div>;
 };
 
