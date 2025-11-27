@@ -98,7 +98,10 @@ import {
 // ============================================================================
 // HANDLERS IMPORTS - Extracted handler factories
 // ============================================================================
-import { createGameFlowHandlers } from "./src/handlers";
+import {
+  createGameFlowHandlers,
+  createPieceMovementHandlers,
+} from "./src/handlers";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -475,240 +478,79 @@ const App: React.FC = () => {
   // Destructure handlers for convenience
   const { handleStartGame, handleNewGame, handleSelectTile } = gameFlowHandlers;
 
-  const handlePieceMove = (
-    pieceId: string,
-    newPosition: { top: number; left: number },
-    locationId?: string
-  ) => {
-    // Check if this piece has already been moved this turn
-    // This includes pieces that have been moved to community (pending community pieces)
-    if (
-      movedPiecesThisTurn.has(pieceId) ||
-      pendingCommunityPieces.has(pieceId)
-    ) {
-      showAlert(
-        ALERTS.PIECE_ALREADY_MOVED.title,
-        ALERTS.PIECE_ALREADY_MOVED.message,
-        "warning"
-      );
-      return;
-    }
+  // ============================================================================
+  // PIECE MOVEMENT HANDLERS - Created via factory for better testability
+  // ============================================================================
+  const pieceMovementHandlers = React.useMemo(
+    () =>
+      createPieceMovementHandlers({
+        // Current state values
+        pieces,
+        players,
+        playerCount,
+        currentPlayerIndex,
+        movedPiecesThisTurn,
+        pendingCommunityPieces,
+        piecesAtTurnStart,
+        piecesAtCorrectionStart,
+        piecesBeforeBonusMove,
+        playedTile,
 
-    const movingPiece = pieces.find((p) => p.id === pieceId);
-    if (!movingPiece) return;
+        // State setters
+        setPieces,
+        setPlayers,
+        setBoardTiles,
+        setGameState,
+        setMovedPiecesThisTurn,
+        setPendingCommunityPieces,
+        setLastDroppedPosition,
+        setLastDroppedPieceId,
+        setPlayedTile,
+        setHasPlayedTileThisTurn,
 
-    // Check if player is trying to move opponent's piece within opponent's domain
-    if (locationId) {
-      const currentPlayer = players[currentPlayerIndex];
-      if (!currentPlayer) return;
+        // Utility functions
+        showAlert,
+        calculatePieceRotation,
+        validatePieceMovement,
+        validateMoveType,
+        formatLocationId,
 
-      const validation = validatePieceMovement(
-        pieceId,
-        movingPiece.locationId,
-        locationId,
-        currentPlayer.id,
-        pieces
-      );
-      if (!validation.isAllowed) {
-        showAlert("Invalid Move", validation.reason, "error");
-        return;
-      }
-    }
-
-    // Check community movement restrictions before allowing the move
-    if (
-      movingPiece &&
-      movingPiece.locationId?.includes("community") &&
-      locationId &&
-      !locationId.includes("community")
-    ) {
-      // Piece is moving FROM community, check restrictions
-      const pieceName = movingPiece.name.toLowerCase();
-
-      // Marks can always move from community
-      if (pieceName !== "mark") {
-        // Check if Marks are in community (excluding pending pieces)
-        const marksInCommunity = pieces.some(
-          (p) =>
-            p.locationId?.includes("community") &&
-            p.name.toLowerCase() === "mark" &&
-            !pendingCommunityPieces.has(p.id)
-        );
-
-        // If Marks in community, Heels and Pawns cannot move
-        if (marksInCommunity) {
-          showAlert(
-            ALERTS.CANNOT_MOVE_PIECE.title,
-            ALERTS.CANNOT_MOVE_PIECE.message,
-            "warning"
-          );
-          return;
-        }
-
-        // If moving a Pawn, check if Heels are in community (excluding pending pieces)
-        if (pieceName === "pawn") {
-          const heelsInCommunity = pieces.some(
-            (p) =>
-              p.locationId?.includes("community") &&
-              p.name.toLowerCase() === "heel" &&
-              !pendingCommunityPieces.has(p.id)
-          );
-          // Pawns cannot move if Heels in community
-          if (heelsInCommunity) {
-            showAlert(
-              ALERTS.CANNOT_MOVE_PIECE.title,
-              ALERTS.CANNOT_MOVE_PIECE.message,
-              "warning"
-            );
-            return;
-          }
-        }
-      }
-    }
-
-    // Check if the move would result in an illegal (UNKNOWN) move type
-    if (locationId && movingPiece.locationId) {
-      const currentPlayer = players[currentPlayerIndex];
-      if (currentPlayer) {
-        const moveType = validateMoveType(
-          movingPiece.locationId,
-          locationId,
-          currentPlayer.id,
-          movingPiece,
-          pieces,
-          playerCount
-        );
-
-        if (moveType === "UNKNOWN") {
-          showAlert(
-            "Illegal Move",
-            `Cannot move from ${formatLocationId(
-              movingPiece.locationId
-            )} to ${formatLocationId(
-              locationId
-            )}. This move violates game rules.`,
-            "error"
-          );
-          return;
-        }
-      }
-    }
-
-    setLastDroppedPosition(newPosition);
-    setLastDroppedPieceId(pieceId);
-    const newRotation = calculatePieceRotation(
-      newPosition,
+        // Alert messages
+        ALERTS,
+      }),
+    [
+      pieces,
+      players,
       playerCount,
-      locationId
-    );
+      currentPlayerIndex,
+      movedPiecesThisTurn,
+      pendingCommunityPieces,
+      piecesAtTurnStart,
+      piecesAtCorrectionStart,
+      piecesBeforeBonusMove,
+      playedTile,
+      setPieces,
+      setPlayers,
+      setBoardTiles,
+      setGameState,
+      setMovedPiecesThisTurn,
+      setPendingCommunityPieces,
+      setLastDroppedPosition,
+      setLastDroppedPieceId,
+      setPlayedTile,
+      setHasPlayedTileThisTurn,
+      showAlert,
+    ]
+  );
 
-    // Simply update the piece position and location
-    // Move validation will be calculated when Check Move is clicked
-    setPieces((prevPieces) =>
-      prevPieces.map((p) =>
-        p.id === pieceId
-          ? {
-              ...p,
-              position: newPosition,
-              rotation: newRotation,
-              ...(locationId !== undefined && { locationId }),
-            }
-          : p
-      )
-    );
-
-    // Track that this piece has been moved this turn
-    setMovedPiecesThisTurn((prev) => new Set(prev).add(pieceId));
-
-    // If piece is moved to community, mark it as "pending" until acceptance/challenge resolved
-    if (locationId && locationId.includes("community")) {
-      setPendingCommunityPieces((prev) => new Set(prev).add(pieceId));
-    }
-  };
-
-  const handleResetTurn = () => {
-    // Restore pieces to turn start state
-    setPieces(piecesAtTurnStart.map((p) => ({ ...p })));
-
-    // If a tile was played, return it to player's hand and remove from board
-    if (playedTile) {
-      const tileId = parseInt(playedTile.tileId);
-      const tile = { id: tileId, url: `./images/${playedTile.tileId}.svg` };
-
-      // Add tile back to player's hand
-      setPlayers((prev) =>
-        prev.map((p) =>
-          p.id === playedTile.playerId
-            ? { ...p, keptTiles: [...p.keptTiles, tile] }
-            : p
-        )
-      );
-
-      // Remove tile from board
-      setBoardTiles((prev) =>
-        prev.filter(
-          (bt) =>
-            !(
-              bt.placerId === playedTile.playerId &&
-              bt.ownerId === playedTile.receivingPlayerId
-            )
-        )
-      );
-
-      // Clear the played tile state
-      setPlayedTile(null);
-      setGameState("CAMPAIGN");
-      setHasPlayedTileThisTurn(false);
-    }
-
-    // Clear tracking sets
-    setMovedPiecesThisTurn(new Set());
-    setPendingCommunityPieces(new Set());
-
-    // Clear any last dropped state
-    setLastDroppedPosition(null);
-    setLastDroppedPieceId(null);
-  };
-
-  const handleResetPiecesCorrection = () => {
-    // Reset pieces to correction start state while keeping tile in play
-    if (piecesAtCorrectionStart.length > 0) {
-      setPieces(piecesAtCorrectionStart.map((p) => ({ ...p })));
-    }
-
-    // Clear movement tracking for fresh correction attempt
-    setMovedPiecesThisTurn(new Set());
-    setPendingCommunityPieces(new Set());
-
-    // Clear any last dropped state
-    setLastDroppedPosition(null);
-    setLastDroppedPieceId(null);
-  };
-
-  const handleResetBonusMove = () => {
-    // Reset pieces to state before bonus move started
-    setPieces(piecesBeforeBonusMove.map((p) => ({ ...p })));
-
-    // Clear tracking sets
-    setMovedPiecesThisTurn(new Set());
-    setPendingCommunityPieces(new Set());
-
-    // Clear any last dropped state
-    setLastDroppedPosition(null);
-    setLastDroppedPieceId(null);
-  };
-
-  const handleBoardTileMove = (
-    boardTileId: string,
-    newPosition: { top: number; left: number }
-  ) => {
-    setLastDroppedPosition(newPosition);
-    setBoardTiles((prevBoardTiles) =>
-      prevBoardTiles.map((bt) =>
-        bt.id === boardTileId ? { ...bt, position: newPosition } : bt
-      )
-    );
-  };
+  // Destructure piece movement handlers
+  const {
+    handlePieceMove,
+    handleResetTurn,
+    handleResetPiecesCorrection,
+    handleResetBonusMove,
+    handleBoardTileMove,
+  } = pieceMovementHandlers;
 
   const generateTurnLog = (
     turnPlayerId: number,
