@@ -2,7 +2,7 @@
  * Handlers Module
  *
  * Purpose: Barrel file for all handler exports
- * Usage: import { createGameFlowHandlers, createPieceMovementHandlers } from './src/handlers';
+ * Usage: import { createGameFlowHandlers, createPieceMovementHandlers, createTurnHandlers } from './src/handlers';
  *
  * @module handlers
  */
@@ -18,3 +18,9 @@ export {
   type PieceMovementDependencies,
   type PieceMovementHandlers,
 } from "./pieceMovementHandlers";
+
+export {
+  createTurnHandlers,
+  type TurnHandlerDependencies,
+  type TurnHandlers,
+} from "./turnHandlers";

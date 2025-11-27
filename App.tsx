@@ -101,6 +101,7 @@ import {
 import {
   createGameFlowHandlers,
   createPieceMovementHandlers,
+  createTurnHandlers,
 } from "./src/handlers";
 
 // ============================================================================
@@ -552,74 +553,62 @@ const App: React.FC = () => {
     handleBoardTileMove,
   } = pieceMovementHandlers;
 
-  const generateTurnLog = (
-    turnPlayerId: number,
-    piecesBefore: Piece[],
-    piecesAfter: Piece[],
-    countOfPlayers: number,
-    tileTransactionAtTurnEnd: typeof tileTransaction
-  ): string[] => {
-    const logs: string[] = [];
+  // ============================================================================
+  // TURN HANDLERS - Created via factory for better testability
+  // ============================================================================
+  const turnHandlers = React.useMemo(
+    () =>
+      createTurnHandlers({
+        // Current state values
+        players,
+        pieces,
+        playerCount,
+        currentPlayerIndex,
 
-    const piecesBeforeMap = new Map(piecesBefore.map((p) => [p.id, p]));
-    const piecesAfterMap = new Map(piecesAfter.map((p) => [p.id, p]));
+        // State setters
+        setCurrentPlayerIndex,
+        setGameState,
+        setGameLog,
+        setPiecesAtTurnStart,
+        setHasPlayedTileThisTurn,
+        setRevealedTileId,
+        setTileTransaction,
+        setBystanders,
+        setBystanderIndex,
+        setIsPrivatelyViewing,
+        setChallengedTile,
+        setPlacerViewingTileId,
+        setMovedPiecesThisTurn,
+        setPendingCommunityPieces,
 
-    if (
-      tileTransactionAtTurnEnd &&
-      tileTransactionAtTurnEnd.placerId === turnPlayerId
-    ) {
-      logs.push(
-        `Played a tile for Player ${tileTransactionAtTurnEnd.receiverId}.`
-      );
-    }
+        // Utility functions
+        getLocationIdFromPosition,
+        formatLocationId,
+      }),
+    [
+      players,
+      pieces,
+      playerCount,
+      currentPlayerIndex,
+      setCurrentPlayerIndex,
+      setGameState,
+      setGameLog,
+      setPiecesAtTurnStart,
+      setHasPlayedTileThisTurn,
+      setRevealedTileId,
+      setTileTransaction,
+      setBystanders,
+      setBystanderIndex,
+      setIsPrivatelyViewing,
+      setChallengedTile,
+      setPlacerViewingTileId,
+      setMovedPiecesThisTurn,
+      setPendingCommunityPieces,
+    ]
+  );
 
-    for (const [id, oldPiece] of piecesBeforeMap.entries()) {
-      const newPiece = piecesAfterMap.get(id);
-      if (newPiece) {
-        if (
-          Math.abs(oldPiece.position.left - newPiece.position.left) > 0.01 ||
-          Math.abs(oldPiece.position.top - newPiece.position.top) > 0.01
-        ) {
-          const oldLocId = getLocationIdFromPosition(
-            oldPiece.position,
-            countOfPlayers
-          );
-          const newLocId = getLocationIdFromPosition(
-            newPiece.position,
-            countOfPlayers
-          );
-          const oldLocStr = oldLocId
-            ? formatLocationId(oldLocId)
-            : "a location";
-          const newLocStr = newLocId
-            ? formatLocationId(newLocId)
-            : "another location";
-          logs.push(
-            `Moved a ${oldPiece.name} from ${oldLocStr} to ${newLocStr}.`
-          );
-        }
-      } else {
-        const oldLocId = getLocationIdFromPosition(
-          oldPiece.position,
-          countOfPlayers
-        );
-        const oldLocStr = oldLocId ? formatLocationId(oldLocId) : "a location";
-        logs.push(`Returned a ${oldPiece.name} to supply from ${oldLocStr}.`);
-      }
-    }
-
-    for (const [id, newPiece] of piecesAfterMap.entries()) {
-      if (!piecesBeforeMap.has(id)) {
-        const newLocId = getLocationIdFromPosition(
-          newPiece.position,
-          countOfPlayers
-        );
-        const newLocStr = newLocId ? formatLocationId(newLocId) : "a location";
-        logs.push(`Added a ${newPiece.name} from supply to ${newLocStr}.`);
-      }
-    }
-    return logs;
-  };
+  // Destructure turn handlers
+  const { generateTurnLog, advanceTurnNormally } = turnHandlers;
 
   const addCredibilityLossLog = (
     playerId: number,
@@ -708,44 +697,6 @@ const App: React.FC = () => {
       setGameState("CORRECTION_REQUIRED");
       setMovesThisTurn([]);
     }
-  };
-
-  const advanceTurnNormally = (startingPlayerId?: number) => {
-    if (playerCount === 0) {
-      console.error("Cannot advance turn: playerCount is 0.");
-      return;
-    }
-
-    const fromPlayerId = startingPlayerId ?? players[currentPlayerIndex]?.id;
-
-    if (!fromPlayerId) {
-      console.error("Cannot advance turn: current player not found.");
-      return;
-    }
-
-    const fromPlayerIndex = players.findIndex((p) => p.id === fromPlayerId);
-    // If player not found, fromPlayerIndex will be -1.
-    // (-1 + 1) % playerCount will be 0, which is a safe default.
-    const nextPlayerIndex = (fromPlayerIndex + 1) % playerCount;
-
-    setCurrentPlayerIndex(nextPlayerIndex);
-    setHasPlayedTileThisTurn(false);
-    setRevealedTileId(null);
-    setGameState("CAMPAIGN");
-    setTileTransaction(null);
-    setBystanders([]);
-    setBystanderIndex(0);
-    setIsPrivatelyViewing(false);
-    setChallengedTile(null);
-    setPlacerViewingTileId(null);
-
-    // Set piece state snapshot for the start of this new turn
-    setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
-
-    // Clear piece movement tracking for new turn
-    setMovedPiecesThisTurn(new Set());
-    // Clear pending community pieces (acceptance/challenge phase is complete)
-    setPendingCommunityPieces(new Set());
   };
 
   const handleEndTurn = () => {
