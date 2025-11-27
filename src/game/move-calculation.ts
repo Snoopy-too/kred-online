@@ -12,7 +12,8 @@ import { DefinedMoveType } from "../types";
 /**
  * Helper functions for location type detection
  */
-const isCommunity = (loc?: string): boolean => loc?.includes("community") ?? false;
+const isCommunity = (loc?: string): boolean =>
+  loc?.includes("community") ?? false;
 const isSeat = (loc?: string): boolean => loc?.includes("_seat") ?? false;
 const isRostrum = (loc?: string): boolean => loc?.includes("_rostrum") ?? false;
 const isOffice = (loc?: string): boolean => loc?.includes("_office") ?? false;
@@ -84,30 +85,36 @@ function determineMoveTypeFromLocations(
   tilePlayerId: number,
   currentPieces: Piece[],
   pieceId: string,
-  areSeatsAdjacentFn: (from: string, to: string, playerCount: number) => boolean,
+  areSeatsAdjacentFn: (
+    from: string,
+    to: string,
+    playerCount: number
+  ) => boolean,
   playerCount: number
 ): DefinedMoveType | null {
   if (isCommunity(initialLocId) && isSeat(finalLocId)) {
     const ownerPlayer = getPlayerFromLocation(finalLocId);
-    return ownerPlayer === tilePlayerId ? DefinedMoveType.ADVANCE : DefinedMoveType.ASSIST;
+    return ownerPlayer === tilePlayerId
+      ? DefinedMoveType.ADVANCE
+      : DefinedMoveType.ASSIST;
   }
-  
+
   if (isSeat(initialLocId) && isRostrum(finalLocId)) {
     return DefinedMoveType.ADVANCE;
   }
-  
+
   if (isRostrum(initialLocId) && isOffice(finalLocId)) {
     return DefinedMoveType.ADVANCE;
   }
-  
+
   if (isRostrum(initialLocId) && isSeat(finalLocId)) {
     return DefinedMoveType.WITHDRAW;
   }
-  
+
   if (isOffice(initialLocId) && isRostrum(finalLocId)) {
     return DefinedMoveType.WITHDRAW;
   }
-  
+
   if (isSeat(initialLocId) && isCommunity(finalLocId)) {
     const fromPlayer = getPlayerFromLocation(initialLocId);
     if (fromPlayer === tilePlayerId) {
@@ -117,11 +124,13 @@ function determineMoveTypeFromLocations(
     const movingPiece = currentPieces.find((p) => p.id === pieceId);
     if (movingPiece) {
       const pieceName = movingPiece.name.toLowerCase();
-      return pieceName === "mark" || pieceName === "heel" ? DefinedMoveType.REMOVE : null;
+      return pieceName === "mark" || pieceName === "heel"
+        ? DefinedMoveType.REMOVE
+        : null;
     }
     return null;
   }
-  
+
   if (isSeat(initialLocId) && isSeat(finalLocId)) {
     const fromPlayer = getPlayerFromLocation(initialLocId);
     if (
@@ -129,14 +138,18 @@ function determineMoveTypeFromLocations(
       finalLocId &&
       areSeatsAdjacentFn(initialLocId, finalLocId, playerCount)
     ) {
-      return fromPlayer === tilePlayerId ? DefinedMoveType.ORGANIZE : DefinedMoveType.INFLUENCE;
+      return fromPlayer === tilePlayerId
+        ? DefinedMoveType.ORGANIZE
+        : DefinedMoveType.INFLUENCE;
     }
     return null;
   }
-  
+
   if (isRostrum(initialLocId) && isRostrum(finalLocId)) {
     const fromPlayer = getPlayerFromLocation(initialLocId);
-    return fromPlayer === tilePlayerId ? DefinedMoveType.ORGANIZE : DefinedMoveType.INFLUENCE;
+    return fromPlayer === tilePlayerId
+      ? DefinedMoveType.ORGANIZE
+      : DefinedMoveType.INFLUENCE;
   }
 
   return null;
@@ -158,11 +171,11 @@ function getMoveCategory(moveType: DefinedMoveType): "M" | "O" {
 
 /**
  * Calculate moves by comparing original pieces to current pieces
- * 
+ *
  * This is the main function for determining what moves a player has made
  * during their turn. It compares the piece positions from the start of
  * the tile play to the current positions.
- * 
+ *
  * @param originalPieces - Pieces at the start of the tile play
  * @param currentPieces - Current piece positions
  * @param tilePlayerId - ID of the player who played the tile

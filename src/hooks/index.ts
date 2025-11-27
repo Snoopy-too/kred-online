@@ -19,3 +19,7 @@ export { useTilePlayWorkflow } from "./useTilePlayWorkflow";
 export { useBonusMoves } from "./useBonusMoves";
 export { useChallengeFlow } from "./useChallengeFlow";
 export { useBureaucracy } from "./useBureaucracy";
+
+// Handler hooks (encapsulate handlers with their dependencies)
+export { useTakeAdvantageHandlers } from "./useTakeAdvantage";
+export type { TakeAdvantageHandlerDependencies } from "./useTakeAdvantage";
