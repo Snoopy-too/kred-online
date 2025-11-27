@@ -53,16 +53,12 @@ import type {
   TileReceivingSpace,
   BankSpace,
   TrackedMove,
-} from "./src/types";
-
-// Types still in game.ts (to be migrated to src/types/bureaucracy.ts)
-import type {
-  PlayedTileState,
   BureaucracyMenuItem,
   BureaucracyPurchase,
   BureaucracyPlayerState,
   BureaucracyMoveType,
-} from "./game";
+  PlayedTileState,
+} from "./src/types";
 
 // ============================================================================
 // CONFIGURATION IMPORTS - Static game configuration data
@@ -1294,7 +1290,7 @@ const App: React.FC = () => {
         }
 
         const challenger = finalPlayers.find((p) => p.id === challengerId);
-        const challengerName = challenger?.name || "Player";
+        const challengerName = challenger ? getPlayerName(challenger, challengerId) : "Player";
         addGameLog(
           `${challengerName} gained credibility for successful challenge (now ${
             challenger?.credibility ?? 0
@@ -2515,8 +2511,14 @@ const App: React.FC = () => {
       currentPlayerId
     );
 
+    // Skip tracking if we can't determine the move type
+    if (!moveType) {
+      console.warn("Could not determine move type for bureaucracy move");
+      return;
+    }
+
     const move: TrackedMove = {
-      moveType: moveType || 0,
+      moveType,
       category: "M",
       pieceId,
       fromPosition: piece.position,

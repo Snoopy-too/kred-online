@@ -1,7 +1,18 @@
 import { useCallback } from "react";
-import type { Player, Tile, Piece, TrackedMove, BureaucracyMenuItem, BureaucracyPurchase } from "../types";
+import type {
+  Player,
+  Tile,
+  Piece,
+  TrackedMove,
+  BureaucracyMenuItem,
+  BureaucracyPurchase,
+} from "../types";
 import { TILE_KREDCOIN_VALUES, BANK_SPACES_BY_PLAYER_COUNT } from "../config";
-import { validateSingleMove, validatePromotion, performPromotion } from "../../game";
+import {
+  validateSingleMove,
+  validatePromotion,
+  performPromotion,
+} from "../../game";
 import { calculateMoves } from "../game/move-calculation";
 import { ALERTS, TIMEOUTS } from "../../constants";
 import { getPlayerName } from "../../utils";
@@ -17,32 +28,36 @@ export interface TakeAdvantageHandlerDependencies {
   totalKredcoinForAdvantage: number;
   takeAdvantagePurchase: BureaucracyPurchase | null;
   takeAdvantagePiecesSnapshot: Piece[];
-  
+
   // State setters from useChallengeFlow
   setShowTakeAdvantageModal: (show: boolean) => void;
   setTakeAdvantageChallengerId: (id: number | null) => void;
   setTakeAdvantageChallengerCredibility: (cred: number) => void;
   setShowTakeAdvantageTileSelection: (show: boolean) => void;
-  setSelectedTilesForAdvantage: (tiles: Tile[] | ((prev: Tile[]) => Tile[])) => void;
+  setSelectedTilesForAdvantage: (
+    tiles: Tile[] | ((prev: Tile[]) => Tile[])
+  ) => void;
   setTotalKredcoinForAdvantage: (total: number) => void;
   setShowTakeAdvantageMenu: (show: boolean) => void;
   setTakeAdvantagePurchase: (purchase: BureaucracyPurchase | null) => void;
   setTakeAdvantagePiecesSnapshot: (pieces: Piece[]) => void;
   setTakeAdvantageValidationError: (error: string | null) => void;
-  
+
   // State from other hooks/App
   players: Player[];
   pieces: Piece[];
   playerCount: number;
-  
+
   // State setters from App
   setPlayers: (players: Player[] | ((prev: Player[]) => Player[])) => void;
   setPieces: (pieces: Piece[] | ((prev: Piece[]) => Piece[])) => void;
   setMovesThisTurn: (moves: TrackedMove[]) => void;
-  setMovedPiecesThisTurn: (set: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  setMovedPiecesThisTurn: (
+    set: Set<string> | ((prev: Set<string>) => Set<string>)
+  ) => void;
   setGameLog: (log: string[] | ((prev: string[]) => string[])) => void;
   setBankedTiles: (tiles: any[] | ((prev: any[]) => any[])) => void;
-  
+
   // Functions
   transitionToCorrectionPhase: (updatedPieces?: Piece[]) => void;
 }
@@ -80,7 +95,8 @@ export function validateTakeAdvantageAction(
     if (piecesMovedToCommunity.length === 0) {
       return {
         isValid: false,
-        error: "No promotion was performed. Please click a piece to promote it.",
+        error:
+          "No promotion was performed. Please click a piece to promote it.",
       };
     }
 
@@ -110,7 +126,7 @@ export function validateTakeAdvantageAction(
   // MOVE: Check if the performed move matches the selected move type
   if (item.type === "MOVE") {
     const requiredMoveType = item.moveType!;
-    
+
     // Import areSeatsAdjacent from rules
     const { areSeatsAdjacent } = require("../rules/adjacency");
 
@@ -160,7 +176,9 @@ export function validateTakeAdvantageAction(
     }
 
     // Check if at least one move matches the expected type
-    const hasMatchingMove = calculatedMoves.some((m) => m.moveType === requiredMoveType);
+    const hasMatchingMove = calculatedMoves.some(
+      (m) => m.moveType === requiredMoveType
+    );
 
     if (!hasMatchingMove) {
       const performedTypes = calculatedMoves.map((m) => m.moveType).join(", ");
@@ -178,18 +196,20 @@ export function validateTakeAdvantageAction(
 
 /**
  * Custom hook for Take Advantage handler functions.
- * 
+ *
  * This hook provides all the handler logic for the Take Advantage feature
  * that appears after a successful challenge. It handles:
  * - Declining/accepting the advantage
  * - Tile selection for kredcoin
  * - Action selection (credibility recovery, moves, promotions)
  * - Action validation and completion
- * 
+ *
  * @param deps - Dependencies required by the handlers
  * @returns Object containing all Take Advantage handlers
  */
-export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies) {
+export function useTakeAdvantageHandlers(
+  deps: TakeAdvantageHandlerDependencies
+) {
   const {
     takeAdvantageChallengerId,
     takeAdvantageChallengerCredibility,
@@ -225,7 +245,9 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
    */
   const handleTakeAdvantageDecline = useCallback(() => {
     const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
-    const challengerName = challenger ? getPlayerName(challenger, takeAdvantageChallengerId!) : "Player";
+    const challengerName = challenger
+      ? getPlayerName(challenger, takeAdvantageChallengerId!)
+      : "Player";
     setGameLog((prev) => [
       ...prev,
       `${challengerName} declined the Take Advantage reward`,
@@ -304,7 +326,9 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
 
     // Log the recovery
     const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
-    const challengerName = challenger ? getPlayerName(challenger, takeAdvantageChallengerId!) : "Player";
+    const challengerName = challenger
+      ? getPlayerName(challenger, takeAdvantageChallengerId!)
+      : "Player";
     setGameLog((prev) => [
       ...prev,
       `${challengerName} recovered 1 credibility (successful challenge reward)`,
@@ -369,25 +393,34 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
   /**
    * Handler: Toggle tile selection (add or remove from selected array)
    */
-  const handleToggleTileSelection = useCallback((tile: Tile) => {
-    const isCurrentlySelected = selectedTilesForAdvantage.some(
-      (t) => t.id === tile.id
-    );
+  const handleToggleTileSelection = useCallback(
+    (tile: Tile) => {
+      const isCurrentlySelected = selectedTilesForAdvantage.some(
+        (t) => t.id === tile.id
+      );
 
-    let newSelection: Tile[];
-    if (isCurrentlySelected) {
-      newSelection = selectedTilesForAdvantage.filter((t) => t.id !== tile.id);
-    } else {
-      newSelection = [...selectedTilesForAdvantage, tile];
-    }
+      let newSelection: Tile[];
+      if (isCurrentlySelected) {
+        newSelection = selectedTilesForAdvantage.filter(
+          (t) => t.id !== tile.id
+        );
+      } else {
+        newSelection = [...selectedTilesForAdvantage, tile];
+      }
 
-    setSelectedTilesForAdvantage(newSelection);
+      setSelectedTilesForAdvantage(newSelection);
 
-    const newTotal = newSelection.reduce((sum, t) => {
-      return sum + (TILE_KREDCOIN_VALUES[t.id] || 0);
-    }, 0);
-    setTotalKredcoinForAdvantage(newTotal);
-  }, [selectedTilesForAdvantage, setSelectedTilesForAdvantage, setTotalKredcoinForAdvantage]);
+      const newTotal = newSelection.reduce((sum, t) => {
+        return sum + (TILE_KREDCOIN_VALUES[t.id] || 0);
+      }, 0);
+      setTotalKredcoinForAdvantage(newTotal);
+    },
+    [
+      selectedTilesForAdvantage,
+      setSelectedTilesForAdvantage,
+      setTotalKredcoinForAdvantage,
+    ]
+  );
 
   /**
    * Handler: Confirm tile selection and show action menu
@@ -405,7 +438,9 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
 
     // Log tile selection
     const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
-    const challengerName = challenger ? getPlayerName(challenger, takeAdvantageChallengerId!) : "Player";
+    const challengerName = challenger
+      ? getPlayerName(challenger, takeAdvantageChallengerId!)
+      : "Player";
     const tileIds = selectedTilesForAdvantage.map((t) => t.id).join(", ");
     setGameLog((prev) => [
       ...prev,
@@ -436,7 +471,9 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
    */
   const handleCancelTileSelection = useCallback(() => {
     const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
-    const challengerName = challenger ? getPlayerName(challenger, takeAdvantageChallengerId!) : "Player";
+    const challengerName = challenger
+      ? getPlayerName(challenger, takeAdvantageChallengerId!)
+      : "Player";
     setGameLog((prev) => [
       ...prev,
       `${challengerName} cancelled Take Advantage`,
@@ -466,59 +503,66 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
   /**
    * Handler: User selects an action from the Take Advantage menu
    */
-  const handleSelectTakeAdvantageAction = useCallback((item: BureaucracyMenuItem) => {
-    // Validate affordability
-    if (totalKredcoinForAdvantage < item.price) {
-      setTakeAdvantageValidationError(ALERTS.INSUFFICIENT_KREDCOIN.message);
-      setTimeout(
-        () => setTakeAdvantageValidationError(null),
-        TIMEOUTS.VALIDATION_ERROR_SHORT
-      );
-      return;
-    }
+  const handleSelectTakeAdvantageAction = useCallback(
+    (item: BureaucracyMenuItem) => {
+      // Validate affordability
+      if (totalKredcoinForAdvantage < item.price) {
+        setTakeAdvantageValidationError(ALERTS.INSUFFICIENT_KREDCOIN.message);
+        setTimeout(
+          () => setTakeAdvantageValidationError(null),
+          TIMEOUTS.VALIDATION_ERROR_SHORT
+        );
+        return;
+      }
 
-    // Create purchase object
-    const purchase: BureaucracyPurchase = {
-      playerId: takeAdvantageChallengerId!,
-      item,
-      timestamp: Date.now(),
-      completed: false,
-    };
+      // Create purchase object
+      const purchase: BureaucracyPurchase = {
+        playerId: takeAdvantageChallengerId!,
+        item,
+        timestamp: Date.now(),
+        completed: false,
+      };
 
-    setTakeAdvantagePurchase(purchase);
+      setTakeAdvantagePurchase(purchase);
 
-    // For CREDIBILITY type, apply immediately and complete
-    if (item.type === "CREDIBILITY") {
-      setPlayers((prev) =>
-        prev.map((p) =>
-          p.id === takeAdvantageChallengerId
-            ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
-            : p
-        )
-      );
+      // For CREDIBILITY type, apply immediately and complete
+      if (item.type === "CREDIBILITY") {
+        setPlayers((prev) =>
+          prev.map((p) =>
+            p.id === takeAdvantageChallengerId
+              ? { ...p, credibility: Math.min(p.credibility + 1, 3) }
+              : p
+          )
+        );
 
-      const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
-      const challengerName = challenger ? getPlayerName(challenger, takeAdvantageChallengerId!) : "Player";
-      setGameLog((prev) => [
-        ...prev,
-        `${challengerName} restored credibility using Take Advantage`,
-      ]);
+        const challenger = players.find(
+          (p) => p.id === takeAdvantageChallengerId
+        );
+        const challengerName = challenger
+          ? getPlayerName(challenger, takeAdvantageChallengerId!)
+          : "Player";
+        setGameLog((prev) => [
+          ...prev,
+          `${challengerName} restored credibility using Take Advantage`,
+        ]);
 
-      // Defer completion to allow state updates
-      setTimeout(() => {
-        // The completion will be handled by handleCompleteTakeAdvantage
-      }, 1500);
-    }
-    // For MOVE and PROMOTION, user needs to perform action on board
-  }, [
-    totalKredcoinForAdvantage,
-    takeAdvantageChallengerId,
-    players,
-    setTakeAdvantageValidationError,
-    setTakeAdvantagePurchase,
-    setPlayers,
-    setGameLog,
-  ]);
+        // Defer completion to allow state updates
+        setTimeout(() => {
+          // The completion will be handled by handleCompleteTakeAdvantage
+        }, 1500);
+      }
+      // For MOVE and PROMOTION, user needs to perform action on board
+    },
+    [
+      totalKredcoinForAdvantage,
+      takeAdvantageChallengerId,
+      players,
+      setTakeAdvantageValidationError,
+      setTakeAdvantagePurchase,
+      setPlayers,
+      setGameLog,
+    ]
+  );
 
   /**
    * Handler: Reset Take Advantage action (restore pieces snapshot)
@@ -529,8 +573,12 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
       setMovesThisTurn([]);
       setMovedPiecesThisTurn(new Set());
 
-      const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
-      const challengerName = challenger ? getPlayerName(challenger, takeAdvantageChallengerId!) : "Player";
+      const challenger = players.find(
+        (p) => p.id === takeAdvantageChallengerId
+      );
+      const challengerName = challenger
+        ? getPlayerName(challenger, takeAdvantageChallengerId!)
+        : "Player";
       setGameLog((prev) => [
         ...prev,
         `${challengerName} reset their Take Advantage action`,
@@ -553,21 +601,27 @@ export function useTakeAdvantageHandlers(deps: TakeAdvantageHandlerDependencies)
   /**
    * Handler: Piece promotion during Take Advantage
    */
-  const handleTakeAdvantagePiecePromote = useCallback((pieceId: string) => {
-    if (!takeAdvantagePurchase || takeAdvantagePurchase.item.type !== "PROMOTION") {
-      return;
-    }
+  const handleTakeAdvantagePiecePromote = useCallback(
+    (pieceId: string) => {
+      if (
+        !takeAdvantagePurchase ||
+        takeAdvantagePurchase.item.type !== "PROMOTION"
+      ) {
+        return;
+      }
 
-    const result = performPromotion(pieces, pieceId);
+      const result = performPromotion(pieces, pieceId);
 
-    if (!result.success) {
-      setTakeAdvantageValidationError(result.reason || "Promotion failed");
-      setTimeout(() => setTakeAdvantageValidationError(null), 3000);
-      return;
-    }
+      if (!result.success) {
+        setTakeAdvantageValidationError(result.reason || "Promotion failed");
+        setTimeout(() => setTakeAdvantageValidationError(null), 3000);
+        return;
+      }
 
-    setPieces(result.pieces);
-  }, [takeAdvantagePurchase, pieces, setPieces, setTakeAdvantageValidationError]);
+      setPieces(result.pieces);
+    },
+    [takeAdvantagePurchase, pieces, setPieces, setTakeAdvantageValidationError]
+  );
 
   return {
     handleTakeAdvantageDecline,

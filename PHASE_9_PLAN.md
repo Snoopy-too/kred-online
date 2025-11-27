@@ -3,24 +3,25 @@
 ## Current Status (as of Phase 8 completion)
 
 ### App.tsx Metrics
+
 - **Starting size**: ~4,100 lines
-- **Current size**: 3,341 lines  
+- **Current size**: 3,341 lines
 - **Reduction**: ~759 lines (18.5%)
 
 ### Extracted Modules Summary
 
-| Module | Lines | Purpose |
-|--------|-------|---------|
-| `src/handlers/gameFlowHandlers.ts` | 381 | Game start, new game, tile selection |
-| `src/handlers/pieceMovementHandlers.ts` | 380 | Piece movement, board tile handling |
-| `src/handlers/tilePlayHandlers.ts` | 263 | Tile placement, reveal, transaction |
-| `src/handlers/turnHandlers.ts` | 215 | Turn log generation, turn advancement |
-| `src/handlers/challengeFlowHandlers.ts` | 207 | Bystander/receiver challenge flow |
-| `src/components/shared/Modals.tsx` | 247 | AlertModal, PerfectTileModal, etc. |
-| `src/components/shared/ErrorBoundary.tsx` | 46 | React error boundary |
-| `src/game/move-calculation.ts` | 230 | calculateMoves and helpers |
-| `src/hooks/useTakeAdvantage.ts` | ~600 | Take Advantage handler hook (new pattern) |
-| **Total Extracted** | ~2,570 | |
+| Module                                    | Lines  | Purpose                                   |
+| ----------------------------------------- | ------ | ----------------------------------------- |
+| `src/handlers/gameFlowHandlers.ts`        | 381    | Game start, new game, tile selection      |
+| `src/handlers/pieceMovementHandlers.ts`   | 380    | Piece movement, board tile handling       |
+| `src/handlers/tilePlayHandlers.ts`        | 263    | Tile placement, reveal, transaction       |
+| `src/handlers/turnHandlers.ts`            | 215    | Turn log generation, turn advancement     |
+| `src/handlers/challengeFlowHandlers.ts`   | 207    | Bystander/receiver challenge flow         |
+| `src/components/shared/Modals.tsx`        | 247    | AlertModal, PerfectTileModal, etc.        |
+| `src/components/shared/ErrorBoundary.tsx` | 46     | React error boundary                      |
+| `src/game/move-calculation.ts`            | 230    | calculateMoves and helpers                |
+| `src/hooks/useTakeAdvantage.ts`           | ~600   | Take Advantage handler hook (new pattern) |
+| **Total Extracted**                       | ~2,570 |                                           |
 
 ---
 
@@ -29,6 +30,7 @@
 ### Pattern Established: `useTakeAdvantageHandlers`
 
 We've created a new pattern where **handler hooks** encapsulate:
+
 1. Handler function implementations
 2. Dependencies clearly defined in an interface
 3. `useCallback` for memoization
@@ -50,6 +52,7 @@ This differs from state hooks (like `useChallengeFlow`) which only manage state.
 ### High Priority (Large, Complex)
 
 #### 1. Bureaucracy Phase Handlers (~240 lines in App.tsx)
+
 ```
 handleSelectBureaucracyMenuItem
 handleDoneWithBureaucracyAction
@@ -63,21 +66,25 @@ handleResetBureaucracyAction
 **Strategy**: Create `useBureaucracyHandlers` hook following same pattern as `useTakeAdvantageHandlers`
 
 **Dependencies needed**:
+
 - From `useBureaucracy`: bureaucracyStates, currentBureaucracyPurchase, etc.
 - From `useGameState`: pieces, players, playerCount
 - Game logic functions: validateSingleMove, validatePromotion, etc.
 
 #### 2. handleCheckMove (~95 lines)
+
 Move check validation for campaign phase
 
 **Strategy**: Could be extracted to `useMoveCheckHandlers` or added to existing handlers
 
 #### 3. handleChallengerDecision (~160 lines)
+
 Complex challenger flow with Take Advantage initiation
 
 **Strategy**: Could be part of `useChallengeHandlers` (different from challengeFlowHandlers which handles bystander/receiver)
 
 #### 4. handleCorrectionComplete (~55 lines)
+
 Correction phase completion logic
 
 **Strategy**: Add to `useTilePlayHandlers` or create `useCorrectionHandlers`
@@ -85,13 +92,15 @@ Correction phase completion logic
 ### Medium Priority (Moderate Complexity)
 
 #### 5. Credential/Bonus Move Handlers (~100 lines total)
+
 ```
 handleCredibilityGain
-handleBonusMoveComplete  
+handleBonusMoveComplete
 handleEndTurn
 ```
 
 #### 6. transitionToCorrectionPhase (~50 lines)
+
 State transition helper - used by multiple handlers
 
 **Strategy**: This could be a shared utility passed to multiple handler hooks
@@ -99,6 +108,7 @@ State transition helper - used by multiple handlers
 ### Lower Priority (Simpler Extractions)
 
 #### 7. Small Modal Handlers
+
 ```
 handleConfirmFinishTurn
 handleCancelFinishTurn
@@ -143,6 +153,7 @@ After integration and testing, remove the inline handlers from App.tsx
 ## Alternative Strategies
 
 ### Strategy A: Container Component Pattern
+
 Instead of handler hooks, create container components that handle logic:
 
 ```tsx
@@ -160,23 +171,38 @@ Instead of handler hooks, create container components that handle logic:
 **Cons**: More restructuring required
 
 ### Strategy B: State Machine (XState)
+
 Model game states as a state machine:
 
 ```typescript
 const gameMachine = createMachine({
   states: {
-    PLAYER_SELECTION: { /* ... */ },
-    DRAFTING: { /* ... */ },
+    PLAYER_SELECTION: {
+      /* ... */
+    },
+    DRAFTING: {
+      /* ... */
+    },
     CAMPAIGN: {
       states: {
-        PLAYING_TILE: { /* ... */ },
-        PENDING_CHALLENGE: { /* ... */ },
-        TAKE_ADVANTAGE: { /* ... */ },
-        CORRECTION: { /* ... */ },
-      }
+        PLAYING_TILE: {
+          /* ... */
+        },
+        PENDING_CHALLENGE: {
+          /* ... */
+        },
+        TAKE_ADVANTAGE: {
+          /* ... */
+        },
+        CORRECTION: {
+          /* ... */
+        },
+      },
     },
-    BUREAUCRACY: { /* ... */ }
-  }
+    BUREAUCRACY: {
+      /* ... */
+    },
+  },
 });
 ```
 
@@ -184,10 +210,11 @@ const gameMachine = createMachine({
 **Cons**: Major refactor, new dependency
 
 ### Strategy C: Event-Driven Architecture
+
 Use an event bus or reducer pattern:
 
 ```typescript
-dispatch({ type: 'TAKE_ADVANTAGE_DECLINE', challengerId });
+dispatch({ type: "TAKE_ADVANTAGE_DECLINE", challengerId });
 // Handlers become reducers or event listeners
 ```
 
@@ -199,18 +226,21 @@ dispatch({ type: 'TAKE_ADVANTAGE_DECLINE', challengerId });
 ## Recommendations
 
 ### Short Term (Immediate)
+
 1. **Integrate `useTakeAdvantageHandlers`** into App.tsx to validate the pattern
 2. **Create `useBureaucracyHandlers`** using the same pattern
 3. Continue reducing App.tsx incrementally
 
 ### Medium Term (Next Sprint)
+
 1. Extract remaining handler groups
 2. Consider grouping related hooks into feature modules:
-   - `src/features/takeAdvantage/` 
+   - `src/features/takeAdvantage/`
    - `src/features/bureaucracy/`
    - `src/features/challenge/`
 
 ### Long Term (Future Consideration)
+
 1. Evaluate if XState makes sense for game state management
 2. Consider splitting CampaignScreen into smaller components
 3. Add comprehensive unit tests for extracted modules
@@ -237,14 +267,17 @@ dispatch({ type: 'TAKE_ADVANTAGE_DECLINE', challengerId });
 ## Files Reference
 
 ### Handler Factories (`src/handlers/`)
+
 - Factory pattern, take dependencies, return handler objects
 - Used via `createXxxHandlers()` in App.tsx
 
 ### State Hooks (`src/hooks/`)
+
 - React hooks managing related state
 - Return state values and setters
 
 ### Handler Hooks (`src/hooks/useXxxHandlers.ts`)
+
 - **NEW PATTERN** - React hooks that provide handler functions
 - Take dependencies interface, return handler functions
 - Use `useCallback` for memoization
