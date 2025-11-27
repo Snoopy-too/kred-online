@@ -16,40 +16,48 @@ The KRED online game refactoring is complete through Phase 7. The codebase has b
 ## Completed Phases
 
 ### ✅ Phase 1: Test Infrastructure
+
 - Vitest + React Testing Library setup
 - Initial smoke and integration tests
 - **Result**: 88 tests
 
 ### ✅ Phase 2: Config Extraction
+
 - Static configuration moved to `src/config/`
 - 6 config files: constants, tiles, pieces, board, rules, bureaucracy
 - **Result**: 1,194 lines, 282 tests
 
 ### ✅ Phase 3: Type Extraction
+
 - TypeScript interfaces moved to `src/types/`
 - 9 type files covering all game entities
 - **Result**: 26 tests
 
 ### ✅ Phase 3b: Utils Extraction
+
 - Pure utilities moved to `src/utils/`
 - positioning, formatting, array utilities
 - **Result**: 62 tests
 
 ### ✅ Phase 4: Game Initialization
+
 - Initialization functions to `src/game/initialization.ts`
 - **Result**: 34 tests
 
 ### ✅ Phase 5: Game Logic & Rules
+
 - Game logic to `src/game/` (state-snapshots, locations)
 - Rules to `src/rules/` (credibility, win-conditions, adjacency, rostrum, movement)
 - **Result**: 872 lines, 147 tests
 
 ### ✅ Phase 6: Validation & Move Types
+
 - Complex validation to `src/game/`
 - tile-validation, validation, bureaucracy, move-types
 - **Result**: 847 lines, 149 tests
 
 ### ✅ Phase 7: React Components & Hooks
+
 - Screen components to `src/components/screens/`
 - 9 custom hooks to `src/hooks/`
 - **Result**: 2,700+ lines from App.tsx, 214 hook tests
@@ -58,12 +66,12 @@ The KRED online game refactoring is complete through Phase 7. The codebase has b
 
 ## Key Metrics
 
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| game.ts | 3,803 lines | 975 lines | -74% |
-| App.tsx | 6,821 lines | 4,109 lines | -40% |
-| Tests | 0 | 1,056 | +1,056 |
-| Modules | 2 files | 46 files | Modular |
+| Metric  | Before      | After       | Change  |
+| ------- | ----------- | ----------- | ------- |
+| game.ts | 3,803 lines | 975 lines   | -74%    |
+| App.tsx | 6,821 lines | 4,109 lines | -40%    |
+| Tests   | 0           | 1,056       | +1,056  |
+| Modules | 2 files     | 46 files    | Modular |
 
 ---
 
@@ -87,18 +95,18 @@ src/
 
 ## Test Distribution
 
-| Category | Tests |
-|----------|-------|
-| Config | 282 |
-| Types | 26 |
-| Utils | 62 |
-| Game | 217 |
-| Rules | 103 |
-| Hooks | 214 |
-| Components | 20 |
-| Integration | 55 |
-| Other | 77 |
-| **Total** | **1,056** |
+| Category    | Tests     |
+| ----------- | --------- |
+| Config      | 282       |
+| Types       | 26        |
+| Utils       | 62        |
+| Game        | 217       |
+| Rules       | 103       |
+| Hooks       | 214       |
+| Components  | 20        |
+| Integration | 55        |
+| Other       | 77        |
+| **Total**   | **1,056** |
 
 ---
 
@@ -110,15 +118,15 @@ Extract ~50 handler functions from App.tsx into organized modules.
 
 **Goal**: App.tsx reduced from 4,109 → ~1,500 lines
 
-| Module | Handlers | Lines |
-|--------|----------|-------|
-| gameFlowHandlers.ts | 3 | ~175 |
-| pieceMovementHandlers.ts | 5 | ~225 |
-| turnHandlers.ts | 5 | ~175 |
-| tilePlayHandlers.ts | 9 | ~500 |
-| challengeHandlers.ts | 8 | ~400 |
-| bureaucracyHandlers.ts | 12 | ~400 |
-| takeAdvantageHandlers.ts | 13 | ~350 |
+| Module                   | Handlers | Lines |
+| ------------------------ | -------- | ----- |
+| gameFlowHandlers.ts      | 3        | ~175  |
+| pieceMovementHandlers.ts | 5        | ~225  |
+| turnHandlers.ts          | 5        | ~175  |
+| tilePlayHandlers.ts      | 9        | ~500  |
+| challengeHandlers.ts     | 8        | ~400  |
+| bureaucracyHandlers.ts   | 12       | ~400  |
+| takeAdvantageHandlers.ts | 13       | ~350  |
 
 **Architecture**: Factory pattern with dependency injection
 
@@ -139,12 +147,13 @@ See REFACTORING_STRATEGY_V2.md for details.
 ## Git History
 
 The refactoring was done across 60+ atomic commits, each verified with:
+
 - `npm run build` ✅
-- `npm run test` ✅  
+- `npm run test` ✅
 - Manual smoke test ✅
 
 This approach ensured the game remained functional throughout the entire process.
 
 ---
 
-*Refactoring completed November 27, 2025*
+_Refactoring completed November 27, 2025_

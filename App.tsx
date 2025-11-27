@@ -36,6 +36,7 @@ import {
   TILE_KREDCOIN_VALUES,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
   PLAYER_PERSPECTIVE_ROTATIONS,
+  DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
 } from "./src/config";
 
 // ============================================================================
@@ -57,7 +58,6 @@ import {
   initializeCampaignPieces,
   findNearestVacantLocation,
   getLocationIdFromPosition,
-  DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
   validateMovesForTilePlay,
   validateTileRequirements,
   validateTileRequirementsWithImpossibleMoveExceptions,
