@@ -102,6 +102,7 @@ import {
   createGameFlowHandlers,
   createPieceMovementHandlers,
   createTurnHandlers,
+  createTilePlayHandlers,
 } from "./src/handlers";
 
 // ============================================================================
@@ -610,6 +611,73 @@ const App: React.FC = () => {
   // Destructure turn handlers
   const { generateTurnLog, advanceTurnNormally } = turnHandlers;
 
+  // ============================================================================
+  // TILE PLAY HANDLERS - Created via factory for better testability
+  // ============================================================================
+  const tilePlayHandlers = React.useMemo(
+    () =>
+      createTilePlayHandlers({
+        // Current state values
+        players,
+        playerCount,
+        currentPlayerIndex,
+        hasPlayedTileThisTurn,
+        piecesAtTurnStart,
+        boardTiles,
+        bankSpacesByPlayerCount: BANK_SPACES_BY_PLAYER_COUNT,
+
+        // State setters
+        setPlayers,
+        setBoardTiles,
+        setPlayedTile,
+        setGameState,
+        setMovesThisTurn,
+        setHasPlayedTileThisTurn,
+        setMovedPiecesThisTurn,
+        setPendingCommunityPieces,
+        setBonusMoveWasCompleted,
+        setPiecesAtCorrectionStart,
+        setPiecesBeforeBonusMove,
+        setRevealedTileId,
+        setIsPrivatelyViewing,
+        setPlacerViewingTileId,
+
+        // Utility functions
+        showAlert,
+      }),
+    [
+      players,
+      playerCount,
+      currentPlayerIndex,
+      hasPlayedTileThisTurn,
+      piecesAtTurnStart,
+      boardTiles,
+      setPlayers,
+      setBoardTiles,
+      setPlayedTile,
+      setGameState,
+      setMovesThisTurn,
+      setHasPlayedTileThisTurn,
+      setMovedPiecesThisTurn,
+      setPendingCommunityPieces,
+      setBonusMoveWasCompleted,
+      setPiecesAtCorrectionStart,
+      setPiecesBeforeBonusMove,
+      setRevealedTileId,
+      setIsPrivatelyViewing,
+      setPlacerViewingTileId,
+      showAlert,
+    ]
+  );
+
+  // Destructure tile play handlers
+  const {
+    handlePlaceTile,
+    handleRevealTile,
+    handleTogglePrivateView,
+    handlePlacerViewTile,
+  } = tilePlayHandlers;
+
   const addCredibilityLossLog = (
     playerId: number,
     reason: string,
@@ -786,149 +854,6 @@ const App: React.FC = () => {
     } else {
       advanceTurnNormally();
     }
-  };
-
-  const handlePlaceTile = (tileId: number, targetSpace: TileReceivingSpace) => {
-    if (hasPlayedTileThisTurn) return;
-    const currentPlayer = players[currentPlayerIndex];
-    const tileToPlace = currentPlayer.keptTiles.find((t) => t.id === tileId);
-
-    if (
-      !tileToPlace ||
-      boardTiles.some((bt) => bt.ownerId === targetSpace.ownerId)
-    )
-      return;
-
-    if (currentPlayer.id === targetSpace.ownerId) {
-      const otherPlayers = players.filter((p) => p.id !== currentPlayer.id);
-      const allOthersAreOutOfTiles = otherPlayers.every(
-        (p) => p.keptTiles.length === 0
-      );
-      if (!allOthersAreOutOfTiles) {
-        showAlert(
-          ALERTS.CANNOT_PLAY_FOR_YOURSELF.title,
-          ALERTS.CANNOT_PLAY_FOR_YOURSELF.message,
-          "warning"
-        );
-        return;
-      }
-    }
-
-    // Check if target player's bank is full
-    const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
-    const tilesPerPlayer = allBankSpaces.length / playerCount;
-    const targetPlayer = players.find((p) => p.id === targetSpace.ownerId);
-
-    if (
-      targetPlayer &&
-      targetPlayer.bureaucracyTiles.length >= tilesPerPlayer
-    ) {
-      showAlert(
-        "Bank Full",
-        `Player ${targetSpace.ownerId}'s bank is full. You cannot play a tile to them. Choose a different player.`,
-        "warning"
-      );
-      return;
-    }
-
-    // NEW VALIDATION: Campaign phase tile rules
-    const totalTilesPlayed = players.reduce(
-      (sum, p) => sum + p.bureaucracyTiles.length,
-      0
-    );
-    const totalTiles = allBankSpaces.length; // 24 for 3/4p, 25 for 5p
-    const isLastTile = totalTilesPlayed === totalTiles - 1;
-
-    if (isLastTile) {
-      // Final tile: Can ONLY be played to the player with one remaining bank space
-      if (
-        !targetPlayer ||
-        targetPlayer.bureaucracyTiles.length !== tilesPerPlayer - 1
-      ) {
-        const eligiblePlayer = players.find(
-          (p) => p.bureaucracyTiles.length === tilesPerPlayer - 1
-        );
-        showAlert(
-          "Invalid Final Tile Placement",
-          eligiblePlayer
-            ? `This is the final tile of the campaign phase. It can only be played to Player ${eligiblePlayer.id}, who has one remaining bank space.`
-            : "This is the final tile of the campaign phase, but no player has exactly one remaining bank space.",
-          "warning"
-        );
-        return;
-      }
-    } else {
-      // Non-final tiles: MUST be played to a player who has at least 1 tile in their hand
-      if (!targetPlayer || targetPlayer.keptTiles.length === 0) {
-        showAlert(
-          "Invalid Tile Placement",
-          `You must play to a player who has at least 1 tile in their hand. Player ${targetSpace.ownerId} has no tiles left.`,
-          "warning"
-        );
-        return;
-      }
-    }
-
-    // Initialize the tile play state (NEW WORKFLOW)
-    const tileIdStr = tileId.toString().padStart(2, "0");
-    const boardTileId = `boardtile_${Date.now()}`;
-
-    // Create a BoardTile to display in the receiving space (face-down/white back)
-    const newBoardTile: BoardTile = {
-      id: boardTileId,
-      tile: tileToPlace,
-      position: targetSpace.position,
-      rotation: targetSpace.rotation,
-      placerId: currentPlayer.id,
-      ownerId: targetSpace.ownerId,
-    };
-
-    setPlayedTile({
-      tileId: tileIdStr,
-      playerId: currentPlayer.id,
-      receivingPlayerId: targetSpace.ownerId,
-      movesPerformed: [],
-      originalPieces: piecesAtTurnStart.map((p) => ({ ...p })),
-      originalBoardTiles: boardTiles.map((t) => ({ ...t })),
-    });
-
-    // Add the board tile to display in the receiving space
-    setBoardTiles((prev) => [...prev, newBoardTile]);
-
-    // Remove tile from player's hand (will be added back if rejected)
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === currentPlayer.id
-          ? { ...p, keptTiles: p.keptTiles.filter((t) => t.id !== tileId) }
-          : p
-      )
-    );
-
-    // Set game state to allow moves (tile not yet visible to others)
-    setGameState("TILE_PLAYED");
-    setMovesThisTurn([]);
-    setHasPlayedTileThisTurn(true);
-
-    // Clear piece movement tracking for this tile play
-    // NOTE: playedTile.originalPieces captures piecesAtTurnStart (beginning of turn)
-    // This allows moves to be detected whether they happen before or after tile placement
-    setMovedPiecesThisTurn(new Set());
-    setPendingCommunityPieces(new Set());
-
-    // Clear any stale correction/bonus move state from previous tile plays
-    setBonusMoveWasCompleted(false);
-    setPiecesAtCorrectionStart([]);
-    setPiecesBeforeBonusMove([]);
-  };
-
-  const handleRevealTile = (tileId: string | null) => {
-    setRevealedTileId(tileId);
-  };
-
-  const handleTogglePrivateView = () => setIsPrivatelyViewing((prev) => !prev);
-
-  const handlePlacerViewTile = (tileId: string) => {
-    setPlacerViewingTileId((prevId) => (prevId === tileId ? null : tileId));
   };
 
   // NEW WORKFLOW HANDLERS
