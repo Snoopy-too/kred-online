@@ -12,6 +12,8 @@
  * @module rules/move-validation
  */
 
+import { getPieceById } from "../../utils";
+
 // ============================================================================
 // TYPE IMPORTS
 // ============================================================================
@@ -57,7 +59,7 @@ export function validateAdvanceMove(
     if (targetOccupied) return false;
 
     // Check community movement restrictions
-    const movingPiece = pieces.find((p) => p.id === move.pieceId);
+    const movingPiece = getPieceById(pieces, move.pieceId);
     if (!movingPiece) return false;
 
     return canMoveFromCommunity(movingPiece, pieces);
@@ -220,7 +222,7 @@ export function validateRemoveMove(
   }
 
   // Check that the piece being moved is a Mark or Heel
-  const movingPiece = pieces.find((p) => p.id === move.pieceId);
+  const movingPiece = getPieceById(pieces, move.pieceId);
   if (!movingPiece) return false;
 
   const pieceName = movingPiece.name.toLowerCase();
@@ -333,7 +335,7 @@ export function validateAssistMove(
   if (targetOccupied) return false;
 
   // Check community movement restrictions
-  const movingPiece = pieces.find((p) => p.id === move.pieceId);
+  const movingPiece = getPieceById(pieces, move.pieceId);
   if (!movingPiece) return false;
 
   return canMoveFromCommunity(movingPiece, pieces);

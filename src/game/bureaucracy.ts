@@ -15,6 +15,7 @@ import {
   THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
   FIVE_PLAYER_BUREAUCRACY_MENU,
 } from "../config";
+import { getPieceById } from "../../utils";
 
 /**
  * Calculates the total Kredcoin value for a player based on their bureaucracy tiles
@@ -76,8 +77,8 @@ export function validatePromotion(
   playerId: number,
   beforePieces: Piece[]
 ): { isValid: boolean; reason: string } {
-  const pieceBefore = beforePieces.find((p) => p.id === pieceId);
-  const pieceAfter = pieces.find((p) => p.id === pieceId);
+  const pieceBefore = getPieceById(beforePieces, pieceId);
+  const pieceAfter = getPieceById(pieces, pieceId);
 
   if (!pieceBefore) {
     return { isValid: false, reason: "Original piece not found" };
@@ -174,7 +175,7 @@ export function performPromotion(
   success: boolean;
   reason?: string;
 } {
-  const pieceToPromote = pieces.find((p) => p.id === pieceId);
+  const pieceToPromote = getPieceById(pieces, pieceId);
 
   if (!pieceToPromote) {
     return { pieces, success: false, reason: "Piece not found" };

@@ -169,6 +169,7 @@ import {
   getPlayerName,
   getPlayerNameSimple,
   getPlayerById,
+  getPieceById,
   formatWinnerNames,
   isPlayerDomain,
   isCommunityLocation,
@@ -1395,7 +1396,7 @@ const App: React.FC = () => {
           : "supply";
 
         // Get the piece name from the current pieces
-        const movedPiece = pieces.find((p) => p.id === move.pieceId);
+        const movedPiece = getPieceById(pieces, move.pieceId);
         const pieceName = movedPiece?.name || "piece";
 
         addGameLog(
@@ -1788,7 +1789,7 @@ const App: React.FC = () => {
         : "supply";
 
       // Get the piece name from the current pieces
-      const movedPiece = pieces.find((p) => p.id === move.pieceId);
+      const movedPiece = getPieceById(pieces, move.pieceId);
       const pieceName = movedPiece?.name || "piece";
 
       addGameLog(
@@ -2152,7 +2153,7 @@ const App: React.FC = () => {
         // Find pieces that moved to community
         const piecesMovedToCommunity = snapshot.pieces.filter(
           (originalPiece) => {
-            const currentPiece = pieces.find((p) => p.id === originalPiece.id);
+            const currentPiece = getPieceById(pieces, originalPiece.id);
             return (
               currentPiece &&
               originalPiece.locationId &&
@@ -2506,7 +2507,7 @@ const App: React.FC = () => {
     locationId?: string
   ) => {
     // Track the move
-    const piece = pieces.find((p) => p.id === pieceId);
+    const piece = getPieceById(pieces, pieceId);
     if (!piece) return;
 
     // Determine the move type based on from/to locations
@@ -2915,7 +2916,7 @@ const App: React.FC = () => {
       // Find pieces that moved to community
       const piecesMovedToCommunity = takeAdvantagePiecesSnapshot.filter(
         (originalPiece) => {
-          const currentPiece = pieces.find((p) => p.id === originalPiece.id);
+          const currentPiece = getPieceById(pieces, originalPiece.id);
           return (
             currentPiece &&
             originalPiece.locationId &&

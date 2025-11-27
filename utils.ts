@@ -3,7 +3,7 @@
  * Pure helper functions that can be used across the application
  */
 
-import type { Player } from "./src/types";
+import type { Player, Piece } from "./src/types";
 
 /**
  * Gets a player's display name with fallback
@@ -55,6 +55,23 @@ export function getPlayerById(
   playerId: number
 ): Player | undefined {
   return players.find((p) => p.id === playerId);
+}
+
+/**
+ * Finds a piece by ID in the pieces array
+ *
+ * @param pieces - Array of all pieces
+ * @param pieceId - Piece ID to find
+ * @returns Piece object or undefined if not found
+ *
+ * @example
+ * const piece = getPieceById(pieces, "mark_p1_1")
+ */
+export function getPieceById(
+  pieces: Piece[],
+  pieceId: string
+): Piece | undefined {
+  return pieces.find((p) => p.id === pieceId);
 }
 
 /**

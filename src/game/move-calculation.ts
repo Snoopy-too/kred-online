@@ -8,6 +8,7 @@
 
 import type { Piece, TrackedMove } from "../types";
 import { DefinedMoveType } from "../types";
+import { getPieceById } from "../../utils";
 
 /**
  * Helper functions for location type detection
@@ -121,7 +122,7 @@ function determineMoveTypeFromLocations(
       return DefinedMoveType.WITHDRAW;
     }
     // Check if the piece is a Mark or Heel (REMOVE only for these pieces)
-    const movingPiece = currentPieces.find((p) => p.id === pieceId);
+    const movingPiece = getPieceById(currentPieces, pieceId);
     if (movingPiece) {
       const pieceName = movingPiece.name.toLowerCase();
       return pieceName === "mark" || pieceName === "heel"
@@ -193,7 +194,7 @@ export function calculateMoves(
   const calculatedMoves: TrackedMove[] = [];
 
   for (const currentPiece of currentPieces) {
-    const initialPiece = originalPieces.find((p) => p.id === currentPiece.id);
+    const initialPiece = getPieceById(originalPieces, currentPiece.id);
     if (!initialPiece) {
       continue;
     }

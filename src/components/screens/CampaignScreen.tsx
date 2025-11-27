@@ -49,7 +49,7 @@ import {
   getBureaucracyMenu,
   getAvailablePurchases,
 } from "../../game/bureaucracy";
-import { getPlayerById } from "../../../utils";
+import { getPlayerById, getPieceById } from "../../../utils";
 
 // ============================================================================
 // COMPONENT
@@ -535,7 +535,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   ) => {
     e.dataTransfer.setData("pieceId", pieceId);
     e.dataTransfer.effectAllowed = "move";
-    const piece = pieces.find((p) => p.id === pieceId);
+    const piece = getPieceById(pieces, pieceId);
     if (piece) {
       setDraggedPieceInfo({
         name: piece.name,

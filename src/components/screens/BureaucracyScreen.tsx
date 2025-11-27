@@ -12,7 +12,7 @@ import {
 } from "../../../game";
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation } from "../../game/locations";
-import { getPlayerById } from "../../../utils";
+import { getPlayerById, getPieceById } from "../../../utils";
 import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
@@ -115,7 +115,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
   ) => {
     e.dataTransfer.setData("pieceId", pieceId);
     e.dataTransfer.effectAllowed = "move";
-    const piece = pieces.find((p) => p.id === pieceId);
+    const piece = getPieceById(pieces, pieceId);
     if (piece) {
       setDraggedPieceInfo({
         name: piece.name,

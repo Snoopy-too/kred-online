@@ -15,7 +15,7 @@ import {
 } from "../../game";
 import { calculateMoves } from "../game/move-calculation";
 import { ALERTS, TIMEOUTS } from "../../constants";
-import { getPlayerName, getPlayerById } from "../../utils";
+import { getPlayerName, getPlayerById, getPieceById } from "../../utils";
 
 /**
  * Dependencies required by the Take Advantage handlers
@@ -82,7 +82,7 @@ export function validateTakeAdvantageAction(
   // PROMOTION: Check if a piece was swapped to community
   if (item.type === "PROMOTION") {
     const piecesMovedToCommunity = snapshotPieces.filter((originalPiece) => {
-      const currentPiece = currentPieces.find((p) => p.id === originalPiece.id);
+      const currentPiece = getPieceById(currentPieces, originalPiece.id);
       return (
         currentPiece &&
         originalPiece.locationId &&

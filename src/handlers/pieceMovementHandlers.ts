@@ -15,6 +15,7 @@ import type {
   PlayedTileState,
 } from "../types";
 import type { Dispatch, SetStateAction } from "react";
+import { getPieceById } from "../../utils";
 
 // ============================================================================
 // DEPENDENCY INTERFACE
@@ -143,7 +144,7 @@ export function createPieceMovementHandlers(
       return;
     }
 
-    const movingPiece = deps.pieces.find((p) => p.id === pieceId);
+    const movingPiece = getPieceById(deps.pieces, pieceId);
     if (!movingPiece) return;
 
     // Check if player is trying to move opponent's piece within opponent's domain
