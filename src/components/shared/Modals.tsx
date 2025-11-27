@@ -178,7 +178,9 @@ export const FinishTurnConfirmModal: React.FC<FinishTurnConfirmModalProps> = ({
         <div className="mb-4">
           <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
         </div>
-        <h2 className="text-3xl font-bold mb-3 text-yellow-400">Finish Turn?</h2>
+        <h2 className="text-3xl font-bold mb-3 text-yellow-400">
+          Finish Turn?
+        </h2>
         <p className="text-slate-300 mb-6 text-lg">
           Are you sure you want to finish? You still have{" "}
           <span className="text-yellow-400 font-bold">

@@ -21,3 +21,6 @@ export * from "./bureaucracy";
 
 // Move type utilities - move type determination and validation
 export * from "./move-types";
+
+// Move calculation - track and calculate player moves
+export * from "./move-calculation";

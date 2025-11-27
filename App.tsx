@@ -50,6 +50,11 @@ import {
 import { formatLocationId } from "./src/utils/formatting";
 
 // ============================================================================
+// GAME LOGIC IMPORTS - Core game logic functions
+// ============================================================================
+import { calculateMoves as calculateMovesCore } from "./src/game";
+
+// ============================================================================
 // GAME LOGIC IMPORTS - Functions still in game.ts (to be extracted)
 // ============================================================================
 import {
@@ -1920,194 +1925,26 @@ const App: React.FC = () => {
 
   /**
    * Helper function to calculate moves by comparing current pieces to original pieces
+   * Wrapper around the extracted calculateMovesCore function
    */
   const calculateMoves = (
     originalPieces: Piece[],
     currentPieces: Piece[],
     tilePlayerId: number
   ): TrackedMove[] => {
-    const calculatedMoves: TrackedMove[] = [];
-
     console.log("calculateMoves called with:", {
       originalPiecesCount: originalPieces.length,
       currentPiecesCount: currentPieces.length,
       tilePlayerId,
     });
 
-    for (const currentPiece of currentPieces) {
-      const initialPiece = originalPieces.find((p) => p.id === currentPiece.id);
-      if (!initialPiece) {
-        console.log("No initial piece found for:", currentPiece.id);
-        continue;
-      }
-
-      const initialLocId = initialPiece.locationId;
-      const finalLocId = currentPiece.locationId;
-
-      console.log(`Piece ${currentPiece.id}: ${initialLocId} → ${finalLocId}`);
-
-      // Skip if piece didn't move
-      if (initialLocId === finalLocId) continue;
-
-      // Determine if this move should be counted
-      let shouldCountMove = false;
-
-      // Rule 1: Community → Seat/Rostrum/Office = COUNT
-      if (
-        initialLocId?.includes("community") &&
-        (finalLocId?.includes("_seat") ||
-          finalLocId?.includes("_rostrum") ||
-          finalLocId?.includes("_office"))
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 2: Seat → Community = COUNT (only if started in seat)
-      else if (
-        initialLocId?.includes("_seat") &&
-        finalLocId?.includes("community")
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 3: Seat → Seat = COUNT (intermediate moves don't matter)
-      else if (
-        initialLocId?.includes("_seat") &&
-        finalLocId?.includes("_seat")
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 4: Seat → Rostrum = COUNT
-      else if (
-        initialLocId?.includes("_seat") &&
-        finalLocId?.includes("_rostrum")
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 5: Rostrum → Seat/Office = COUNT
-      else if (
-        initialLocId?.includes("_rostrum") &&
-        (finalLocId?.includes("_seat") || finalLocId?.includes("_office"))
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 6: Office → Rostrum = COUNT
-      else if (
-        initialLocId?.includes("_office") &&
-        finalLocId?.includes("_rostrum")
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 7: Rostrum → Community = COUNT (WITHDRAW)
-      else if (
-        initialLocId?.includes("_rostrum") &&
-        finalLocId?.includes("community")
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 8: Rostrum → Rostrum = COUNT (ORGANIZE)
-      else if (
-        initialLocId?.includes("_rostrum") &&
-        finalLocId?.includes("_rostrum")
-      ) {
-        shouldCountMove = true;
-      }
-      // Rule 9: Office → Community = COUNT (shouldn't happen but count if it does)
-      else if (
-        initialLocId?.includes("_office") &&
-        finalLocId?.includes("community")
-      ) {
-        shouldCountMove = true;
-      }
-
-      if (!shouldCountMove) continue;
-
-      // Determine move type
-      let moveType = "UNKNOWN";
-      const isCommunity = (loc?: string) => loc?.includes("community");
-      const isSeat = (loc?: string) => loc?.includes("_seat");
-      const isRostrum = (loc?: string) => loc?.includes("_rostrum");
-      const isOffice = (loc?: string) => loc?.includes("_office");
-      const getPlayerFromLocation = (loc?: string): number | null => {
-        const match = loc?.match(/p(\d+)_/);
-        return match ? parseInt(match[1]) : null;
-      };
-
-      if (isCommunity(initialLocId) && isSeat(finalLocId)) {
-        const ownerPlayer = getPlayerFromLocation(finalLocId);
-        moveType = ownerPlayer === tilePlayerId ? "ADVANCE" : "ASSIST";
-      } else if (isSeat(initialLocId) && isRostrum(finalLocId)) {
-        moveType = "ADVANCE";
-      } else if (isRostrum(initialLocId) && isOffice(finalLocId)) {
-        moveType = "ADVANCE";
-      } else if (isRostrum(initialLocId) && isSeat(finalLocId)) {
-        moveType = "WITHDRAW";
-      } else if (isOffice(initialLocId) && isRostrum(finalLocId)) {
-        moveType = "WITHDRAW";
-      } else if (isSeat(initialLocId) && isCommunity(finalLocId)) {
-        // Determine if this is REMOVE or WITHDRAW based on piece ownership
-        const fromPlayer = getPlayerFromLocation(initialLocId);
-        if (fromPlayer === tilePlayerId) {
-          moveType = "WITHDRAW";
-        } else {
-          // Check if the piece is a Mark or Heel (REMOVE only for these pieces)
-          const movingPiece = currentPieces.find(
-            (p) => p.id === currentPiece.id
-          );
-          if (movingPiece) {
-            const pieceName = movingPiece.name.toLowerCase();
-            moveType =
-              pieceName === "mark" || pieceName === "heel"
-                ? "REMOVE"
-                : "UNKNOWN";
-          } else {
-            moveType = "UNKNOWN";
-          }
-        }
-      } else if (isSeat(initialLocId) && isSeat(finalLocId)) {
-        const fromPlayer = getPlayerFromLocation(initialLocId);
-        // Check if seats are adjacent using the helper function from game.ts
-        if (
-          initialLocId &&
-          finalLocId &&
-          areSeatsAdjacent(initialLocId, finalLocId, playerCount)
-        ) {
-          if (fromPlayer === tilePlayerId) {
-            moveType = "ORGANIZE";
-          } else {
-            moveType = "INFLUENCE";
-          }
-        } else {
-          // Non-adjacent seats - not a valid move type
-          moveType = "UNKNOWN";
-        }
-      } else if (isRostrum(initialLocId) && isRostrum(finalLocId)) {
-        const fromPlayer = getPlayerFromLocation(initialLocId);
-        moveType = fromPlayer === tilePlayerId ? "ORGANIZE" : "INFLUENCE";
-      }
-
-      // Determine category
-      let category: "M" | "O" = "M";
-      if (
-        moveType === "REMOVE" ||
-        moveType === "INFLUENCE" ||
-        moveType === "ASSIST"
-      ) {
-        category = "O";
-      }
-
-      // Create tracked move
-      calculatedMoves.push({
-        moveType,
-        category,
-        pieceId: currentPiece.id,
-        fromPosition: initialPiece.position,
-        fromLocationId: initialLocId,
-        toPosition: currentPiece.position,
-        toLocationId: finalLocId,
-        timestamp: Date.now(),
-      });
-    }
-
-    return calculatedMoves;
+    return calculateMovesCore(
+      originalPieces,
+      currentPieces,
+      tilePlayerId,
+      playerCount,
+      areSeatsAdjacent
+    );
   };
 
   const handleCheckMove = () => {
