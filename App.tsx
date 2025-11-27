@@ -110,6 +110,13 @@ import {
 // COMPONENT IMPORTS - Extracted React components
 // ============================================================================
 import ErrorDisplay from "./src/components/shared/ErrorDisplay";
+import {
+  AlertModal,
+  PerfectTileModal,
+  ChallengeResultMessage,
+  FinishTurnConfirmModal,
+  BureaucracyTransition,
+} from "./src/components/shared/Modals";
 import PlayerSelectionScreen from "./src/components/screens/PlayerSelectionScreen";
 import DraftingScreen from "./src/components/screens/DraftingScreen";
 import BureaucracyScreen from "./src/components/screens/BureaucracyScreen";
@@ -3461,174 +3468,34 @@ const App: React.FC = () => {
         {renderGameState()}
       </ErrorBoundary>
 
-      {/* Custom Alert Modal */}
-      {showPerfectTileModal && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          aria-modal="true"
-          role="dialog"
-        >
-          <div className="bg-gray-800 border-2 border-green-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
-            <div className="mb-4">
-              <div className="text-6xl text-green-400 mb-2">✓</div>
-            </div>
-            <h2 className="text-3xl font-bold mb-3 text-green-400">
-              Perfect Tile Play
-            </h2>
-            <p className="text-slate-300 mb-6 text-lg">
-              The tile requirements have been fulfilled perfectly. You cannot
-              reject this tile. Other players may now challenge the play.
-            </p>
-            <button
-              onClick={handlePerfectTileContinue}
-              className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Perfect Tile Modal */}
+      <PerfectTileModal
+        isOpen={showPerfectTileModal}
+        onContinue={handlePerfectTileContinue}
+      />
 
       {/* Challenge Result Message - displays for 5 seconds */}
-      {challengeResultMessage && (
-        <div
-          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4"
-          aria-live="polite"
-          role="status"
-        >
-          <div
-            className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
-              challengeResultMessage.includes("Failed")
-                ? "bg-green-900 border-green-500 text-green-300"
-                : "bg-orange-900 border-orange-500 text-orange-300"
-            }`}
-          >
-            <h2 className="text-2xl font-bold mb-2">
-              {challengeResultMessage.includes("Failed")
-                ? "✓ Challenge Failed"
-                : "⚠️ Challenge Successful"}
-            </h2>
-            <p className="text-lg">{challengeResultMessage}</p>
-          </div>
-        </div>
-      )}
+      <ChallengeResultMessage message={challengeResultMessage} />
 
-      {alertModal.isOpen && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          aria-modal="true"
-          role="dialog"
-        >
-          <div
-            className="bg-gray-800 border-2 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8"
-            style={{
-              borderColor:
-                alertModal.type === "error"
-                  ? "#ef5350"
-                  : alertModal.type === "warning"
-                  ? "#ffa726"
-                  : "#29b6f6",
-            }}
-          >
-            <div className="mb-4">
-              {alertModal.type === "error" && (
-                <div className="text-6xl font-bold text-red-400 mb-2">✕</div>
-              )}
-              {alertModal.type === "warning" && (
-                <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
-              )}
-              {alertModal.type === "info" && (
-                <div className="text-6xl text-blue-400 mb-2">ℹ️</div>
-              )}
-            </div>
-            <h2
-              className="text-3xl font-bold mb-3"
-              style={{
-                color:
-                  alertModal.type === "error"
-                    ? "#ef5350"
-                    : alertModal.type === "warning"
-                    ? "#ffa726"
-                    : "#29b6f6",
-              }}
-            >
-              {alertModal.title}
-            </h2>
-            <p className="text-slate-300 mb-6 text-lg">{alertModal.message}</p>
-            <button
-              onClick={closeAlert}
-              className="px-8 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition-colors shadow-md"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={closeAlert}
+      />
 
       {/* Finish Turn Confirmation Modal */}
-      {showFinishTurnConfirm.isOpen && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          aria-modal="true"
-          role="dialog"
-        >
-          <div className="bg-gray-800 border-2 border-yellow-500 rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8">
-            <div className="mb-4">
-              <div className="text-6xl text-yellow-400 mb-2">⚠️</div>
-            </div>
-            <h2 className="text-3xl font-bold mb-3 text-yellow-400">
-              Finish Turn?
-            </h2>
-            <p className="text-slate-300 mb-6 text-lg">
-              Are you sure you want to finish? You still have{" "}
-              <span className="text-yellow-400 font-bold">
-                ₭-{showFinishTurnConfirm.remainingKredcoin}
-              </span>{" "}
-              left.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={handleCancelFinishTurn}
-                className="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmFinishTurn}
-                className="px-6 py-3 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors shadow-md"
-              >
-                Yes, Finish
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <FinishTurnConfirmModal
+        isOpen={showFinishTurnConfirm.isOpen}
+        remainingKredcoin={showFinishTurnConfirm.remainingKredcoin}
+        onCancel={handleCancelFinishTurn}
+        onConfirm={handleConfirmFinishTurn}
+      />
 
       {/* Bureaucracy Phase Transition Message */}
-      {showBureaucracyTransition && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] transition-opacity duration-500"
-          aria-live="polite"
-          role="status"
-        >
-          <div className="text-center animate-pulse">
-            <h1
-              className="text-8xl sm:text-9xl font-black text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] mb-4"
-              style={{
-                textShadow:
-                  "0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.3)",
-                fontFamily: "system-ui, -apple-system, sans-serif",
-                letterSpacing: "0.05em",
-              }}
-            >
-              BUREAUCRACY!
-            </h1>
-            <p className="text-2xl text-yellow-200 font-semibold">
-              Prepare for the bureaucracy phase...
-            </p>
-          </div>
-        </div>
-      )}
+      <BureaucracyTransition isVisible={showBureaucracyTransition} />
     </div>
   );
 };
