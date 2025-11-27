@@ -24,6 +24,7 @@ import type {
 } from "../types";
 import { PlayedTileState } from "../hooks/useTilePlayWorkflow";
 import { ALERTS } from "../../constants";
+import { getPlayerById } from "../../utils";
 
 // ============================================================================
 // DEPENDENCY INTERFACE
@@ -130,7 +131,7 @@ export function createTilePlayHandlers(deps: TilePlayDependencies) {
     // Check if target player's bank is full
     const allBankSpaces = bankSpacesByPlayerCount[playerCount] || [];
     const tilesPerPlayer = allBankSpaces.length / playerCount;
-    const targetPlayer = players.find((p) => p.id === targetSpace.ownerId);
+    const targetPlayer = getPlayerById(players, targetSpace.ownerId);
 
     if (
       targetPlayer &&

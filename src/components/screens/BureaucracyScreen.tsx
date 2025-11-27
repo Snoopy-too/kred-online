@@ -12,6 +12,7 @@ import {
 } from "../../../game";
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation } from "../../game/locations";
+import { getPlayerById } from "../../../utils";
 import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
@@ -79,7 +80,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
   credibilityRotationAdjustments,
 }) => {
   const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
-  const currentPlayer = players.find((p) => p.id === currentPlayerId);
+  const currentPlayer = getPlayerById(players, currentPlayerId);
   const playerState = bureaucracyStates.find(
     (s) => s.playerId === currentPlayerId
   );
@@ -439,7 +440,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
               const credibilityLocations =
                 CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
               return credibilityLocations.map((location) => {
-                const player = players.find((p) => p.id === location.ownerId);
+                const player = getPlayerById(players, location.ownerId);
                 const credibilityValue = player?.credibility ?? 3;
                 const adjustment =
                   credibilityRotationAdjustments[location.ownerId] || 0;

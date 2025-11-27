@@ -49,6 +49,7 @@ import {
   getBureaucracyMenu,
   getAvailablePurchases,
 } from "../../game/bureaucracy";
+import { getPlayerById } from "../../../utils";
 
 // ============================================================================
 // COMPONENT
@@ -485,7 +486,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
     // Free placement mode: allow tiles to be placed anywhere without snapping
     if (tileIdStr && !hasPlayedTileThisTurn) {
-      const currentPlayer = players.find((p) => p.id === currentPlayerId);
+      const currentPlayer = getPlayerById(players, currentPlayerId);
       if (currentPlayer) {
         const freeTileSpace: TileReceivingSpace = {
           ownerId: currentPlayerId,
@@ -606,7 +607,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   // COMPUTED VALUES FOR RENDERING
   // ============================================================================
-  const currentPlayer = players.find((p) => p.id === currentPlayerId);
+  const currentPlayer = getPlayerById(players, currentPlayerId);
 
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
   // In test mode, always show decision dialogs so player can control all players
@@ -1003,7 +1004,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               const credibilityLocations =
                 CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
               return credibilityLocations.map((location) => {
-                const player = players.find((p) => p.id === location.ownerId);
+                const player = getPlayerById(players, location.ownerId);
                 const credibilityValue = player?.credibility ?? 3;
                 const adjustment =
                   credibilityRotationAdjustments[location.ownerId] || 0;
@@ -1730,7 +1731,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             </div>
 
             {/* No tiles message */}
-            {players.find((p) => p.id === takeAdvantageChallengerId)
+            {getPlayerById(players, takeAdvantageChallengerId!)
               ?.bureaucracyTiles.length === 0 && (
               <p className="text-red-400 text-center text-lg mb-6">
                 You have no tiles in your bank. Cannot purchase an action.

@@ -15,7 +15,7 @@ import {
 } from "../../game";
 import { calculateMoves } from "../game/move-calculation";
 import { ALERTS, TIMEOUTS } from "../../constants";
-import { getPlayerName } from "../../utils";
+import { getPlayerName, getPlayerById } from "../../utils";
 
 /**
  * Dependencies required by the Take Advantage handlers
@@ -244,7 +244,7 @@ export function useTakeAdvantageHandlers(
    * Decline the Take Advantage offer and continue to correction phase
    */
   const handleTakeAdvantageDecline = useCallback(() => {
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
     const challengerName = challenger
       ? getPlayerName(challenger, takeAdvantageChallengerId!)
       : "Player";
@@ -275,7 +275,7 @@ export function useTakeAdvantageHandlers(
    * Show tile selection screen
    */
   const handleTakeAdvantageYes = useCallback(() => {
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
 
     if (!challenger) {
       console.error("Challenger not found");
@@ -325,7 +325,7 @@ export function useTakeAdvantageHandlers(
     );
 
     // Log the recovery
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
     const challengerName = challenger
       ? getPlayerName(challenger, takeAdvantageChallengerId!)
       : "Player";
@@ -357,7 +357,7 @@ export function useTakeAdvantageHandlers(
    * Show tile selection screen
    */
   const handlePurchaseMove = useCallback(() => {
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
 
     if (!challenger) {
       console.error("Challenger not found");
@@ -437,7 +437,7 @@ export function useTakeAdvantageHandlers(
     }
 
     // Log tile selection
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
     const challengerName = challenger
       ? getPlayerName(challenger, takeAdvantageChallengerId!)
       : "Player";
@@ -470,7 +470,7 @@ export function useTakeAdvantageHandlers(
    * Handler: Cancel tile selection
    */
   const handleCancelTileSelection = useCallback(() => {
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
     const challengerName = challenger
       ? getPlayerName(challenger, takeAdvantageChallengerId!)
       : "Player";
