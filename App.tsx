@@ -798,6 +798,16 @@ const App: React.FC = () => {
   };
 
   /**
+   * Helper: Reset Take Advantage modal state
+   * Used after declining, completing, or canceling Take Advantage
+   */
+  const cleanupTakeAdvantageModalState = () => {
+    setShowTakeAdvantageModal(false);
+    setTakeAdvantageChallengerId(null);
+    setTakeAdvantageChallengerCredibility(0);
+  };
+
+  /**
    * Handles credibility gain for a player
    *
    * Credibility Rules:
@@ -2614,9 +2624,7 @@ const App: React.FC = () => {
     ]);
 
     // Clean up modal state
-    setShowTakeAdvantageModal(false);
-    setTakeAdvantageChallengerId(null);
-    setTakeAdvantageChallengerCredibility(0);
+    cleanupTakeAdvantageModalState();
 
     // Continue to correction phase
     transitionToCorrectionPhase();
@@ -2678,9 +2686,7 @@ const App: React.FC = () => {
     ]);
 
     // Clean up modal state
-    setShowTakeAdvantageModal(false);
-    setTakeAdvantageChallengerId(null);
-    setTakeAdvantageChallengerCredibility(0);
+    cleanupTakeAdvantageModalState();
 
     // Continue to correction phase
     transitionToCorrectionPhase();
