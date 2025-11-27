@@ -808,6 +808,17 @@ const App: React.FC = () => {
   };
 
   /**
+   * Helper: Reset challenge state
+   * Used after a tile play is finalized or ended
+   */
+  const resetChallengeState = () => {
+    setChallengeOrder([]);
+    setCurrentChallengerIndex(0);
+    setReceiverAcceptance(null);
+    setTileRejected(false);
+  };
+
+  /**
    * Handles credibility gain for a player
    *
    * Credibility Rules:
@@ -1577,10 +1588,7 @@ const App: React.FC = () => {
     }
 
     // Reset challenge state FIRST before setting turn
-    setChallengeOrder([]);
-    setCurrentChallengerIndex(0);
-    setReceiverAcceptance(null);
-    setTileRejected(false);
+    resetChallengeState();
 
     // Next player is the receiving player
     // Use the players state to find the correct index
@@ -1875,10 +1883,7 @@ const App: React.FC = () => {
     };
 
     // Reset challenge state FIRST before setting turn
-    setChallengeOrder([]);
-    setCurrentChallengerIndex(0);
-    setReceiverAcceptance(null);
-    setTileRejected(false);
+    resetChallengeState();
 
     // Update players and set turn to receiver using latest state
     // Calculate the updated players array directly from current state
