@@ -96,6 +96,11 @@ import {
 } from "./src/hooks";
 
 // ============================================================================
+// HANDLERS IMPORTS - Extracted handler factories
+// ============================================================================
+import { createGameFlowHandlers } from "./src/handlers";
+
+// ============================================================================
 // COMPONENT IMPORTS - Extracted React components
 // ============================================================================
 import ErrorDisplay from "./src/components/shared/ErrorDisplay";
@@ -352,236 +357,123 @@ const App: React.FC = () => {
     remainingKredcoin: 0,
   });
 
-  const handleStartGame = (
-    count: number,
-    testMode: boolean,
-    skipDraft: boolean,
-    skipCampaign: boolean
-  ) => {
-    setPlayerCount(count);
-    setIsTestMode(testMode);
-    setMovedPiecesThisTurn(new Set());
-    setPendingCommunityPieces(new Set());
+  // ============================================================================
+  // GAME FLOW HANDLERS - Created via factory for better testability
+  // ============================================================================
+  const gameFlowHandlers = React.useMemo(
+    () =>
+      createGameFlowHandlers({
+        // Current state values
+        playerCount,
+        players,
+        currentPlayerIndex,
+        draftRound,
 
-    const initialPlayers = initializePlayers(count);
+        // State setters from useGameState
+        setPlayerCount,
+        setIsTestMode,
+        setPlayers,
+        setPieces,
+        setCurrentPlayerIndex,
+        setDraftRound,
+        setGameState,
+        setGameLog,
 
-    if (skipDraft && skipCampaign) {
-      // Skip both phases - distribute tiles randomly and move to bureaucracy tiles
-      const allTiles: Tile[] = [];
-      for (let i = 1; i <= 24; i++) {
-        allTiles.push({
-          id: i,
-          url: `./images/${String(i).padStart(2, "0")}.svg`,
-        });
-      }
+        // State setters from useMoveTracking
+        setPiecesAtTurnStart,
+        setMovedPiecesThisTurn,
+        setPendingCommunityPieces,
 
-      // Add blank tile for 5-player mode
-      if (count === 5) {
-        allTiles.push({
-          id: 25,
-          url: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'/%3e`,
-        });
-      }
+        // State setters from useBoardDisplay
+        setBoardTiles,
+        setBankedTiles,
+        setLastDroppedPosition,
+        setRevealedTileId,
 
-      // Shuffle tiles
-      const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
+        // State setters from useTilePlayWorkflow
+        setHasPlayedTileThisTurn,
+        setPlayedTile,
+        setMovesThisTurn,
+        setTileTransaction,
+        setReceiverAcceptance,
 
-      // Calculate tiles per player for bank
-      const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[count] || [];
-      const tilesPerPlayer = bankSpaces.length / count;
+        // State setters from useChallengeFlow
+        setChallengedTile,
+        setPlacerViewingTileId,
+        setBystanders,
+        setBystanderIndex,
+        setIsPrivatelyViewing,
+        setShowChallengeRevealModal,
+        setChallengeOrder,
+        setCurrentChallengerIndex,
+        setTileRejected,
+        setShowMoveCheckResult,
+        setMoveCheckResult,
+        setGiveReceiverViewingTileId,
+        setTilePlayerMustWithdraw,
 
-      // Distribute tiles to each player's bureaucracy tiles
-      const playersWithTiles = initialPlayers.map((player, index) => {
-        const startIdx = index * tilesPerPlayer;
-        const playerTiles = shuffledTiles.slice(
-          startIdx,
-          startIdx + tilesPerPlayer
-        );
-        return {
-          ...player,
-          hand: [],
-          keptTiles: [],
-          bureaucracyTiles: playerTiles,
-        };
-      });
+        // State setters from useBureaucracy
+        setBureaucracyTurnOrder,
+        setBureaucracyStates,
+        setCurrentBureaucracyPlayerIndex,
+        setShowBureaucracyMenu,
 
-      setPlayers(playersWithTiles);
+        // Initialization functions
+        initializePlayers,
+        initializeCampaignPieces,
+        getBureaucracyTurnOrder,
+        calculatePlayerKredcoin,
 
-      // Initialize campaign pieces
-      const campaignPieces = initializeCampaignPieces(count);
-      setPieces(campaignPieces);
+        // Configuration
+        BANK_SPACES_BY_PLAYER_COUNT,
+      }),
+    [
+      playerCount,
+      players,
+      currentPlayerIndex,
+      draftRound,
+      setPlayerCount,
+      setIsTestMode,
+      setPlayers,
+      setPieces,
+      setCurrentPlayerIndex,
+      setDraftRound,
+      setGameState,
+      setGameLog,
+      setPiecesAtTurnStart,
+      setMovedPiecesThisTurn,
+      setPendingCommunityPieces,
+      setBoardTiles,
+      setBankedTiles,
+      setLastDroppedPosition,
+      setRevealedTileId,
+      setHasPlayedTileThisTurn,
+      setPlayedTile,
+      setMovesThisTurn,
+      setTileTransaction,
+      setReceiverAcceptance,
+      setChallengedTile,
+      setPlacerViewingTileId,
+      setBystanders,
+      setBystanderIndex,
+      setIsPrivatelyViewing,
+      setShowChallengeRevealModal,
+      setChallengeOrder,
+      setCurrentChallengerIndex,
+      setTileRejected,
+      setShowMoveCheckResult,
+      setMoveCheckResult,
+      setGiveReceiverViewingTileId,
+      setTilePlayerMustWithdraw,
+      setBureaucracyTurnOrder,
+      setBureaucracyStates,
+      setCurrentBureaucracyPlayerIndex,
+      setShowBureaucracyMenu,
+    ]
+  );
 
-      // Initialize Bureaucracy phase
-      const turnOrder = getBureaucracyTurnOrder(playersWithTiles);
-      const initialStates: BureaucracyPlayerState[] = playersWithTiles.map(
-        (p) => ({
-          playerId: p.id,
-          initialKredcoin: calculatePlayerKredcoin(p),
-          remainingKredcoin: calculatePlayerKredcoin(p),
-          turnComplete: false,
-          purchases: [],
-        })
-      );
-
-      setBureaucracyTurnOrder(turnOrder);
-      setBureaucracyStates(initialStates);
-      setCurrentBureaucracyPlayerIndex(0);
-      setShowBureaucracyMenu(true);
-      setGameState("BUREAUCRACY");
-      setCurrentPlayerIndex(0);
-    } else if (skipDraft) {
-      // Skip draft phase only - distribute tiles randomly to hand
-      const allTiles: Tile[] = [];
-      for (let i = 1; i <= 24; i++) {
-        allTiles.push({
-          id: i,
-          url: `./images/${String(i).padStart(2, "0")}.svg`,
-        });
-      }
-
-      // Add blank tile for 5-player mode
-      if (count === 5) {
-        allTiles.push({
-          id: 25,
-          url: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'/%3e`,
-        });
-      }
-
-      // Shuffle tiles
-      const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
-
-      // Determine hand size based on player count
-      const handSize = count === 3 ? 8 : count === 4 ? 6 : 5; // 3p=8, 4p=6, 5p=5
-
-      // Distribute tiles to each player's hand
-      const playersWithTiles = initialPlayers.map((player, index) => {
-        const startIdx = index * handSize;
-        const playerTiles = shuffledTiles.slice(startIdx, startIdx + handSize);
-        return {
-          ...player,
-          hand: playerTiles,
-          keptTiles: playerTiles,
-          bureaucracyTiles: [],
-        };
-      });
-
-      setPlayers(playersWithTiles);
-
-      // Initialize campaign pieces and start campaign
-      const campaignPieces = initializeCampaignPieces(count);
-      setPieces(campaignPieces);
-      setPiecesAtTurnStart(campaignPieces.map((p) => ({ ...p })));
-
-      // Player with tile 03 goes first
-      const startingTileId = 3;
-      const startingPlayerIndex = playersWithTiles.findIndex(
-        (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
-      );
-      if (startingPlayerIndex !== -1) {
-        setCurrentPlayerIndex(startingPlayerIndex);
-      } else {
-        setCurrentPlayerIndex(0);
-      }
-
-      setGameState("CAMPAIGN");
-    } else {
-      // Normal game flow - start with drafting
-      setPlayers(initialPlayers);
-      setGameState("DRAFTING");
-      setCurrentPlayerIndex(0);
-      setDraftRound(1);
-    }
-  };
-
-  const handleNewGame = () => {
-    setGameState("PLAYER_SELECTION");
-    setPlayers([]);
-    setPlayerCount(0);
-    setPieces([]);
-    setLastDroppedPosition(null);
-    setBoardTiles([]);
-    setBankedTiles([]);
-    setHasPlayedTileThisTurn(false);
-    setRevealedTileId(null);
-    setTileTransaction(null);
-    setBystanders([]);
-    setBystanderIndex(0);
-    setIsPrivatelyViewing(false);
-    setShowChallengeRevealModal(false);
-    setChallengedTile(null);
-    setPlacerViewingTileId(null);
-    setGameLog([]);
-    setPiecesAtTurnStart([]);
-    // Reset new tile play workflow states
-    setPlayedTile(null);
-    setMovesThisTurn([]);
-    setMovedPiecesThisTurn(new Set());
-    setPendingCommunityPieces(new Set());
-    setReceiverAcceptance(null);
-    setChallengeOrder([]);
-    setCurrentChallengerIndex(0);
-    setTileRejected(false);
-    setShowMoveCheckResult(false);
-    setMoveCheckResult(null);
-    setGiveReceiverViewingTileId(null);
-    setTilePlayerMustWithdraw(false);
-  };
-
-  const handleSelectTile = (selectedTile: Tile) => {
-    const updatedPlayers = players.map((player, index) => {
-      if (index === currentPlayerIndex) {
-        return {
-          ...player,
-          keptTiles: [...player.keptTiles, selectedTile],
-          hand: player.hand.filter((tile) => tile.id !== selectedTile.id),
-        };
-      }
-      return player;
-    });
-
-    const nextPlayerIndex = currentPlayerIndex + 1;
-    if (nextPlayerIndex >= playerCount) {
-      const handsToPass = updatedPlayers.map((p) => p.hand);
-      const playersWithPassedHands = updatedPlayers.map((p, i) => {
-        const passingPlayerIndex = (i - 1 + playerCount) % playerCount;
-        return { ...p, hand: handsToPass[passingPlayerIndex] };
-      });
-
-      if (playersWithPassedHands[0].hand.length === 0) {
-        setGameState("CAMPAIGN");
-
-        // Initialize pieces for campaign: Marks at seats 1,3,5 + Heels/Pawns in community
-        const initialPieces = initializeCampaignPieces(playerCount);
-        setPieces(initialPieces);
-        setPiecesAtTurnStart(initialPieces);
-
-        // Player with tile 03.svg goes first in Campaign
-        const startingTileId = 3;
-        const startingPlayerIndex = playersWithPassedHands.findIndex(
-          (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
-        );
-        console.log(
-          "startingPlayerIndex:",
-          startingPlayerIndex,
-          "playersWithPassedHands:",
-          playersWithPassedHands
-        );
-
-        setCurrentPlayerIndex(
-          startingPlayerIndex !== -1 ? startingPlayerIndex : 0
-        );
-        setHasPlayedTileThisTurn(false);
-        setPlayers(playersWithPassedHands);
-      } else {
-        setPlayers(playersWithPassedHands);
-        setDraftRound(draftRound + 1);
-        setCurrentPlayerIndex(0);
-      }
-    } else {
-      setPlayers(updatedPlayers);
-      setCurrentPlayerIndex(nextPlayerIndex);
-    }
-  };
+  // Destructure handlers for convenience
+  const { handleStartGame, handleNewGame, handleSelectTile } = gameFlowHandlers;
 
   const handlePieceMove = (
     pieceId: string,
