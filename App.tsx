@@ -851,8 +851,8 @@ const App: React.FC = () => {
     if (!playedTile) return;
 
     // Log the bonus move
-    const player = players.find((p) => p.id === bonusMovePlayerId);
-    const playerName = player?.name || `Player ${bonusMovePlayerId}`;
+    const player = getPlayerById(players, bonusMovePlayerId);
+    const playerName = getPlayerName(player, bonusMovePlayerId);
     addGameLog(
       `${playerName} took a bonus Advance move (already had 3 credibility)`
     );
@@ -1015,7 +1015,7 @@ const App: React.FC = () => {
       setTileRejected(true);
 
       // Check if tile player has 0 credibility - if so, they MUST perform a WITHDRAW during correction
-      const tilePlayer = players.find((p) => p.id === playedTile.playerId);
+      const tilePlayer = getPlayerById(players, playedTile.playerId);
       const playerHasZeroCredibility =
         tilePlayer && tilePlayer.credibility === 0;
       const movesMeetRequirements =
@@ -1205,10 +1205,13 @@ const App: React.FC = () => {
       if (isTilePerfect) {
         // Challenge is INVALID - player played perfectly
         const challengerId = challengeOrder[currentChallengerIndex];
-        const challengerName =
-          players.find((p) => p.id === challengerId)?.name || "Player";
-        const challengedPlayerName =
-          players.find((p) => p.id === playedTile.playerId)?.name || "Player";
+        const challengerName = getPlayerName(
+          getPlayerById(players, challengerId),
+          challengerId
+        );
+        const challengedPlayerName = getPlayerNameSimple(
+          getPlayerById(players, playedTile.playerId)
+        );
         setChallengeResultMessage(
           `Challenge Failed: ${challengedPlayerName} played the tile perfectly.`
         );
@@ -1229,8 +1232,9 @@ const App: React.FC = () => {
         }, 5000);
       } else {
         // Challenge is VALID - player did NOT meet requirements perfectly
-        const challengedPlayerName =
-          players.find((p) => p.id === playedTile.playerId)?.name || "Player";
+        const challengedPlayerName = getPlayerNameSimple(
+          getPlayerById(players, playedTile.playerId)
+        );
         setChallengeResultMessage(
           `Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`
         );
@@ -1289,8 +1293,10 @@ const App: React.FC = () => {
           );
         }
 
-        const challenger = finalPlayers.find((p) => p.id === challengerId);
-        const challengerName = challenger ? getPlayerName(challenger, challengerId) : "Player";
+        const challenger = getPlayerById(finalPlayers, challengerId);
+        const challengerName = challenger
+          ? getPlayerName(challenger, challengerId)
+          : "Player";
         addGameLog(
           `${challengerName} gained credibility for successful challenge (now ${
             challenger?.credibility ?? 0
@@ -1742,7 +1748,7 @@ const App: React.FC = () => {
       ).length;
 
       // Check if player's domain is empty (no pieces in seats, rostrums, or offices)
-      const tilePlayer = players.find((p) => p.id === playedTile.playerId);
+      const tilePlayer = getPlayerById(players, playedTile.playerId);
       const playerDomainEmpty =
         tilePlayer &&
         pieces.every((p) => {
@@ -2553,7 +2559,7 @@ const App: React.FC = () => {
   const transitionToCorrectionPhase = (updatedOriginalPieces?: Piece[]) => {
     if (!playedTile) return;
 
-    const tilePlayer = players.find((p) => p.id === playedTile.playerId);
+    const tilePlayer = getPlayerById(players, playedTile.playerId);
     const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
 
     // Determine if tile player must withdraw (0 credibility penalty)
@@ -2597,8 +2603,10 @@ const App: React.FC = () => {
    * Decline the Take Advantage offer and continue to correction phase
    */
   const handleTakeAdvantageDecline = () => {
-    const challengerName =
-      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    const challengerName = getPlayerName(
+      getPlayerById(players, takeAdvantageChallengerId!),
+      takeAdvantageChallengerId!
+    );
     setGameLog((prev) => [
       ...prev,
       `${challengerName} declined the Take Advantage reward`,
@@ -2618,7 +2626,7 @@ const App: React.FC = () => {
    * Show tile selection screen
    */
   const handleTakeAdvantageYes = () => {
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
 
     if (!challenger) {
       console.error("Challenger not found");
@@ -2659,8 +2667,10 @@ const App: React.FC = () => {
     );
 
     // Log the recovery
-    const challengerName =
-      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    const challengerName = getPlayerName(
+      getPlayerById(players, takeAdvantageChallengerId!),
+      takeAdvantageChallengerId!
+    );
     setGameLog((prev) => [
       ...prev,
       `${challengerName} recovered 1 credibility (successful challenge reward)`,
@@ -2680,7 +2690,7 @@ const App: React.FC = () => {
    * Show tile selection screen
    */
   const handlePurchaseMove = () => {
-    const challenger = players.find((p) => p.id === takeAdvantageChallengerId);
+    const challenger = getPlayerById(players, takeAdvantageChallengerId!);
 
     if (!challenger) {
       console.error("Challenger not found");
@@ -2746,8 +2756,10 @@ const App: React.FC = () => {
     }
 
     // Log tile selection
-    const challengerName =
-      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    const challengerName = getPlayerName(
+      getPlayerById(players, takeAdvantageChallengerId!),
+      takeAdvantageChallengerId!
+    );
     const tileIds = selectedTilesForAdvantage.map((t) => t.id).join(", ");
     setGameLog((prev) => [
       ...prev,
@@ -2766,8 +2778,10 @@ const App: React.FC = () => {
    * Handler: Cancel tile selection
    */
   const handleCancelTileSelection = () => {
-    const challengerName =
-      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    const challengerName = getPlayerName(
+      getPlayerById(players, takeAdvantageChallengerId!),
+      takeAdvantageChallengerId!
+    );
     setGameLog((prev) => [
       ...prev,
       `${challengerName} cancelled Take Advantage`,
@@ -2818,9 +2832,10 @@ const App: React.FC = () => {
         )
       );
 
-      const challengerName =
-        players.find((p) => p.id === takeAdvantageChallengerId)?.name ||
-        "Player";
+      const challengerName = getPlayerName(
+        getPlayerById(players, takeAdvantageChallengerId!),
+        takeAdvantageChallengerId!
+      );
       setGameLog((prev) => [
         ...prev,
         `${challengerName} restored credibility using Take Advantage`,
@@ -2845,9 +2860,10 @@ const App: React.FC = () => {
       setMovesThisTurn([]);
       setMovedPiecesThisTurn(new Set());
 
-      const challengerName =
-        players.find((p) => p.id === takeAdvantageChallengerId)?.name ||
-        "Player";
+      const challengerName = getPlayerName(
+        getPlayerById(players, takeAdvantageChallengerId!),
+        takeAdvantageChallengerId!
+      );
       setGameLog((prev) => [
         ...prev,
         `${challengerName} reset their Take Advantage action`,
@@ -3022,8 +3038,10 @@ const App: React.FC = () => {
    * Completes the Take Advantage purchase and cleans up state
    */
   const handleCompleteTakeAdvantage = (purchase: BureaucracyPurchase) => {
-    const challengerName =
-      players.find((p) => p.id === takeAdvantageChallengerId)?.name || "Player";
+    const challengerName = getPlayerName(
+      getPlayerById(players, takeAdvantageChallengerId!),
+      takeAdvantageChallengerId!
+    );
 
     // Place used tiles face-up in player's bank spaces
     if (takeAdvantageChallengerId !== null) {
