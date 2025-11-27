@@ -1,6 +1,47 @@
 import React, { useState, useEffect, useRef } from "react";
 
 // ============================================================================
+// App.tsx - Main Application Component
+// ============================================================================
+//
+// ARCHITECTURE OVERVIEW:
+// ----------------------
+// This file serves as the main orchestrator for the KRED game. It has been
+// progressively refactored to extract logic into specialized modules:
+//
+// EXTRACTED MODULES:
+// - src/handlers/      - Handler factories (gameFlow, pieceMovement, tilePlay, etc.)
+// - src/hooks/         - Custom React hooks for state management
+// - src/game/          - Pure game logic functions
+// - src/components/    - React UI components
+// - src/config/        - Static configuration data
+// - src/types/         - TypeScript type definitions
+// - src/rules/         - Game rules and validation
+// - src/utils/         - General utility functions
+//
+// HANDLER PATTERN:
+// Handlers are created via factory functions that receive dependencies:
+//   const handlers = createGameFlowHandlers({ players, pieces, ... });
+// This allows for testability and clear dependency documentation.
+//
+// STATE HOOK PATTERN:
+// State is managed through custom hooks (useGameState, useBureaucracy, etc.)
+// that encapsulate related state variables and their setters.
+//
+// HANDLER HOOK PATTERN (NEW):
+// Complex handlers are being extracted to hooks like useTakeAdvantageHandlers
+// that use useCallback for memoization and clearly define dependencies.
+//
+// REMAINING IN App.tsx:
+// - Hook initialization and composition
+// - Handler wiring (connecting handlers to state)
+// - Some complex handlers awaiting extraction (bureaucracy, correction)
+// - Main render logic (renderGameState)
+//
+// See PHASE_9_PLAN.md for future refactoring roadmap.
+// ============================================================================
+
+// ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
 // ============================================================================
 import type {
@@ -14,7 +55,7 @@ import type {
   TrackedMove,
 } from "./src/types";
 
-// Types still in game.ts (to be extracted in Phase 3)
+// Types still in game.ts (to be migrated to src/types/bureaucracy.ts)
 import type {
   PlayedTileState,
   BureaucracyMenuItem,
@@ -138,15 +179,8 @@ import {
 } from "./utils";
 import CampaignScreen from "./src/components/screens/CampaignScreen";
 
-// --- Helper Components ---
-
 /**
- * The main application component.
- *
- * GAME STATE FLOW:
-
-/**
- * The main application component.
+ * App Component - Main Application Entry Point
  *
  * GAME STATE FLOW:
  * ================
@@ -187,10 +221,18 @@ import CampaignScreen from "./src/components/screens/CampaignScreen";
  *
  * 10. If no winner → back to CAMPAIGN (new round)
  *     If winner → GAME OVER (alert shown)
+ *
+ * COMPONENT STRUCTURE:
+ * ====================
+ * - State managed via custom hooks (useGameState, useBureaucracy, etc.)
+ * - Handlers created via factory functions (createGameFlowHandlers, etc.)
+ * - UI delegated to screen components (CampaignScreen, BureaucracyScreen, etc.)
+ * - Modals rendered at top level for proper z-index stacking
  */
 const App: React.FC = () => {
   // ============================================================================
-  // CUSTOM HOOKS - Extract state management into hooks
+  // CUSTOM HOOKS - State management extracted to dedicated hooks
+  // See src/hooks/ for implementations
   // ============================================================================
 
   // Core game state (useGameState hook)
@@ -377,7 +419,8 @@ const App: React.FC = () => {
   });
 
   // ============================================================================
-  // GAME FLOW HANDLERS - Created via factory for better testability
+  // HANDLER FACTORIES - Created via factory pattern for testability
+  // See src/handlers/ for implementations
   // ============================================================================
   const gameFlowHandlers = React.useMemo(
     () =>
@@ -495,7 +538,7 @@ const App: React.FC = () => {
   const { handleStartGame, handleNewGame, handleSelectTile } = gameFlowHandlers;
 
   // ============================================================================
-  // PIECE MOVEMENT HANDLERS - Created via factory for better testability
+  // PIECE MOVEMENT HANDLERS
   // ============================================================================
   const pieceMovementHandlers = React.useMemo(
     () =>
@@ -569,7 +612,7 @@ const App: React.FC = () => {
   } = pieceMovementHandlers;
 
   // ============================================================================
-  // TURN HANDLERS - Created via factory for better testability
+  // TURN HANDLERS
   // ============================================================================
   const turnHandlers = React.useMemo(
     () =>
@@ -626,7 +669,7 @@ const App: React.FC = () => {
   const { generateTurnLog, advanceTurnNormally } = turnHandlers;
 
   // ============================================================================
-  // TILE PLAY HANDLERS - Created via factory for better testability
+  // TILE PLAY HANDLERS
   // ============================================================================
   const tilePlayHandlers = React.useMemo(
     () =>
@@ -693,7 +736,7 @@ const App: React.FC = () => {
   } = tilePlayHandlers;
 
   // ============================================================================
-  // CHALLENGE FLOW HANDLERS (Legacy) - Created via factory for better testability
+  // CHALLENGE FLOW HANDLERS (Legacy bystander/receiver flow)
   // ============================================================================
   const challengeFlowHandlers = React.useMemo(
     () =>
