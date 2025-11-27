@@ -53,9 +53,7 @@ export interface TilePlayDependencies {
   setPiecesBeforeBonusMove: React.Dispatch<React.SetStateAction<Piece[]>>;
   setRevealedTileId: (id: string | null) => void;
   setIsPrivatelyViewing: React.Dispatch<React.SetStateAction<boolean>>;
-  setPlacerViewingTileId: React.Dispatch<
-    React.SetStateAction<string | null>
-  >;
+  setPlacerViewingTileId: React.Dispatch<React.SetStateAction<string | null>>;
 
   // Utility functions
   showAlert: (title: string, message: string, type: string) => void;

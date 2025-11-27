@@ -7,7 +7,13 @@
  * @module handlers/pieceMovementHandlers
  */
 
-import type { Piece, Player, GameState, BoardTile, PlayedTileState } from "../types";
+import type {
+  Piece,
+  Player,
+  GameState,
+  BoardTile,
+  PlayedTileState,
+} from "../types";
 import type { Dispatch, SetStateAction } from "react";
 
 // ============================================================================
@@ -17,7 +23,11 @@ import type { Dispatch, SetStateAction } from "react";
 /**
  * Alert function type for showing messages to users
  */
-type ShowAlertFn = (title: string, message: string, type: "info" | "warning" | "error") => void;
+type ShowAlertFn = (
+  title: string,
+  message: string,
+  type: "info" | "warning" | "error"
+) => void;
 
 /**
  * Dependencies required by piece movement handlers.
@@ -42,7 +52,9 @@ export interface PieceMovementDependencies {
   setGameState: Dispatch<SetStateAction<GameState>>;
   setMovedPiecesThisTurn: Dispatch<SetStateAction<Set<string>>>;
   setPendingCommunityPieces: Dispatch<SetStateAction<Set<string>>>;
-  setLastDroppedPosition: Dispatch<SetStateAction<{ top: number; left: number } | null>>;
+  setLastDroppedPosition: Dispatch<
+    SetStateAction<{ top: number; left: number } | null>
+  >;
   setLastDroppedPieceId: Dispatch<SetStateAction<string | null>>;
   setPlayedTile: Dispatch<SetStateAction<PlayedTileState | null>>;
   setHasPlayedTileThisTurn: Dispatch<SetStateAction<boolean>>;
@@ -269,7 +281,10 @@ export function createPieceMovementHandlers(
     // If a tile was played, return it to player's hand and remove from board
     if (deps.playedTile) {
       const tileId = parseInt(deps.playedTile.tileId);
-      const tile = { id: tileId, url: `./images/${deps.playedTile.tileId}.svg` };
+      const tile = {
+        id: tileId,
+        url: `./images/${deps.playedTile.tileId}.svg`,
+      };
 
       // Add tile back to player's hand
       deps.setPlayers((prev) =>

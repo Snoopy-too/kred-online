@@ -103,6 +103,7 @@ import {
   createPieceMovementHandlers,
   createTurnHandlers,
   createTilePlayHandlers,
+  createChallengeFlowHandlers,
 } from "./src/handlers";
 
 // ============================================================================
@@ -677,6 +678,60 @@ const App: React.FC = () => {
     handleTogglePrivateView,
     handlePlacerViewTile,
   } = tilePlayHandlers;
+
+  // ============================================================================
+  // CHALLENGE FLOW HANDLERS (Legacy) - Created via factory for better testability
+  // ============================================================================
+  const challengeFlowHandlers = React.useMemo(
+    () =>
+      createChallengeFlowHandlers({
+        // Current state values
+        players,
+        playerCount,
+        tileTransaction,
+        bystanders,
+        bystanderIndex,
+
+        // State setters
+        setPlayers,
+        setBoardTiles,
+        setGameState,
+        setChallengedTile,
+        setShowChallengeRevealModal,
+        setBystanderIndex,
+        setCurrentPlayerIndex,
+        setBystanders,
+        setIsPrivatelyViewing,
+
+        // Helper functions
+        advanceTurnNormally,
+      }),
+    [
+      players,
+      playerCount,
+      tileTransaction,
+      bystanders,
+      bystanderIndex,
+      setPlayers,
+      setBoardTiles,
+      setGameState,
+      setChallengedTile,
+      setShowChallengeRevealModal,
+      setBystanderIndex,
+      setCurrentPlayerIndex,
+      setBystanders,
+      setIsPrivatelyViewing,
+      advanceTurnNormally,
+    ]
+  );
+
+  // Destructure challenge flow handlers
+  const {
+    handleBystanderDecision,
+    handleContinueAfterChallenge,
+    handleReceiverDecision,
+    resolveTransaction,
+  } = challengeFlowHandlers;
 
   const addCredibilityLossLog = (
     playerId: number,
@@ -2138,107 +2193,6 @@ const App: React.FC = () => {
       moveValidations,
     });
     setShowMoveCheckResult(true);
-  };
-
-  const resolveTransaction = (wasChallenged: boolean) => {
-    if (!tileTransaction) return;
-
-    setPlayers((prev) =>
-      prev.map((p) => {
-        if (p.id === tileTransaction.receiverId) {
-          return {
-            ...p,
-            bureaucracyTiles: [...p.bureaucracyTiles, tileTransaction.tile],
-          };
-        }
-        return p;
-      })
-    );
-    setBoardTiles((prev) =>
-      prev.filter((bt) => bt.id !== tileTransaction.boardTileId)
-    );
-    advanceTurnNormally(tileTransaction.placerId);
-  };
-
-  const handleReceiverDecision = (decision: "accept" | "reject") => {
-    if (!tileTransaction) return;
-    setIsPrivatelyViewing(false);
-
-    if (decision === "reject") {
-      const placer = players.find((p) => p.id === tileTransaction.placerId);
-      if (placer) {
-        setPlayers((prev) =>
-          prev.map((p) =>
-            p.id === placer.id
-              ? { ...p, keptTiles: [...p.keptTiles, tileTransaction.tile] }
-              : p
-          )
-        );
-      }
-      setBoardTiles((prev) =>
-        prev.filter((bt) => bt.id !== tileTransaction.boardTileId)
-      );
-      advanceTurnNormally(tileTransaction.placerId);
-    } else {
-      // 'accept'
-      setGameState("PENDING_CHALLENGE");
-
-      const bystanderPlayers = players.filter(
-        (p) =>
-          p.id !== tileTransaction.placerId &&
-          p.id !== tileTransaction.receiverId
-      );
-      const placerIndex = players.findIndex(
-        (p) => p.id === tileTransaction.placerId
-      );
-
-      const sortedBystanders = bystanderPlayers.sort((a, b) => {
-        const indexA = players.findIndex((p) => p.id === a.id);
-        const indexB = players.findIndex((p) => p.id === b.id);
-        const relativeA = (indexA - placerIndex + playerCount) % playerCount;
-        const relativeB = (indexB - placerIndex + playerCount) % playerCount;
-        return relativeA - relativeB;
-      });
-
-      if (sortedBystanders.length > 0) {
-        setBystanders(sortedBystanders);
-        setBystanderIndex(0);
-        const firstBystanderIndex = players.findIndex(
-          (p) => p.id === sortedBystanders[0].id
-        );
-        setCurrentPlayerIndex(firstBystanderIndex);
-      } else {
-        resolveTransaction(false);
-      }
-    }
-  };
-
-  const handleBystanderDecision = (decision: "challenge" | "pass") => {
-    if (decision === "challenge") {
-      if (tileTransaction) {
-        setChallengedTile(tileTransaction.tile);
-        setShowChallengeRevealModal(true);
-      }
-    } else {
-      // 'pass'
-      const nextBystanderIndex = bystanderIndex + 1;
-      if (nextBystanderIndex >= bystanders.length) {
-        resolveTransaction(false);
-      } else {
-        setBystanderIndex(nextBystanderIndex);
-        const nextBystander = bystanders[nextBystanderIndex];
-        const nextBystanderPlayerIndex = players.findIndex(
-          (p) => p.id === nextBystander.id
-        );
-        setCurrentPlayerIndex(nextBystanderPlayerIndex);
-      }
-    }
-  };
-
-  const handleContinueAfterChallenge = () => {
-    setShowChallengeRevealModal(false);
-    resolveTransaction(true);
-    setChallengedTile(null);
   };
 
   // ============================================================================

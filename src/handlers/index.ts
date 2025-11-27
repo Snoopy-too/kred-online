@@ -29,3 +29,9 @@ export {
   createTilePlayHandlers,
   type TilePlayDependencies,
 } from "./tilePlayHandlers";
+
+export {
+  createChallengeFlowHandlers,
+  type ChallengeFlowDependencies,
+  type TileTransaction,
+} from "./challengeFlowHandlers";
