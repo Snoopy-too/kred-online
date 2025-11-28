@@ -33,18 +33,18 @@ Test Count: 1,056 tests
 
 ### Module Structure
 
-| Module | Files | Lines | Purpose |
-|--------|-------|-------|---------|
-| `src/config/` | 7 | ~1,200 | Static game configuration |
-| `src/types/` | 10 | ~400 | TypeScript interfaces |
-| `src/utils/` | 4 | ~200 | Pure utility functions |
-| `src/game/` | 9 | ~900 | Core game logic |
-| `src/rules/` | 7 | ~500 | Game rules validation |
-| `src/hooks/` | 10 | ~600 | React state hooks |
-| `src/handlers/` | 6 | ~1,500 | Handler factories |
-| `src/components/` | 7 | ~800 | React components |
-| `App.tsx` | 1 | 3,416 | Main orchestrator |
-| `game.ts` | 1 | 229 | Legacy re-exports |
+| Module            | Files | Lines  | Purpose                   |
+| ----------------- | ----- | ------ | ------------------------- |
+| `src/config/`     | 7     | ~1,200 | Static game configuration |
+| `src/types/`      | 10    | ~400   | TypeScript interfaces     |
+| `src/utils/`      | 4     | ~200   | Pure utility functions    |
+| `src/game/`       | 9     | ~900   | Core game logic           |
+| `src/rules/`      | 7     | ~500   | Game rules validation     |
+| `src/hooks/`      | 10    | ~600   | React state hooks         |
+| `src/handlers/`   | 6     | ~1,500 | Handler factories         |
+| `src/components/` | 7     | ~800   | React components          |
+| `App.tsx`         | 1     | 3,416  | Main orchestrator         |
+| `game.ts`         | 1     | 229    | Legacy re-exports         |
 
 ### Strengths
 
@@ -68,15 +68,15 @@ Test Count: 1,056 tests
 
 ### Overall Quality Score: **B+** (Good)
 
-| Aspect | Score | Notes |
-|--------|-------|-------|
-| Architecture | A | Well-organized modular structure |
-| Type Safety | B+ | Strong, but some gaps |
-| Test Coverage | A | 1,056 tests |
-| Code Duplication | B | Some patterns repeated |
-| Documentation | B+ | Good comments, architecture docs |
-| Performance | B | Room for optimization |
-| Maintainability | B+ | Clear patterns, some large files |
+| Aspect           | Score | Notes                            |
+| ---------------- | ----- | -------------------------------- |
+| Architecture     | A     | Well-organized modular structure |
+| Type Safety      | B+    | Strong, but some gaps            |
+| Test Coverage    | A     | 1,056 tests                      |
+| Code Duplication | B     | Some patterns repeated           |
+| Documentation    | B+    | Good comments, architecture docs |
+| Performance      | B     | Room for optimization            |
+| Maintainability  | B+    | Clear patterns, some large files |
 
 ### What's Working Well
 
@@ -92,35 +92,35 @@ Test Count: 1,056 tests
 
 ### 🔴 Critical Issues (Should Fix)
 
-| Issue | Location | Impact |
-|-------|----------|--------|
-| Import from `../../game` instead of types | `src/config/bureaucracy.ts:10` | Coupling to legacy file |
-| `any[]` type used | `src/handlers/tilePlayHandlers.ts:48` | Type safety hole |
-| Console.log in production | `src/game/validation.ts:40-74` | Performance, security |
+| Issue                                     | Location                              | Impact                  |
+| ----------------------------------------- | ------------------------------------- | ----------------------- |
+| Import from `../../game` instead of types | `src/config/bureaucracy.ts:10`        | Coupling to legacy file |
+| `any[]` type used                         | `src/handlers/tilePlayHandlers.ts:48` | Type safety hole        |
+| Console.log in production                 | `src/game/validation.ts:40-74`        | Performance, security   |
 
 ### 🟡 High Priority Issues
 
-| Issue | Location | Impact |
-|-------|----------|--------|
-| Missing `displayName` on Piece type | `src/types/piece.ts` | Runtime property mismatch |
-| Empty description fields | `src/config/bureaucracy.ts` | Poor UX |
-| Inconsistent import paths | Multiple files | Maintainability |
+| Issue                               | Location                    | Impact                    |
+| ----------------------------------- | --------------------------- | ------------------------- |
+| Missing `displayName` on Piece type | `src/types/piece.ts`        | Runtime property mismatch |
+| Empty description fields            | `src/config/bureaucracy.ts` | Poor UX                   |
+| Inconsistent import paths           | Multiple files              | Maintainability           |
 
 ### 🟠 Medium Priority Issues
 
-| Issue | Location | Impact |
-|-------|----------|--------|
-| `shuffle()` mutates input array | `src/utils/array.ts:31-45` | Unexpected side effects |
-| Large dependency arrays in useMemo | `App.tsx:420-520` | Potential stale closures |
-| Duplicate initialization logic | `src/game/initialization.ts:115-200` | Code bloat |
+| Issue                              | Location                             | Impact                   |
+| ---------------------------------- | ------------------------------------ | ------------------------ |
+| `shuffle()` mutates input array    | `src/utils/array.ts:31-45`           | Unexpected side effects  |
+| Large dependency arrays in useMemo | `App.tsx:420-520`                    | Potential stale closures |
+| Duplicate initialization logic     | `src/game/initialization.ts:115-200` | Code bloat               |
 
 ### 🟢 Low Priority Issues
 
-| Issue | Location | Impact |
-|-------|----------|--------|
-| Empty `board/` directory | `src/components/board/` | Cleanup needed |
-| Legacy `game.ts` re-exports | `game.ts` | Technical debt |
-| Hardcoded magic numbers | `src/config/pieces.ts` | Maintainability |
+| Issue                       | Location                | Impact          |
+| --------------------------- | ----------------------- | --------------- |
+| Empty `board/` directory    | `src/components/board/` | Cleanup needed  |
+| Legacy `game.ts` re-exports | `game.ts`               | Technical debt  |
+| Hardcoded magic numbers     | `src/config/pieces.ts`  | Maintainability |
 
 ---
 
@@ -135,8 +135,8 @@ Estimated Time: 2-4 hours (with AI), 4-8 hours (manual)
 1. **Fix Critical Type Issues**
    - Change `any[]` to `TrackedMove[]` in tilePlayHandlers
    - Fix import paths in bureaucracy.ts
-   
 2. **Remove Debug Code**
+
    - Remove or wrap console.log statements in validation.ts
 
 3. **Add Missing Type Property**
@@ -149,13 +149,16 @@ Estimated Time: 8-16 hours (with AI), 24-40 hours (manual)
 ```
 
 1. **Consolidate Root-Level Files**
+
    - Merge `utils.ts` and `constants.ts` into `src/` modules
    - Remove `game.ts` after migrating imports
 
 2. **Fix shuffle() Purity**
+
    - Make it return new array instead of mutating
 
 3. **Fill Empty Descriptions**
+
    - Add meaningful descriptions to bureaucracy menu items
 
 4. **Standardize Import Paths**
@@ -168,16 +171,19 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 ```
 
 1. **Further Decompose App.tsx**
+
    - Target: 3,416 → ~1,000 lines
    - Extract bureaucracy handlers to hook
    - Extract take advantage handlers to hook
    - Extract correction handlers to hook
 
 2. **Use useReducer for Complex State**
+
    - Replace 17+ useState calls in useChallengeFlow
    - Improve state management predictability
 
 3. **Add State Machine (XState)**
+
    - Model game flow as explicit state machine
    - Clearer transitions, guards, and side effects
 
@@ -192,31 +198,31 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 
 ### Without AI Assistance
 
-| Task | Junior Dev | Mid-Level Dev | Senior Dev |
-|------|------------|---------------|------------|
-| Critical Fixes | 8-12 hrs | 4-6 hrs | 2-3 hrs |
-| Short-Term Improvements | 40-60 hrs | 24-32 hrs | 16-24 hrs |
-| App.tsx Decomposition | 80-120 hrs | 50-70 hrs | 30-50 hrs |
-| State Machine Migration | 60-100 hrs | 40-60 hrs | 25-40 hrs |
-| **Total** | **188-292 hrs** | **118-168 hrs** | **73-117 hrs** |
+| Task                    | Junior Dev      | Mid-Level Dev   | Senior Dev     |
+| ----------------------- | --------------- | --------------- | -------------- |
+| Critical Fixes          | 8-12 hrs        | 4-6 hrs         | 2-3 hrs        |
+| Short-Term Improvements | 40-60 hrs       | 24-32 hrs       | 16-24 hrs      |
+| App.tsx Decomposition   | 80-120 hrs      | 50-70 hrs       | 30-50 hrs      |
+| State Machine Migration | 60-100 hrs      | 40-60 hrs       | 25-40 hrs      |
+| **Total**               | **188-292 hrs** | **118-168 hrs** | **73-117 hrs** |
 
 ### With AI Assistance
 
-| Task | With AI (Copilot-level) |
-|------|-------------------------|
-| Critical Fixes | 1-2 hrs |
-| Short-Term Improvements | 4-8 hrs |
-| App.tsx Decomposition | 8-16 hrs |
-| State Machine Migration | 12-20 hrs |
-| **Total** | **25-46 hrs** |
+| Task                    | With AI (Copilot-level) |
+| ----------------------- | ----------------------- |
+| Critical Fixes          | 1-2 hrs                 |
+| Short-Term Improvements | 4-8 hrs                 |
+| App.tsx Decomposition   | 8-16 hrs                |
+| State Machine Migration | 12-20 hrs               |
+| **Total**               | **25-46 hrs**           |
 
 ### Cost Analysis (Assuming $100/hr average developer cost)
 
-| Approach | Time | Cost |
-|----------|------|------|
+| Approach              | Time        | Cost              |
+| --------------------- | ----------- | ----------------- |
 | Mid-Level Dev (no AI) | 118-168 hrs | $11,800 - $16,800 |
-| Senior Dev (no AI) | 73-117 hrs | $7,300 - $11,700 |
-| With AI Assistance | 25-46 hrs | $2,500 - $4,600 |
+| Senior Dev (no AI)    | 73-117 hrs  | $7,300 - $11,700  |
+| With AI Assistance    | 25-46 hrs   | $2,500 - $4,600   |
 
 ---
 
@@ -225,12 +231,14 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 ### What the Project Would Gain
 
 #### From Critical Fixes Only (2-4 hours)
+
 - ✅ Type safety restored
 - ✅ No debug code in production
 - ✅ Cleaner builds
 - **ROI**: Very High - minimal effort, prevents bugs
 
 #### From Short-Term Improvements (8-16 hours)
+
 - ✅ Cleaner import structure
 - ✅ Reduced technical debt
 - ✅ Better UX (menu descriptions)
@@ -238,6 +246,7 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 - **ROI**: High - moderate effort, significant maintainability gains
 
 #### From App.tsx Decomposition (40-80 hours)
+
 - ✅ Smaller, testable files
 - ✅ Better separation of concerns
 - ✅ Easier debugging
@@ -245,6 +254,7 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 - **ROI**: Medium - significant effort, moderate gains (code already works)
 
 #### From State Machine Migration (60-100 hours)
+
 - ✅ Explicit state transitions
 - ✅ Easier to reason about game flow
 - ✅ Built-in visualization tools
@@ -254,12 +264,12 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 
 ### Recommendation Matrix
 
-| If Your Priority Is... | Do This |
-|------------------------|---------|
-| Ship ASAP | Critical fixes only (2-4 hrs) |
-| Maintainability | Critical + Short-term (10-20 hrs) |
-| Long-term health | Critical + Short-term + Decomposition (50-100 hrs) |
-| Building a team | All of the above + State Machine (110-180 hrs) |
+| If Your Priority Is... | Do This                                            |
+| ---------------------- | -------------------------------------------------- |
+| Ship ASAP              | Critical fixes only (2-4 hrs)                      |
+| Maintainability        | Critical + Short-term (10-20 hrs)                  |
+| Long-term health       | Critical + Short-term + Decomposition (50-100 hrs) |
+| Building a team        | All of the above + State Machine (110-180 hrs)     |
 
 ---
 
@@ -268,6 +278,7 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 ### Immediate (Do Now)
 
 1. **Fix the 3 critical issues** - 2 hours
+
    - `any[]` → `TrackedMove[]`
    - Fix import path in bureaucracy.ts
    - Remove console.log statements
@@ -278,6 +289,7 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 ### Short-Term (Next Sprint)
 
 3. **Standardize imports** - 4 hours
+
    - Update all files to use `src/` prefix
    - Remove `game.ts` legacy file
 
@@ -288,6 +300,7 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 ### Medium-Term (If Continuing Development)
 
 5. **Decompose App.tsx** - Only if:
+
    - Adding significant new features
    - Onboarding new team members
    - Experiencing bugs in complex handlers
@@ -307,7 +320,7 @@ Estimated Time: 40-80 hours (with AI), 120-200 hours (manual)
 
 ## Summary
 
-The KRED online codebase is in **good shape** after the refactoring effort. The remaining issues are minor and the code is maintainable. 
+The KRED online codebase is in **good shape** after the refactoring effort. The remaining issues are minor and the code is maintainable.
 
 **For a working game application**, the current state is production-ready with just the critical fixes applied.
 
@@ -317,14 +330,14 @@ The KRED online codebase is in **good shape** after the refactoring effort. The 
 
 ### Bottom Line
 
-| Scenario | Recommended Action | Time Investment |
-|----------|-------------------|-----------------|
-| Personal project | Critical fixes only | 2-4 hours |
-| Small team | Critical + Short-term | 10-20 hours |
-| Commercial product | Full improvements | 50-100 hours |
+| Scenario           | Recommended Action    | Time Investment |
+| ------------------ | --------------------- | --------------- |
+| Personal project   | Critical fixes only   | 2-4 hours       |
+| Small team         | Critical + Short-term | 10-20 hours     |
+| Commercial product | Full improvements     | 50-100 hours    |
 
 The refactoring has already achieved 80% of the value. The remaining 20% follows the law of diminishing returns.
 
 ---
 
-*Assessment completed November 28, 2025*
+_Assessment completed November 28, 2025_

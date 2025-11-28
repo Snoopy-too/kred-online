@@ -15,54 +15,64 @@ The KRED online board game codebase has been successfully refactored from two mo
 
 ## Before & After Metrics
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| `game.ts` | 3,803 lines | 975 lines | **-74%** |
-| `App.tsx` | 6,821 lines | 3,416 lines | **-50%** |
-| **Total** | 10,624 lines | 4,391 lines | **-59%** |
-| Test Coverage | 0 tests | 1,056 tests | ✅ |
-| Modules | 2 files | 50+ files | Modular |
+| Metric        | Before       | After       | Improvement |
+| ------------- | ------------ | ----------- | ----------- |
+| `game.ts`     | 3,803 lines  | 975 lines   | **-74%**    |
+| `App.tsx`     | 6,821 lines  | 3,416 lines | **-50%**    |
+| **Total**     | 10,624 lines | 4,391 lines | **-59%**    |
+| Test Coverage | 0 tests      | 1,056 tests | ✅          |
+| Modules       | 2 files      | 50+ files   | Modular     |
 
 ---
 
 ## Refactoring Phases Completed
 
 ### Phase 1: Test Infrastructure
+
 - Set up Vitest + React Testing Library
 - Created initial smoke and integration tests
 
 ### Phase 2: Configuration Extraction
+
 - Extracted static configuration to `src/config/`
 - 6 config files: constants, tiles, pieces, board, rules, bureaucracy
 
 ### Phase 3: Type Extraction
+
 - Moved TypeScript interfaces to `src/types/`
 - 9 type files covering all game entities
 
 ### Phase 3b: Utils Extraction
+
 - Pure utility functions to `src/utils/`
 - positioning, formatting, array utilities
 
 ### Phase 4: Game Initialization
+
 - Initialization logic to `src/game/initialization.ts`
 
 ### Phase 5: Game Logic & Rules
+
 - Game logic to `src/game/`
 - Rules to `src/rules/`
 
 ### Phase 6: Validation & Move Types
+
 - Complex validation to `src/game/`
 - tile-validation, validation, bureaucracy, move-types
 
 ### Phase 7: React Components & Hooks
+
 - Screen components to `src/components/screens/`
 - 9 custom hooks to `src/hooks/`
 
 ### Phase 8: Handler Extraction
+
 - Handler factories to `src/handlers/`
 - 5 handler modules with dependency injection
 
 ### Phase 9: Code Cleanup & Patterns
+
 - Added helper functions (`getPlayerById`, `getPieceById`)
 - Standardized patterns across codebase
 - Cleaned up duplicate code
@@ -151,46 +161,52 @@ src/
 
 ## Test Distribution
 
-| Category | Tests |
-|----------|-------|
-| Config | 282 |
-| Types | 26 |
-| Utils | 62 |
-| Game | 217 |
-| Rules | 103 |
-| Hooks | 214 |
-| Components | 20 |
-| Integration | 55 |
-| Other | 77 |
-| **Total** | **1,056** |
+| Category    | Tests     |
+| ----------- | --------- |
+| Config      | 282       |
+| Types       | 26        |
+| Utils       | 62        |
+| Game        | 217       |
+| Rules       | 103       |
+| Hooks       | 214       |
+| Components  | 20        |
+| Integration | 55        |
+| Other       | 77        |
+| **Total**   | **1,056** |
 
 ---
 
 ## Key Patterns Established
 
 ### 1. Handler Factory Pattern
+
 ```typescript
 const handlers = createGameFlowHandlers({
   players, pieces, setGameState, ...
 });
 ```
+
 - Clear dependency injection
 - Testable in isolation
 - Self-documenting dependencies
 
 ### 2. Custom Hook Pattern
+
 ```typescript
 const { gameState, players, setPlayers } = useGameState();
 ```
+
 - Related state grouped together
 - Clean component interface
 - Easy to test and mock
 
 ### 3. Helper Function Pattern
+
 ```typescript
 const player = getPlayerById(players, playerId);
 const piece = getPieceById(pieces, pieceId);
 ```
+
 - Reduces duplication
 - Improves readability
 - Centralizes null handling
@@ -223,6 +239,7 @@ These handlers are tightly coupled to 10+ state setters each, making further ext
 ## Git Workflow
 
 All changes were made via atomic commits:
+
 - `npm run build` ✅
 - `npm test -- --run` ✅
 - Manual smoke test ✅
