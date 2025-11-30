@@ -1133,8 +1133,8 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
   // Step 3: Place additional Marks in community
   let additionalMarkCount: number;
   if (playerCount === 4) {
-    // 4-player: 14 total - 12 in seats = 2 in community
-    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
+    // 4-player: 14 total - 12 in seats = 2, + 1 extra starting Mark = 3 in community
+    additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3) + 1;
   } else if (playerCount === 5) {
     // 5-player: 18 total - 15 in seats = 3 in community
     additionalMarkCount = PIECE_COUNTS_BY_PLAYER_COUNT[playerCount].MARK - (playerCount * 3);
