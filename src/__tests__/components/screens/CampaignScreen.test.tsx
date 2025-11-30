@@ -351,4 +351,130 @@ describe("CampaignScreen", () => {
     fireEvent.click(checkbox);
     expect(mockSetShowGridOverlay).toHaveBeenCalledWith(true);
   });
+
+  // Test Mode Tools Tests
+  describe("Test Mode Tools", () => {
+    it("should display Credibility Rotation Adjuster in test mode", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+      expect(screen.getByText(/Credibility Rotation Adjuster/)).toBeInTheDocument();
+    });
+
+    it("should expand Credibility Rotation Adjuster when clicked", () => {
+      render(
+        <CampaignScreen
+          {...defaultProps}
+          isTestMode={true}
+          isCredibilityAdjusterExpanded={true}
+        />
+      );
+      // When expanded, should show rotation adjustment buttons
+      expect(screen.getAllByText(/\+15°/).length).toBeGreaterThan(0);
+    });
+
+    it("should display Credibility System Rules in test mode", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+      expect(screen.getByText(/Credibility System Rules/)).toBeInTheDocument();
+    });
+
+    it("should expand Credibility Rules when clicked", () => {
+      render(
+        <CampaignScreen
+          {...defaultProps}
+          isTestMode={true}
+          isCredibilityRulesExpanded={true}
+        />
+      );
+      // When expanded, should show rules content
+      expect(screen.getByText(/Lose 1 Credibility if:/)).toBeInTheDocument();
+    });
+
+    it("should display Kredcoin Tracker in test mode", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+      expect(screen.getByText(/Kredcoin Tracker/)).toBeInTheDocument();
+    });
+
+    it("should display Create Dummy Tile button in test mode when no dummy tile exists", () => {
+      render(
+        <CampaignScreen {...defaultProps} isTestMode={true} dummyTile={null} />
+      );
+      expect(screen.getByText(/Create Dummy Tile/)).toBeInTheDocument();
+    });
+
+    it("should display Dummy Tile Tracker when dummy tile exists in test mode", () => {
+      const dummyTile = { position: { top: 50, left: 50 }, rotation: 0 };
+      render(
+        <CampaignScreen {...defaultProps} isTestMode={true} dummyTile={dummyTile} />
+      );
+      expect(screen.getByText(/Dummy Tile Tracker/)).toBeInTheDocument();
+    });
+
+    it("should display Piece Tracker in test mode", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+      expect(screen.getByText(/Piece Tracker/)).toBeInTheDocument();
+    });
+
+    it("should expand Piece Tracker and show pieces when clicked", () => {
+      render(
+        <CampaignScreen
+          {...defaultProps}
+          isTestMode={true}
+          isPieceTrackerExpanded={true}
+        />
+      );
+      // When expanded, should show piece information
+      expect(screen.getByText(/Mark/)).toBeInTheDocument();
+    });
+
+    it("should not display test mode tools when not in test mode", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={false} />);
+      expect(screen.queryByText(/Credibility Rotation Adjuster/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Credibility System Rules/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Kredcoin Tracker/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Piece Tracker/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Create Dummy Tile/)).not.toBeInTheDocument();
+    });
+
+    it("should call setIsCredibilityAdjusterExpanded when toggled", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+      const adjusterButton = screen.getByText(/Credibility Rotation Adjuster/);
+      fireEvent.click(adjusterButton);
+      expect(mockSetIsCredibilityAdjusterExpanded).toHaveBeenCalledWith(true);
+    });
+
+    it("should call setIsCredibilityRulesExpanded when toggled", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+      const rulesButton = screen.getByText(/Credibility System Rules/);
+      fireEvent.click(rulesButton);
+      expect(mockSetIsCredibilityRulesExpanded).toHaveBeenCalledWith(true);
+    });
+
+    it("should call setIsPieceTrackerExpanded when toggled", () => {
+      render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+      const trackerButton = screen.getByText(/Piece Tracker/);
+      fireEvent.click(trackerButton);
+      expect(mockSetIsPieceTrackerExpanded).toHaveBeenCalledWith(true);
+    });
+
+    it("should call setDummyTile when Create Dummy Tile button is clicked", () => {
+      render(
+        <CampaignScreen {...defaultProps} isTestMode={true} dummyTile={null} />
+      );
+      const createButton = screen.getByText(/Create Dummy Tile/);
+      fireEvent.click(createButton);
+      expect(mockSetDummyTile).toHaveBeenCalledWith({
+        position: { top: 50, left: 50 },
+        rotation: 0,
+      });
+    });
+
+    it("should call setDummyTile with null when Delete Tile button is clicked", () => {
+      const dummyTile = { position: { top: 50, left: 50 }, rotation: 0 };
+      render(
+        <CampaignScreen {...defaultProps} isTestMode={true} dummyTile={dummyTile} />
+      );
+      const deleteButton = screen.getByText(/Delete Tile/);
+      fireEvent.click(deleteButton);
+      expect(mockSetDummyTile).toHaveBeenCalledWith(null);
+    });
+  });
 });
