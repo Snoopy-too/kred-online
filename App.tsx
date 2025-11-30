@@ -390,7 +390,7 @@ const BureaucracyScreen: React.FC<{
     }
 
     return (
-      <main className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center p-4 font-sans text-slate-100">
+      <main className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-start p-4 font-sans text-slate-100">
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
@@ -424,7 +424,7 @@ const BureaucracyScreen: React.FC<{
         )}
 
         {/* Main Content: Board and Menu Side by Side */}
-        <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start justify-center">
+        <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start justify-start ml-[90px]">
           {/* Game Board */}
           <div className="relative w-full lg:w-2/3 aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
             <div
@@ -1175,12 +1175,12 @@ const CampaignScreen: React.FC<{
   const indicatorScaleStyle = dropIndicator ? { transform: 'scale(0.84)' } : {};
 
   return (
-    <main className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans">
-      <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
+    <main className="min-h-screen w-full bg-[#808080] flex flex-col items-start justify-start p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8 ml-[90px]">
 
         {/* Main Content (Board, Hand, etc.) */}
         <div
-          className="flex-1 flex flex-col items-center min-w-0"
+          className="flex-1 flex flex-col items-start min-w-0"
           style={{
             perspective: '1200px',
             perspectiveOrigin: '50% 100%'
@@ -2162,7 +2162,7 @@ const CampaignScreen: React.FC<{
 
       {/* Take Advantage Action Menu */}
       {showTakeAdvantageMenu && takeAdvantageChallengerId !== null && (
-        <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 flex items-start justify-start z-50 overflow-y-auto">
           <div className="w-full max-w-7xl my-8 px-4">
             <div className="bg-gray-900 rounded-lg shadow-2xl border-2 border-yellow-600 p-6">
               {/* Header */}
@@ -2193,7 +2193,7 @@ const CampaignScreen: React.FC<{
               )}
 
               {/* Main Content: Board and Menu Side by Side */}
-              <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
+              <div className="flex flex-col lg:flex-row gap-6 items-start justify-start ml-[90px]">
                 {/* Board Section */}
                 <div className="w-full lg:w-2/3">
                   <div className="relative aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
