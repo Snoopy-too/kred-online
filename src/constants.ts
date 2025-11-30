@@ -666,9 +666,9 @@ const THREE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
 ];
 
 const FOUR_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
-    { ownerId: 1, position: { left: 10.57, top: 52.44 }, rotation: 157.0 },
+    { ownerId: 1, position: { left: 8.44, top: 53.42 }, rotation: 157.0 },
     { ownerId: 2, position: { left: 48.91, top: 13.18 }, rotation: 247.0 },
-    { ownerId: 3, position: { left: 89.11, top: 48.14 }, rotation: 337.0 },
+    { ownerId: 3, position: { left: 92.33, top: 49.51 }, rotation: 338.0 },
     { ownerId: 4, position: { left: 52.34, top: 88.09 }, rotation: 67.0 },
 ];
 

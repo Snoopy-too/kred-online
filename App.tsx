@@ -1539,9 +1539,9 @@ const CampaignScreen: React.FC<{
                     ? "You have played a tile this turn."
                     : "Drag a tile to another player's receiving area."}
               </p>
-              <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[6rem]">
+              <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[9rem]">
                 {currentPlayer?.keptTiles.map(tile => (
-                  <div key={tile.id} draggable={!hasPlayedTileThisTurn} onDragStart={(e) => handleDragStartTile(e, tile.id)} onDragEnd={() => setIsDraggingTile(false)} className={`bg-stone-100 w-10 h-20 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 ${hasPlayedTileThisTurn || gameState !== 'CAMPAIGN' ? 'cursor-not-allowed opacity-60' : 'cursor-grab'}`} >
+                  <div key={tile.id} draggable={!hasPlayedTileThisTurn} onDragStart={(e) => handleDragStartTile(e, tile.id)} onDragEnd={() => setIsDraggingTile(false)} className={`bg-stone-100 w-16 h-32 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 ${hasPlayedTileThisTurn || gameState !== 'CAMPAIGN' ? 'cursor-not-allowed opacity-60' : 'cursor-grab'}`} >
                     <img src={tile.url} alt={`Tile ${tile.id}`} className="w-full h-full object-contain" />
                   </div>
                 ))}
