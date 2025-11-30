@@ -241,6 +241,8 @@ const BureaucracyScreen: React.FC<{
   isTestMode: boolean;
   BOARD_IMAGE_URLS: { [key: number]: string };
   credibilityRotationAdjustments: { [playerId: number]: number };
+  hoveredPieceId: string | null;
+  setHoveredPieceId: (pieceId: string | null) => void;
 }> = ({
   players,
   pieces,
@@ -268,6 +270,8 @@ const BureaucracyScreen: React.FC<{
   isTestMode,
   BOARD_IMAGE_URLS,
   credibilityRotationAdjustments,
+  hoveredPieceId,
+  setHoveredPieceId,
 }) => {
     const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
     const currentPlayer = players.find(p => p.id === currentPlayerId);
@@ -920,7 +924,9 @@ const CampaignScreen: React.FC<{
   onResetTakeAdvantageAction: () => void;
   onDoneTakeAdvantageAction: () => void;
   onTakeAdvantagePiecePromote: (pieceId: string) => void;
-}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, showGridOverlay, setShowGridOverlay, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove, showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility, showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage, showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError, onTakeAdvantageDecline, onTakeAdvantageYes, onRecoverCredibility, onPurchaseMove, onToggleTileSelection, onConfirmTileSelection, onCancelTileSelection, onSelectTakeAdvantageAction, onResetTakeAdvantageAction, onDoneTakeAdvantageAction, onTakeAdvantagePiecePromote }) => {
+  hoveredPieceId: string | null;
+  setHoveredPieceId: (pieceId: string | null) => void;
+}> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, showGridOverlay, setShowGridOverlay, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove, showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility, showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage, showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError, onTakeAdvantageDecline, onTakeAdvantageYes, onRecoverCredibility, onPurchaseMove, onToggleTileSelection, onConfirmTileSelection, onCancelTileSelection, onSelectTakeAdvantageAction, onResetTakeAdvantageAction, onDoneTakeAdvantageAction, onTakeAdvantagePiecePromote, hoveredPieceId, setHoveredPieceId }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{ x: number, y: number } | null>(null);
@@ -5616,6 +5622,8 @@ const App: React.FC = () => {
             isTestMode={isTestMode}
             BOARD_IMAGE_URLS={BOARD_IMAGE_URLS}
             credibilityRotationAdjustments={credibilityRotationAdjustments}
+            hoveredPieceId={hoveredPieceId}
+            setHoveredPieceId={setHoveredPieceId}
           />
         );
       case 'CAMPAIGN':
@@ -5719,6 +5727,8 @@ const App: React.FC = () => {
             onResetTakeAdvantageAction={handleResetTakeAdvantageAction}
             onDoneTakeAdvantageAction={handleDoneTakeAdvantageAction}
             onTakeAdvantagePiecePromote={handleTakeAdvantagePiecePromote}
+            hoveredPieceId={hoveredPieceId}
+            setHoveredPieceId={setHoveredPieceId}
           />
         );
       case 'PLAYER_SELECTION':
