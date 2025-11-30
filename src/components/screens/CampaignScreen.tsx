@@ -1406,7 +1406,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               <div className="mt-8 bg-gray-700 rounded-lg p-4">
                 <button
                   onClick={() =>
-                    setIsCredibilityAdjusterExpanded(!isCredibilityAdjusterExpanded)
+                    setIsCredibilityAdjusterExpanded(
+                      !isCredibilityAdjusterExpanded
+                    )
                   }
                   className="w-full text-left flex items-center justify-between mb-4"
                 >
@@ -1422,10 +1424,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                     {Array.from({ length: playerCount }, (_, i) => i + 1).map(
                       (playerId) => {
                         const credibilityLocations =
-                          CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+                          CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] ||
+                          [];
                         const baseRotation =
-                          credibilityLocations.find((loc) => loc.ownerId === playerId)
-                            ?.rotation || 0;
+                          credibilityLocations.find(
+                            (loc) => loc.ownerId === playerId
+                          )?.rotation || 0;
                         const adjustment =
                           credibilityRotationAdjustments[playerId] || 0;
                         const finalRotation = baseRotation + adjustment;
@@ -1461,8 +1465,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                   setCredibilityRotationAdjustments({
                                     ...credibilityRotationAdjustments,
                                     [playerId]:
-                                      (credibilityRotationAdjustments[playerId] || 0) -
-                                      15,
+                                      (credibilityRotationAdjustments[
+                                        playerId
+                                      ] || 0) - 15,
                                   })
                                 }
                                 className="px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
@@ -1474,8 +1479,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                   setCredibilityRotationAdjustments({
                                     ...credibilityRotationAdjustments,
                                     [playerId]:
-                                      (credibilityRotationAdjustments[playerId] || 0) -
-                                      1,
+                                      (credibilityRotationAdjustments[
+                                        playerId
+                                      ] || 0) - 1,
                                   })
                                 }
                                 className="px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-500 transition-colors"
@@ -1498,8 +1504,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                   setCredibilityRotationAdjustments({
                                     ...credibilityRotationAdjustments,
                                     [playerId]:
-                                      (credibilityRotationAdjustments[playerId] || 0) +
-                                      1,
+                                      (credibilityRotationAdjustments[
+                                        playerId
+                                      ] || 0) + 1,
                                   })
                                 }
                                 className="px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-500 transition-colors"
@@ -1511,8 +1518,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                   setCredibilityRotationAdjustments({
                                     ...credibilityRotationAdjustments,
                                     [playerId]:
-                                      (credibilityRotationAdjustments[playerId] || 0) +
-                                      15,
+                                      (credibilityRotationAdjustments[
+                                        playerId
+                                      ] || 0) + 15,
                                   })
                                 }
                                 className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-500 transition-colors"
@@ -1553,30 +1561,34 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                       </p>
                       <ul className="list-disc list-inside space-y-1 text-slate-400">
                         <li>
-                          You play a tile that doesn't perfectly meet requirements
-                          AND receiving player rejects it
+                          You play a tile that doesn't perfectly meet
+                          requirements AND receiving player rejects it
                         </li>
                         <li>
-                          You play a tile that doesn't perfectly meet requirements
-                          AND another player successfully challenges it
+                          You play a tile that doesn't perfectly meet
+                          requirements AND another player successfully
+                          challenges it
                         </li>
                         <li>
-                          You unsuccessfully challenge another player's move (they
-                          played perfectly)
+                          You unsuccessfully challenge another player's move
+                          (they played perfectly)
                         </li>
                         <li>
-                          Another player successfully challenges on a tile that you
-                          accepted
+                          Another player successfully challenges on a tile that
+                          you accepted
                         </li>
                       </ul>
                     </div>
                     <div className="bg-gray-800 rounded p-2 border-l-4 border-blue-500">
-                      <p className="font-semibold text-blue-400 mb-1">Game Rules:</p>
+                      <p className="font-semibold text-blue-400 mb-1">
+                        Game Rules:
+                      </p>
                       <ul className="list-disc list-inside space-y-1 text-slate-400">
                         <li>All players start with 3 Credibility</li>
                         <li>Credibility is shown on the board (0-3)</li>
                         <li>
-                          Perfect plays cannot be rejected - receiver must accept
+                          Perfect plays cannot be rejected - receiver must
+                          accept
                         </li>
                       </ul>
                     </div>
@@ -1586,13 +1598,13 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                       </p>
                       <ul className="list-disc list-inside space-y-1 text-slate-400">
                         <li>
-                          If you reject a tile that was not played perfectly, gain
-                          up to 2 credibility points (max 3 total)
+                          If you reject a tile that was not played perfectly,
+                          gain up to 2 credibility points (max 3 total)
                         </li>
                         <li>
-                          If you already have 3 credibility when rejecting, the game
-                          pauses and you may take an "Advance" move, then click
-                          Continue to resume
+                          If you already have 3 credibility when rejecting, the
+                          game pauses and you may take an "Advance" move, then
+                          click Continue to resume
                         </li>
                       </ul>
                     </div>
@@ -1601,7 +1613,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                         When Credibility = 0:
                       </p>
                       <ul className="list-disc list-inside space-y-1 text-slate-400">
-                        <li>You do not get the option to challenge any moves</li>
+                        <li>
+                          You do not get the option to challenge any moves
+                        </li>
                         <li>You are UNABLE to view tiles played to you</li>
                       </ul>
                     </div>
@@ -1663,7 +1677,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               <div className="mt-8">
                 <button
                   onClick={() =>
-                    setDummyTile({ position: { top: 50, left: 50 }, rotation: 0 })
+                    setDummyTile({
+                      position: { top: 50, left: 50 },
+                      rotation: 0,
+                    })
                   }
                   className="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-lg"
                 >
@@ -1740,7 +1757,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {isTestMode && (
               <div className="mt-8">
                 <button
-                  onClick={() => setIsPieceTrackerExpanded(!isPieceTrackerExpanded)}
+                  onClick={() =>
+                    setIsPieceTrackerExpanded(!isPieceTrackerExpanded)
+                  }
                   className="w-full text-left mb-4 flex items-center justify-between"
                 >
                   <h2 className="text-2xl font-bold text-slate-200">
