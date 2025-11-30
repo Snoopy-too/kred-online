@@ -491,6 +491,7 @@ const BureaucracyScreen: React.FC<{
                 const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
                 const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
+                const isHovered = hoveredPieceId === piece.id;
 
                 return (
                   <img
@@ -504,17 +505,20 @@ const BureaucracyScreen: React.FC<{
                       }
                     }}
                     onDragEnd={handleDragEndPiece}
+                    onMouseEnter={() => setHoveredPieceId(piece.id)}
+                    onMouseLeave={() => setHoveredPieceId(null)}
                     onClick={() => {
                       if (isPromotionPurchase) {
                         onPiecePromote(piece.id);
                       }
                     }}
-                    className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab' : 'cursor-not-allowed'}`}
+                    className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab' : 'cursor-not-allowed'} ${isHovered && isDraggable ? 'ring-4 ring-blue-400 ring-opacity-80 rounded-full' : ''}`}
                     style={{
                       position: 'absolute',
                       top: `${piece.position.top}%`,
                       left: `${piece.position.left}%`,
                       transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`,
+                      filter: isHovered && isDraggable ? 'brightness(1.2) drop-shadow(0 0 12px rgba(96, 165, 250, 0.9))' : undefined,
                     }}
                     aria-hidden="true"
                   />
@@ -1423,9 +1427,10 @@ const CampaignScreen: React.FC<{
 
               // Check if this piece has been moved this turn
               const hasMoved = movedPiecesThisTurn.has(piece.id);
+              const isHovered = hoveredPieceId === piece.id;
 
               return (
-                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved ? 'ring-4 ring-amber-400 ring-opacity-70 rounded-full' : ''}`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`, cursor: 'grab', filter: hasMoved ? 'brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))' : undefined }} aria-hidden="true" />
+                <img key={piece.id} src={piece.imageUrl} alt={piece.name} draggable="true" onDragStart={(e) => handleDragStartPiece(e, piece.id)} onDragEnd={handleDragEndPiece} onMouseEnter={() => setHoveredPieceId(piece.id)} onMouseLeave={() => setHoveredPieceId(null)} className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved ? 'ring-4 ring-amber-400 ring-opacity-70 rounded-full' : ''} ${isHovered && !hasMoved ? 'ring-4 ring-blue-400 ring-opacity-80 rounded-full' : ''}`} style={{ position: 'absolute', top: `${piece.position.top}%`, left: `${piece.position.left}%`, transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`, cursor: 'grab', filter: hasMoved ? 'brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))' : isHovered ? 'brightness(1.2) drop-shadow(0 0 12px rgba(96, 165, 250, 0.9))' : undefined }} aria-hidden="true" />
               );
             })}
 
@@ -2261,6 +2266,7 @@ const CampaignScreen: React.FC<{
 
                         const isPromotionPurchase = takeAdvantagePurchase?.item.type === 'PROMOTION';
                         const isDraggable = !isPromotionPurchase && takeAdvantagePurchase?.item.type === 'MOVE';
+                        const isHovered = hoveredPieceId === piece.id;
 
                         return (
                           <img
@@ -2274,18 +2280,21 @@ const CampaignScreen: React.FC<{
                               }
                             }}
                             onDragEnd={handleDragEndPiece}
+                            onMouseEnter={() => setHoveredPieceId(piece.id)}
+                            onMouseLeave={() => setHoveredPieceId(null)}
                             onClick={() => {
                               if (isPromotionPurchase) {
                                 onTakeAdvantagePiecePromote(piece.id);
                               }
                             }}
                             className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
-                              }`}
+                              } ${isHovered && isDraggable ? 'ring-4 ring-blue-400 ring-opacity-80 rounded-full' : ''}`}
                             style={{
                               position: 'absolute',
                               top: `${piece.position.top}%`,
                               left: `${piece.position.left}%`,
                               transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`,
+                              filter: isHovered && isDraggable ? 'brightness(1.2) drop-shadow(0 0 12px rgba(96, 165, 250, 0.9))' : undefined,
                             }}
                             aria-hidden="true"
                           />
@@ -2777,6 +2786,9 @@ const App: React.FC = () => {
 
   // State for tracking moved pieces this turn (one move per piece restriction)
   const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(new Set());
+
+  // State for piece hover highlighting
+  const [hoveredPieceId, setHoveredPieceId] = useState<string | null>(null);
 
   // Bureaucracy Phase State
   const [bureaucracyStates, setBureaucracyStates] = useState<BureaucracyPlayerState[]>([]);
