@@ -1401,7 +1401,409 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </div>
             )}
 
-            {/* Test mode controls and modals will be added in next sub-phases */}
+            {/* Credibility Rotation Adjuster (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8 bg-gray-700 rounded-lg p-4">
+                <button
+                  onClick={() =>
+                    setIsCredibilityAdjusterExpanded(!isCredibilityAdjusterExpanded)
+                  }
+                  className="w-full text-left flex items-center justify-between mb-4"
+                >
+                  <h3 className="text-lg font-bold text-slate-200">
+                    Credibility Rotation Adjuster
+                  </h3>
+                  <span className="text-slate-400 text-xl">
+                    {isCredibilityAdjusterExpanded ? "▼" : "▶"}
+                  </span>
+                </button>
+                {isCredibilityAdjusterExpanded && (
+                  <div className="space-y-4">
+                    {Array.from({ length: playerCount }, (_, i) => i + 1).map(
+                      (playerId) => {
+                        const credibilityLocations =
+                          CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+                        const baseRotation =
+                          credibilityLocations.find((loc) => loc.ownerId === playerId)
+                            ?.rotation || 0;
+                        const adjustment =
+                          credibilityRotationAdjustments[playerId] || 0;
+                        const finalRotation = baseRotation + adjustment;
+
+                        return (
+                          <div
+                            key={`cred-adj-${playerId}`}
+                            className="bg-gray-800 rounded-lg p-3 border border-gray-600"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-slate-200 font-semibold">
+                                Player {playerId}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                Base:{" "}
+                                <span className="text-cyan-400">
+                                  {baseRotation.toFixed(1)}°
+                                </span>{" "}
+                                | Adjustment:{" "}
+                                <span className="text-yellow-400">
+                                  {adjustment > 0 ? "+" : ""}
+                                  {adjustment}°
+                                </span>{" "}
+                                | Final:{" "}
+                                <span className="text-green-400">
+                                  {finalRotation.toFixed(1)}°
+                                </span>
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() =>
+                                  setCredibilityRotationAdjustments({
+                                    ...credibilityRotationAdjustments,
+                                    [playerId]:
+                                      (credibilityRotationAdjustments[playerId] || 0) -
+                                      15,
+                                  })
+                                }
+                                className="px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
+                              >
+                                -15°
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setCredibilityRotationAdjustments({
+                                    ...credibilityRotationAdjustments,
+                                    [playerId]:
+                                      (credibilityRotationAdjustments[playerId] || 0) -
+                                      1,
+                                  })
+                                }
+                                className="px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-500 transition-colors"
+                              >
+                                -1°
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setCredibilityRotationAdjustments({
+                                    ...credibilityRotationAdjustments,
+                                    [playerId]: 0,
+                                  })
+                                }
+                                className="px-2 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-500 transition-colors"
+                              >
+                                Reset
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setCredibilityRotationAdjustments({
+                                    ...credibilityRotationAdjustments,
+                                    [playerId]:
+                                      (credibilityRotationAdjustments[playerId] || 0) +
+                                      1,
+                                  })
+                                }
+                                className="px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-500 transition-colors"
+                              >
+                                +1°
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setCredibilityRotationAdjustments({
+                                    ...credibilityRotationAdjustments,
+                                    [playerId]:
+                                      (credibilityRotationAdjustments[playerId] || 0) +
+                                      15,
+                                  })
+                                }
+                                className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-500 transition-colors"
+                              >
+                                +15°
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Credibility Rules Info (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8 bg-gray-700 rounded-lg p-4">
+                <button
+                  onClick={() =>
+                    setIsCredibilityRulesExpanded(!isCredibilityRulesExpanded)
+                  }
+                  className="w-full text-left flex items-center justify-between mb-4"
+                >
+                  <h3 className="text-lg font-bold text-slate-200">
+                    Credibility System Rules
+                  </h3>
+                  <span className="text-slate-400 text-xl">
+                    {isCredibilityRulesExpanded ? "▼" : "▶"}
+                  </span>
+                </button>
+                {isCredibilityRulesExpanded && (
+                  <div className="space-y-3 text-xs text-slate-300">
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-red-500">
+                      <p className="font-semibold text-red-400 mb-1">
+                        Lose 1 Credibility if:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>
+                          You play a tile that doesn't perfectly meet requirements
+                          AND receiving player rejects it
+                        </li>
+                        <li>
+                          You play a tile that doesn't perfectly meet requirements
+                          AND another player successfully challenges it
+                        </li>
+                        <li>
+                          You unsuccessfully challenge another player's move (they
+                          played perfectly)
+                        </li>
+                        <li>
+                          Another player successfully challenges on a tile that you
+                          accepted
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-blue-500">
+                      <p className="font-semibold text-blue-400 mb-1">Game Rules:</p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>All players start with 3 Credibility</li>
+                        <li>Credibility is shown on the board (0-3)</li>
+                        <li>
+                          Perfect plays cannot be rejected - receiver must accept
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-green-500">
+                      <p className="font-semibold text-green-400 mb-1">
+                        Gain Credibility:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>
+                          If you reject a tile that was not played perfectly, gain
+                          up to 2 credibility points (max 3 total)
+                        </li>
+                        <li>
+                          If you already have 3 credibility when rejecting, the game
+                          pauses and you may take an "Advance" move, then click
+                          Continue to resume
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-yellow-500">
+                      <p className="font-semibold text-yellow-400 mb-1">
+                        When Credibility = 0:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>You do not get the option to challenge any moves</li>
+                        <li>You are UNABLE to view tiles played to you</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Kredcoin Tracker (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8 bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-amber-400 mb-4 text-center">
+                  ₭- Kredcoin Tracker
+                </h3>
+                <p className="text-xs text-slate-400 mb-4 text-center italic">
+                  Hidden in normal play • Only face-down banked tiles count
+                </p>
+                <div className="space-y-3">
+                  {players.map((player) => {
+                    const kredcoin = calculatePlayerKredcoin(player.id);
+                    const playerBankedTiles = bankedTiles.filter(
+                      (bt) => bt.ownerId === player.id
+                    );
+                    const faceDownCount = playerBankedTiles.filter(
+                      (bt) => !bt.faceUp
+                    ).length;
+                    const faceUpCount = playerBankedTiles.filter(
+                      (bt) => bt.faceUp
+                    ).length;
+
+                    return (
+                      <div
+                        key={`kredcoin-${player.id}`}
+                        className="bg-gray-800 rounded-lg p-3 border border-amber-600/30"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-200 font-semibold">
+                            Player {player.id}
+                          </span>
+                          <span className="text-2xl font-bold text-amber-400">
+                            ₭- {kredcoin}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-400 flex justify-between">
+                          <span>Face-down: {faceDownCount}</span>
+                          <span className="text-red-400">
+                            Face-up (excluded): {faceUpCount}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Create Dummy Tile Button (Test Mode Only) */}
+            {isTestMode && !dummyTile && (
+              <div className="mt-8">
+                <button
+                  onClick={() =>
+                    setDummyTile({ position: { top: 50, left: 50 }, rotation: 0 })
+                  }
+                  className="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-lg"
+                >
+                  + Create Dummy Tile
+                </button>
+              </div>
+            )}
+
+            {/* Dummy Tile Tracker (Test Mode Only) */}
+            {isTestMode && dummyTile && (
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold text-center text-slate-200 mb-4">
+                  Dummy Tile Tracker
+                </h2>
+                <div className="bg-gray-800/50 rounded-lg border border-indigo-600 p-4 text-sm">
+                  <div className="font-mono border-b border-gray-600 pb-4 mb-4">
+                    <div className="font-semibold text-indigo-300 mb-3">
+                      Dummy Tile Position & Rotation
+                    </div>
+                    <div className="text-slate-300 mb-2">
+                      <span className="font-semibold">Position:</span> Left:{" "}
+                      <span className="text-cyan-400">
+                        {dummyTile.position.left.toFixed(2)}%
+                      </span>{" "}
+                      | Top:{" "}
+                      <span className="text-cyan-400">
+                        {dummyTile.position.top.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="text-slate-300 mb-4">
+                      <span className="font-semibold">Rotation:</span>{" "}
+                      <span className="text-cyan-400">
+                        {dummyTile.rotation.toFixed(1)}°
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleRotateDummyTile(1)}
+                        className="px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded hover:bg-indigo-400 transition-colors"
+                      >
+                        +1°
+                      </button>
+                      <button
+                        onClick={() => handleRotateDummyTile(-1)}
+                        className="px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded hover:bg-indigo-400 transition-colors"
+                      >
+                        -1°
+                      </button>
+                      <button
+                        onClick={() => handleRotateDummyTile(15)}
+                        className="px-3 py-1 bg-indigo-600 text-white text-xs font-semibold rounded hover:bg-indigo-500 transition-colors"
+                      >
+                        +15°
+                      </button>
+                      <button
+                        onClick={() => handleRotateDummyTile(-15)}
+                        className="px-3 py-1 bg-indigo-600 text-white text-xs font-semibold rounded hover:bg-indigo-500 transition-colors"
+                      >
+                        -15°
+                      </button>
+                      <button
+                        onClick={() => setDummyTile(null)}
+                        className="px-3 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
+                      >
+                        Delete Tile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Piece Tracker (Test Mode Only) */}
+            {isTestMode && (
+              <div className="mt-8">
+                <button
+                  onClick={() => setIsPieceTrackerExpanded(!isPieceTrackerExpanded)}
+                  className="w-full text-left mb-4 flex items-center justify-between"
+                >
+                  <h2 className="text-2xl font-bold text-slate-200">
+                    Piece Tracker
+                  </h2>
+                  <span className="text-slate-400 text-xl">
+                    {isPieceTrackerExpanded ? "▼" : "▶"}
+                  </span>
+                </button>
+                {isPieceTrackerExpanded && (
+                  <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 max-h-96 overflow-y-auto text-xs">
+                    {pieces.length === 0 ? (
+                      <p className="text-slate-400 text-center italic">
+                        No pieces on board
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pieces.map((piece) => (
+                          <div
+                            key={piece.id}
+                            className={`font-mono border-b border-gray-600 pb-1 ${
+                              piece.id === lastDroppedPieceId
+                                ? "text-yellow-300"
+                                : "text-slate-300"
+                            }`}
+                          >
+                            <div
+                              className={`font-semibold ${
+                                piece.id === lastDroppedPieceId
+                                  ? "text-yellow-400"
+                                  : "text-cyan-300"
+                              }`}
+                            >
+                              {piece.displayName || piece.name}
+                            </div>
+                            <div
+                              className={
+                                piece.id === lastDroppedPieceId
+                                  ? "text-yellow-200"
+                                  : "text-slate-400"
+                              }
+                            >
+                              Left: {piece.position.left.toFixed(2)}% | Top:{" "}
+                              {piece.position.top.toFixed(2)}%
+                            </div>
+                            <div
+                              className={
+                                piece.id === lastDroppedPieceId
+                                  ? "text-yellow-200"
+                                  : "text-slate-400"
+                              }
+                            >
+                              Rotation: {piece.rotation.toFixed(1)}° | Location:{" "}
+                              {piece.locationId || "unknown"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
