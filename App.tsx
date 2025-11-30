@@ -1,33 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  PLAYER_OPTIONS,
-  BOARD_IMAGE_URLS,
   initializePlayers,
   initializePieces,
   initializeCampaignPieces,
-  PIECE_COUNTS_BY_PLAYER_COUNT,
-  PIECE_TYPES,
-  Tile,
-  Player,
-  GameState,
-  Piece,
-  BoardTile,
   calculatePieceRotation,
   findNearestVacantLocation,
-  TILE_SPACES_BY_PLAYER_COUNT,
-  TileReceivingSpace,
-  BANK_SPACES_BY_PLAYER_COUNT,
-  TILE_KREDCOIN_VALUES,
-  CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
-  BankSpace,
-  PLAYER_PERSPECTIVE_ROTATIONS,
   formatLocationId,
   getLocationIdFromPosition,
   DEFAULT_PIECE_POSITIONS_BY_PLAYER_COUNT,
   isPositionInCommunityCircle,
-  TrackedMove,
-  PlayedTileState,
   validateMovesForTilePlay,
   validateTileRequirements,
   validateTileRequirementsWithImpossibleMoveExceptions,
@@ -37,10 +19,6 @@ import {
   validateSingleMove,
   areSeatsAdjacent,
   handleCredibilityLoss,
-  BureaucracyMenuItem,
-  BureaucracyPurchase,
-  BureaucracyPlayerState,
-  BureaucracyMoveType,
   calculatePlayerKredcoin,
   getBureaucracyTurnOrder,
   getBureaucracyMenu,
@@ -53,8 +31,36 @@ import {
   checkBureaucracyWinCondition,
   validatePieceMovement,
 } from './game';
-import { ALERTS, TIMEOUTS, DEFAULTS } from './constants';
-import { getPlayerName, getPlayerNameSimple, getPlayerById, formatWinnerNames, isPlayerDomain, isCommunityLocation } from './utils';
+import {
+  Tile,
+  Player,
+  GameState,
+  Piece,
+  BoardTile,
+  TileReceivingSpace,
+  BankSpace,
+  TrackedMove,
+  PlayedTileState,
+  BureaucracyMenuItem,
+  BureaucracyPurchase,
+  BureaucracyPlayerState,
+  BureaucracyMoveType,
+} from './src/types';
+import {
+  PLAYER_OPTIONS,
+  BOARD_IMAGE_URLS,
+  PIECE_COUNTS_BY_PLAYER_COUNT,
+  PIECE_TYPES,
+  TILE_SPACES_BY_PLAYER_COUNT,
+  BANK_SPACES_BY_PLAYER_COUNT,
+  TILE_KREDCOIN_VALUES,
+  CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
+  PLAYER_PERSPECTIVE_ROTATIONS,
+  ALERTS,
+  TIMEOUTS,
+  DEFAULTS,
+} from './src/constants';
+import { getPlayerName, getPlayerNameSimple, getPlayerById, formatWinnerNames, isPlayerDomain, isCommunityLocation } from './src/utils';
 
 // --- Helper Components ---
 
@@ -77,10 +83,10 @@ const PlayerSelectionScreen: React.FC<{
     <main className="min-h-screen w-full bg-sky-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-slate-800">
       <div className="text-center mb-12">
         <img
-            src="./images/logo.png"
-            alt="Kred Logo"
-            className="w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto"
-            style={{ filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.15))' }}
+          src="./images/logo.png"
+          alt="Kred Logo"
+          className="w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto"
+          style={{ filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.15))' }}
         />
         <p className="text-xl text-sky-900 mt-2 italic">
           You can't trust anyone!
@@ -100,11 +106,10 @@ const PlayerSelectionScreen: React.FC<{
           <button
             key={count}
             onClick={() => setPlayerCount(count)}
-            className={`w-24 h-24 sm:w-32 sm:h-32 text-2xl font-bold rounded-lg transition-all duration-200 ease-in-out border-2 ${
-              playerCount === count
-                ? 'bg-indigo-600 border-indigo-400 scale-110 shadow-lg text-white'
-                : 'bg-white border-gray-200 text-slate-700 hover:bg-gray-50 hover:border-gray-300'
-            }`}
+            className={`w-24 h-24 sm:w-32 sm:h-32 text-2xl font-bold rounded-lg transition-all duration-200 ease-in-out border-2 ${playerCount === count
+              ? 'bg-indigo-600 border-indigo-400 scale-110 shadow-lg text-white'
+              : 'bg-white border-gray-200 text-slate-700 hover:bg-gray-50 hover:border-gray-300'
+              }`}
             aria-pressed={playerCount === count}
           >
             {count} Players
@@ -264,548 +269,544 @@ const BureaucracyScreen: React.FC<{
   BOARD_IMAGE_URLS,
   credibilityRotationAdjustments,
 }) => {
-  const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
-  const currentPlayer = players.find(p => p.id === currentPlayerId);
-  const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
-  const menu = getBureaucracyMenu(playerCount);
-  const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
-  const isPromotionPurchase = currentPurchase?.item.type === 'PROMOTION';
-  const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
+    const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
+    const currentPlayer = players.find(p => p.id === currentPlayerId);
+    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    const menu = getBureaucracyMenu(playerCount);
+    const affordableItems = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
+    const isPromotionPurchase = currentPurchase?.item.type === 'PROMOTION';
+    const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
 
-  // Drag and drop state
-  const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string; pieceId: string; locationId?: string } | null>(null);
-  const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string; isValid?: boolean } | null>(null);
+    // Drag and drop state
+    const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string; pieceId: string; locationId?: string } | null>(null);
+    const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string; isValid?: boolean } | null>(null);
 
-  // Drag handlers
-  const handleDragStartPiece = (e: React.DragEvent<HTMLDivElement>, pieceId: string) => {
-    e.dataTransfer.setData("pieceId", pieceId);
-    e.dataTransfer.effectAllowed = 'move';
-    const piece = pieces.find(p => p.id === pieceId);
-    if (piece) {
-      setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl, pieceId: piece.id, locationId: piece.locationId });
-    }
-  };
-
-  const handleDragEndPiece = () => {
-    setDraggedPieceInfo(null);
-    setDropIndicator(null);
-  };
-
-  const handleDragOverBoard = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!draggedPieceInfo) {
-      if (dropIndicator) setDropIndicator(null);
-      return;
-    }
-
-    const boardRect = e.currentTarget.getBoundingClientRect();
-    const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
-    const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
-
-    let left = rawLeft;
-    let top = rawTop;
-    if (boardRotation !== 0) {
-      const angleRad = -boardRotation * (Math.PI / 180);
-      const centerX = 50;
-      const centerY = 50;
-      const translatedX = rawLeft - centerX;
-      const translatedY = rawTop - centerY;
-      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
-      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
-      left = rotatedX + centerX;
-      top = rotatedY + centerY;
-    }
-
-    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
-
-    if (snappedLocation) {
-      const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
-
-      // Validate if the move is allowed
-      const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, currentPlayerId, pieces);
-
-      if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
-        setDropIndicator({
-          position: snappedLocation.position,
-          rotation: newRotation,
-          name: draggedPieceInfo.name,
-          imageUrl: draggedPieceInfo.imageUrl,
-          isValid: validation.isAllowed
-        });
+    // Drag handlers
+    const handleDragStartPiece = (e: React.DragEvent<HTMLDivElement>, pieceId: string) => {
+      e.dataTransfer.setData("pieceId", pieceId);
+      e.dataTransfer.effectAllowed = 'move';
+      const piece = pieces.find(p => p.id === pieceId);
+      if (piece) {
+        setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl, pieceId: piece.id, locationId: piece.locationId });
       }
-    } else {
-      if (dropIndicator) setDropIndicator(null);
+    };
+
+    const handleDragEndPiece = () => {
+      setDraggedPieceInfo(null);
+      setDropIndicator(null);
+    };
+
+    const handleDragOverBoard = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      if (!draggedPieceInfo) {
+        if (dropIndicator) setDropIndicator(null);
+        return;
+      }
+
+      const boardRect = e.currentTarget.getBoundingClientRect();
+      const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+      const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+
+      let left = rawLeft;
+      let top = rawTop;
+      if (boardRotation !== 0) {
+        const angleRad = -boardRotation * (Math.PI / 180);
+        const centerX = 50;
+        const centerY = 50;
+        const translatedX = rawLeft - centerX;
+        const translatedY = rawTop - centerY;
+        const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+        const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+        left = rotatedX + centerX;
+        top = rotatedY + centerY;
+      }
+
+      const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
+
+      if (snappedLocation) {
+        const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
+
+        // Validate if the move is allowed
+        const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, currentPlayerId, pieces);
+
+        if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
+          setDropIndicator({
+            position: snappedLocation.position,
+            rotation: newRotation,
+            name: draggedPieceInfo.name,
+            imageUrl: draggedPieceInfo.imageUrl,
+            isValid: validation.isAllowed
+          });
+        }
+      } else {
+        if (dropIndicator) setDropIndicator(null);
+      }
+    };
+
+    const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setDropIndicator(null);
+      const pieceId = e.dataTransfer.getData("pieceId");
+
+      const boardRect = e.currentTarget.getBoundingClientRect();
+      const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
+      const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
+
+      let left = rawLeft;
+      let top = rawTop;
+      if (boardRotation !== 0) {
+        const angleRad = -boardRotation * (Math.PI / 180);
+        const centerX = 50;
+        const centerY = 50;
+        const translatedX = rawLeft - centerX;
+        const translatedY = rawTop - centerY;
+        const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+        const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+        left = rotatedX + centerX;
+        top = rotatedY + centerY;
+      }
+
+      // Regular piece placement with snapping
+      const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
+
+      if (snappedLocation && pieceId) {
+        onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
+      }
+    };
+
+    const handleMouseLeaveBoard = () => {
+      setDropIndicator(null);
+    };
+
+    let indicatorSizeClass = '';
+    if (dropIndicator) {
+      if (dropIndicator.name === 'Heel') indicatorSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
+      else if (dropIndicator.name === 'Pawn') indicatorSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+      else indicatorSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
     }
-  };
 
-  const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDropIndicator(null);
-    const pieceId = e.dataTransfer.getData("pieceId");
-
-    const boardRect = e.currentTarget.getBoundingClientRect();
-    const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
-    const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
-
-    let left = rawLeft;
-    let top = rawTop;
-    if (boardRotation !== 0) {
-      const angleRad = -boardRotation * (Math.PI / 180);
-      const centerX = 50;
-      const centerY = 50;
-      const translatedX = rawLeft - centerX;
-      const translatedY = rawTop - centerY;
-      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
-      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
-      left = rotatedX + centerX;
-      top = rotatedY + centerY;
-    }
-
-    // Regular piece placement with snapping
-    const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
-
-    if (snappedLocation && pieceId) {
-      onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
-    }
-  };
-
-  const handleMouseLeaveBoard = () => {
-    setDropIndicator(null);
-  };
-
-  let indicatorSizeClass = '';
-  if (dropIndicator) {
-    if (dropIndicator.name === 'Heel') indicatorSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
-    else if (dropIndicator.name === 'Pawn') indicatorSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
-    else indicatorSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
-  }
-
-  return (
-    <main className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center p-4 font-sans text-slate-100">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
-          Bureaucracy Phase
-        </h1>
-        <p className="text-2xl text-slate-200 mt-2">
-          Player {currentPlayerId}'s Turn
-        </p>
-        <div className="mt-2 text-lg">
-          <span className="text-yellow-400 font-bold">
-            Kredcoin: ₭-{playerState?.remainingKredcoin || 0}
-          </span>
+    return (
+      <main className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center p-4 font-sans text-slate-100">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
+            Bureaucracy Phase
+          </h1>
+          <p className="text-2xl text-slate-200 mt-2">
+            Player {currentPlayerId}'s Turn
+          </p>
+          <div className="mt-2 text-lg">
+            <span className="text-yellow-400 font-bold">
+              Kredcoin: ₭-{playerState?.remainingKredcoin || 0}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Validation Error Modal */}
-      {validationError && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
-            <h2 className="text-2xl font-bold text-white mb-6">Invalid Action</h2>
-            <div className="flex justify-center">
-              <button
-                onClick={onResetAction}
-                className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded transition-colors"
-              >
-                Reset Pieces
-              </button>
+        {/* Validation Error Modal */}
+        {validationError && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
+              <h2 className="text-2xl font-bold text-white mb-6">Invalid Action</h2>
+              <div className="flex justify-center">
+                <button
+                  onClick={onResetAction}
+                  className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded transition-colors"
+                >
+                  Reset Pieces
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Content: Board and Menu Side by Side */}
-      <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start justify-center">
-        {/* Game Board */}
-        <div className="relative w-full lg:w-2/3 aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
-          <div
-            className="absolute inset-0 w-full h-full transition-transform duration-500"
-            style={{ transform: `rotate(${boardRotation}deg)` }}
-            onDragOver={handleDragOverBoard}
-            onDrop={handleDropOnBoard}
-            onMouseLeave={handleMouseLeaveBoard}
-          >
-            <img
-              src={BOARD_IMAGE_URLS[playerCount]}
-              alt={`${playerCount}-player board`}
-              className="absolute inset-0 w-full h-full object-contain"
-              draggable={false}
-            />
+        {/* Main Content: Board and Menu Side by Side */}
+        <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start justify-center">
+          {/* Game Board */}
+          <div className="relative w-full lg:w-2/3 aspect-square bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
+            <div
+              className="absolute inset-0 w-full h-full transition-transform duration-500"
+              style={{ transform: `rotate(${boardRotation}deg)` }}
+              onDragOver={handleDragOverBoard}
+              onDrop={handleDropOnBoard}
+              onMouseLeave={handleMouseLeaveBoard}
+            >
+              <img
+                src={BOARD_IMAGE_URLS[playerCount]}
+                alt={`${playerCount}-player board`}
+                className="absolute inset-0 w-full h-full object-contain"
+                draggable={false}
+              />
 
-            {/* Drop indicator */}
-            {dropIndicator && (
-              <>
-                {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
-                <div
-                  className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
-                  style={{
-                    top: `${dropIndicator.position.top}%`,
-                    left: `${dropIndicator.position.left}%`,
-                    width: '80px',
-                    height: '80px',
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: dropIndicator.isValid === false ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
-                    boxShadow: dropIndicator.isValid === false
-                      ? '0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)'
-                      : '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
-                    border: dropIndicator.isValid === false ? '2px solid rgba(239, 68, 68, 0.6)' : '2px solid rgba(34, 197, 94, 0.6)',
-                  }}
-                  aria-hidden="true"
-                />
-                {/* Drop indicator piece preview */}
-                <div
-                  className={`${indicatorSizeClass} absolute pointer-events-none transition-all duration-100 ease-in-out`}
-                  style={{
-                    top: `${dropIndicator.position.top}%`,
-                    left: `${dropIndicator.position.left}%`,
-                    transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
-                    filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
-                    opacity: 0.7,
-                  }}
-                  aria-hidden="true"
-                >
-                  <img src={dropIndicator.imageUrl} alt="" className="w-full h-full object-contain" />
-                </div>
-              </>
-            )}
+              {/* Drop indicator */}
+              {dropIndicator && (
+                <>
+                  {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
+                  <div
+                    className="absolute pointer-events-none transition-all duration-100 ease-in-out rounded-full"
+                    style={{
+                      top: `${dropIndicator.position.top}%`,
+                      left: `${dropIndicator.position.left}%`,
+                      width: '80px',
+                      height: '80px',
+                      transform: 'translate(-50%, -50%)',
+                      backgroundColor: dropIndicator.isValid === false ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)',
+                      boxShadow: dropIndicator.isValid === false
+                        ? '0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 20px rgba(239, 68, 68, 0.2)'
+                        : '0 0 30px rgba(34, 197, 94, 0.5), inset 0 0 20px rgba(34, 197, 94, 0.2)',
+                      border: dropIndicator.isValid === false ? '2px solid rgba(239, 68, 68, 0.6)' : '2px solid rgba(34, 197, 94, 0.6)',
+                    }}
+                    aria-hidden="true"
+                  />
+                  {/* Drop indicator piece preview */}
+                  <div
+                    className={`${indicatorSizeClass} absolute pointer-events-none transition-all duration-100 ease-in-out`}
+                    style={{
+                      top: `${dropIndicator.position.top}%`,
+                      left: `${dropIndicator.position.left}%`,
+                      transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
+                      filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))',
+                      opacity: 0.7,
+                    }}
+                    aria-hidden="true"
+                  >
+                    <img src={dropIndicator.imageUrl} alt="" className="w-full h-full object-contain" />
+                  </div>
+                </>
+              )}
 
-            {/* Render pieces */}
-            {pieces.map((piece) => {
-              let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
-              if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
-              if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+              {/* Render pieces */}
+              {pieces.map((piece) => {
+                let pieceSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
+                if (piece.name === 'Heel') pieceSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
+                if (piece.name === 'Pawn') pieceSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
 
-              // Apply size reduction for different player counts
-              const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.90 : 1;
-              const baseScale = 0.798;
-              const finalScale = baseScale * scaleMultiplier;
+                // Apply size reduction for different player counts
+                const scaleMultiplier = playerCount === 3 ? 0.85 : playerCount === 5 ? 0.90 : 1;
+                const baseScale = 0.798;
+                const finalScale = baseScale * scaleMultiplier;
 
-              // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
-              // Check both position AND locationId to avoid false positives for seats near the community
-              const isInCommunity = piece.locationId?.startsWith('community') || false;
-              const communityCounterRotation = isInCommunity ? -boardRotation : 0;
+                // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
+                // Check both position AND locationId to avoid false positives for seats near the community
+                const isInCommunity = piece.locationId?.startsWith('community') || false;
+                const communityCounterRotation = isInCommunity ? -boardRotation : 0;
 
-              const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
-
-              return (
-                <img
-                  key={piece.id}
-                  src={piece.imageUrl}
-                  alt={piece.name}
-                  draggable={isDraggable}
-                  onDragStart={(e) => {
-                    if (isDraggable) {
-                      handleDragStartPiece(e, piece.id);
-                    }
-                  }}
-                  onDragEnd={handleDragEndPiece}
-                  onClick={() => {
-                    if (isPromotionPurchase) {
-                      onPiecePromote(piece.id);
-                    }
-                  }}
-                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab' : 'cursor-not-allowed'}`}
-                  style={{
-                    position: 'absolute',
-                    top: `${piece.position.top}%`,
-                    left: `${piece.position.left}%`,
-                    transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`,
-                  }}
-                  aria-hidden="true"
-                />
-              );
-            })}
-
-            {/* Render board tiles */}
-            {boardTiles.map((boardTile) => (
-              <div
-                key={boardTile.id}
-                className="absolute pointer-events-none"
-                style={{
-                  left: `${boardTile.position.left}%`,
-                  top: `${boardTile.position.top}%`,
-                  transform: `translate(-50%, -50%) rotate(${boardTile.rotation - boardRotation}deg)`,
-                  width: '3%',
-                  height: '6%',
-                }}
-              >
-                <img
-                  src={boardTile.tile.url}
-                  alt={`Tile ${boardTile.tile.id}`}
-                  className="w-full h-full object-contain"
-                  draggable={false}
-                />
-              </div>
-            ))}
-
-            {/* Credibility display */}
-            {(() => {
-              const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
-              return credibilityLocations.map((location) => {
-                const player = players.find(p => p.id === location.ownerId);
-                const credibilityValue = player?.credibility ?? 3;
-                const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
-                const finalRotation = (location.rotation || 0) + adjustment;
-                const credibilityImage = `./images/${credibilityValue}_credibility.svg`;
+                const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
 
                 return (
-                  <div
-                    key={`credibility_${location.ownerId}_${credibilityValue}`}
-                    className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
-                    style={{
-                      width: '5.283rem',
-                      height: '5.283rem',
-                      top: `${location.position.top}%`,
-                      left: `${location.position.left}%`,
-                      transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
+                  <img
+                    key={piece.id}
+                    src={piece.imageUrl}
+                    alt={piece.name}
+                    draggable={isDraggable}
+                    onDragStart={(e) => {
+                      if (isDraggable) {
+                        handleDragStartPiece(e, piece.id);
+                      }
                     }}
-                  >
-                    <img
-                      src={credibilityImage}
-                      alt={`Credibility for Player ${location.ownerId}`}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
+                    onDragEnd={handleDragEndPiece}
+                    onClick={() => {
+                      if (isPromotionPurchase) {
+                        onPiecePromote(piece.id);
+                      }
+                    }}
+                    className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab' : 'cursor-not-allowed'}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${piece.position.top}%`,
+                      left: `${piece.position.left}%`,
+                      transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation}deg) scale(${finalScale})`,
+                    }}
+                    aria-hidden="true"
+                  />
                 );
-              });
-            })()}
-          </div>
-        </div>
+              })}
 
-        {/* Right Side Panel: Purchase Menu and Controls */}
-        <div className="w-full lg:w-1/3 flex flex-col gap-4">
-          {/* Actions Menu */}
-          {showPurchaseMenu && (
-            <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
-              <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
-                Actions
-              </h2>
-              <div className="space-y-3">
-                {/* Move items in two rows of three */}
-                {menu.some(item => item.type === 'MOVE') && (
-                  <>
-                    {/* First row: Assist, Remove, Influence */}
-                    <div className="grid grid-cols-3 gap-2">
-                      {menu.filter(item => item.type === 'MOVE' && ['ASSIST', 'REMOVE', 'INFLUENCE'].includes(item.moveType || '')).map((item) => {
-                        const canAfford = affordableItems.some(ai => ai.id === item.id);
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => canAfford && onSelectMenuItem(item)}
-                            disabled={!canAfford}
-                            className={`p-2 rounded-lg border-2 transition-all ${
-                              canAfford
-                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
-                            }`}
-                          >
-                            <div className="text-center">
-                              <span className="font-bold text-sm block mb-1">
-                                {item.moveType}
-                              </span>
-                              <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
-                                ₭-{item.price}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {/* Second row: Advance, Withdraw, Organize */}
-                    <div className="grid grid-cols-3 gap-2">
-                      {menu.filter(item => item.type === 'MOVE' && ['ADVANCE', 'WITHDRAW', 'ORGANIZE'].includes(item.moveType || '')).map((item) => {
-                        const canAfford = affordableItems.some(ai => ai.id === item.id);
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => canAfford && onSelectMenuItem(item)}
-                            disabled={!canAfford}
-                            className={`p-2 rounded-lg border-2 transition-all ${
-                              canAfford
-                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
-                            }`}
-                          >
-                            <div className="text-center">
-                              <span className="font-bold text-sm block mb-1">
-                                {item.moveType}
-                              </span>
-                              <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
-                                ₭-{item.price}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-                {/* Non-move items (Promotion, Credibility) remain full width */}
-                {menu.filter(item => item.type !== 'MOVE').map((item) => {
-                  const canAfford = affordableItems.some(ai => ai.id === item.id);
-                  const isCredibilityAtMax = item.type === 'CREDIBILITY' && currentPlayer && currentPlayer.credibility >= 3;
-                  const isEnabled = canAfford && !isCredibilityAtMax;
+              {/* Render board tiles */}
+              {boardTiles.map((boardTile) => (
+                <div
+                  key={boardTile.id}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${boardTile.position.left}%`,
+                    top: `${boardTile.position.top}%`,
+                    transform: `translate(-50%, -50%) rotate(${boardTile.rotation - boardRotation}deg)`,
+                    width: '3%',
+                    height: '6%',
+                  }}
+                >
+                  <img
+                    src={boardTile.tile.url}
+                    alt={`Tile ${boardTile.tile.id}`}
+                    className="w-full h-full object-contain"
+                    draggable={false}
+                  />
+                </div>
+              ))}
+
+              {/* Credibility display */}
+              {(() => {
+                const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+                return credibilityLocations.map((location) => {
+                  const player = players.find(p => p.id === location.ownerId);
+                  const credibilityValue = player?.credibility ?? 3;
+                  const adjustment = credibilityRotationAdjustments[location.ownerId] || 0;
+                  const finalRotation = (location.rotation || 0) + adjustment;
+                  const credibilityImage = `./images/${credibilityValue}_credibility.svg`;
+
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => isEnabled && onSelectMenuItem(item)}
-                      disabled={!isEnabled}
-                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                        isEnabled
+                    <div
+                      key={`credibility_${location.ownerId}_${credibilityValue}`}
+                      className="absolute rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
+                      style={{
+                        width: '5.283rem',
+                        height: '5.283rem',
+                        top: `${location.position.top}%`,
+                        left: `${location.position.left}%`,
+                        transform: `translate(-50%, -50%) rotate(${finalRotation}deg)`,
+                      }}
+                    >
+                      <img
+                        src={credibilityImage}
+                        alt={`Credibility for Player ${location.ownerId}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
+          {/* Right Side Panel: Purchase Menu and Controls */}
+          <div className="w-full lg:w-1/3 flex flex-col gap-4">
+            {/* Actions Menu */}
+            {showPurchaseMenu && (
+              <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
+                <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
+                  Actions
+                </h2>
+                <div className="space-y-3">
+                  {/* Move items in two rows of three */}
+                  {menu.some(item => item.type === 'MOVE') && (
+                    <>
+                      {/* First row: Assist, Remove, Influence */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {menu.filter(item => item.type === 'MOVE' && ['ASSIST', 'REMOVE', 'INFLUENCE'].includes(item.moveType || '')).map((item) => {
+                          const canAfford = affordableItems.some(ai => ai.id === item.id);
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => canAfford && onSelectMenuItem(item)}
+                              disabled={!canAfford}
+                              className={`p-2 rounded-lg border-2 transition-all ${canAfford
+                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                }`}
+                            >
+                              <div className="text-center">
+                                <span className="font-bold text-sm block mb-1">
+                                  {item.moveType}
+                                </span>
+                                <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                  ₭-{item.price}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {/* Second row: Advance, Withdraw, Organize */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {menu.filter(item => item.type === 'MOVE' && ['ADVANCE', 'WITHDRAW', 'ORGANIZE'].includes(item.moveType || '')).map((item) => {
+                          const canAfford = affordableItems.some(ai => ai.id === item.id);
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => canAfford && onSelectMenuItem(item)}
+                              disabled={!canAfford}
+                              className={`p-2 rounded-lg border-2 transition-all ${canAfford
+                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                }`}
+                            >
+                              <div className="text-center">
+                                <span className="font-bold text-sm block mb-1">
+                                  {item.moveType}
+                                </span>
+                                <span className={`text-base font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                  ₭-{item.price}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                  {/* Non-move items (Promotion, Credibility) remain full width */}
+                  {menu.filter(item => item.type !== 'MOVE').map((item) => {
+                    const canAfford = affordableItems.some(ai => ai.id === item.id);
+                    const isCredibilityAtMax = item.type === 'CREDIBILITY' && currentPlayer && currentPlayer.credibility >= 3;
+                    const isEnabled = canAfford && !isCredibilityAtMax;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => isEnabled && onSelectMenuItem(item)}
+                        disabled={!isEnabled}
+                        className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isEnabled
                           ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
                           : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
-                      }`}
+                          }`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-bold text-lg">
+                            {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
+                            {item.type === 'CREDIBILITY' && 'Restore Credibility'}
+                          </span>
+                          <span className={`text-xl font-bold ${isEnabled ? 'text-yellow-400' : 'text-gray-600'}`}>
+                            ₭-{item.price}
+                          </span>
+                        </div>
+                        {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={onFinishTurn}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                  >
+                    Finish Turn
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Action in Progress */}
+            {!showPurchaseMenu && currentPurchase && (
+              <div className="bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
+                <h2 className="text-2xl font-bold text-center mb-4 text-blue-300">
+                  Perform Your Action
+                </h2>
+                <p className="text-center text-lg mb-6">
+                  {currentPurchase.item.type === 'PROMOTION' && (
+                    <>Promote a {currentPurchase.item.promotionLocation === 'OFFICE' ? 'piece in your Office' :
+                      currentPurchase.item.promotionLocation === 'ROSTRUM' ? 'piece in one of your Rostrums' :
+                        'piece in one of your Seats'}</>
+                  )}
+                  {currentPurchase.item.type === 'MOVE' && (
+                    <>Perform a {currentPurchase.item.moveType} move</>
+                  )}
+                  {currentPurchase.item.type === 'CREDIBILITY' && (
+                    <>Your credibility has been restored</>
+                  )}
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={onResetAction}
+                    className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={onDoneWithAction}
+                    className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Turn Progress */}
+            <div className="bg-gray-800/70 rounded-lg p-4">
+              <h3 className="text-lg font-bold text-center mb-3 text-yellow-400">Turn Order</h3>
+              <div className="flex justify-center gap-4 flex-wrap">
+                {turnOrder.map((playerId, index) => {
+                  const pState = bureaucracyStates.find(s => s.playerId === playerId);
+                  const isCurrentPlayer = index === currentBureaucracyPlayerIndex;
+                  const isComplete = pState?.turnComplete;
+
+                  return (
+                    <div
+                      key={playerId}
+                      className={`px-4 py-2 rounded-lg border-2 ${isCurrentPlayer
+                        ? 'bg-yellow-600 border-yellow-400 text-white font-bold'
+                        : isComplete
+                          ? 'bg-green-800 border-green-600 text-green-200'
+                          : 'bg-gray-700 border-gray-500 text-gray-300'
+                        }`}
                     >
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-bold text-lg">
-                          {item.type === 'PROMOTION' && `Promote ${item.promotionLocation}`}
-                          {item.type === 'CREDIBILITY' && 'Restore Credibility'}
-                        </span>
-                        <span className={`text-xl font-bold ${isEnabled ? 'text-yellow-400' : 'text-gray-600'}`}>
-                          ₭-{item.price}
-                        </span>
-                      </div>
-                      {item.description && <p className="text-sm text-gray-300">{item.description}</p>}
-                    </button>
+                      Player {playerId} {isComplete && '✓'}
+                    </div>
                   );
                 })}
               </div>
-              <div className="mt-6 flex justify-center">
-                <button
-                  onClick={onFinishTurn}
-                  className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors shadow-lg"
-                >
-                  Finish Turn
-                </button>
-              </div>
             </div>
-          )}
 
-          {/* Action in Progress */}
-          {!showPurchaseMenu && currentPurchase && (
-            <div className="bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
-              <h2 className="text-2xl font-bold text-center mb-4 text-blue-300">
-                Perform Your Action
-              </h2>
-              <p className="text-center text-lg mb-6">
-                {currentPurchase.item.type === 'PROMOTION' && (
-                  <>Promote a {currentPurchase.item.promotionLocation === 'OFFICE' ? 'piece in your Office' :
-                    currentPurchase.item.promotionLocation === 'ROSTRUM' ? 'piece in one of your Rostrums' :
-                    'piece in one of your Seats'}</>
-                )}
-                {currentPurchase.item.type === 'MOVE' && (
-                  <>Perform a {currentPurchase.item.moveType} move</>
-                )}
-                {currentPurchase.item.type === 'CREDIBILITY' && (
-                  <>Your credibility has been restored</>
-                )}
-              </p>
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={onResetAction}
-                  className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition-colors shadow-lg"
-                >
-                  Reset
-                </button>
-                <button
-                  onClick={onDoneWithAction}
-                  className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg"
-                >
-                  Done
-                </button>
-              </div>
+            {/* Board Rotation Toggle */}
+            <div className="bg-gray-800/70 rounded-lg p-3">
+              <label className="flex items-center justify-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={boardRotationEnabled}
+                  onChange={(e) => setBoardRotationEnabled(e.target.checked)}
+                  className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500 cursor-pointer"
+                />
+                <span className="ml-3 text-slate-200">
+                  Board Rotation {boardRotationEnabled ? '(ON)' : '(OFF)'}
+                </span>
+              </label>
             </div>
-          )}
 
-          {/* Turn Progress */}
-          <div className="bg-gray-800/70 rounded-lg p-4">
-            <h3 className="text-lg font-bold text-center mb-3 text-yellow-400">Turn Order</h3>
-            <div className="flex justify-center gap-4 flex-wrap">
-              {turnOrder.map((playerId, index) => {
-                const pState = bureaucracyStates.find(s => s.playerId === playerId);
-                const isCurrentPlayer = index === currentBureaucracyPlayerIndex;
-                const isComplete = pState?.turnComplete;
+            {/* Check Move Button (Test Mode Only) */}
+            {isTestMode && !showPurchaseMenu && currentPurchase && currentPurchase.item.type === 'MOVE' && (
+              <div className="bg-gray-700 rounded-lg p-4">
+                <button
+                  onClick={onCheckMove}
+                  className="w-full px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-lg"
+                >
+                  ✓ Check Move
+                </button>
+                <p className="text-xs text-slate-400 mt-2">Validate if the move matches your selected action type.</p>
+              </div>
+            )}
+          </div>
+        </div>
 
-                return (
-                  <div
-                    key={playerId}
-                    className={`px-4 py-2 rounded-lg border-2 ${
-                      isCurrentPlayer
-                        ? 'bg-yellow-600 border-yellow-400 text-white font-bold'
-                        : isComplete
-                        ? 'bg-green-800 border-green-600 text-green-200'
-                        : 'bg-gray-700 border-gray-500 text-gray-300'
-                    }`}
-                  >
-                    Player {playerId} {isComplete && '✓'}
+        {/* Move Check Result Modal */}
+        {showMoveCheckResult && moveCheckResult && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+            <div className="bg-gray-800 border-2 border-gray-700 p-8 rounded-xl text-center shadow-2xl max-w-lg w-full">
+              <div className="mb-8">
+                {moveCheckResult.isValid ? (
+                  <div className="text-center">
+                    <div className="text-9xl text-green-500 font-bold mb-4">✓</div>
+                    <h2 className="text-4xl font-bold text-green-400 mb-2">Valid Move!</h2>
+                    <p className="text-lg text-green-300">The move matches the selected action type.</p>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="text-9xl text-red-500 font-bold mb-4">✕</div>
+                    <h2 className="text-4xl font-bold text-red-400 mb-2">Invalid Move</h2>
+                    <p className="text-lg text-red-300">{moveCheckResult.reason}</p>
+                  </div>
+                )}
+              </div>
 
-          {/* Board Rotation Toggle */}
-          <div className="bg-gray-800/70 rounded-lg p-3">
-            <label className="flex items-center justify-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={boardRotationEnabled}
-                onChange={(e) => setBoardRotationEnabled(e.target.checked)}
-                className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500 cursor-pointer"
-              />
-              <span className="ml-3 text-slate-200">
-                Board Rotation {boardRotationEnabled ? '(ON)' : '(OFF)'}
-              </span>
-            </label>
-          </div>
-
-          {/* Check Move Button (Test Mode Only) */}
-          {isTestMode && !showPurchaseMenu && currentPurchase && currentPurchase.item.type === 'MOVE' && (
-            <div className="bg-gray-700 rounded-lg p-4">
               <button
-                onClick={onCheckMove}
-                className="w-full px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-lg"
+                onClick={onCloseMoveCheckResult}
+                className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-colors shadow-lg"
               >
-                ✓ Check Move
+                Close
               </button>
-              <p className="text-xs text-slate-400 mt-2">Validate if the move matches your selected action type.</p>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Move Check Result Modal */}
-      {showMoveCheckResult && moveCheckResult && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-          <div className="bg-gray-800 border-2 border-gray-700 p-8 rounded-xl text-center shadow-2xl max-w-lg w-full">
-            <div className="mb-8">
-              {moveCheckResult.isValid ? (
-                <div className="text-center">
-                  <div className="text-9xl text-green-500 font-bold mb-4">✓</div>
-                  <h2 className="text-4xl font-bold text-green-400 mb-2">Valid Move!</h2>
-                  <p className="text-lg text-green-300">The move matches the selected action type.</p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="text-9xl text-red-500 font-bold mb-4">✕</div>
-                  <h2 className="text-4xl font-bold text-red-400 mb-2">Invalid Move</h2>
-                  <p className="text-lg text-red-300">{moveCheckResult.reason}</p>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={onCloseMoveCheckResult}
-              className="px-8 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition-colors shadow-lg"
-            >
-              Close
-            </button>
           </div>
-        </div>
-      )}
-    </main>
-  );
-};
+        )}
+      </main>
+    );
+  };
 
 const CampaignScreen: React.FC<{
   gameState: GameState;
@@ -918,11 +919,11 @@ const CampaignScreen: React.FC<{
 }> = ({ gameState, playerCount, players, pieces, boardTiles, bankedTiles, currentPlayerId, lastDroppedPosition, lastDroppedPieceId, isTestMode, dummyTile, setDummyTile, boardRotationEnabled, setBoardRotationEnabled, showGridOverlay, setShowGridOverlay, hasPlayedTileThisTurn, revealedTileId, tileTransaction, isPrivatelyViewing, bystanders, bystanderIndex, showChallengeRevealModal, challengedTile, placerViewingTileId, giveReceiverViewingTileId, gameLog, onNewGame, onPieceMove, onBoardTileMove, onEndTurn, onPlaceTile, onRevealTile, onReceiverDecision, onBystanderDecision, onTogglePrivateView, onContinueAfterChallenge, onPlacerViewTile, onSetGiveReceiverViewingTileId, playedTile, receiverAcceptance, onReceiverAcceptanceDecision, onChallengerDecision, onCorrectionComplete, tileRejected, showMoveCheckResult, moveCheckResult, onCloseMoveCheckResult, onCheckMove, credibilityRotationAdjustments, setCredibilityRotationAdjustments, isGameLogExpanded, setIsGameLogExpanded, isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded, isCredibilityRulesExpanded, setIsCredibilityRulesExpanded, isPieceTrackerExpanded, setIsPieceTrackerExpanded, showPerfectTileModal, setShowPerfectTileModal, showBonusMoveModal, bonusMovePlayerId, onBonusMoveComplete, movedPiecesThisTurn, onResetTurn, onResetPiecesCorrection, onResetBonusMove, showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility, showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage, showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError, onTakeAdvantageDecline, onTakeAdvantageYes, onRecoverCredibility, onPurchaseMove, onToggleTileSelection, onConfirmTileSelection, onCancelTileSelection, onSelectTakeAdvantageAction, onResetTakeAdvantageAction, onDoneTakeAdvantageAction, onTakeAdvantagePiecePromote }) => {
 
   const [isDraggingTile, setIsDraggingTile] = useState(false);
-  const [boardMousePosition, setBoardMousePosition] = useState<{x: number, y: number} | null>(null);
+  const [boardMousePosition, setBoardMousePosition] = useState<{ x: number, y: number } | null>(null);
   const [draggedPieceInfo, setDraggedPieceInfo] = useState<{ name: string; imageUrl: string; pieceId: string; locationId?: string } | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{ position: { top: number; left: number }; rotation: number; name: string; imageUrl: string; isValid?: boolean } | null>(null);
   const boardRotation = boardRotationEnabled ? (PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0) : 0;
-  
+
   const tileSpaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
   const occupiedOwnerIds = new Set(boardTiles.map(bt => bt.ownerId));
   const unoccupiedSpaces = tileSpaces.filter(space => !occupiedOwnerIds.has(space.ownerId));
@@ -931,7 +932,7 @@ const CampaignScreen: React.FC<{
 
   useEffect(() => {
     if (logContainerRef.current) {
-        logContainerRef.current.scrollTop = 0;
+      logContainerRef.current.scrollTop = 0;
     }
   }, [gameLog]);
 
@@ -955,7 +956,7 @@ const CampaignScreen: React.FC<{
 
     setBoardMousePosition({ x: clampedX, y: clampedY });
   };
-  
+
   const handleMouseLeaveBoard = () => {
     if (isTestMode) {
       setBoardMousePosition(null);
@@ -970,47 +971,47 @@ const CampaignScreen: React.FC<{
   const handleDragOverBoard = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!draggedPieceInfo) {
-      if(dropIndicator) setDropIndicator(null);
+      if (dropIndicator) setDropIndicator(null);
       return;
     }
-    
+
     const boardRect = e.currentTarget.getBoundingClientRect();
     const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
     const rawTop = ((e.clientY - boardRect.top) / boardRect.height) * 100;
-    
+
     let left = rawLeft;
     let top = rawTop;
     if (boardRotation !== 0) {
-        const angleRad = -boardRotation * (Math.PI / 180);
-        const centerX = 50;
-        const centerY = 50;
-        const translatedX = rawLeft - centerX;
-        const translatedY = rawTop - centerY;
-        const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
-        const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
-        left = rotatedX + centerX;
-        top = rotatedY + centerY;
+      const angleRad = -boardRotation * (Math.PI / 180);
+      const centerX = 50;
+      const centerY = 50;
+      const translatedX = rawLeft - centerX;
+      const translatedY = rawTop - centerY;
+      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      left = rotatedX + centerX;
+      top = rotatedY + centerY;
     }
 
     const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
     if (snappedLocation) {
-        const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
+      const newRotation = calculatePieceRotation(snappedLocation.position, playerCount, snappedLocation.id);
 
-        // Validate if the move is allowed
-        const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, currentPlayerId, pieces);
+      // Validate if the move is allowed
+      const validation = validatePieceMovement(draggedPieceInfo.pieceId, draggedPieceInfo.locationId, snappedLocation.id, currentPlayerId, pieces);
 
-        if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
-             setDropIndicator({
-                position: snappedLocation.position,
-                rotation: newRotation,
-                name: draggedPieceInfo.name,
-                imageUrl: draggedPieceInfo.imageUrl,
-                isValid: validation.isAllowed
-            });
-        }
+      if (!dropIndicator || dropIndicator.position.top !== snappedLocation.position.top || dropIndicator.position.left !== snappedLocation.position.left) {
+        setDropIndicator({
+          position: snappedLocation.position,
+          rotation: newRotation,
+          name: draggedPieceInfo.name,
+          imageUrl: draggedPieceInfo.imageUrl,
+          isValid: validation.isAllowed
+        });
+      }
     } else {
-        if(dropIndicator) setDropIndicator(null);
+      if (dropIndicator) setDropIndicator(null);
     }
   };
 
@@ -1029,50 +1030,50 @@ const CampaignScreen: React.FC<{
     let left = rawLeft;
     let top = rawTop;
     if (boardRotation !== 0) {
-        const angleRad = -boardRotation * (Math.PI / 180);
-        const centerX = 50;
-        const centerY = 50;
-        const translatedX = rawLeft - centerX;
-        const translatedY = rawTop - centerY;
-        const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
-        const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
-        left = rotatedX + centerX;
-        top = rotatedY + centerY;
+      const angleRad = -boardRotation * (Math.PI / 180);
+      const centerX = 50;
+      const centerY = 50;
+      const translatedX = rawLeft - centerX;
+      const translatedY = rawTop - centerY;
+      const rotatedX = translatedX * Math.cos(angleRad) - translatedY * Math.sin(angleRad);
+      const rotatedY = translatedX * Math.sin(angleRad) + translatedY * Math.cos(angleRad);
+      left = rotatedX + centerX;
+      top = rotatedY + centerY;
     }
 
     // Handle dummy tile drops
     if (isDummyTile && dummyTile) {
-        setDummyTile({
-            position: { top, left },
-            rotation: dummyTile.rotation
-        });
-        return;
+      setDummyTile({
+        position: { top, left },
+        rotation: dummyTile.rotation
+      });
+      return;
     }
 
     if (boardTileId && isTestMode) {
-        onBoardTileMove(boardTileId, { top, left });
-        return;
+      onBoardTileMove(boardTileId, { top, left });
+      return;
     }
 
     // Free placement mode: allow tiles to be placed anywhere without snapping
     if (tileIdStr && !hasPlayedTileThisTurn) {
-        const currentPlayer = players.find(p => p.id === currentPlayerId);
-        if (currentPlayer) {
-            const freeTileSpace: TileReceivingSpace = {
-                ownerId: currentPlayerId,
-                position: { left, top },
-                rotation: 0
-            };
-            onPlaceTile(parseInt(tileIdStr, 10), freeTileSpace);
-            return;
-        }
+      const currentPlayer = players.find(p => p.id === currentPlayerId);
+      if (currentPlayer) {
+        const freeTileSpace: TileReceivingSpace = {
+          ownerId: currentPlayerId,
+          position: { left, top },
+          rotation: 0
+        };
+        onPlaceTile(parseInt(tileIdStr, 10), freeTileSpace);
+        return;
+      }
     }
 
     // Regular piece placement with snapping
     const snappedLocation = findNearestVacantLocation({ top, left }, pieces, playerCount);
 
     if (snappedLocation && pieceId) {
-        onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
+      onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
     }
   };
 
@@ -1081,8 +1082,8 @@ const CampaignScreen: React.FC<{
     e.stopPropagation();
     const tileIdStr = e.dataTransfer.getData("tileId");
     if (tileIdStr && !hasPlayedTileThisTurn && space) {
-        // Normal mode: drop on fixed tile space
-        onPlaceTile(parseInt(tileIdStr, 10), space);
+      // Normal mode: drop on fixed tile space
+      onPlaceTile(parseInt(tileIdStr, 10), space);
     }
   };
 
@@ -1091,7 +1092,7 @@ const CampaignScreen: React.FC<{
     e.dataTransfer.effectAllowed = 'move';
     const piece = pieces.find(p => p.id === pieceId);
     if (piece) {
-        setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl, pieceId: piece.id, locationId: piece.locationId });
+      setDraggedPieceInfo({ name: piece.name, imageUrl: piece.imageUrl, pieceId: piece.id, locationId: piece.locationId });
     }
   };
 
@@ -1099,7 +1100,7 @@ const CampaignScreen: React.FC<{
     setDraggedPieceInfo(null);
     setDropIndicator(null);
   };
-  
+
   const handleDragStartTile = (e: React.DragEvent<HTMLDivElement>, tileId: number) => {
     e.dataTransfer.setData("tileId", tileId.toString());
     e.dataTransfer.effectAllowed = 'move';
@@ -1147,26 +1148,26 @@ const CampaignScreen: React.FC<{
   let waitingPlayerId = undefined;
   if (showWaitingOverlay) {
     if (gameState === 'PENDING_ACCEPTANCE') {
-        waitingPlayerId = playedTile?.receivingPlayerId || tileTransaction?.receiverId;
-        waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
+      waitingPlayerId = playedTile?.receivingPlayerId || tileTransaction?.receiverId;
+      waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
     } else if (gameState === 'PENDING_CHALLENGE') {
-        waitingPlayerId = bystanders[bystanderIndex]?.id;
-        waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
+      waitingPlayerId = bystanders[bystanderIndex]?.id;
+      waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
     }
   }
-  
+
   let indicatorSizeClass = '';
   if (dropIndicator) {
-      if (dropIndicator.name === 'Heel') indicatorSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
-      else if (dropIndicator.name === 'Pawn') indicatorSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
-      else indicatorSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
+    if (dropIndicator.name === 'Heel') indicatorSizeClass = 'w-14 h-14 sm:w-16 sm:h-16';
+    else if (dropIndicator.name === 'Pawn') indicatorSizeClass = 'w-16 h-16 sm:w-20 sm:h-20';
+    else indicatorSizeClass = 'w-10 h-10 sm:w-14 sm:h-14'; // Mark
   }
   const indicatorScaleStyle = dropIndicator ? { transform: 'scale(0.84)' } : {};
 
   return (
     <main className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans">
       <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
-        
+
         {/* Main Content (Board, Hand, etc.) */}
         <div
           className="flex-1 flex flex-col items-center min-w-0"
@@ -1178,7 +1179,7 @@ const CampaignScreen: React.FC<{
           <div className="w-full max-w-5xl text-center mb-4 relative z-50">
             <div className="inline-block bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-cyan-300 tracking-wide">
-                  Player {currentPlayerId}'s Turn
+                Player {currentPlayerId}'s Turn
               </h2>
             </div>
           </div>
@@ -1186,7 +1187,7 @@ const CampaignScreen: React.FC<{
             className="w-full max-w-5xl aspect-[1/1] transition-transform duration-1000 ease-in-out hover:scale-105 relative"
             onDragOver={handleDragOverBoard}
             onDrop={handleDropOnBoard}
-            onClick={(e) => { if (e.target === e.currentTarget) { onRevealTile(null); }}}
+            onClick={(e) => { if (e.target === e.currentTarget) { onRevealTile(null); } }}
             onMouseMove={handleMouseMoveOnBoard}
             onMouseLeave={handleMouseLeaveBoard}
             style={{
@@ -1211,9 +1212,9 @@ const CampaignScreen: React.FC<{
             )}
 
             {isTestMode && boardMousePosition && (
-              <div 
+              <div
                 className="absolute top-2 right-2 bg-gray-900/70 text-white text-xs p-2 rounded-md pointer-events-none shadow-lg backdrop-blur-sm z-10"
-                style={{ 
+                style={{
                   transform: `rotate(${-boardRotation}deg) translateZ(0)`,
                 }}
                 aria-hidden="true"
@@ -1222,7 +1223,7 @@ const CampaignScreen: React.FC<{
                 <p className="font-mono">Y: {boardMousePosition.y.toFixed(2)}%</p>
               </div>
             )}
-            
+
             {dropIndicator && (
               <>
                 {/* Soft glow indicator showing snap location - green for valid, red for invalid */}
@@ -1274,7 +1275,7 @@ const CampaignScreen: React.FC<{
                 </div>
               </div>
             ))}
-            
+
             {boardTiles.map(boardTile => {
               const isPlacer = boardTile.placerId === currentPlayerId;
               const isTransactionalTile = boardTile.id === tileTransaction?.boardTileId;
@@ -1329,7 +1330,7 @@ const CampaignScreen: React.FC<{
                   draggable={isTestMode && !isTransactionalTile && !isPlayedTile}
                   onDragStart={(isTestMode && !isTransactionalTile && !isPlayedTile) ? (e) => handleDragStartBoardTile(e, boardTile.id) : undefined}
                   onClick={isTileClickable ? handleTileClick : undefined}
-                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed && !shouldShowWhiteBack ? '' : 'bg-stone-100 p-1'}` }
+                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed && !shouldShowWhiteBack ? '' : 'bg-stone-100 p-1'}`}
                   style={{
                     top: `${boardTile.position.top}%`,
                     left: `${boardTile.position.left}%`,
@@ -1483,8 +1484,8 @@ const CampaignScreen: React.FC<{
               {gameState === 'CORRECTION_REQUIRED'
                 ? "Your tile was rejected. The tile requirements are shown above. Move your pieces to fulfill them, then click End Turn."
                 : hasPlayedTileThisTurn
-                ? "You have played a tile this turn."
-                : "Drag a tile to another player's receiving area on the board."}
+                  ? "You have played a tile this turn."
+                  : "Drag a tile to another player's receiving area on the board."}
             </p>
             <div className="flex flex-wrap justify-center gap-2 p-4 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
               {currentPlayer?.keptTiles.map(tile => (
@@ -1503,22 +1504,22 @@ const CampaignScreen: React.FC<{
                   <details key={player.id} className="bg-gray-800/50 p-3 rounded-lg border border-gray-700 cursor-pointer">
                     <summary className="font-semibold text-lg text-slate-100">Player {player.id}'s Tiles ({player.keptTiles.length})</summary>
                     <div className="mt-4">
-                        <h4 className="font-semibold text-md text-slate-300">Playable Hand:</h4>
-                        <div className="flex flex-wrap justify-center gap-2 pt-2">
-                          {player.keptTiles.map(tile => (
-                            <div key={tile.id} className="bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300">
-                              <img src={tile.url} alt={`Tile ${tile.id}`} className="w-full h-full object-contain" />
-                            </div>
-                          ))}
-                        </div>
+                      <h4 className="font-semibold text-md text-slate-300">Playable Hand:</h4>
+                      <div className="flex flex-wrap justify-center gap-2 pt-2">
+                        {player.keptTiles.map(tile => (
+                          <div key={tile.id} className="bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300">
+                            <img src={tile.url} alt={`Tile ${tile.id}`} className="w-full h-full object-contain" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     <div className="mt-4">
-                        <h4 className="font-semibold text-md text-slate-300">Bureaucracy Tiles ({player.bureaucracyTiles.length}):</h4>
-                        <div className="flex flex-wrap justify-center gap-2 pt-2">
-                          {player.bureaucracyTiles.map(tile => (
-                              <div key={`buro-${tile.id}`} className="bg-gray-700 w-12 h-24 p-1 rounded-md shadow-inner border-2 border-yellow-400"></div>
-                          ))}
-                        </div>
+                      <h4 className="font-semibold text-md text-slate-300">Bureaucracy Tiles ({player.bureaucracyTiles.length}):</h4>
+                      <div className="flex flex-wrap justify-center gap-2 pt-2">
+                        {player.bureaucracyTiles.map(tile => (
+                          <div key={`buro-${tile.id}`} className="bg-gray-700 w-12 h-24 p-1 rounded-md shadow-inner border-2 border-yellow-400"></div>
+                        ))}
+                      </div>
                     </div>
                   </details>
                 ))}
@@ -1652,74 +1653,74 @@ const CampaignScreen: React.FC<{
                   <span className="text-slate-400 text-xl">{isCredibilityAdjusterExpanded ? '▼' : '▶'}</span>
                 </button>
                 {isCredibilityAdjusterExpanded && (
-                <div className="space-y-4">
-                  {Array.from({ length: playerCount }, (_, i) => i + 1).map((playerId) => {
-                    const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
-                    const baseRotation = credibilityLocations.find(loc => loc.ownerId === playerId)?.rotation || 0;
-                    const adjustment = credibilityRotationAdjustments[playerId] || 0;
-                    const finalRotation = baseRotation + adjustment;
+                  <div className="space-y-4">
+                    {Array.from({ length: playerCount }, (_, i) => i + 1).map((playerId) => {
+                      const credibilityLocations = CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+                      const baseRotation = credibilityLocations.find(loc => loc.ownerId === playerId)?.rotation || 0;
+                      const adjustment = credibilityRotationAdjustments[playerId] || 0;
+                      const finalRotation = baseRotation + adjustment;
 
-                    return (
-                      <div key={`cred-adj-${playerId}`} className="bg-gray-800 rounded-lg p-3 border border-gray-600">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-slate-200 font-semibold">Player {playerId}</span>
-                          <span className="text-xs text-slate-400">
-                            Base: <span className="text-cyan-400">{baseRotation.toFixed(1)}°</span> |
-                            Adjustment: <span className="text-yellow-400">{adjustment > 0 ? '+' : ''}{adjustment}°</span> |
-                            Final: <span className="text-green-400">{finalRotation.toFixed(1)}°</span>
-                          </span>
+                      return (
+                        <div key={`cred-adj-${playerId}`} className="bg-gray-800 rounded-lg p-3 border border-gray-600">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-slate-200 font-semibold">Player {playerId}</span>
+                            <span className="text-xs text-slate-400">
+                              Base: <span className="text-cyan-400">{baseRotation.toFixed(1)}°</span> |
+                              Adjustment: <span className="text-yellow-400">{adjustment > 0 ? '+' : ''}{adjustment}°</span> |
+                              Final: <span className="text-green-400">{finalRotation.toFixed(1)}°</span>
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => setCredibilityRotationAdjustments(prev => ({
+                                ...prev,
+                                [playerId]: (prev[playerId] || 0) - 15
+                              }))}
+                              className="px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
+                            >
+                              -15°
+                            </button>
+                            <button
+                              onClick={() => setCredibilityRotationAdjustments(prev => ({
+                                ...prev,
+                                [playerId]: (prev[playerId] || 0) - 1
+                              }))}
+                              className="px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-500 transition-colors"
+                            >
+                              -1°
+                            </button>
+                            <button
+                              onClick={() => setCredibilityRotationAdjustments(prev => ({
+                                ...prev,
+                                [playerId]: 0
+                              }))}
+                              className="px-2 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-500 transition-colors"
+                            >
+                              Reset
+                            </button>
+                            <button
+                              onClick={() => setCredibilityRotationAdjustments(prev => ({
+                                ...prev,
+                                [playerId]: (prev[playerId] || 0) + 1
+                              }))}
+                              className="px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-500 transition-colors"
+                            >
+                              +1°
+                            </button>
+                            <button
+                              onClick={() => setCredibilityRotationAdjustments(prev => ({
+                                ...prev,
+                                [playerId]: (prev[playerId] || 0) + 15
+                              }))}
+                              className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-500 transition-colors"
+                            >
+                              +15°
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => setCredibilityRotationAdjustments(prev => ({
-                              ...prev,
-                              [playerId]: (prev[playerId] || 0) - 15
-                            }))}
-                            className="px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-500 transition-colors"
-                          >
-                            -15°
-                          </button>
-                          <button
-                            onClick={() => setCredibilityRotationAdjustments(prev => ({
-                              ...prev,
-                              [playerId]: (prev[playerId] || 0) - 1
-                            }))}
-                            className="px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-500 transition-colors"
-                          >
-                            -1°
-                          </button>
-                          <button
-                            onClick={() => setCredibilityRotationAdjustments(prev => ({
-                              ...prev,
-                              [playerId]: 0
-                            }))}
-                            className="px-2 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-500 transition-colors"
-                          >
-                            Reset
-                          </button>
-                          <button
-                            onClick={() => setCredibilityRotationAdjustments(prev => ({
-                              ...prev,
-                              [playerId]: (prev[playerId] || 0) + 1
-                            }))}
-                            className="px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-500 transition-colors"
-                          >
-                            +1°
-                          </button>
-                          <button
-                            onClick={() => setCredibilityRotationAdjustments(prev => ({
-                              ...prev,
-                              [playerId]: (prev[playerId] || 0) + 15
-                            }))}
-                            className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-500 transition-colors"
-                          >
-                            +15°
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
@@ -1735,39 +1736,39 @@ const CampaignScreen: React.FC<{
                   <span className="text-slate-400 text-xl">{isCredibilityRulesExpanded ? '▼' : '▶'}</span>
                 </button>
                 {isCredibilityRulesExpanded && (
-                <div className="space-y-3 text-xs text-slate-300">
-                  <div className="bg-gray-800 rounded p-2 border-l-4 border-red-500">
-                    <p className="font-semibold text-red-400 mb-1">Lose 1 Credibility if:</p>
-                    <ul className="list-disc list-inside space-y-1 text-slate-400">
-                      <li>You play a tile that doesn't perfectly meet requirements AND receiving player rejects it</li>
-                      <li>You play a tile that doesn't perfectly meet requirements AND another player successfully challenges it</li>
-                      <li>You unsuccessfully challenge another player's move (they played perfectly)</li>
-                      <li>Another player successfully challenges on a tile that you accepted</li>
-                    </ul>
+                  <div className="space-y-3 text-xs text-slate-300">
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-red-500">
+                      <p className="font-semibold text-red-400 mb-1">Lose 1 Credibility if:</p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>You play a tile that doesn't perfectly meet requirements AND receiving player rejects it</li>
+                        <li>You play a tile that doesn't perfectly meet requirements AND another player successfully challenges it</li>
+                        <li>You unsuccessfully challenge another player's move (they played perfectly)</li>
+                        <li>Another player successfully challenges on a tile that you accepted</li>
+                      </ul>
+                    </div>
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-blue-500">
+                      <p className="font-semibold text-blue-400 mb-1">Game Rules:</p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>All players start with 3 Credibility</li>
+                        <li>Credibility is shown on the board (0-3)</li>
+                        <li>Perfect plays cannot be rejected - receiver must accept</li>
+                      </ul>
+                    </div>
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-green-500">
+                      <p className="font-semibold text-green-400 mb-1">Gain Credibility:</p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>If you reject a tile that was not played perfectly, gain up to 2 credibility points (max 3 total)</li>
+                        <li>If you already have 3 credibility when rejecting, the game pauses and you may take an "Advance" move, then click Continue to resume</li>
+                      </ul>
+                    </div>
+                    <div className="bg-gray-800 rounded p-2 border-l-4 border-yellow-500">
+                      <p className="font-semibold text-yellow-400 mb-1">When Credibility = 0:</p>
+                      <ul className="list-disc list-inside space-y-1 text-slate-400">
+                        <li>You do not get the option to challenge any moves</li>
+                        <li>You are UNABLE to view tiles played to you</li>
+                      </ul>
+                    </div>
                   </div>
-                  <div className="bg-gray-800 rounded p-2 border-l-4 border-blue-500">
-                    <p className="font-semibold text-blue-400 mb-1">Game Rules:</p>
-                    <ul className="list-disc list-inside space-y-1 text-slate-400">
-                      <li>All players start with 3 Credibility</li>
-                      <li>Credibility is shown on the board (0-3)</li>
-                      <li>Perfect plays cannot be rejected - receiver must accept</li>
-                    </ul>
-                  </div>
-                  <div className="bg-gray-800 rounded p-2 border-l-4 border-green-500">
-                    <p className="font-semibold text-green-400 mb-1">Gain Credibility:</p>
-                    <ul className="list-disc list-inside space-y-1 text-slate-400">
-                      <li>If you reject a tile that was not played perfectly, gain up to 2 credibility points (max 3 total)</li>
-                      <li>If you already have 3 credibility when rejecting, the game pauses and you may take an "Advance" move, then click Continue to resume</li>
-                    </ul>
-                  </div>
-                  <div className="bg-gray-800 rounded p-2 border-l-4 border-yellow-500">
-                    <p className="font-semibold text-yellow-400 mb-1">When Credibility = 0:</p>
-                    <ul className="list-disc list-inside space-y-1 text-slate-400">
-                      <li>You do not get the option to challenge any moves</li>
-                      <li>You are UNABLE to view tiles played to you</li>
-                    </ul>
-                  </div>
-                </div>
                 )}
               </div>
             )}
@@ -1872,21 +1873,21 @@ const CampaignScreen: React.FC<{
                   <span className="text-slate-400 text-xl">{isPieceTrackerExpanded ? '▼' : '▶'}</span>
                 </button>
                 {isPieceTrackerExpanded && (
-                <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 max-h-96 overflow-y-auto text-xs">
-                  {pieces.length === 0 ? (
-                    <p className="text-slate-400 text-center italic">No pieces on board</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {pieces.map((piece) => (
-                        <div key={piece.id} className={`font-mono border-b border-gray-600 pb-1 ${piece.id === lastDroppedPieceId ? 'text-yellow-300' : 'text-slate-300'}`}>
-                          <div className={`font-semibold ${piece.id === lastDroppedPieceId ? 'text-yellow-400' : 'text-cyan-300'}`}>{piece.displayName || piece.name}</div>
-                          <div className={piece.id === lastDroppedPieceId ? 'text-yellow-200' : 'text-slate-400'}>Left: {piece.position.left.toFixed(2)}% | Top: {piece.position.top.toFixed(2)}%</div>
-                          <div className={piece.id === lastDroppedPieceId ? 'text-yellow-200' : 'text-slate-400'}>Rotation: {piece.rotation.toFixed(1)}° | Location: {piece.locationId || 'unknown'}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                  <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 max-h-96 overflow-y-auto text-xs">
+                    {pieces.length === 0 ? (
+                      <p className="text-slate-400 text-center italic">No pieces on board</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pieces.map((piece) => (
+                          <div key={piece.id} className={`font-mono border-b border-gray-600 pb-1 ${piece.id === lastDroppedPieceId ? 'text-yellow-300' : 'text-slate-300'}`}>
+                            <div className={`font-semibold ${piece.id === lastDroppedPieceId ? 'text-yellow-400' : 'text-cyan-300'}`}>{piece.displayName || piece.name}</div>
+                            <div className={piece.id === lastDroppedPieceId ? 'text-yellow-200' : 'text-slate-400'}>Left: {piece.position.left.toFixed(2)}% | Top: {piece.position.top.toFixed(2)}%</div>
+                            <div className={piece.id === lastDroppedPieceId ? 'text-yellow-200' : 'text-slate-400'}>Rotation: {piece.rotation.toFixed(1)}° | Location: {piece.locationId || 'unknown'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -1898,16 +1899,16 @@ const CampaignScreen: React.FC<{
       {/* --- Overlays --- */}
       {showChallengeRevealModal && challengedTile && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 border-2 border-red-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-sm w-full">
-                <h2 className="text-4xl font-extrabold text-red-500 mb-2">CHALLENGED!</h2>
-                <p className="text-slate-300 mb-4">The placed tile has been revealed to all players.</p>
-                <div className="bg-stone-100 w-20 h-40 p-1 rounded-lg shadow-lg border-2 border-gray-300 mx-auto mb-6">
-                    <img src={challengedTile.url} alt={`Tile ${challengedTile.id}`} className="w-full h-full object-contain" />
-                </div>
-                <button onClick={onContinueAfterChallenge} className="px-8 py-3 bg-indigo-600 text-white font-bold text-lg rounded-lg hover:bg-indigo-500 transition-colors shadow-md hover:shadow-lg">
-                    Continue
-                </button>
+          <div className="bg-gray-800 border-2 border-red-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-sm w-full">
+            <h2 className="text-4xl font-extrabold text-red-500 mb-2">CHALLENGED!</h2>
+            <p className="text-slate-300 mb-4">The placed tile has been revealed to all players.</p>
+            <div className="bg-stone-100 w-20 h-40 p-1 rounded-lg shadow-lg border-2 border-gray-300 mx-auto mb-6">
+              <img src={challengedTile.url} alt={`Tile ${challengedTile.id}`} className="w-full h-full object-contain" />
             </div>
+            <button onClick={onContinueAfterChallenge} className="px-8 py-3 bg-indigo-600 text-white font-bold text-lg rounded-lg hover:bg-indigo-500 transition-colors shadow-md hover:shadow-lg">
+              Continue
+            </button>
+          </div>
         </div>
       )}
 
@@ -1941,11 +1942,10 @@ const CampaignScreen: React.FC<{
                   <button
                     onClick={() => playedTile ? onReceiverAcceptanceDecision(false) : onReceiverDecision('reject')}
                     disabled={hasZeroCredibility}
-                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md w-full sm:w-auto ${
-                      hasZeroCredibility
-                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
-                        : 'bg-red-700 text-white hover:bg-red-600'
-                    }`}
+                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md w-full sm:w-auto ${hasZeroCredibility
+                      ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
+                      : 'bg-red-700 text-white hover:bg-red-600'
+                      }`}
                   >
                     Reject Tile
                   </button>
@@ -1980,11 +1980,10 @@ const CampaignScreen: React.FC<{
                   <button
                     onClick={() => playedTile ? onChallengerDecision(true) : onBystanderDecision('challenge')}
                     disabled={hasZeroCredibility}
-                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md ${
-                      hasZeroCredibility
-                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
-                        : 'bg-red-600 text-white hover:bg-red-500'
-                    }`}
+                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md ${hasZeroCredibility
+                      ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
+                      : 'bg-red-600 text-white hover:bg-red-500'
+                      }`}
                   >
                     Challenge
                   </button>
@@ -2094,11 +2093,10 @@ const CampaignScreen: React.FC<{
                     <button
                       key={tile.id}
                       onClick={() => onToggleTileSelection(tile)}
-                      className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${
-                        isSelected
-                          ? 'border-yellow-400 ring-4 ring-yellow-400/50 scale-105'
-                          : 'border-gray-300 hover:border-yellow-300'
-                      }`}
+                      className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${isSelected
+                        ? 'border-yellow-400 ring-4 ring-yellow-400/50 scale-105'
+                        : 'border-gray-300 hover:border-yellow-300'
+                        }`}
                     >
                       <img
                         src={tile.url}
@@ -2106,9 +2104,8 @@ const CampaignScreen: React.FC<{
                         className="w-full h-full object-contain"
                       />
                       {/* Kredcoin Value Badge */}
-                      <div className={`absolute top-1 right-1 px-2 py-1 rounded text-xs font-bold ${
-                        isSelected ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
-                      }`}>
+                      <div className={`absolute top-1 right-1 px-2 py-1 rounded text-xs font-bold ${isSelected ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+                        }`}>
                         ₭-{tileValue}
                       </div>
                       {/* Selection Checkmark */}
@@ -2134,11 +2131,10 @@ const CampaignScreen: React.FC<{
               <button
                 onClick={onConfirmTileSelection}
                 disabled={selectedTilesForAdvantage.length === 0}
-                className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${
-                  selectedTilesForAdvantage.length === 0
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-500 text-white hover:scale-105'
-                }`}
+                className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${selectedTilesForAdvantage.length === 0
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-500 text-white hover:scale-105'
+                  }`}
               >
                 Continue with {selectedTilesForAdvantage.length} tile(s) (₭-{totalKredcoinForAdvantage})
               </button>
@@ -2283,9 +2279,8 @@ const CampaignScreen: React.FC<{
                                 onTakeAdvantagePiecePromote(piece.id);
                               }
                             }}
-                            className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
-                              isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
-                            }`}
+                            className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase ? 'cursor-pointer hover:scale-110' : isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+                              }`}
                             style={{
                               position: 'absolute',
                               top: `${piece.position.top}%`,
@@ -2330,11 +2325,10 @@ const CampaignScreen: React.FC<{
                                             key={item.id}
                                             onClick={() => canAfford && onSelectTakeAdvantageAction(item)}
                                             disabled={!canAfford}
-                                            className={`p-2 rounded-lg border-2 transition-all ${
-                                              canAfford
-                                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
-                                            }`}
+                                            className={`p-2 rounded-lg border-2 transition-all ${canAfford
+                                              ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                              : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                              }`}
                                           >
                                             <div className="text-center">
                                               <span className="font-bold text-sm block mb-1">
@@ -2360,11 +2354,10 @@ const CampaignScreen: React.FC<{
                                             key={item.id}
                                             onClick={() => canAfford && onSelectTakeAdvantageAction(item)}
                                             disabled={!canAfford}
-                                            className={`p-2 rounded-lg border-2 transition-all ${
-                                              canAfford
-                                                ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                                                : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
-                                            }`}
+                                            className={`p-2 rounded-lg border-2 transition-all ${canAfford
+                                              ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                              : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                              }`}
                                           >
                                             <div className="text-center">
                                               <span className="font-bold text-sm block mb-1">
@@ -2392,11 +2385,10 @@ const CampaignScreen: React.FC<{
                                     key={item.id}
                                     onClick={() => isEnabled && onSelectTakeAdvantageAction(item)}
                                     disabled={!isEnabled}
-                                    className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                                      isEnabled
-                                        ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
-                                        : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
-                                    }`}
+                                    className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isEnabled
+                                      ? 'bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer'
+                                      : 'bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                      }`}
                                   >
                                     <div className="flex justify-between items-center mb-2">
                                       <span className="font-bold text-lg">
@@ -2469,9 +2461,9 @@ const CampaignScreen: React.FC<{
 
       {showWaitingOverlay && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4">
-             <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 p-6 rounded-xl text-center shadow-2xl">
-                 <h2 className="text-2xl font-bold text-slate-200 animate-pulse">{waitingMessage}</h2>
-             </div>
+          <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 p-6 rounded-xl text-center shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-200 animate-pulse">{waitingMessage}</h2>
+          </div>
         </div>
       )}
 
@@ -2567,17 +2559,15 @@ const CampaignScreen: React.FC<{
                     {moveCheckResult.moveValidations.map((validation, index) => (
                       <div
                         key={index}
-                        className={`p-3 rounded border-l-4 ${
-                          validation.isValid
-                            ? 'bg-green-900/30 border-green-500'
-                            : 'bg-red-900/30 border-red-500'
-                        }`}
+                        className={`p-3 rounded border-l-4 ${validation.isValid
+                          ? 'bg-green-900/30 border-green-500'
+                          : 'bg-red-900/30 border-red-500'
+                          }`}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <span
-                            className={`text-lg font-bold ${
-                              validation.isValid ? 'text-green-400' : 'text-red-400'
-                            }`}
+                            className={`text-lg font-bold ${validation.isValid ? 'text-green-400' : 'text-red-400'
+                              }`}
                           >
                             {validation.isValid ? '✓' : '✕'}
                           </span>
@@ -2611,13 +2601,12 @@ const CampaignScreen: React.FC<{
             {/* Close Button */}
             <button
               onClick={() => onCloseMoveCheckResult?.()}
-              className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${
-                !moveCheckResult.isMet
-                  ? 'bg-red-600 hover:bg-red-500'
-                  : moveCheckResult.hasExtraMoves
+              className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${!moveCheckResult.isMet
+                ? 'bg-red-600 hover:bg-red-500'
+                : moveCheckResult.hasExtraMoves
                   ? 'bg-yellow-600 hover:bg-yellow-500'
                   : 'bg-green-600 hover:bg-green-500'
-              }`}
+                }`}
             >
               Close
             </button>
@@ -2984,7 +2973,7 @@ const App: React.FC = () => {
     setGiveReceiverViewingTileId(null);
     setTilePlayerMustWithdraw(false);
   };
-  
+
   const handleSelectTile = (selectedTile: Tile) => {
     const updatedPlayers = players.map((player, index) => {
       if (index === currentPlayerIndex) {
@@ -3031,7 +3020,7 @@ const App: React.FC = () => {
       setCurrentPlayerIndex(nextPlayerIndex);
     }
   };
-  
+
   const handlePieceMove = (pieceId: string, newPosition: { top: number; left: number }, locationId?: string) => {
     // Check if this piece has already been moved this turn
     // This includes pieces that have been moved to community (pending community pieces)
@@ -3218,46 +3207,46 @@ const App: React.FC = () => {
   };
 
   const generateTurnLog = (
-      turnPlayerId: number,
-      piecesBefore: Piece[],
-      piecesAfter: Piece[],
-      countOfPlayers: number,
-      tileTransactionAtTurnEnd: typeof tileTransaction
-    ): string[] => {
-      const logs: string[] = [];
+    turnPlayerId: number,
+    piecesBefore: Piece[],
+    piecesAfter: Piece[],
+    countOfPlayers: number,
+    tileTransactionAtTurnEnd: typeof tileTransaction
+  ): string[] => {
+    const logs: string[] = [];
 
-      const piecesBeforeMap = new Map(piecesBefore.map(p => [p.id, p]));
-      const piecesAfterMap = new Map(piecesAfter.map(p => [p.id, p]));
+    const piecesBeforeMap = new Map(piecesBefore.map(p => [p.id, p]));
+    const piecesAfterMap = new Map(piecesAfter.map(p => [p.id, p]));
 
-      if (tileTransactionAtTurnEnd && tileTransactionAtTurnEnd.placerId === turnPlayerId) {
-        logs.push(`Played a tile for Player ${tileTransactionAtTurnEnd.receiverId}.`);
-      }
+    if (tileTransactionAtTurnEnd && tileTransactionAtTurnEnd.placerId === turnPlayerId) {
+      logs.push(`Played a tile for Player ${tileTransactionAtTurnEnd.receiverId}.`);
+    }
 
-      for (const [id, oldPiece] of piecesBeforeMap.entries()) {
-        const newPiece = piecesAfterMap.get(id);
-        if (newPiece) {
-          if (Math.abs(oldPiece.position.left - newPiece.position.left) > 0.01 || Math.abs(oldPiece.position.top - newPiece.position.top) > 0.01) {
-            const oldLocId = getLocationIdFromPosition(oldPiece.position, countOfPlayers);
-            const newLocId = getLocationIdFromPosition(newPiece.position, countOfPlayers);
-            const oldLocStr = oldLocId ? formatLocationId(oldLocId) : 'a location';
-            const newLocStr = newLocId ? formatLocationId(newLocId) : 'another location';
-            logs.push(`Moved a ${oldPiece.name} from ${oldLocStr} to ${newLocStr}.`);
-          }
-        } else {
+    for (const [id, oldPiece] of piecesBeforeMap.entries()) {
+      const newPiece = piecesAfterMap.get(id);
+      if (newPiece) {
+        if (Math.abs(oldPiece.position.left - newPiece.position.left) > 0.01 || Math.abs(oldPiece.position.top - newPiece.position.top) > 0.01) {
           const oldLocId = getLocationIdFromPosition(oldPiece.position, countOfPlayers);
-          const oldLocStr = oldLocId ? formatLocationId(oldLocId) : 'a location';
-          logs.push(`Returned a ${oldPiece.name} to supply from ${oldLocStr}.`);
-        }
-      }
-
-      for (const [id, newPiece] of piecesAfterMap.entries()) {
-        if (!piecesBeforeMap.has(id)) {
           const newLocId = getLocationIdFromPosition(newPiece.position, countOfPlayers);
-          const newLocStr = newLocId ? formatLocationId(newLocId) : 'a location';
-          logs.push(`Added a ${newPiece.name} from supply to ${newLocStr}.`);
+          const oldLocStr = oldLocId ? formatLocationId(oldLocId) : 'a location';
+          const newLocStr = newLocId ? formatLocationId(newLocId) : 'another location';
+          logs.push(`Moved a ${oldPiece.name} from ${oldLocStr} to ${newLocStr}.`);
         }
+      } else {
+        const oldLocId = getLocationIdFromPosition(oldPiece.position, countOfPlayers);
+        const oldLocStr = oldLocId ? formatLocationId(oldLocId) : 'a location';
+        logs.push(`Returned a ${oldPiece.name} to supply from ${oldLocStr}.`);
       }
-      return logs;
+    }
+
+    for (const [id, newPiece] of piecesAfterMap.entries()) {
+      if (!piecesBeforeMap.has(id)) {
+        const newLocId = getLocationIdFromPosition(newPiece.position, countOfPlayers);
+        const newLocStr = newLocId ? formatLocationId(newLocId) : 'a location';
+        logs.push(`Added a ${newPiece.name} from supply to ${newLocStr}.`);
+      }
+    }
+    return logs;
   };
 
   const addGameLog = (message: string) => {
@@ -3342,9 +3331,9 @@ const App: React.FC = () => {
       console.error("Cannot advance turn: playerCount is 0.");
       return;
     }
-    
+
     const fromPlayerId = startingPlayerId ?? players[currentPlayerIndex]?.id;
-    
+
     if (!fromPlayerId) {
       console.error("Cannot advance turn: current player not found.");
       return;
@@ -3550,11 +3539,11 @@ const App: React.FC = () => {
     setPiecesAtCorrectionStart([]);
     setPiecesBeforeBonusMove([]);
   };
-  
+
   const handleRevealTile = (tileId: string | null) => { setRevealedTileId(tileId); };
 
   const handleTogglePrivateView = () => setIsPrivatelyViewing(prev => !prev);
-  
+
   const handlePlacerViewTile = (tileId: string) => {
     setPlacerViewingTileId(prevId => (prevId === tileId ? null : tileId));
   };
@@ -4398,7 +4387,7 @@ const App: React.FC = () => {
 
       // Rule 1: Community → Seat/Rostrum/Office = COUNT
       if (initialLocId?.includes('community') &&
-          (finalLocId?.includes('_seat') || finalLocId?.includes('_rostrum') || finalLocId?.includes('_office'))) {
+        (finalLocId?.includes('_seat') || finalLocId?.includes('_rostrum') || finalLocId?.includes('_office'))) {
         shouldCountMove = true;
       }
       // Rule 2: Seat → Community = COUNT (only if started in seat)
@@ -4415,7 +4404,7 @@ const App: React.FC = () => {
       }
       // Rule 5: Rostrum → Seat/Office = COUNT
       else if (initialLocId?.includes('_rostrum') &&
-               (finalLocId?.includes('_seat') || finalLocId?.includes('_office'))) {
+        (finalLocId?.includes('_seat') || finalLocId?.includes('_office'))) {
         shouldCountMove = true;
       }
       // Rule 6: Office → Rostrum = COUNT
@@ -4592,74 +4581,74 @@ const App: React.FC = () => {
     if (!tileTransaction) return;
 
     setPlayers(prev => prev.map(p => {
-        if (p.id === tileTransaction.receiverId) {
-            return { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tileTransaction.tile] };
-        }
-        return p;
+      if (p.id === tileTransaction.receiverId) {
+        return { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tileTransaction.tile] };
+      }
+      return p;
     }));
     setBoardTiles(prev => prev.filter(bt => bt.id !== tileTransaction.boardTileId));
     advanceTurnNormally(tileTransaction.placerId);
   };
-  
+
   const handleReceiverDecision = (decision: 'accept' | 'reject') => {
-      if (!tileTransaction) return;
-      setIsPrivatelyViewing(false);
+    if (!tileTransaction) return;
+    setIsPrivatelyViewing(false);
 
-      if (decision === 'reject') {
-          const placer = players.find(p => p.id === tileTransaction.placerId);
-          if (placer) {
-              setPlayers(prev => prev.map(p => p.id === placer.id ? { ...p, keptTiles: [...p.keptTiles, tileTransaction.tile] } : p));
-          }
-          setBoardTiles(prev => prev.filter(bt => bt.id !== tileTransaction.boardTileId));
-          advanceTurnNormally(tileTransaction.placerId);
-      } else { // 'accept'
-          setGameState('PENDING_CHALLENGE');
-          
-          const bystanderPlayers = players.filter(p => p.id !== tileTransaction.placerId && p.id !== tileTransaction.receiverId);
-          const placerIndex = players.findIndex(p => p.id === tileTransaction.placerId);
-
-          const sortedBystanders = bystanderPlayers.sort((a, b) => {
-              const indexA = players.findIndex(p => p.id === a.id);
-              const indexB = players.findIndex(p => p.id === b.id);
-              const relativeA = (indexA - placerIndex + playerCount) % playerCount;
-              const relativeB = (indexB - placerIndex + playerCount) % playerCount;
-              return relativeA - relativeB;
-          });
-
-          if (sortedBystanders.length > 0) {
-              setBystanders(sortedBystanders);
-              setBystanderIndex(0);
-              const firstBystanderIndex = players.findIndex(p => p.id === sortedBystanders[0].id);
-              setCurrentPlayerIndex(firstBystanderIndex);
-          } else {
-              resolveTransaction(false);
-          }
+    if (decision === 'reject') {
+      const placer = players.find(p => p.id === tileTransaction.placerId);
+      if (placer) {
+        setPlayers(prev => prev.map(p => p.id === placer.id ? { ...p, keptTiles: [...p.keptTiles, tileTransaction.tile] } : p));
       }
+      setBoardTiles(prev => prev.filter(bt => bt.id !== tileTransaction.boardTileId));
+      advanceTurnNormally(tileTransaction.placerId);
+    } else { // 'accept'
+      setGameState('PENDING_CHALLENGE');
+
+      const bystanderPlayers = players.filter(p => p.id !== tileTransaction.placerId && p.id !== tileTransaction.receiverId);
+      const placerIndex = players.findIndex(p => p.id === tileTransaction.placerId);
+
+      const sortedBystanders = bystanderPlayers.sort((a, b) => {
+        const indexA = players.findIndex(p => p.id === a.id);
+        const indexB = players.findIndex(p => p.id === b.id);
+        const relativeA = (indexA - placerIndex + playerCount) % playerCount;
+        const relativeB = (indexB - placerIndex + playerCount) % playerCount;
+        return relativeA - relativeB;
+      });
+
+      if (sortedBystanders.length > 0) {
+        setBystanders(sortedBystanders);
+        setBystanderIndex(0);
+        const firstBystanderIndex = players.findIndex(p => p.id === sortedBystanders[0].id);
+        setCurrentPlayerIndex(firstBystanderIndex);
+      } else {
+        resolveTransaction(false);
+      }
+    }
   };
 
   const handleBystanderDecision = (decision: 'challenge' | 'pass') => {
-      if (decision === 'challenge') {
-          if (tileTransaction) {
-              setChallengedTile(tileTransaction.tile);
-              setShowChallengeRevealModal(true);
-          }
-      } else { // 'pass'
-          const nextBystanderIndex = bystanderIndex + 1;
-          if (nextBystanderIndex >= bystanders.length) {
-              resolveTransaction(false);
-          } else {
-              setBystanderIndex(nextBystanderIndex);
-              const nextBystander = bystanders[nextBystanderIndex];
-              const nextBystanderPlayerIndex = players.findIndex(p => p.id === nextBystander.id);
-              setCurrentPlayerIndex(nextBystanderPlayerIndex);
-          }
+    if (decision === 'challenge') {
+      if (tileTransaction) {
+        setChallengedTile(tileTransaction.tile);
+        setShowChallengeRevealModal(true);
       }
+    } else { // 'pass'
+      const nextBystanderIndex = bystanderIndex + 1;
+      if (nextBystanderIndex >= bystanders.length) {
+        resolveTransaction(false);
+      } else {
+        setBystanderIndex(nextBystanderIndex);
+        const nextBystander = bystanders[nextBystanderIndex];
+        const nextBystanderPlayerIndex = players.findIndex(p => p.id === nextBystander.id);
+        setCurrentPlayerIndex(nextBystanderPlayerIndex);
+      }
+    }
   };
 
   const handleContinueAfterChallenge = () => {
-      setShowChallengeRevealModal(false);
-      resolveTransaction(true);
-      setChallengedTile(null);
+    setShowChallengeRevealModal(false);
+    resolveTransaction(true);
+    setChallengedTile(null);
   }
 
   // ============================================================================
@@ -5519,12 +5508,12 @@ const App: React.FC = () => {
     const actionName = purchase.item.type === 'PROMOTION'
       ? `Promotion (${purchase.item.promotionLocation})`
       : purchase.item.type === 'CREDIBILITY'
-      ? 'Credibility Restoration'
-      : purchase.item.moveType;
+        ? 'Credibility Restoration'
+        : purchase.item.moveType;
 
     const tileIds = selectedTilesForAdvantage.map(t => t.id).join(', ');
     setGameLog(prev => [...prev,
-      `${challengerName} completed Take Advantage: ${actionName} (₭-${purchase.item.price}) using tiles [${tileIds}]`
+    `${challengerName} completed Take Advantage: ${actionName} (₭-${purchase.item.price}) using tiles [${tileIds}]`
     ]);
 
     // Clean up all Take Advantage state
@@ -5758,11 +5747,10 @@ const App: React.FC = () => {
       {/* Challenge Result Message - displays for 5 seconds */}
       {challengeResultMessage && (
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4" aria-live="polite" role="status">
-          <div className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
-            challengeResultMessage.includes('Failed')
-              ? 'bg-green-900 border-green-500 text-green-300'
-              : 'bg-orange-900 border-orange-500 text-orange-300'
-          }`}>
+          <div className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${challengeResultMessage.includes('Failed')
+            ? 'bg-green-900 border-green-500 text-green-300'
+            : 'bg-orange-900 border-orange-500 text-orange-300'
+            }`}>
             <h2 className="text-2xl font-bold mb-2">
               {challengeResultMessage.includes('Failed') ? '✓ Challenge Failed' : '⚠️ Challenge Successful'}
             </h2>
