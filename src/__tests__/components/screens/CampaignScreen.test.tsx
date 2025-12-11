@@ -356,7 +356,9 @@ describe("CampaignScreen", () => {
   describe("Test Mode Tools", () => {
     it("should display Credibility Rotation Adjuster in test mode", () => {
       render(<CampaignScreen {...defaultProps} isTestMode={true} />);
-      expect(screen.getByText(/Credibility Rotation Adjuster/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Credibility Rotation Adjuster/)
+      ).toBeInTheDocument();
     });
 
     it("should expand Credibility Rotation Adjuster when clicked", () => {
@@ -403,7 +405,11 @@ describe("CampaignScreen", () => {
     it("should display Dummy Tile Tracker when dummy tile exists in test mode", () => {
       const dummyTile = { position: { top: 50, left: 50 }, rotation: 0 };
       render(
-        <CampaignScreen {...defaultProps} isTestMode={true} dummyTile={dummyTile} />
+        <CampaignScreen
+          {...defaultProps}
+          isTestMode={true}
+          dummyTile={dummyTile}
+        />
       );
       expect(screen.getByText(/Dummy Tile Tracker/)).toBeInTheDocument();
     });
@@ -427,8 +433,12 @@ describe("CampaignScreen", () => {
 
     it("should not display test mode tools when not in test mode", () => {
       render(<CampaignScreen {...defaultProps} isTestMode={false} />);
-      expect(screen.queryByText(/Credibility Rotation Adjuster/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Credibility System Rules/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Credibility Rotation Adjuster/)
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Credibility System Rules/)
+      ).not.toBeInTheDocument();
       expect(screen.queryByText(/Kredcoin Tracker/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Piece Tracker/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Create Dummy Tile/)).not.toBeInTheDocument();
@@ -470,7 +480,11 @@ describe("CampaignScreen", () => {
     it("should call setDummyTile with null when Delete Tile button is clicked", () => {
       const dummyTile = { position: { top: 50, left: 50 }, rotation: 0 };
       render(
-        <CampaignScreen {...defaultProps} isTestMode={true} dummyTile={dummyTile} />
+        <CampaignScreen
+          {...defaultProps}
+          isTestMode={true}
+          dummyTile={dummyTile}
+        />
       );
       const deleteButton = screen.getByText(/Delete Tile/);
       fireEvent.click(deleteButton);
