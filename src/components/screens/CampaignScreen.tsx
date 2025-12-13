@@ -1061,6 +1061,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               return (
                 <img
                   key={piece.id}
+                  data-piece-id={piece.id}
+                  data-location-id={piece.locationId || ''}
                   src={piece.imageUrl}
                   alt={piece.name}
                   draggable="true"

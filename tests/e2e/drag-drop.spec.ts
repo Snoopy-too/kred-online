@@ -21,19 +21,19 @@ test.describe('Drag and Drop - Pieces', () => {
     await startGame(page, 4, { testMode: true });
     await skipToDraftEnd(page, 4);
 
-    // Wait for campaign phase to load
-    await expect(page.locator('h1')).toContainText('Campaign Phase');
+    // Wait for campaign phase to load (verify Game Log is visible)
+    await expect(page.getByRole('heading', { name: /Game Log/i })).toBeVisible();
 
-    // Find a piece in community (assuming data-piece-id attribute exists)
-    const communityPiece = page.locator('[data-piece-id^="mark-"]').first();
+    // Find a piece in community (piece IDs are like "initial_p1_mark_seat1" or "community_mark_1")
+    const communityPiece = page.locator('[data-piece-id*="_mark_"]').first();
     await expect(communityPiece).toBeVisible();
 
     // Get the piece ID
     const pieceId = await communityPiece.getAttribute('data-piece-id');
     expect(pieceId).toBeTruthy();
 
-    // Find a valid seat location (assuming data-location-id attribute exists)
-    const seat = page.locator('[data-location-id^="p1_seat"]').first();
+    // Find a valid seat location (location IDs are like "p1_seat1", "p2_seat3", etc.)
+    const seat = page.locator('[data-piece-id][data-location-id*="_seat"]').first();
     await expect(seat).toBeVisible();
 
     const seatId = await seat.getAttribute('data-location-id');
@@ -157,7 +157,7 @@ test.describe('Drag and Drop - Edge Cases', () => {
       await page.waitForTimeout(500);
 
       // Verify game is still functional
-      await expect(page.locator('h1')).toContainText('Campaign Phase');
+      await expect(page.getByRole('heading', { name: /Game Log/i })).toBeVisible();
     } else {
       test.skip();
     }

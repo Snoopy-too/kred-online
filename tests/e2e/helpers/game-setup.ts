@@ -45,7 +45,8 @@ export async function startGame(
   if (!skipDraft) {
     await expect(page.locator('h1')).toContainText('Drafting Phase', { timeout: 5000 });
   } else if (!skipCampaign) {
-    await expect(page.locator('h1')).toContainText('Campaign Phase', { timeout: 5000 });
+    // Campaign screen doesn't have h1, look for Game Log heading specifically
+    await expect(page.getByRole('heading', { name: /Game Log/i })).toBeVisible({ timeout: 5000 });
   } else {
     await expect(page.locator('h1')).toContainText('Bureaucracy Phase', { timeout: 5000 });
   }
@@ -66,16 +67,16 @@ export async function completeDraft(page: Page, playerCount: 3 | 4 | 5) {
       // Wait for current player's turn
       await expect(page.locator('h2')).toContainText(`Player ${player}`, { timeout: 5000 });
 
-      // Select first available tile
-      await page.locator('.tile-hand button').first().click();
+      // Select first available tile (using aria-label selector)
+      await page.locator('button[aria-label^="Select tile"]').first().click();
 
       // Small delay for state update
       await page.waitForTimeout(200);
     }
   }
 
-  // Wait for transition to Campaign phase
-  await expect(page.locator('h1')).toContainText('Campaign Phase', { timeout: 5000 });
+  // Wait for transition to Campaign phase (look for Game Log heading)
+  await expect(page.getByRole('heading', { name: /Game Log/i })).toBeVisible({ timeout: 5000 });
 }
 
 /**
@@ -136,8 +137,8 @@ export async function setupCampaignState(
   // Start game and skip draft
   await startGame(page, playerCount, { testMode, skipDraft: true });
 
-  // Campaign phase should now be active
-  await expect(page.locator('h1')).toContainText('Campaign Phase');
+  // Campaign phase should now be active (look for Game Log heading)
+  await expect(page.getByRole('heading', { name: /Game Log/i })).toBeVisible();
 
   // If current player is not player 1, we'd need to advance turns
   // For now, this is a basic implementation

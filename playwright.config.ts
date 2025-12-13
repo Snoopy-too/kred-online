@@ -26,7 +26,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL for the dev server
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:3003/KRED',
 
     // Collect trace when retrying the failed test
     trace: 'retain-on-failure',
@@ -59,10 +59,11 @@ export default defineConfig({
   ],
 
   // Run your local dev server before starting the tests
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000, // 2 minutes to start server
-  },
+  // Note: Start dev server manually before running tests: npm run dev
+  // webServer: {
+  //   command: 'npm run dev',
+  //   url: 'http://localhost:3003/KRED',
+  //   reuseExistingServer: true,
+  //   timeout: 120000,
+  // },
 });
