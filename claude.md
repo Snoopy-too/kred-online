@@ -2,13 +2,28 @@
 
 ## Testing
 
+### Unit & Integration Tests (Vitest)
+
 - **Run tests**: Use `npm test -- --run` to run tests without watch mode
   - The `--run` flag prevents vitest from hanging in watch mode after tests complete
   - Always verify all tests pass before committing changes
+- **Test with UI**: `npm run test:ui` for interactive test interface
+- **Test with coverage**: `npm run test:coverage` for coverage reports
 
-## Current Test Count
+### E2E Tests (Playwright)
 
-- **1056 tests** across 46 test files (as of Phase 7g completion)
+- **Prerequisites**: Start dev server first with `npm run dev`
+- **Run E2E tests**: `npm run test:e2e` (headless mode)
+- **Interactive mode**: `npm run test:e2e:ui` (Playwright UI)
+- **Debug mode**: `npm run test:e2e:debug` (step through tests)
+- **Headed mode**: `npm run test:e2e:headed` (visible browser)
+- **Timed execution**: `time npm run test:e2e -- --reporter=list --workers=1`
+
+### Current Test Count
+
+- **1,071 unit/integration tests** across 46 test files
+- **7 E2E tests** (~12 seconds execution time)
+- **Total: 1,078 tests**
 
 ## Project Structure
 
@@ -21,7 +36,9 @@ Key directories:
 - `src/hooks/` - Custom React hooks
 - `src/utils/` - Utility functions
 - `src/components/` - React components
-- `src/__tests__/` - Test files (mirrors src structure)
+- `src/__tests__/` - Unit/integration test files (mirrors src structure)
+- `tests/e2e/` - End-to-end tests with Playwright
+  - `tests/e2e/helpers/` - E2E test utilities (game-setup, drag-drop, assertions)
 
 ## Refactoring Status
 
