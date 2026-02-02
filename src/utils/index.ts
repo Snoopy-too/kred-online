@@ -2,10 +2,10 @@
 // Re-exports all utility modules for convenient importing
 
 // Positioning utilities - coordinate and rotation calculations
-export * from "./positioning";
+export { getPiecePosition, setPiecePosition } from "./positioning";
 
 // Formatting utilities - display string formatting
-export * from "./formatting";
+export { formatLocationId, formatWinnerNames } from "./formatting";
 
 // Array utilities - array manipulation helpers
-export * from "./array";
+export { shuffle, uniqueBy, groupBy } from "./array";

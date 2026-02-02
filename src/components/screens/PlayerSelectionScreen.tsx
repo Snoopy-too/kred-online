@@ -47,7 +47,7 @@ const PlayerSelectionScreen: React.FC<PlayerSelectionScreenProps> = ({
       <div className="text-center mb-12">
         <img
           src="./images/logo.png"
-          alt="Kred Logo"
+          alt="KRED Logo"
           className="w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto"
           style={{ filter: "drop-shadow(0 4px 10px rgba(0, 0, 0, 0.15))" }}
         />
@@ -69,11 +69,10 @@ const PlayerSelectionScreen: React.FC<PlayerSelectionScreenProps> = ({
           <button
             key={count}
             onClick={() => setPlayerCount(count)}
-            className={`w-24 h-24 sm:w-32 sm:h-32 text-2xl font-bold rounded-lg transition-all duration-200 ease-in-out border-2 ${
-              playerCount === count
+            className={`w-24 h-24 sm:w-32 sm:h-32 text-2xl font-bold rounded-lg transition-all duration-200 ease-in-out border-2 ${playerCount === count
                 ? "bg-indigo-600 border-indigo-400 scale-110 shadow-lg text-white"
                 : "bg-white border-gray-200 text-slate-700 hover:bg-gray-50 hover:border-gray-300"
-            }`}
+              }`}
             aria-pressed={playerCount === count}
           >
             {count} Players
@@ -120,19 +119,17 @@ const PlayerSelectionScreen: React.FC<PlayerSelectionScreenProps> = ({
                 checked={skipCampaign}
                 disabled={!skipDraft}
                 onChange={(e) => setSkipCampaign(e.target.checked)}
-                className={`h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 ${
-                  !skipDraft
+                className={`h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 ${!skipDraft
                     ? "opacity-50 cursor-not-allowed"
                     : "bg-white cursor-pointer"
-                }`}
+                  }`}
               />
               <label
                 htmlFor="skip-campaign-checkbox"
-                className={`ml-3 ${
-                  !skipDraft
+                className={`ml-3 ${!skipDraft
                     ? "text-slate-400 cursor-not-allowed"
                     : "text-slate-600 cursor-pointer"
-                }`}
+                  }`}
               >
                 Skip Campaign Phase (Go directly to Bureaucracy)
               </label>

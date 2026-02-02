@@ -27,16 +27,8 @@ import {
 // ============================================================================
 // RULES IMPORTS - Game rules enforcement
 // ============================================================================
-import {
-  // Rostrum rules - support requirements
-  getRostrumSupportRule,
-  countPiecesInSeats,
-  areSupportingSeatsFullForRostrum,
-  areBothRostrumsFilledForPlayer,
-
-  // Adjacency rules - seat positioning
-  areSeatsAdjacent,
-} from "../rules";
+import { getRostrumSupportRule, countPiecesInSeats, areSupportingSeatsFullForRostrum, areBothRostrumsFilledForPlayer } from "./rostrum";
+import { areSeatsAdjacent } from "./adjacency";
 
 // ============================================================================
 // UTILITY IMPORTS - Helper functions

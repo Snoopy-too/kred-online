@@ -1,0 +1,346 @@
+// KRED game events
+    socket.on('kred:game:started', (data) => {
+      log('[KRED] Game started! ' + JSON.stringify(data, null, 2), 'success');
+      if (data.initialGameState) {
+        document.getElementById('infoPhase').textContent = data.initialGameState.phase;
+        document.getElementById('infoRoomId').textContent = data.initialGameState.roomId || '-';
+      }
+    });
+
+    socket.on('kred:drafting:update', (data) => {
+      log('[KRED] Drafting update: ' + JSON.stringify(data, null, 2));
+      if (data.phase) {
+        document.getElementById('infoPhase').textContent = data.phase;
+      }
+    });
+
+    socket.on('kred:state:update', (data) => {
+      log('[KRED] State update: ' + JSON.stringify(data, null, 2));
+      if (data.gameState && data.gameState.phase) {
+        document.getElementById('infoPhase').textContent = data.gameState.phase;
+      }
+    });
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KRED Multiplayer Test Client</title>
+  <script src="https://cdn.socket.io/4.1.2/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+
+    h1 {
+      color: #16213e;
+      background: #ffd700;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 2px solid #0f3460;
+    }
+
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+
+    .status.connected {
+      background: #28a745;
+    }
+
+    .status.disconnected {
+      background: #dc3545;
+    }
+
+    button {
+      background: #ffd700;
+      color: #16213e;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #ffed4e;
+    }
+
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+
+    input {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 2px solid #0f3460;
+      background: #0f3460;
+      color: #eee;
+    }
+
+    #log {
+      background: #0f0f0f;
+      padding: 15px;
+      border-radius: 5px;
+      height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #ffd700;
+    }
+
+    .log-entry.error {
+      border-left-color: #dc3545;
+      color: #ff6b6b;
+    }
+
+    .log-entry.success {
+      border-left-color: #28a745;
+      color: #51cf66;
+    }
+
+    .game-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .info-item {
+      background: #0f3460;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🎮 KRED Multiplayer Test Client</h1>
+
+  <div class="section">
+    <h2>Connection Status</h2>
+    <div id="status" class="status disconnected">Disconnected</div>
+  </div>
+
+  <div class="section">
+    <h2>Game Room</h2>
+    <div>
+      <input type="text" id="playerName" placeholder="Your Name" value="Player 1" aria-label="Player Name">
+      <input type="number" id="playerCount" placeholder="Player Count" value="3" min="3" max="5"
+        aria-label="Player Count">
+      <button id="createBtn" onclick="createGame()">Create Game</button>
+    </div>
+    <div>
+      <input type="text" id="roomId" placeholder="Room ID" aria-label="Room ID">
+      <button id="joinBtn" onclick="joinGame()">Join Game</button>
+    </div>
+    <div>
+      <button id="startBtn" onclick="startGame()" disabled>Start Game</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Game Info</h2>
+    <div class="game-info">
+      <div class="info-item">
+        <strong>Room ID:</strong> <span id="infoRoomId">-</span>
+      </div>
+      <div class="info-item">
+        <strong>Player Index:</strong> <span id="infoPlayerIndex">-</span>
+      </div>
+      <div class="info-item">
+        <strong>Phase:</strong> <span id="infoPhase">-</span>
+      </div>
+      <div class="info-item">
+        <strong>Current Player:</strong> <span id="infoCurrentPlayer">-</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Actions</h2>
+    <button onclick="testAction('tile:accept')">Accept Tile</button>
+    <button onclick="testAction('tile:reject')">Reject Tile</button>
+    <button onclick="testAction('challenge:initiate')">Challenge</button>
+    <button onclick="testAction('challenge:pass')">Pass Challenge</button>
+    <button onclick="testAction('campaign:endTurn')">End Turn</button>
+  </div>
+
+  <div class="section">
+    <h2>Event Log</h2>
+    <button onclick="clearLog()">Clear Log</button>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const socket = io('http://localhost:4001');
+    let sessionData = {
+      roomId: null,
+      playerId: null,
+      playerIndex: null,
+      sessionToken: null
+    };
+
+    // Connection events
+    socket.on('connect', () => {
+      updateStatus(true);
+      log('Connected to server', 'success');
+    });
+
+    socket.on('disconnect', () => {
+      updateStatus(false);
+      log('Disconnected from server', 'error');
+    });
+
+    // Game events
+    socket.on('kred:stateUpdate', (data) => {
+      log('State Update: ' + JSON.stringify(data, null, 2));
+      updateGameInfo(data.gameState);
+    });
+
+    socket.on('game:phaseChange', (data) => {
+      log('Phase Change: ' + data.newPhase, 'success');
+      document.getElementById('infoPhase').textContent = data.newPhase;
+      document.getElementById('infoCurrentPlayer').textContent = data.currentPlayer;
+    });
+
+    socket.on('player:joined', (data) => {
+      log(`Player joined: ${data.playerName} (Index: ${data.playerIndex})`, 'success');
+    });
+
+    socket.on('player:disconnected', (data) => {
+      log(`Player disconnected: Index ${data.playerIndex}`, 'error');
+    });
+
+    socket.on('error:invalidMove', (data) => {
+      log('Invalid Move: ' + data.message, 'error');
+    });
+
+    socket.on('error:notYourTurn', (data) => {
+      log('Not Your Turn: ' + data.message, 'error');
+    });
+
+    // Helper functions
+    function updateStatus(connected) {
+      const status = document.getElementById('status');
+      status.textContent = connected ? 'Connected' : 'Disconnected';
+      status.className = 'status ' + (connected ? 'connected' : 'disconnected');
+    }
+
+    function log(message, type = '') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function updateGameInfo(gameState) {
+      if (!gameState) return;
+
+      if (gameState.gameState) {
+        document.getElementById('infoPhase').textContent = gameState.gameState;
+      }
+      if (gameState.currentPlayerIndex !== undefined) {
+        document.getElementById('infoCurrentPlayer').textContent = gameState.currentPlayerIndex;
+      }
+    }
+
+    function createGame() {
+      const playerName = document.getElementById('playerName').value;
+      const playerCount = parseInt(document.getElementById('playerCount').value);
+      // Use kred:initialize to create a game
+      socket.emit('kred:initialize', { roomId: undefined, playerName, playerCount }, (response) => {
+        if (response.success) {
+          log(`Game created!`, 'success');
+          // No roomId returned, so keep blank or set manually if needed
+          // Enable Start Game if playerCount >= 3
+          if (playerCount >= 3) {
+            document.getElementById('startBtn').disabled = false;
+          } else {
+            document.getElementById('startBtn').disabled = true;
+          }
+          // Show phase and info
+          if (response.initialState) {
+            document.getElementById('infoPhase').textContent = response.initialState.phase;
+            document.getElementById('infoRoomId').textContent = response.initialState.roomId || '-';
+          }
+        } else {
+          log('Failed to create game: ' + response.error, 'error');
+        }
+      });
+    }
+
+    function joinGame() {
+      const roomId = document.getElementById('roomId').value;
+      const playerName = document.getElementById('playerName').value;
+      // Use kred:initialize to join a game (if needed, or implement kred:join if available)
+      socket.emit('kred:initialize', { roomId, playerName }, (response) => {
+        if (response.success) {
+          log(`Joined game!`, 'success');
+          if (response.initialState) {
+            document.getElementById('infoPhase').textContent = response.initialState.phase;
+            document.getElementById('infoRoomId').textContent = response.initialState.roomId || roomId;
+          }
+        } else {
+          log('Failed to join game: ' + response.error, 'error');
+        }
+      });
+    }
+
+    function startGame() {
+      const roomId = document.getElementById('roomId').value;
+      socket.emit('kred:game:start', { roomId }, (response) => {
+        if (response.success) {
+          log('Game started!', 'success');
+          document.getElementById('startBtn').disabled = true;
+          if (response.initialGameState) {
+            document.getElementById('infoPhase').textContent = response.initialGameState.phase;
+          }
+        } else {
+          log('Failed to start game: ' + response.error, 'error');
+        }
+      });
+    }
+
+    function testAction(eventName) {
+      socket.emit(eventName, {}, (response) => {
+        if (response.success) {
+          log(`Action ${eventName} succeeded`, 'success');
+        } else {
+          log(`Action ${eventName} failed: ${response.error}`, 'error');
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>

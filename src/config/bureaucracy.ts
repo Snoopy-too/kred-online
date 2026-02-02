@@ -12,7 +12,7 @@ import type {
   BureaucracyItemType,
   BureaucracyMoveType,
   PromotionLocationType,
-} from "../../game";
+} from "../types";
 
 /**
  * BUREAUCRACY MENU - 3 and 4 Player Modes

@@ -9,6 +9,7 @@ export interface GamePieceInfo {
 export interface Piece {
   id: string;
   name: string;
+  displayName?: string; // Optional display name for UI (e.g., "Mark", "Heel", "Pawn")
   imageUrl: string;
   position: { top: number; left: number }; // in percentage
   rotation: number;

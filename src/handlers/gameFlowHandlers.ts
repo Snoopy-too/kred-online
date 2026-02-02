@@ -119,7 +119,8 @@ export interface GameFlowHandlers {
     count: number,
     testMode: boolean,
     skipDraft: boolean,
-    skipCampaign: boolean
+    skipCampaign: boolean,
+    initialGameState?: any
   ) => void;
   handleNewGame: () => void;
   handleSelectTile: (selectedTile: Tile) => void;
@@ -145,14 +146,43 @@ export function createGameFlowHandlers(
     count: number,
     testMode: boolean,
     skipDraft: boolean,
-    skipCampaign: boolean
+    skipCampaign: boolean,
+    initialGameState?: any
   ): void => {
     deps.setPlayerCount(count);
     deps.setIsTestMode(testMode);
     deps.setMovedPiecesThisTurn(new Set());
     deps.setPendingCommunityPieces(new Set());
 
-    const initialPlayers = deps.initializePlayers(count);
+    // If we have a complete game state from the server (refresh/reconnect), restore it fully
+    if (initialGameState && initialGameState.phase) {
+      console.log('[GAME] Restoring game state from server:', initialGameState.phase);
+      console.log('[GAME] Players in saved state:', initialGameState.players?.length, 'players');
+      console.log('[GAME] Full player data:', JSON.stringify(initialGameState.players?.map((p: any, i: number) => ({
+        playerNum: i + 1,
+        id: p.id,
+        name: p.name,
+        handSize: p.hand?.length || 0,
+        tiles: p.hand?.map((t: any) => ({ id: t.id, url: t.url })) || []
+      })), null, 2));
+      
+      // Restore all state
+      deps.setPlayers(initialGameState.players || []);
+      deps.setGameState(initialGameState.phase === 'drafting' ? 'DRAFTING' : 'CAMPAIGN');
+      deps.setCurrentPlayerIndex(initialGameState.currentPlayerIndex || 0);
+      
+      // If in campaign phase, also restore campaign state
+      if (initialGameState.phase === 'campaign') {
+        deps.setPieces(initialGameState.pieces || deps.initializeCampaignPieces(count));
+        deps.setBoardTiles(initialGameState.boardTiles || []);
+        deps.setBankedTiles(initialGameState.bankedTiles || []);
+      }
+      
+      return;
+    }
+
+    // Use server-provided players if available (multiplayer), otherwise initialize locally
+    const initialPlayers = initialGameState?.players || deps.initializePlayers(count);
 
     if (skipDraft && skipCampaign) {
       // Skip both phases - distribute tiles randomly and move to bureaucracy
@@ -323,6 +353,7 @@ export function createGameFlowHandlers(
   // handleSelectTile - Handle tile selection during drafting phase
   // ============================================================================
   const handleSelectTile = (selectedTile: Tile): void => {
+    // Update current player's tiles (move selected tile from hand to keptTiles)
     const updatedPlayers = deps.players.map((player, index) => {
       if (index === deps.currentPlayerIndex) {
         return {
@@ -334,42 +365,59 @@ export function createGameFlowHandlers(
       return player;
     });
 
-    const nextPlayerIndex = deps.currentPlayerIndex + 1;
-    if (nextPlayerIndex >= deps.playerCount) {
-      const handsToPass = updatedPlayers.map((p) => p.hand);
-      const playersWithPassedHands = updatedPlayers.map((p, i) => {
-        const passingPlayerIndex =
-          (i - 1 + deps.playerCount) % deps.playerCount;
-        return { ...p, hand: handsToPass[passingPlayerIndex] };
-      });
+    // Check if all players have selected their tile this round (all hands empty)
+    const allPlayersSelected = updatedPlayers.every((p) => p.hand.length === 0);
 
-      if (playersWithPassedHands[0].hand.length === 0) {
-        deps.setGameState("CAMPAIGN");
+    if (allPlayersSelected) {
+      // All players have selected - check if drafting is complete
+      if (updatedPlayers[0].keptTiles.length === updatedPlayers[0].keptTiles.length) {
+        // Check if we have all tiles (drafting complete)
+        const totalTilesPerPlayer = Math.floor((deps.playerCount === 5 ? 25 : 24) / deps.playerCount);
+        
+        if (updatedPlayers[0].keptTiles.length >= totalTilesPerPlayer) {
+          // Drafting complete - move to Campaign
+          deps.setGameState("CAMPAIGN");
 
-        // Initialize pieces for campaign: Marks at seats 1,3,5 + Heels/Pawns in community
-        const initialPieces = deps.initializeCampaignPieces(deps.playerCount);
-        deps.setPieces(initialPieces);
-        deps.setPiecesAtTurnStart(initialPieces);
+          // Initialize pieces for campaign: Marks at seats 1,3,5 + Heels/Pawns in community
+          const initialPieces = deps.initializeCampaignPieces(deps.playerCount);
+          deps.setPieces(initialPieces);
+          deps.setPiecesAtTurnStart(initialPieces);
 
-        // Player with tile 03.svg goes first in Campaign
-        const startingTileId = 3;
-        const startingPlayerIndex = playersWithPassedHands.findIndex(
-          (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
-        );
+          // Player with tile 03.svg goes first in Campaign
+          const startingTileId = 3;
+          const startingPlayerIndex = updatedPlayers.findIndex(
+            (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
+          );
 
-        deps.setCurrentPlayerIndex(
-          startingPlayerIndex !== -1 ? startingPlayerIndex : 0
-        );
-        deps.setHasPlayedTileThisTurn(false);
-        deps.setPlayers(playersWithPassedHands);
-      } else {
+          deps.setCurrentPlayerIndex(
+            startingPlayerIndex !== -1 ? startingPlayerIndex : 0
+          );
+          deps.setHasPlayedTileThisTurn(false);
+          deps.setPlayers(updatedPlayers);
+        }
+      }
+    } else {
+      // Not all players have selected yet - just update the players state
+      // In multiplayer, each player waits after selecting until all have selected
+      // In single-player, move to next player
+      const nextPlayerIndex = deps.currentPlayerIndex + 1;
+      
+      if (nextPlayerIndex >= deps.playerCount) {
+        // All players have had a turn selecting - rotate hands for next round
+        const handsToPass = updatedPlayers.map((p) => p.hand);
+        const playersWithPassedHands = updatedPlayers.map((p, i) => {
+          const passingPlayerIndex = (i - 1 + deps.playerCount) % deps.playerCount;
+          return { ...p, hand: handsToPass[passingPlayerIndex] };
+        });
+
         deps.setPlayers(playersWithPassedHands);
         deps.setDraftRound(deps.draftRound + 1);
         deps.setCurrentPlayerIndex(0);
+      } else {
+        // Single-player mode - move to next player
+        deps.setPlayers(updatedPlayers);
+        deps.setCurrentPlayerIndex(nextPlayerIndex);
       }
-    } else {
-      deps.setPlayers(updatedPlayers);
-      deps.setCurrentPlayerIndex(nextPlayerIndex);
     }
   };
 

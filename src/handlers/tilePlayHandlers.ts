@@ -23,7 +23,7 @@ import type {
   GameState,
 } from "../types";
 import { PlayedTileState } from "../hooks/useTilePlayWorkflow";
-import { ALERTS } from "../../constants";
+import { ALERTS } from "../config";
 import { getPlayerById } from "../../utils";
 
 // ============================================================================

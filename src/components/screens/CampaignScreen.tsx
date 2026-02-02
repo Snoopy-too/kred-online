@@ -63,6 +63,8 @@ interface CampaignScreenProps {
   boardTiles: BoardTile[];
   bankedTiles: (BoardTile & { faceUp: boolean })[];
   currentPlayerId: number;
+  playerIndex?: number; // Index of the player viewing this screen (multiplayer)
+  isMultiplayer?: boolean; // Whether this is a multiplayer game
   lastDroppedPosition: { top: number; left: number } | null;
   lastDroppedPieceId: string | null;
   isTestMode: boolean;
@@ -192,6 +194,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   boardTiles,
   bankedTiles,
   currentPlayerId,
+  playerIndex,
+  isMultiplayer = false,
   lastDroppedPosition,
   lastDroppedPieceId,
   isTestMode,
@@ -299,8 +303,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   // DERIVED STATE & CALCULATIONS
   // ============================================================================
+  // In multiplayer, each player's board is rotated to their perspective (stationary)
+  // In test mode, board rotates with current player turn
   const boardRotation = boardRotationEnabled
-    ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0
+    ? (isMultiplayer && playerIndex !== undefined
+      ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[playerIndex + 1] ?? 0
+      : PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0)
     : 0;
 
   const tileSpaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
@@ -609,6 +617,24 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   const currentPlayer = getPlayerById(players, currentPlayerId);
 
+  // In multiplayer, determine which player's hand to show (viewer's hand)
+  // playerIndex is 0-based, player.id is 1-based, so we find by id
+  const viewingPlayer = isMultiplayer && playerIndex !== undefined
+    ? players.find(p => p.id === playerIndex + 1) || currentPlayer
+    : currentPlayer;
+
+  // Debug logging for multiplayer hand visibility
+  console.log('[CAMPAIGN] Hand visibility:', {
+    isMultiplayer,
+    playerIndex,
+    lookingForPlayerId: playerIndex !== undefined ? playerIndex + 1 : 'N/A',
+    currentPlayerId,
+    viewingPlayerId: viewingPlayer?.id,
+    viewingPlayerName: viewingPlayer?.name,
+    viewingPlayerHandSize: viewingPlayer?.hand?.length || 0,
+    allPlayers: players.map(p => ({ id: p.id, name: p.name, handSize: p.hand?.length || 0 }))
+  });
+
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
   // In test mode, always show decision dialogs so player can control all players
   // NEW WORKFLOW: Uses playedTile for PENDING_ACCEPTANCE
@@ -655,7 +681,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // RENDER
   // ============================================================================
   return (
-    <main className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans">
+    <main className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start p-2 sm:p-4 lg:p-6 font-sans">
       <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
         {/* Main Content (Board, Hand, etc.) */}
         <div
@@ -665,18 +691,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             perspectiveOrigin: "50% 100%",
           }}
         >
-          {/* Turn Title */}
-          <div className="w-full max-w-5xl text-center mb-4 relative z-50">
-            <div className="inline-block bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-2">
-              <h2 className="text-2xl sm:text-3xl font-bold text-cyan-300 tracking-wide">
-                Player {currentPlayerId}'s Turn
-              </h2>
-            </div>
-          </div>
-
           {/* Game Board */}
           <div
-            className="w-full max-w-5xl aspect-[1/1] transition-transform duration-1000 ease-in-out hover:scale-105 relative"
+            className="w-full max-w-5xl aspect-[1/1] transition-transform duration-700 ease-in-out relative"
             onDragOver={handleDragOverBoard}
             onDrop={handleDropOnBoard}
             onClick={(e) => {
@@ -690,6 +707,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               transform: `rotate(${boardRotation}deg)`,
               transformStyle: "preserve-3d",
               transformOrigin: "center center",
+              transition: isMultiplayer ? "none" : "transform 0.7s ease-in-out",
             }}
           >
             {/* Board Image */}
@@ -818,10 +836,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 onDrop={(e) => handleDropOnTileSpace(e, space)}
                 onDragOver={handleDragOver}
                 className={`absolute w-12 h-24 rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all duration-300
-                  ${
-                    isDraggingTile
-                      ? "border-cyan-400 bg-cyan-500/20 scale-105 border-solid"
-                      : "border-cyan-400/50"
+                  ${isDraggingTile
+                    ? "border-cyan-400 bg-cyan-500/20 scale-105 border-solid"
+                    : "border-cyan-400/50"
                   }`}
                 style={{
                   top: `${space.position.top}%`,
@@ -833,9 +850,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   style={{
                     transform: `rotate(${-space.rotation - boardRotation}deg)`,
                   }}
-                  className={`font-semibold text-xs leading-tight ${
-                    isDraggingTile ? "text-cyan-200" : "text-cyan-400/70"
-                  }`}
+                  className={`font-semibold text-xs leading-tight ${isDraggingTile ? "text-cyan-200" : "text-cyan-400/70"
+                    }`}
                 >
                   <div>Drop Tile</div> <div>For P{space.ownerId}</div>
                 </div>
@@ -855,7 +871,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               const isPlayedTile =
                 playedTile &&
                 boardTile.tile.id.toString().padStart(2, "0") ===
-                  playedTile.tileId &&
+                playedTile.tileId &&
                 boardTile.placerId === playedTile.playerId &&
                 boardTile.ownerId === playedTile.receivingPlayerId;
               const isTilePlayedButNotYetAccepted =
@@ -935,17 +951,15 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                       : undefined
                   }
                   onClick={isTileClickable ? handleTileClick : undefined}
-                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${
-                    !isRevealed && !shouldShowWhiteBack
+                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed && !shouldShowWhiteBack
                       ? ""
                       : "bg-stone-100 p-1"
-                  }`}
+                    }`}
                   style={{
                     top: `${boardTile.position.top}%`,
                     left: `${boardTile.position.left}%`,
-                    transform: `translate(-50%, -50%) rotate(${
-                      boardTile.rotation || 0
-                    }deg)`,
+                    transform: `translate(-50%, -50%) rotate(${boardTile.rotation || 0
+                      }deg)`,
                     cursor: isTileClickable ? "pointer" : "default",
                   }}
                   aria-label={
@@ -980,9 +994,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 style={{
                   top: `${bankedTile.position.top}%`,
                   left: `${bankedTile.position.left}%`,
-                  transform: `translate(-50%, -50%) rotate(${
-                    bankedTile.rotation || 0
-                  }deg)`,
+                  transform: `translate(-50%, -50%) rotate(${bankedTile.rotation || 0
+                    }deg)`,
                 }}
               >
                 {bankedTile.faceUp ? (
@@ -1066,18 +1079,16 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   draggable="true"
                   onDragStart={(e) => handleDragStartPiece(e, piece.id)}
                   onDragEnd={handleDragEndPiece}
-                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
-                    hasMoved
+                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved
                       ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
                       : ""
-                  }`}
+                    }`}
                   style={{
                     position: "absolute",
                     top: `${piece.position.top}%`,
                     left: `${piece.position.left}%`,
-                    transform: `translate(-50%, -50%) rotate(${
-                      piece.rotation + communityCounterRotation
-                    }deg) scale(${finalScale})`,
+                    transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation
+                      }deg) scale(${finalScale})`,
                     cursor: "grab",
                     filter: hasMoved
                       ? "brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))"
@@ -1116,7 +1127,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
           <div className="w-full max-w-5xl mt-8 relative z-50">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-slate-200">
-                Player {currentPlayerId}'s Hand
+                {isMultiplayer ? 'My Hand' : `${currentPlayer?.name || `Player ${currentPlayerId}`}'s Hand`}
               </h2>
               <div className="flex gap-2">
                 {(gameState === "TILE_PLAYED" ||
@@ -1153,32 +1164,30 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </div>
             </div>
             <p
-              className={`text-center mb-4 ${
-                gameState === "CORRECTION_REQUIRED"
+              className={`text-center mb-4 ${gameState === "CORRECTION_REQUIRED"
                   ? "text-yellow-400 font-semibold"
                   : hasPlayedTileThisTurn
-                  ? "text-slate-400"
-                  : "text-white"
-              }`}
+                    ? "text-slate-400"
+                    : "text-white"
+                }`}
             >
               {gameState === "CORRECTION_REQUIRED"
                 ? "Your tile was rejected. The tile requirements are shown above. Move your pieces to fulfill them, then click End Turn."
                 : hasPlayedTileThisTurn
-                ? "You have played a tile this turn."
-                : "Drag a tile to another player's receiving area on the board."}
+                  ? "You have played a tile this turn."
+                  : "Drag a tile to another player's receiving area on the board."}
             </p>
             <div className="flex flex-wrap justify-center gap-2 p-4 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
-              {currentPlayer?.keptTiles.map((tile) => (
+              {viewingPlayer?.hand?.map((tile) => (
                 <div
                   key={tile.id}
-                  draggable={!hasPlayedTileThisTurn}
+                  draggable={!hasPlayedTileThisTurn && (!isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId))}
                   onDragStart={(e) => handleDragStartTile(e, tile.id)}
                   onDragEnd={() => setIsDraggingTile(false)}
-                  className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 ${
-                    hasPlayedTileThisTurn || gameState !== "CAMPAIGN"
+                  className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 ${hasPlayedTileThisTurn || gameState !== "CAMPAIGN" || (isMultiplayer && playerIndex !== undefined && playerIndex + 1 !== currentPlayerId)
                       ? "cursor-not-allowed opacity-60"
                       : "cursor-grab"
-                  }`}
+                    }`}
                 >
                   <img
                     src={tile.url}
@@ -1199,48 +1208,68 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {players
                   .filter((p) => p.id !== currentPlayerId)
-                  .map((player) => (
-                    <details
-                      key={player.id}
-                      className="bg-gray-800/50 p-3 rounded-lg border border-gray-700 cursor-pointer"
-                    >
-                      <summary className="font-semibold text-lg text-slate-100">
-                        Player {player.id}'s Tiles ({player.keptTiles.length})
-                      </summary>
-                      <div className="mt-4">
-                        <h4 className="font-semibold text-md text-slate-300">
-                          Playable Hand:
-                        </h4>
-                        <div className="flex flex-wrap justify-center gap-2 pt-2">
-                          {player.keptTiles.map((tile) => (
-                            <div
-                              key={tile.id}
-                              className="bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300"
-                            >
-                              <img
-                                src={tile.url}
-                                alt={`Tile ${tile.id}`}
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                          ))}
+                  .map((player) => {
+                    // In multiplayer, hide opponent hands (show only your own tiles)
+                    const isOwnHand = !isMultiplayer || (playerIndex !== undefined && player.id === playerIndex);
+                    const showTiles = isTestMode || isOwnHand;
+
+                    return (
+                      <details
+                        key={player.id}
+                        className="bg-gray-800/50 p-3 rounded-lg border border-gray-700 cursor-pointer"
+                      >
+                        <summary className="font-semibold text-lg text-slate-100">
+                          {isOwnHand ? `Your Tiles (${player.keptTiles.length})` : `Player ${player.id}'s Tiles (${player.keptTiles.length})`}
+                        </summary>
+                        <div className="mt-4">
+                          <h4 className="font-semibold text-md text-slate-300">
+                            Playable Hand:
+                          </h4>
+                          <div className="flex flex-wrap justify-center gap-2 pt-2">
+                            {showTiles ? (
+                              player.keptTiles.map((tile) => (
+                                <div
+                                  key={tile.id}
+                                  className="bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300"
+                                >
+                                  <img
+                                    src={tile.url}
+                                    alt={`Tile ${tile.id}`}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              ))
+                            ) : (
+                              player.keptTiles.map((tile) => (
+                                <div
+                                  key={tile.id}
+                                  className="bg-gradient-to-br from-purple-900 to-indigo-900 w-12 h-24 p-1 rounded-md shadow-md border-2 border-purple-700"
+                                  title="Hidden opponent tile"
+                                >
+                                  <div className="w-full h-full flex items-center justify-center text-2xl opacity-50">
+                                    ?
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-4">
-                        <h4 className="font-semibold text-md text-slate-300">
-                          Bureaucracy Tiles ({player.bureaucracyTiles.length}):
-                        </h4>
-                        <div className="flex flex-wrap justify-center gap-2 pt-2">
-                          {player.bureaucracyTiles.map((tile) => (
-                            <div
-                              key={`buro-${tile.id}`}
-                              className="bg-gray-700 w-12 h-24 p-1 rounded-md shadow-inner border-2 border-yellow-400"
-                            ></div>
-                          ))}
+                        <div className="mt-4">
+                          <h4 className="font-semibold text-md text-slate-300">
+                            Bureaucracy Tiles ({player.bureaucracyTiles.length}):
+                          </h4>
+                          <div className="flex flex-wrap justify-center gap-2 pt-2">
+                            {player.bureaucracyTiles.map((tile) => (
+                              <div
+                                key={`buro-${tile.id}`}
+                                className="bg-gray-700 w-12 h-24 p-1 rounded-md shadow-inner border-2 border-yellow-400"
+                              ></div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </details>
-                  ))}
+                      </details>
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -1317,13 +1346,14 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         {/* Right Column: Supply & Log */}
         <div className="w-full lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
           <div className="lg:sticky lg:top-8 flex flex-col gap-8">
-            {/* New Game Button */}
-            <button
-              onClick={onNewGame}
-              className="w-full px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors shadow-md"
-            >
-              New Game
-            </button>
+            {/* Turn Indicator */}
+            <div className="w-full bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-3 text-center">
+              <h2 className="text-xl font-bold text-cyan-300 tracking-wide">
+                {isMultiplayer && playerIndex !== undefined && playerIndex + 1 === currentPlayerId
+                  ? "Your Turn"
+                  : `${players[currentPlayerId - 1]?.name || `Player ${currentPlayerId}`}'s Turn`}
+              </h2>
+            </div>
 
             {/* Game Log */}
             <div>
@@ -1349,11 +1379,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                     [...gameLog].reverse().map((entry, index) => (
                       <p
                         key={gameLog.length - 1 - index}
-                        className={`text-slate-300 mb-2 ${
-                          entry.startsWith("---")
+                        className={`text-slate-300 mb-2 ${entry.startsWith("---")
                             ? "font-bold text-cyan-300 mt-2 border-b border-gray-600 pb-2"
                             : ""
-                        }`}
+                          }`}
                       >
                         {entry}
                       </p>
@@ -1458,9 +1487,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   );
                 }
                 return (
-                  <p className="text-slate-300 mb-6">{`Player ${
-                    playedTile?.playerId || tileTransaction?.placerId
-                  } has played a tile to you. You can either accept or reject it.`}</p>
+                  <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId
+                    } has played a tile to you. You can either accept or reject it.`}</p>
                 );
               })()}
               {(() => {
@@ -1497,11 +1525,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                           : onReceiverDecision("reject")
                       }
                       disabled={hasZeroCredibility}
-                      className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md w-full sm:w-auto ${
-                        hasZeroCredibility
+                      className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md w-full sm:w-auto ${hasZeroCredibility
                           ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
                           : "bg-red-700 text-white hover:bg-red-600"
-                      }`}
+                        }`}
                     >
                       Reject Tile
                     </button>
@@ -1547,11 +1574,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 );
               }
               return (
-                <p className="text-slate-300 mb-6">{`Player ${
-                  playedTile?.receivingPlayerId || tileTransaction?.receiverId
-                } accepted the tile from Player ${
-                  playedTile?.playerId || tileTransaction?.placerId
-                }.`}</p>
+                <p className="text-slate-300 mb-6">{`Player ${playedTile?.receivingPlayerId || tileTransaction?.receiverId
+                  } accepted the tile from Player ${playedTile?.playerId || tileTransaction?.placerId
+                  }.`}</p>
               );
             })()}
             <div className="flex justify-center items-center gap-4">
@@ -1569,11 +1594,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                         : onBystanderDecision("challenge")
                     }
                     disabled={hasZeroCredibility}
-                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md ${
-                      hasZeroCredibility
+                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md ${hasZeroCredibility
                         ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
                         : "bg-red-600 text-white hover:bg-red-500"
-                    }`}
+                      }`}
                   >
                     Challenge
                   </button>
@@ -1696,11 +1720,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                     <button
                       key={tile.id}
                       onClick={() => onToggleTileSelection(tile)}
-                      className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${
-                        isSelected
+                      className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${isSelected
                           ? "border-yellow-400 ring-4 ring-yellow-400/50 scale-105"
                           : "border-gray-300 hover:border-yellow-300"
-                      }`}
+                        }`}
                     >
                       <img
                         src={tile.url}
@@ -1709,11 +1732,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                       />
                       {/* Kredcoin Value Badge */}
                       <div
-                        className={`absolute top-1 right-1 px-2 py-1 rounded text-xs font-bold ${
-                          isSelected
+                        className={`absolute top-1 right-1 px-2 py-1 rounded text-xs font-bold ${isSelected
                             ? "bg-yellow-400 text-gray-900"
                             : "bg-gray-700 text-yellow-400"
-                        }`}
+                          }`}
                       >
                         ₭-{tileValue}
                       </div>
@@ -1733,21 +1755,20 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {/* No tiles message */}
             {getPlayerById(players, takeAdvantageChallengerId!)
               ?.bureaucracyTiles.length === 0 && (
-              <p className="text-red-400 text-center text-lg mb-6">
-                You have no tiles in your bank. Cannot purchase an action.
-              </p>
-            )}
+                <p className="text-red-400 text-center text-lg mb-6">
+                  You have no tiles in your bank. Cannot purchase an action.
+                </p>
+              )}
 
             {/* Action Buttons */}
             <div className="flex gap-4 justify-center">
               <button
                 onClick={onConfirmTileSelection}
                 disabled={selectedTilesForAdvantage.length === 0}
-                className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${
-                  selectedTilesForAdvantage.length === 0
+                className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${selectedTilesForAdvantage.length === 0
                     ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                     : "bg-green-600 hover:bg-green-500 text-white hover:scale-105"
-                }`}
+                  }`}
               >
                 Continue with {selectedTilesForAdvantage.length} tile(s) (₭-
                 {totalKredcoinForAdvantage})
@@ -1857,14 +1878,14 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                 dropIndicator.name === "Pawn"
                                   ? "80px"
                                   : dropIndicator.name === "Heel"
-                                  ? "64px"
-                                  : "56px",
+                                    ? "64px"
+                                    : "56px",
                               height:
                                 dropIndicator.name === "Pawn"
                                   ? "80px"
                                   : dropIndicator.name === "Heel"
-                                  ? "64px"
-                                  : "56px",
+                                    ? "64px"
+                                    : "56px",
                               transform: `translate(-50%, -50%) rotate(${dropIndicator.rotation}deg) scale(0.798)`,
                               filter:
                                 "drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))",
@@ -1893,8 +1914,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                           playerCount === 3
                             ? 0.85
                             : playerCount === 5
-                            ? 0.9
-                            : 1;
+                              ? 0.9
+                              : 1;
                         const baseScale = 0.798;
                         const finalScale = baseScale * scaleMultiplier;
 
@@ -1931,20 +1952,18 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                 onTakeAdvantagePiecePromote(piece.id);
                               }
                             }}
-                            className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
-                              isPromotionPurchase
+                            className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase
                                 ? "cursor-pointer hover:scale-110"
                                 : isDraggable
-                                ? "cursor-grab active:cursor-grabbing"
-                                : "cursor-default"
-                            }`}
+                                  ? "cursor-grab active:cursor-grabbing"
+                                  : "cursor-default"
+                              }`}
                             style={{
                               position: "absolute",
                               top: `${piece.position.top}%`,
                               left: `${piece.position.left}%`,
-                              transform: `translate(-50%, -50%) rotate(${
-                                piece.rotation + communityCounterRotation
-                              }deg) scale(${finalScale})`,
+                              transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation
+                                }deg) scale(${finalScale})`,
                             }}
                             aria-hidden="true"
                           />
@@ -2002,22 +2021,20 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                               onSelectTakeAdvantageAction(item)
                                             }
                                             disabled={!canAfford}
-                                            className={`p-2 rounded-lg border-2 transition-all ${
-                                              canAfford
+                                            className={`p-2 rounded-lg border-2 transition-all ${canAfford
                                                 ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                                                 : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
-                                            }`}
+                                              }`}
                                           >
                                             <div className="text-center">
                                               <span className="font-bold text-sm block mb-1">
                                                 {item.moveType}
                                               </span>
                                               <span
-                                                className={`text-base font-bold ${
-                                                  canAfford
+                                                className={`text-base font-bold ${canAfford
                                                     ? "text-yellow-400"
                                                     : "text-gray-600"
-                                                }`}
+                                                  }`}
                                               >
                                                 ₭-{item.price}
                                               </span>
@@ -2051,22 +2068,20 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                               onSelectTakeAdvantageAction(item)
                                             }
                                             disabled={!canAfford}
-                                            className={`p-2 rounded-lg border-2 transition-all ${
-                                              canAfford
+                                            className={`p-2 rounded-lg border-2 transition-all ${canAfford
                                                 ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                                                 : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
-                                            }`}
+                                              }`}
                                           >
                                             <div className="text-center">
                                               <span className="font-bold text-sm block mb-1">
                                                 {item.moveType}
                                               </span>
                                               <span
-                                                className={`text-base font-bold ${
-                                                  canAfford
+                                                className={`text-base font-bold ${canAfford
                                                     ? "text-yellow-400"
                                                     : "text-gray-600"
-                                                }`}
+                                                  }`}
                                               >
                                                 ₭-{item.price}
                                               </span>
@@ -2100,11 +2115,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                         onSelectTakeAdvantageAction(item)
                                       }
                                       disabled={!isEnabled}
-                                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                                        isEnabled
+                                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isEnabled
                                           ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                                           : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
-                                      }`}
+                                        }`}
                                     >
                                       <div className="flex justify-between items-center mb-2">
                                         <span className="font-bold text-lg">
@@ -2114,11 +2128,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                                             "Restore Credibility"}
                                         </span>
                                         <span
-                                          className={`text-xl font-bold ${
-                                            isEnabled
+                                          className={`text-xl font-bold ${isEnabled
                                               ? "text-yellow-400"
                                               : "text-gray-600"
-                                          }`}
+                                            }`}
                                         >
                                           ₭-{item.price}
                                         </span>
@@ -2349,28 +2362,25 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                         (validation, index) => (
                           <div
                             key={index}
-                            className={`p-3 rounded border-l-4 ${
-                              validation.isValid
+                            className={`p-3 rounded border-l-4 ${validation.isValid
                                 ? "bg-green-900/30 border-green-500"
                                 : "bg-red-900/30 border-red-500"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <span
-                                className={`text-lg font-bold ${
-                                  validation.isValid
+                                className={`text-lg font-bold ${validation.isValid
                                     ? "text-green-400"
                                     : "text-red-400"
-                                }`}
+                                  }`}
                               >
                                 {validation.isValid ? "✓" : "✕"}
                               </span>
                               <span
-                                className={`font-semibold ${
-                                  validation.isValid
+                                className={`font-semibold ${validation.isValid
                                     ? "text-green-300"
                                     : "text-white"
-                                }`}
+                                  }`}
                               >
                                 {validation.moveType}
                               </span>
@@ -2409,13 +2419,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {/* Close Button */}
             <button
               onClick={() => onCloseMoveCheckResult?.()}
-              className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${
-                !moveCheckResult.isMet
+              className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${!moveCheckResult.isMet
                   ? "bg-red-600 hover:bg-red-500"
                   : moveCheckResult.hasExtraMoves
-                  ? "bg-yellow-600 hover:bg-yellow-500"
-                  : "bg-green-600 hover:bg-green-500"
-              }`}
+                    ? "bg-yellow-600 hover:bg-yellow-500"
+                    : "bg-green-600 hover:bg-green-500"
+                }`}
             >
               Close
             </button>

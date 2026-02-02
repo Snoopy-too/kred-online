@@ -4,7 +4,7 @@
  * Screen for selecting player count and game options before starting the game.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import PlayerSelectionScreen from "../../../components/screens/PlayerSelectionScreen";
 
@@ -18,7 +18,7 @@ describe("PlayerSelectionScreen", () => {
   it("should render the logo and tagline", () => {
     render(<PlayerSelectionScreen onStartGame={mockOnStartGame} />);
 
-    const logo = screen.getByAltText("Kred Logo");
+    const logo = screen.getByAltText("KRED Logo");
     expect(logo).toBeInTheDocument();
     expect(screen.getByText("You can't trust anyone!")).toBeInTheDocument();
   });

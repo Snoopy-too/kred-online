@@ -44,6 +44,57 @@ import React, { useState, useEffect, useRef } from "react";
 // ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
 // ============================================================================
+import type { Socket } from 'socket.io-client';
+
+export interface MultiplayerProps {
+  socket?: Socket;
+  roomId?: string;
+  playerId?: string;
+  playerIndex?: number;
+  playerCount?: number;
+
+  // Multiplayer actions (replaces direct socket.emit calls)
+  multiplayerActions?: {
+    // Game management
+    createGame: (playerName: string, playerCount: number) => Promise<any>;
+    joinGame: (roomId: string, playerName: string) => Promise<any>;
+    startGame: () => Promise<void>;
+
+    // Drafting
+    selectDraftTile: (tileId: string) => Promise<void>;
+
+    // Campaign
+    playTile: (tileId: string, targetPlayerId: number) => Promise<void>;
+    movePiece: (pieceId: string, position: { x: number; y: number }, location: string) => Promise<void>;
+    endTurn: () => Promise<void>;
+
+    // Tile acceptance
+    acceptTile: () => Promise<void>;
+    rejectTile: () => Promise<void>;
+    viewTilePrivate: () => Promise<void>;
+
+    // Challenge
+    initiateChallenge: () => Promise<void>;
+    passChallenge: () => Promise<void>;
+
+    // Take Advantage
+    selectAdvantageTiles: (tileIds: string[]) => Promise<void>;
+    purchaseAdvantage: (purchase: any) => Promise<void>;
+
+    // Bureaucracy
+    purchaseBureaucracy: (purchase: any) => Promise<void>;
+
+    // Spectator
+    joinAsSpectator: (roomId: string, name: string) => Promise<void>;
+  };
+
+  // Initial state from server (for multiplayer mode)
+  initialGameState?: GameState;
+  initialPlayers?: Player[];
+  initialPieces?: Piece[];
+  initialCurrentPlayerIndex?: number;
+}
+
 import type {
   Tile,
   Player,
@@ -78,6 +129,9 @@ import {
 
 // ============================================================================
 // UTILITY IMPORTS - Helper functions
+
+// Import ALERTS from constants
+import { ALERTS, TIMEOUTS, DEFAULTS, GAME_LOGS } from "./src/config";
 // ============================================================================
 import {
   calculatePieceRotation,
@@ -125,17 +179,15 @@ import {
 // ============================================================================
 // HOOKS IMPORTS - Custom React hooks
 // ============================================================================
-import {
-  useAlerts,
-  useBoardDisplay,
-  useTestMode,
-  useBonusMoves,
-  useMoveTracking,
-  useTilePlayWorkflow,
-  useChallengeFlow,
-  useBureaucracy,
-  useGameState,
-} from "./src/hooks";
+import { useAlerts } from "./src/hooks/useAlerts";
+import { useBoardDisplay } from "./src/hooks/useBoardDisplay";
+import { useTestMode } from "./src/hooks/useTestMode";
+import { useBonusMoves } from "./src/hooks/useBonusMoves";
+import { useMoveTracking } from "./src/hooks/useMoveTracking";
+import { useTilePlayWorkflow } from "./src/hooks/useTilePlayWorkflow";
+import { useChallengeFlow } from "./src/hooks/useChallengeFlow";
+import { useBureaucracy } from "./src/hooks/useBureaucracy";
+import { useGameState } from "./src/hooks/useGameState";
 
 // ============================================================================
 // HANDLERS IMPORTS - Extracted handler factories
@@ -147,6 +199,8 @@ import {
   createTilePlayHandlers,
   createChallengeFlowHandlers,
 } from "./src/handlers";
+
+import { useMultiplayerSync } from "./src/hooks/useMultiplayerSync";
 
 // ============================================================================
 // COMPONENT IMPORTS - Extracted React components
@@ -160,11 +214,8 @@ import {
   FinishTurnConfirmModal,
   BureaucracyTransition,
 } from "./src/components/shared/Modals";
-import PlayerSelectionScreen from "./src/components/screens/PlayerSelectionScreen";
 import DraftingScreen from "./src/components/screens/DraftingScreen";
-import BureaucracyScreen from "./src/components/screens/BureaucracyScreen";
-
-import { ALERTS, TIMEOUTS, DEFAULTS } from "./constants";
+import CampaignScreen from "./src/components/screens/CampaignScreen";
 import {
   getPlayerName,
   getPlayerNameSimple,
@@ -226,7 +277,19 @@ import CampaignScreen from "./src/components/screens/CampaignScreen";
  * - UI delegated to screen components (CampaignScreen, BureaucracyScreen, etc.)
  * - Modals rendered at top level for proper z-index stacking
  */
-const App: React.FC = () => {
+const App: React.FC<MultiplayerProps> = ({
+  socket,
+  roomId,
+  playerId,
+  playerIndex,
+  playerCount: multiplayerPlayerCount,
+  multiplayerActions,
+  initialGameState,
+  initialPlayers,
+  initialPieces,
+  initialCurrentPlayerIndex,
+}) => {
+  console.log('[APP] App mounted with props:', { socket, roomId, playerId, playerIndex, playerCount: multiplayerPlayerCount, multiplayerActions, initialGameState, initialPlayers, initialPieces, initialCurrentPlayerIndex });
   // ============================================================================
   // CUSTOM HOOKS - State management extracted to dedicated hooks
   // See src/hooks/ for implementations
@@ -416,6 +479,42 @@ const App: React.FC = () => {
   });
 
   // ============================================================================
+  // MULTIPLAYER SYNCHRONIZATION
+  // ============================================================================
+  // Track playerIndex in state so it can be updated from server events
+  const [livePlayerIndex, setLivePlayerIndex] = useState<number | undefined>(playerIndex);
+
+  const { isMultiplayer, isMyTurn, broadcastState } = useMultiplayerSync({
+    socket,
+    roomId,
+    playerId,
+    playerIndex: livePlayerIndex,
+    gameState,
+    players,
+    pieces,
+    boardTiles,
+    currentPlayerIndex,
+    setGameState,
+    setPlayers,
+    setPieces,
+    setBoardTiles,
+    setCurrentPlayerIndex,
+    setPlayerIndex: setLivePlayerIndex,
+    setPlayerCount,
+    setPlayedTile
+  });
+
+  // Initialize campaign pieces when phase transitions to CAMPAIGN in multiplayer
+  React.useEffect(() => {
+    if (isMultiplayer && gameState === 'CAMPAIGN' && pieces.length === 0 && players.length > 0) {
+      console.log('[MULTIPLAYER] Initializing campaign pieces for', players.length, 'players');
+      const initialPieces = initializeCampaignPieces(players.length);
+      setPieces(initialPieces);
+      setPiecesAtTurnStart(initialPieces);
+    }
+  }, [isMultiplayer, gameState, pieces.length, players.length, setPieces, setPiecesAtTurnStart]);
+
+  // ============================================================================
   // HANDLER FACTORIES - Created via factory pattern for testability
   // See src/handlers/ for implementations
   // ============================================================================
@@ -532,7 +631,32 @@ const App: React.FC = () => {
   );
 
   // Destructure handlers for convenience
-  const { handleStartGame, handleNewGame, handleSelectTile } = gameFlowHandlers;
+  const { handleStartGame, handleNewGame, handleSelectTile: originalHandleSelectTile } = gameFlowHandlers;
+
+  // Log playerIndex for debugging
+  React.useEffect(() => {
+    if (isMultiplayer && livePlayerIndex !== undefined) {
+      console.log('[APP] My playerIndex:', livePlayerIndex, 'of', playerCount, 'players');
+      console.log('[APP] Current players state:', players);
+    }
+  }, [isMultiplayer, livePlayerIndex, playerCount, players]);
+
+  // Wrap tile selection for multiplayer coordination
+  const handleSelectTile = React.useCallback(async (tile: any) => {
+    if (isMultiplayer && multiplayerActions) {
+      // In multiplayer, use server-coordinated tile selection
+      console.log('[MULTIPLAYER] Selecting tile via server:', tile.id);
+      try {
+        await multiplayerActions.selectDraftTile(tile.id);
+      } catch (error) {
+        console.error('[MULTIPLAYER] Tile selection failed:', error);
+        alert(`Tile selection failed: ${error.message}`);
+      }
+    } else {
+      // Single-player mode - use local handler
+      originalHandleSelectTile(tile);
+    }
+  }, [isMultiplayer, multiplayerActions, originalHandleSelectTile]);
 
   // ============================================================================
   // PIECE MOVEMENT HANDLERS
@@ -1070,15 +1194,15 @@ const App: React.FC = () => {
           prev.map((p) =>
             p.id === receivingPlayer.id
               ? {
-                  ...p,
-                  bureaucracyTiles: [
-                    ...p.bureaucracyTiles,
-                    {
-                      id: parseInt(playedTile.tileId),
-                      url: `./images/${playedTile.tileId}.svg`,
-                    },
-                  ],
-                }
+                ...p,
+                bureaucracyTiles: [
+                  ...p.bureaucracyTiles,
+                  {
+                    id: parseInt(playedTile.tileId),
+                    url: `./images/${playedTile.tileId}.svg`,
+                  },
+                ],
+              }
               : p
           )
         );
@@ -1184,6 +1308,82 @@ const App: React.FC = () => {
       finalizeTilePlay(false, null);
     }
   };
+
+  // ============================================================================
+  // MULTIPLAYER CAMPAIGN ACTION WRAPPERS
+  // ============================================================================
+  
+  // Wrap piece movement for multiplayer
+  const wrappedPieceMove = React.useCallback(async (pieceId: string, newPosition: any, locationId: string) => {
+    // Call local handler first to update UI optimistically
+    const result = pieceMovementHandlers.handlePieceMove(pieceId, newPosition, locationId);
+    
+    // Then sync to server in multiplayer
+    if (isMultiplayer && multiplayerActions && result.success) {
+      try {
+        await multiplayerActions.movePiece(result.pieces, result.movedPiecesThisTurn);
+      } catch (error) {
+        console.error('[MULTIPLAYER] Piece movement sync failed:', error);
+      }
+    }
+    
+    return result;
+  }, [isMultiplayer, multiplayerActions, pieceMovementHandlers]);
+  
+  // Wrap tile placement for multiplayer
+  const wrappedPlaceTile = React.useCallback(async (tileId: number, targetSpace: { ownerId: number; position: any; rotation: number }) => {
+    const tileIdStr = tileId.toString();
+    const targetPlayerId = targetSpace.ownerId;
+    
+    if (isMultiplayer && multiplayerActions) {
+      console.log('[MULTIPLAYER] Playing tile via server:', tileIdStr, 'to player', targetPlayerId);
+      try {
+        await multiplayerActions.playTile(tileIdStr, targetPlayerId);
+      } catch (error) {
+        console.error('[MULTIPLAYER] Tile play failed:', error);
+        alert(`Failed to play tile: ${error.message}`);
+      }
+    } else {
+      // Single-player mode
+      handlePlaceTile(tileId, targetSpace);
+    }
+  }, [isMultiplayer, multiplayerActions, handlePlaceTile]);
+  
+  // Wrap turn ending for multiplayer
+  const wrappedEndTurn = React.useCallback(async () => {
+    if (isMultiplayer && multiplayerActions) {
+      console.log('[MULTIPLAYER] Ending turn via server');
+      try {
+        await multiplayerActions.endTurn();
+      } catch (error) {
+        console.error('[MULTIPLAYER] End turn failed:', error);
+        alert(`Failed to end turn: ${error.message}`);
+      }
+    } else {
+      // Single-player mode
+      handleEndTurn();
+    }
+  }, [isMultiplayer, multiplayerActions, handleEndTurn]);
+  
+  // Wrap receiver decision for multiplayer
+  const wrappedReceiverDecision = React.useCallback(async (accepted: boolean) => {
+    if (isMultiplayer && multiplayerActions) {
+      console.log('[MULTIPLAYER] Receiver decision via server:', accepted ? 'ACCEPT' : 'REJECT');
+      try {
+        if (accepted) {
+          await multiplayerActions.acceptTile();
+        } else {
+          await multiplayerActions.rejectTile();
+        }
+      } catch (error) {
+        console.error('[MULTIPLAYER] Receiver decision failed:', error);
+        alert(`Failed to process decision: ${error.message}`);
+      }
+    } else {
+      // Single-player mode
+      handleReceiverAcceptanceDecision(accepted);
+    }
+  }, [isMultiplayer, multiplayerActions, handleReceiverAcceptanceDecision]);
 
   /**
    * Handle challenger's decision (challenge or pass)
@@ -1320,8 +1520,7 @@ const App: React.FC = () => {
           ? getPlayerName(challenger, challengerId)
           : "Player";
         addGameLog(
-          `${challengerName} gained credibility for successful challenge (now ${
-            challenger?.credibility ?? 0
+          `${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0
           })`
         );
 
@@ -1471,9 +1670,8 @@ const App: React.FC = () => {
     if (nextBankIndex >= 0 && nextBankIndex < playerBankSpaces.length) {
       const bankSpace = playerBankSpaces[nextBankIndex];
       const newBankedTile: BoardTile & { faceUp: boolean } = {
-        id: `bank_${
-          playedTile.receivingPlayerId
-        }_${nextBankIndex}_${Date.now()}`,
+        id: `bank_${playedTile.receivingPlayerId
+          }_${nextBankIndex}_${Date.now()}`,
         tile: {
           id: parseInt(playedTile.tileId),
           url: `./images/${playedTile.tileId}.svg`,
@@ -1846,9 +2044,8 @@ const App: React.FC = () => {
     if (nextBankIndex < playerBankSpaces.length) {
       const bankSpace = playerBankSpaces[nextBankIndex];
       const newBankedTile: BoardTile & { faceUp: boolean } = {
-        id: `bank_${
-          updatedPlayedTile.receivingPlayerId
-        }_${nextBankIndex}_${Date.now()}`,
+        id: `bank_${updatedPlayedTile.receivingPlayerId
+          }_${nextBankIndex}_${Date.now()}`,
         tile: {
           id: parseInt(updatedPlayedTile.tileId),
           url: `./images/${updatedPlayedTile.tileId}.svg`,
@@ -1869,7 +2066,7 @@ const App: React.FC = () => {
         (bt) =>
           !(
             bt.tile.id.toString().padStart(2, "0") ===
-              updatedPlayedTile.tileId &&
+            updatedPlayedTile.tileId &&
             bt.placerId === updatedPlayedTile.playerId &&
             bt.ownerId === updatedPlayedTile.receivingPlayerId
           )
@@ -2055,10 +2252,10 @@ const App: React.FC = () => {
         piecesForValidation = piecesForValidation.map((p) =>
           p.id === prevMove.pieceId
             ? {
-                ...p,
-                locationId: prevMove.toLocationId,
-                position: prevMove.toPosition,
-              }
+              ...p,
+              locationId: prevMove.toLocationId,
+              position: prevMove.toPosition,
+            }
             : p
         );
       }
@@ -2227,10 +2424,10 @@ const App: React.FC = () => {
             piecesForValidation = piecesForValidation.map((p) =>
               p.id === prevMove.pieceId
                 ? {
-                    ...p,
-                    locationId: prevMove.toLocationId,
-                    position: prevMove.toPosition,
-                  }
+                  ...p,
+                  locationId: prevMove.toLocationId,
+                  position: prevMove.toPosition,
+                }
                 : p
             );
           }
@@ -2465,10 +2662,10 @@ const App: React.FC = () => {
         piecesForValidation = piecesForValidation.map((p) =>
           p.id === prevMove.pieceId
             ? {
-                ...p,
-                locationId: prevMove.toLocationId,
-                position: prevMove.toPosition,
-              }
+              ...p,
+              locationId: prevMove.toLocationId,
+              position: prevMove.toPosition,
+            }
             : p
         );
       }
@@ -2998,10 +3195,10 @@ const App: React.FC = () => {
           piecesForValidation = piecesForValidation.map((p) =>
             p.id === prevMove.pieceId
               ? {
-                  ...p,
-                  locationId: prevMove.toLocationId,
-                  position: prevMove.toPosition,
-                }
+                ...p,
+                locationId: prevMove.toLocationId,
+                position: prevMove.toPosition,
+              }
               : p
           );
         }
@@ -3091,9 +3288,8 @@ const App: React.FC = () => {
         if (bankIndex < playerBankSpaces.length) {
           const bankSpace = playerBankSpaces[bankIndex];
           const newBankedTile: BoardTile & { faceUp: boolean } = {
-            id: `bank_${takeAdvantageChallengerId}_${bankIndex}_${Date.now()}_${
-              tile.id
-            }`,
+            id: `bank_${takeAdvantageChallengerId}_${bankIndex}_${Date.now()}_${tile.id
+              }`,
             tile: tile,
             position: bankSpace.position,
             rotation: bankSpace.rotation,
@@ -3132,8 +3328,8 @@ const App: React.FC = () => {
       purchase.item.type === "PROMOTION"
         ? `Promotion (${purchase.item.promotionLocation})`
         : purchase.item.type === "CREDIBILITY"
-        ? "Credibility Restoration"
-        : purchase.item.moveType;
+          ? "Credibility Restoration"
+          : purchase.item.moveType;
 
     const tileIds = selectedTilesForAdvantage.map((t) => t.id).join(", ");
     setGameLog((prev) => [
@@ -3182,6 +3378,98 @@ const App: React.FC = () => {
     setPieces(result.pieces);
   };
 
+  // ============================================================================
+  // MULTIPLAYER INITIALIZATION
+  // ============================================================================
+  // Use initialGameState from server if provided (multiplayer mode)
+  React.useEffect(() => {
+    if (initialGameState && initialPlayers && initialPieces !== undefined && initialCurrentPlayerIndex !== undefined) {
+      console.log('[MULTIPLAYER] Initializing with server state');
+      setGameState(initialGameState);
+      setPlayers(initialPlayers);
+      setPieces(initialPieces);
+      setCurrentPlayerIndex(initialCurrentPlayerIndex);
+    }
+  }, []); // Run once on mount
+
+  // Listen for game start events in multiplayer
+  React.useEffect(() => {
+    if (!socket || !roomId) return;
+
+    const handleGameStarted = (data: { playerCount: number; initialGameState?: any }) => {
+      console.log('[MULTIPLAYER] Game started event received:', data);
+      if (gameState === 'PLAYER_SELECTION' && data.playerCount) {
+        handleStartGame(data.playerCount, false, false, false, data.initialGameState);
+      }
+    };
+
+    socket.on('kred:game:started', handleGameStarted);
+
+    return () => {
+      socket.off('kred:game:started', handleGameStarted);
+    };
+  }, [socket, roomId, gameState, handleStartGame]);
+
+  // ============================================================================
+  // MULTIPLAYER DRAFTING SYNC
+  // ============================================================================
+  React.useEffect(() => {
+    if (!socket || !isMultiplayer) return;
+
+    const handleDraftingUpdate = (data: { players: any[]; phase: string; allSelected: boolean }) => {
+      console.log('[MULTIPLAYER] Drafting update received:', JSON.stringify({
+        playersCount: data.players?.length,
+        phase: data.phase,
+        allSelected: data.allSelected,
+        playersState: data.players?.map((p, i) => ({
+          index: i,
+          handCount: p?.hand?.length || 0,
+          handIds: p?.hand?.map((t: any) => t.id) || [],
+          keptTilesCount: p?.keptTiles?.length || 0,
+          keptTileIds: p?.keptTiles?.map((t: any) => t.id) || [],
+          pendingPackets: p?.pendingTiles?.length || 0
+        }))
+      }, null, 2));
+
+      // Enhanced logging for debugging playerIndex and player data
+      console.log('[MULTIPLAYER] Current playerIndex:', playerIndex);
+      console.log('[MULTIPLAYER] Full players array:', JSON.stringify(data.players, null, 2));
+
+      // Defensive: Only set players if valid array
+      if (Array.isArray(data.players) && data.players.length > 0 && data.players.every(p => p && Array.isArray(p.hand) && Array.isArray(p.keptTiles))) {
+        setPlayers(data.players);
+      } else {
+        console.error('[MULTIPLAYER] Invalid players array received from server:', data.players);
+        // Optionally, show an alert or fallback UI here
+        setPlayers([]); // Clear players to trigger fallback UI
+      }
+
+      if (data.phase === 'campaign') {
+        setGameState('CAMPAIGN');
+
+        // Initialize campaign pieces
+        const initialPieces = initializeCampaignPieces(playerCount);
+        setPieces(initialPieces);
+        setPiecesAtTurnStart(initialPieces);
+
+        // Find player with tile 03 to start (now in hand, not keptTiles)
+        const startingTileId = 3;
+        const startingPlayerIndex = data.players.findIndex(
+          (p: any) => p.hand && p.hand.some((t: any) => t.id === startingTileId)
+        );
+        setCurrentPlayerIndex(startingPlayerIndex !== -1 ? startingPlayerIndex : 0);
+        setHasPlayedTileThisTurn(false);
+      }
+    };
+
+    socket.on('kred:drafting:update', handleDraftingUpdate);
+
+    return () => {
+      socket.off('kred:drafting:update', handleDraftingUpdate);
+    };
+  }, [socket, isMultiplayer, setPlayers, setGameState, setPieces, setPiecesAtTurnStart,
+    setCurrentPlayerIndex, setHasPlayedTileThisTurn, playerCount, initializeCampaignPieces]);
+
   const handleBureaucracyPiecePromote = (pieceId: string) => {
     if (
       !currentBureaucracyPurchase ||
@@ -3202,16 +3490,58 @@ const App: React.FC = () => {
   };
 
   const renderGameState = () => {
-    console.log(
-      "renderGameState called with gameState:",
-      gameState,
-      "playerCount:",
-      playerCount,
-      "players:",
-      players.length,
-      "currentPlayerIndex:",
-      currentPlayerIndex
-    );
+    // Multiplayer: Check gameState and render appropriate screen
+    if (isMultiplayer) {
+      // Log state for debugging
+      console.log('[APP] Multiplayer render:', {
+        gameState,
+        players: players.length,
+        playerIndex: livePlayerIndex,
+        currentPlayerIndex
+      });
+
+      // Wait for all required props to be defined and valid
+      const isValidPlayers = Array.isArray(players) && players.length > 0 && players.every(p => p && typeof p === 'object');
+      const isValidPlayerIndex = typeof livePlayerIndex === 'number' && livePlayerIndex >= 0 && livePlayerIndex < players.length;
+      const isValidCurrentPlayerIndex = typeof currentPlayerIndex === 'number' && currentPlayerIndex >= 0 && currentPlayerIndex < players.length;
+
+      if (!isValidPlayers || !isValidPlayerIndex || !isValidCurrentPlayerIndex) {
+        const loadingMessage = !isValidPlayers 
+          ? 'Loading players...' 
+          : !isValidPlayerIndex 
+          ? 'Syncing player index...' 
+          : 'Syncing current player...';
+        
+        return (
+          <main className="min-h-screen w-full bg-gray-900 flex flex-col items-center justify-center p-4 font-sans text-slate-100">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
+                {loadingMessage}
+              </h1>
+              <p className="text-slate-400 mt-2">Syncing game state from server...</p>
+            </div>
+          </main>
+        );
+      }
+
+      // Route based on gameState for multiplayer
+      if (gameState === 'DRAFTING') {
+        return (
+          <DraftingScreen
+            players={players}
+            currentPlayerIndex={currentPlayerIndex}
+            draftRound={draftRound}
+            onSelectTile={handleSelectTile}
+            playerIndex={livePlayerIndex}
+            isMultiplayer={isMultiplayer}
+          />
+        );
+      }
+      
+      // For other phases, fall through to normal switch below
+    }
+    
+    // Single player or multiplayer non-drafting phases: use normal flow
     switch (gameState) {
       case "DRAFTING":
         return (
@@ -3220,6 +3550,8 @@ const App: React.FC = () => {
             currentPlayerIndex={currentPlayerIndex}
             draftRound={draftRound}
             onSelectTile={handleSelectTile}
+            playerIndex={playerIndex}
+            isMultiplayer={isMultiplayer}
           />
         );
       case "BUREAUCRACY":
@@ -3242,7 +3574,7 @@ const App: React.FC = () => {
             onFinishTurn={handleFinishBureaucracyTurn}
             onPieceMove={handleBureaucracyPieceMove}
             onPiecePromote={handleBureaucracyPiecePromote}
-            onClearValidationError={handleClearBureaucracyValidationError}
+            onClearValidationError={handleClearValidationError}
             onResetAction={handleResetBureaucracyAction}
             onCheckMove={handleCheckBureaucracyMove}
             showMoveCheckResult={showBureaucracyMoveCheckResult}
@@ -3282,6 +3614,8 @@ const App: React.FC = () => {
             boardTiles={boardTiles}
             bankedTiles={bankedTiles}
             currentPlayerId={currentPlayer.id}
+            playerIndex={playerIndex}
+            isMultiplayer={isMultiplayer}
             lastDroppedPosition={lastDroppedPosition}
             lastDroppedPieceId={lastDroppedPieceId}
             isTestMode={isTestMode}
@@ -3303,10 +3637,10 @@ const App: React.FC = () => {
             showGridOverlay={showGridOverlay}
             setShowGridOverlay={setShowGridOverlay}
             onNewGame={handleNewGame}
-            onPieceMove={handlePieceMove}
+            onPieceMove={wrappedPieceMove}
             onBoardTileMove={handleBoardTileMove}
-            onEndTurn={handleEndTurn}
-            onPlaceTile={handlePlaceTile}
+            onEndTurn={wrappedEndTurn}
+            onPlaceTile={wrappedPlaceTile}
             onRevealTile={handleRevealTile}
             onReceiverDecision={handleReceiverDecision}
             onBystanderDecision={handleBystanderDecision}
@@ -3316,7 +3650,7 @@ const App: React.FC = () => {
             onSetGiveReceiverViewingTileId={setGiveReceiverViewingTileId}
             playedTile={playedTile}
             receiverAcceptance={receiverAcceptance}
-            onReceiverAcceptanceDecision={handleReceiverAcceptanceDecision}
+            onReceiverAcceptanceDecision={wrappedReceiverDecision}
             onChallengerDecision={handleChallengerDecision}
             onCorrectionComplete={handleCorrectionComplete}
             tileRejected={tileRejected}
@@ -3369,9 +3703,10 @@ const App: React.FC = () => {
             onTakeAdvantagePiecePromote={handleTakeAdvantagePiecePromote}
           />
         );
-      case "PLAYER_SELECTION":
+      // Multiplayer-only: PLAYER_SELECTION should never be reached
       default:
-        return <PlayerSelectionScreen onStartGame={handleStartGame} />;
+        // Optionally, redirect to DraftingScreen or show error
+        return <DraftingScreen />;
     }
   };
 

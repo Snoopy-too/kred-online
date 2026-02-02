@@ -1,0 +1,28 @@
+{
+  "name": "@kred/server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@kred/shared": "file:../shared",
+    "socket.io": "^4.1.2",
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5",
+    "express-session": "^1.18.1",
+    "express-mysql-session": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/express-session": "^1.18.1",
+    "@types/node": "^22.14.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.8.2",
+    "vitest": "^4.0.12"
+  }
+}

@@ -1,11 +1,12 @@
 // Barrel file for all type exports
 // Types will be re-exported here as they are extracted
 
-export * from './piece';
-export * from './tile';
-export * from './player';
-export * from './game';
-export * from './move';
-export * from './bureaucracy';
-export * from './challenge';
-export * from './played-tile';
+export { GamePieceInfo, Piece } from './piece';
+export { Tile, BoardTile, TileReceivingSpace } from './tile';
+export { Player } from './player';
+export { GameState, DropLocation, BankSpace } from './game';
+export { DefinedMoveType, MoveRequirementType, DefinedMove, TrackedMove } from './move';
+export { BureaucracyItemType, BureaucracyMoveType, PromotionLocationType } from './bureaucracy';
+export { ChallengeState } from './challenge';
+// PlayedTileState and related types
+export type { PlayedTileState } from './played-tile';

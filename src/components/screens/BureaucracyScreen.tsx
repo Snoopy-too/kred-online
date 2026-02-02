@@ -391,20 +391,18 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                       onPiecePromote(piece.id);
                     }
                   }}
-                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
-                    isPromotionPurchase
+                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase
                       ? "cursor-pointer hover:scale-110"
                       : isDraggable
-                      ? "cursor-grab"
-                      : "cursor-not-allowed"
-                  }`}
+                        ? "cursor-grab"
+                        : "cursor-not-allowed"
+                    }`}
                   style={{
                     position: "absolute",
                     top: `${piece.position.top}%`,
                     left: `${piece.position.left}%`,
-                    transform: `translate(-50%, -50%) rotate(${
-                      piece.rotation + communityCounterRotation
-                    }deg) scale(${finalScale})`,
+                    transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation
+                      }deg) scale(${finalScale})`,
                   }}
                   aria-hidden="true"
                 />
@@ -419,9 +417,8 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                 style={{
                   left: `${boardTile.position.left}%`,
                   top: `${boardTile.position.top}%`,
-                  transform: `translate(-50%, -50%) rotate(${
-                    boardTile.rotation - boardRotation
-                  }deg)`,
+                  transform: `translate(-50%, -50%) rotate(${boardTile.rotation - boardRotation
+                    }deg)`,
                   width: "3%",
                   height: "6%",
                 }}
@@ -504,22 +501,20 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                                 canAfford && onSelectMenuItem(item)
                               }
                               disabled={!canAfford}
-                              className={`p-2 rounded-lg border-2 transition-all ${
-                                canAfford
+                              className={`p-2 rounded-lg border-2 transition-all ${canAfford
                                   ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                                   : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
-                              }`}
+                                }`}
                             >
                               <div className="text-center">
                                 <span className="font-bold text-sm block mb-1">
                                   {item.moveType}
                                 </span>
                                 <span
-                                  className={`text-base font-bold ${
-                                    canAfford
+                                  className={`text-base font-bold ${canAfford
                                       ? "text-yellow-400"
                                       : "text-gray-600"
-                                  }`}
+                                    }`}
                                 >
                                   ₭-{item.price}
                                 </span>
@@ -549,22 +544,20 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                                 canAfford && onSelectMenuItem(item)
                               }
                               disabled={!canAfford}
-                              className={`p-2 rounded-lg border-2 transition-all ${
-                                canAfford
+                              className={`p-2 rounded-lg border-2 transition-all ${canAfford
                                   ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                                   : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
-                              }`}
+                                }`}
                             >
                               <div className="text-center">
                                 <span className="font-bold text-sm block mb-1">
                                   {item.moveType}
                                 </span>
                                 <span
-                                  className={`text-base font-bold ${
-                                    canAfford
+                                  className={`text-base font-bold ${canAfford
                                       ? "text-yellow-400"
                                       : "text-gray-600"
-                                  }`}
+                                    }`}
                                 >
                                   ₭-{item.price}
                                 </span>
@@ -592,11 +585,10 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                         key={item.id}
                         onClick={() => isEnabled && onSelectMenuItem(item)}
                         disabled={!isEnabled}
-                        className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                          isEnabled
+                        className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isEnabled
                             ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                             : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
-                        }`}
+                          }`}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <span className="font-bold text-lg">
@@ -606,9 +598,8 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                               "Restore Credibility"}
                           </span>
                           <span
-                            className={`text-xl font-bold ${
-                              isEnabled ? "text-yellow-400" : "text-gray-600"
-                            }`}
+                            className={`text-xl font-bold ${isEnabled ? "text-yellow-400" : "text-gray-600"
+                              }`}
                           >
                             ₭-{item.price}
                           </span>
@@ -646,8 +637,8 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                     {currentPurchase.item.promotionLocation === "OFFICE"
                       ? "piece in your Office"
                       : currentPurchase.item.promotionLocation === "ROSTRUM"
-                      ? "piece in one of your Rostrums"
-                      : "piece in one of your Seats"}
+                        ? "piece in one of your Rostrums"
+                        : "piece in one of your Seats"}
                   </>
                 )}
                 {currentPurchase.item.type === "MOVE" && (
@@ -690,13 +681,12 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                 return (
                   <div
                     key={playerId}
-                    className={`px-4 py-2 rounded-lg border-2 ${
-                      isCurrentPlayer
+                    className={`px-4 py-2 rounded-lg border-2 ${isCurrentPlayer
                         ? "bg-yellow-600 border-yellow-400 text-white font-bold"
                         : isComplete
-                        ? "bg-green-800 border-green-600 text-green-200"
-                        : "bg-gray-700 border-gray-500 text-gray-300"
-                    }`}
+                          ? "bg-green-800 border-green-600 text-green-200"
+                          : "bg-gray-700 border-gray-500 text-gray-300"
+                      }`}
                   >
                     Player {playerId} {isComplete && "✓"}
                   </div>
