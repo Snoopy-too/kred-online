@@ -18,7 +18,7 @@ export function useTestMode() {
   const [gameLog, setGameLog] = useState<string[]>([]);
 
   // UI expansion states for test mode modules
-  const [isGameLogExpanded, setIsGameLogExpanded] = useState(true);
+  const [isGameLogExpanded, setIsGameLogExpanded] = useState(false);
   const [isCredibilityAdjusterExpanded, setIsCredibilityAdjusterExpanded] =
     useState(false);
   const [isCredibilityRulesExpanded, setIsCredibilityRulesExpanded] =

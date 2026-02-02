@@ -681,18 +681,22 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // RENDER
   // ============================================================================
   return (
-    <main className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start p-2 sm:p-4 lg:p-6 font-sans">
-      <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
+    <main id="campaign-screen" className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start pt-2 pr-2 sm:pt-3 sm:pr-3 lg:pt-4 lg:pr-4 font-sans">
+      <div id="campaign-layout-container" className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
         {/* Main Content (Board, Hand, etc.) */}
         <div
-          className="flex-1 flex flex-col items-center min-w-0"
+          id="campaign-main-content"
+          className="flex-1 flex flex-col items-start min-w-0 overflow-visible"
           style={{
             perspective: "1200px",
             perspectiveOrigin: "50% 100%",
+            marginLeft: playerCount === 3 ? "-75px" : playerCount === 4 ? "-50px" : "-40px",
+            marginTop: playerCount === 3 ? "-75px" : playerCount === 4 ? "-50px" : "-40px",
           }}
         >
           {/* Game Board */}
           <div
+            id="campaign-game-board"
             className="w-full max-w-5xl aspect-[1/1] transition-transform duration-700 ease-in-out relative"
             onDragOver={handleDragOverBoard}
             onDrop={handleDropOnBoard}
@@ -1123,85 +1127,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {/* More content will be added in next sub-phases */}
           </div>
 
-          {/* Player Hand Section */}
-          <div className="w-full max-w-5xl mt-8 relative z-50">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-slate-200">
-                {isMultiplayer ? 'My Hand' : `${currentPlayer?.name || `Player ${currentPlayerId}`}'s Hand`}
-              </h2>
-              <div className="flex gap-2">
-                {(gameState === "TILE_PLAYED" ||
-                  movedPiecesThisTurn.size > 0) &&
-                  gameState !== "CORRECTION_REQUIRED" &&
-                  !showBonusMoveModal && (
-                    <button
-                      onClick={onResetTurn}
-                      className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
-                    >
-                      Reset Turn
-                    </button>
-                  )}
-                {gameState === "CORRECTION_REQUIRED" && playedTile && (
-                  <button
-                    onClick={onResetPiecesCorrection}
-                    className="px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md whitespace-nowrap"
-                  >
-                    Reset Pieces
-                  </button>
-                )}
-                <button
-                  onClick={onEndTurn}
-                  disabled={
-                    (gameState !== "CAMPAIGN" &&
-                      gameState !== "TILE_PLAYED" &&
-                      gameState !== "CORRECTION_REQUIRED") ||
-                    (gameState === "CAMPAIGN" && !hasPlayedTileThisTurn)
-                  }
-                  className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  End Turn
-                </button>
-              </div>
-            </div>
-            <p
-              className={`text-center mb-4 ${gameState === "CORRECTION_REQUIRED"
-                  ? "text-yellow-400 font-semibold"
-                  : hasPlayedTileThisTurn
-                    ? "text-slate-400"
-                    : "text-white"
-                }`}
-            >
-              {gameState === "CORRECTION_REQUIRED"
-                ? "Your tile was rejected. The tile requirements are shown above. Move your pieces to fulfill them, then click End Turn."
-                : hasPlayedTileThisTurn
-                  ? "You have played a tile this turn."
-                  : "Drag a tile to another player's receiving area on the board."}
-            </p>
-            <div className="flex flex-wrap justify-center gap-2 p-4 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
-              {viewingPlayer?.hand?.map((tile) => (
-                <div
-                  key={tile.id}
-                  draggable={!hasPlayedTileThisTurn && (!isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId))}
-                  onDragStart={(e) => handleDragStartTile(e, tile.id)}
-                  onDragEnd={() => setIsDraggingTile(false)}
-                  className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 ${hasPlayedTileThisTurn || gameState !== "CAMPAIGN" || (isMultiplayer && playerIndex !== undefined && playerIndex + 1 !== currentPlayerId)
-                      ? "cursor-not-allowed opacity-60"
-                      : "cursor-grab"
-                    }`}
-                >
-                  <img
-                    src={tile.url}
-                    alt={`Tile ${tile.id}`}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Test Mode: Other Players */}
           {isTestMode && (
-            <div className="w-full max-w-5xl mt-4">
+            <div id="campaign-test-other-players" className="w-full max-w-5xl mt-4">
               <h3 className="text-xl font-bold text-center text-slate-300 mb-2">
                 Other Players (Test Mode)
               </h3>
@@ -1276,7 +1204,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
           {/* Test Mode Controls */}
           {isTestMode && (
-            <div className="mt-8 space-y-4">
+            <div id="campaign-test-controls" className="mt-8 space-y-4">
               {/* Board Rotation Toggle */}
               <div className="bg-gray-700 rounded-lg p-4 mt-4">
                 <label className="flex items-center space-x-3 cursor-pointer">
@@ -1344,10 +1272,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         </div>
 
         {/* Right Column: Supply & Log */}
-        <div className="w-full lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
+        <div id="campaign-right-column" className="w-full lg:w-72 lg:flex-shrink-0 mt-6 lg:mt-0">
           <div className="lg:sticky lg:top-8 flex flex-col gap-8">
-            {/* Turn Indicator */}
-            <div className="w-full bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-3 text-center">
+            {/* Info Section */}
+            <div id="campaign-info" className="w-full bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-3 text-center">
               <h2 className="text-xl font-bold text-cyan-300 tracking-wide">
                 {isMultiplayer && playerIndex !== undefined && playerIndex + 1 === currentPlayerId
                   ? "Your Turn"
@@ -1355,14 +1283,74 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </h2>
             </div>
 
+            {/* Action Buttons */}
+            <div id="campaign-action-buttons" className="flex flex-col gap-2">
+              {(gameState === "TILE_PLAYED" ||
+                movedPiecesThisTurn.size > 0) &&
+                gameState !== "CORRECTION_REQUIRED" &&
+                !showBonusMoveModal && (
+                  <button
+                    onClick={onResetTurn}
+                    className="w-full px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md"
+                  >
+                    Reset Turn
+                  </button>
+                )}
+              {gameState === "CORRECTION_REQUIRED" && playedTile && (
+                <button
+                  onClick={onResetPiecesCorrection}
+                  className="w-full px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md"
+                >
+                  Reset Pieces
+                </button>
+              )}
+              <button
+                onClick={onEndTurn}
+                disabled={
+                  (gameState !== "CAMPAIGN" &&
+                    gameState !== "TILE_PLAYED" &&
+                    gameState !== "CORRECTION_REQUIRED") ||
+                  (gameState === "CAMPAIGN" && !hasPlayedTileThisTurn)
+                }
+                className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
+              >
+                End Turn
+              </button>
+            </div>
+
+            {/* Player Hand */}
+            <div id="campaign-player-hand">
+              <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
+                {viewingPlayer?.hand?.map((tile) => (
+                  <div
+                    key={tile.id}
+                    draggable={!hasPlayedTileThisTurn && (!isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId))}
+                    onDragStart={(e) => handleDragStartTile(e, tile.id)}
+                    onDragEnd={() => setIsDraggingTile(false)}
+                    className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 flex-shrink-0 ${
+                      hasPlayedTileThisTurn || gameState !== "CAMPAIGN" || (isMultiplayer && playerIndex !== undefined && playerIndex + 1 !== currentPlayerId)
+                        ? "cursor-not-allowed opacity-60"
+                        : "cursor-grab"
+                    }`}
+                  >
+                    <img
+                      src={tile.url}
+                      alt={`Tile ${tile.id}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Game Log */}
-            <div>
+            <div id="campaign-game-log">
               <button
                 onClick={() => setIsGameLogExpanded(!isGameLogExpanded)}
-                className="w-full text-left mb-4 flex items-center justify-between"
+                className="w-full text-left px-3 py-2 bg-gray-800/50 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition-colors flex items-center justify-between"
               >
-                <h2 className="text-2xl font-bold text-slate-200">Game Log</h2>
-                <span className="text-slate-400 text-xl">
+                <h3 className="text-sm font-semibold text-slate-300">Game Log</h3>
+                <span className="text-slate-400 text-sm">
                   {isGameLogExpanded ? "▼" : "▶"}
                 </span>
               </button>
