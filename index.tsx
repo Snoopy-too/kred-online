@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { AppWithMultiplayer } from './src/AppWithMultiplayer.tsx';
+import './src/config/i18n'; // Initialize i18n
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

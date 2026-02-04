@@ -64,13 +64,13 @@ export function useMultiplayerActions() {
   /**
    * Start the game
    */
-  const startGame = useCallback(async (): Promise<void> => {
+  const startGame = useCallback(async (draftTiles: boolean = true): Promise<void> => {
     if (!socket || !connected || !roomId) {
       throw new Error('Not connected to server or missing room');
     }
 
     return new Promise((resolve, reject) => {
-      socket.emit('kred:game:start', { roomId }, (response: any) => {
+      socket.emit('kred:game:start', { roomId, draftTiles }, (response: any) => {
         if (response.success) {
           resolve();
         } else {
@@ -135,10 +135,14 @@ export function useMultiplayerActions() {
           'kred:campaign:playTile',
           { roomId, playerIndex, tileId, targetPlayerId },
           (response: any) => {
+            if (!response) {
+              reject(new Error('No response from server'));
+              return;
+            }
             if (response.success) {
               resolve();
             } else {
-              reject(new Error(response.error));
+              reject(new Error(response.error || 'Unknown error'));
             }
           }
         );
@@ -410,6 +414,120 @@ export function useMultiplayerActions() {
     [socket, connected]
   );
 
+  // ============================================================================
+  // CAMPAIGN PHASE DECISION ACTIONS
+  // ============================================================================
+
+  /**
+   * Make receiver decision (accept/reject tile)
+   */
+  const makeReceiverDecision = useCallback(
+    async (accepted: boolean): Promise<void> => {
+      if (!socket || !connected) {
+        throw new Error('Not connected to server');
+      }
+      if (!roomId) {
+        throw new Error('Missing room information');
+      }
+
+      return new Promise((resolve, reject) => {
+        socket.emit(
+          'kred:campaign:receiverDecision',
+          { roomId, accepted },
+          (response: any) => {
+            if (response.success) {
+              resolve();
+            } else {
+              reject(new Error(response.error));
+            }
+          }
+        );
+      });
+    },
+    [socket, connected, roomId]
+  );
+
+  /**
+   * Make challenger decision (challenge/pass)
+   */
+  const makeChallengerDecision = useCallback(
+    async (challenge: boolean): Promise<void> => {
+      if (!socket || !connected) {
+        throw new Error('Not connected to server');
+      }
+      if (!roomId) {
+        throw new Error('Missing room information');
+      }
+
+      return new Promise((resolve, reject) => {
+        socket.emit(
+          'kred:campaign:challengerDecision',
+          { roomId, challenge },
+          (response: any) => {
+            if (response.success) {
+              resolve();
+            } else {
+              reject(new Error(response.error));
+            }
+          }
+        );
+      });
+    },
+    [socket, connected, roomId]
+  );
+
+  /**
+   * Complete bonus move
+   */
+  const completeBonusMove = useCallback(async (): Promise<void> => {
+    if (!socket || !connected) {
+      throw new Error('Not connected to server');
+    }
+    if (!roomId) {
+      throw new Error('Missing room information');
+    }
+
+    return new Promise((resolve, reject) => {
+      socket.emit(
+        'kred:campaign:completeBonusMove',
+        { roomId },
+        (response: any) => {
+          if (response.success) {
+            resolve();
+          } else {
+            reject(new Error(response.error));
+          }
+        }
+      );
+    });
+  }, [socket, connected, roomId]);
+
+  /**
+   * Complete correction
+   */
+  const completeCorrection = useCallback(async (): Promise<void> => {
+    if (!socket || !connected) {
+      throw new Error('Not connected to server');
+    }
+    if (!roomId) {
+      throw new Error('Missing room information');
+    }
+
+    return new Promise((resolve, reject) => {
+      socket.emit(
+        'kred:campaign:completeCorrection',
+        { roomId },
+        (response: any) => {
+          if (response.success) {
+            resolve();
+          } else {
+            reject(new Error(response.error));
+          }
+        }
+      );
+    });
+  }, [socket, connected, roomId]);
+
   return {
     // Connection state
     connected,
@@ -430,13 +548,18 @@ export function useMultiplayerActions() {
     endTurn,
 
     // Tile acceptance actions
-    acceptTile,
-    rejectTile,
+    acceptTile: () => makeReceiverDecision(true),
+    rejectTile: () => makeReceiverDecision(false),
     viewTilePrivate,
 
     // Challenge actions
-    initiateChallenge,
-    passChallenge,
+    initiateChallenge: () => makeChallengerDecision(true),
+    passChallenge: () => makeChallengerDecision(false),
+    makeChallenge: () => makeChallengerDecision(true),
+
+    // Campaign decision completion
+    completeBonusMove,
+    completeCorrection,
 
     // Take Advantage actions
     selectAdvantageTiles,

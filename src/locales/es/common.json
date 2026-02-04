@@ -1,0 +1,66 @@
+{
+  "game": {
+    "title": "KRED",
+    "tagline": "¡No puedes confiar en nadie, ni siquiera en ti mismo!",
+    "loading": "Cargando...",
+    "waiting": "Esperando jugadores...",
+    "yourTurn": "Tu Turno",
+    "notYourTurn": "No es tu Turno",
+    "gameOver": "Juego Terminado",
+    "winner": "Ganador"
+  },
+  "phases": {
+    "campaign": "Campaña",
+    "bureaucracy": "Burocracia",
+    "challenge": "Desafío",
+    "drafting": "Selección de Fichas",
+    "playerSelection": "Selección de Jugador"
+  },
+  "pieces": {
+    "pawn": "Peón",
+    "heel": "Tacón",
+    "mark": "Marca",
+    "pawns": "Peones",
+    "heels": "Tacones",
+    "marks": "Marcas"
+  },
+  "locations": {
+    "office": "Oficina",
+    "rostrum": "Podio",
+    "seat": "Asiento",
+    "community": "Comunidad",
+    "rostrums": "Podios",
+    "seats": "Asientos"
+  },
+  "ui": {
+    "player": "Jugador",
+    "players": "Jugadores",
+    "turn": "Turno",
+    "round": "Ronda",
+    "credibility": "Credibilidad",
+    "funding": "Financiamiento",
+    "tiles": "Fichas",
+    "manual": "Manual",
+    "language": "Idioma"
+  },
+  "messages": {
+    "tilePlayedHonestly": "Ficha jugada honestamente",
+    "tilePlayedDishonestly": "Ficha jugada deshonestamente",
+    "challengeSuccessful": "¡Desafío exitoso!",
+    "challengeFailed": "¡Desafío fallido!",
+    "pieceMovedToOffice": "Peón movido a la Oficina",
+    "pieceMovedToRostrum": "Tacón movido al Podio",
+    "pieceMovedToSeat": "Pieza movida al Asiento",
+    "invalidMove": "Movimiento inválido",
+    "notEnoughFunding": "No hay suficiente financiamiento",
+    "purchaseComplete": "Compra completada"
+  },
+  "actions": {
+    "play": "Jugar",
+    "pass": "Pasar",
+    "challenge": "Desafiar",
+    "skip": "Saltar",
+    "purchase": "Comprar",
+    "endTurn": "Terminar Turno"
+  }
+}

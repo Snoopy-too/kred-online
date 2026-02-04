@@ -50,6 +50,7 @@ import {
   getAvailablePurchases,
 } from "../../game/bureaucracy";
 import { getPlayerById, getPieceById } from "../../../utils";
+import LanguageModal from "../shared/LanguageModal";
 
 // ============================================================================
 // COMPONENT
@@ -281,6 +282,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   // STATE HOOKS
   // ============================================================================
+  const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{
     x: number;
@@ -636,11 +638,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   });
 
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
-  // In test mode, always show decision dialogs so player can control all players
+  // In test mode (single-player), allow controlling all players
+  // In multiplayer, only show decisions to the specific player who needs to decide
   // NEW WORKFLOW: Uses playedTile for PENDING_ACCEPTANCE
   // OLD WORKFLOW: Uses tileTransaction for PENDING_CHALLENGE
   const isMyTurnForDecision =
-    isTestMode ||
+    (isTestMode && !isMultiplayer) ||
     (gameState === "PENDING_ACCEPTANCE" &&
       playedTile &&
       currentPlayerId === playedTile.receivingPlayerId) ||
@@ -1246,6 +1249,22 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 <p className="text-xs text-slate-400 mt-2">
                   When ON, displays a 2% grid overlay on the board to help with
                   tile placement. When OFF, the grid is hidden.
+                </p>
+              </div>
+
+              {/* Language Selector Button */}
+              <div className="bg-gray-700 rounded-lg p-4">
+                <button
+                  onClick={() => setLanguageModalOpen(true)}
+                  className="w-full px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition-colors shadow-lg flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                  </svg>
+                  Change Language
+                </button>
+                <p className="text-xs text-slate-400 mt-2 text-center">
+                  Select your preferred language
                 </p>
               </div>
 
@@ -2419,6 +2438,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
           </div>
         </div>
       )}
+
+      {/* Language Modal */}
+      <LanguageModal
+        isOpen={languageModalOpen}
+        onClose={() => setLanguageModalOpen(false)}
+      />
     </main>
   );
 };

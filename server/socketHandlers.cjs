@@ -349,10 +349,11 @@ module.exports = function setupKREDHandlers(io, socket, db) {
 
   // Handle game start (transition from lobby to gameplay)
   socket.on('kred:game:start', async (data, callback) => {
-    const { roomId } = data;
+    const { roomId, draftTiles = true } = data; // Default to true for backward compatibility
     
     try {
-      console.log(`[KRED] Game start requested for room: ${roomId}`);
+      console.log(`[KRED] Game start requested for room: ${roomId}, draftTiles: ${draftTiles}`);
+      
       // Validate minimum players from generic room
       const [playersRes] = await db.query(
         `SELECT COUNT(*) as player_count FROM room_players WHERE room_id = ?`,
@@ -389,19 +390,35 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       const playerNames = allPlayers.map(p => p.player_name);
       const dealtPlayers = createAndDealTiles(playerCount, playerNames);
       state.players = dealtPlayers;
-      state.phase = 'DRAFTING';
+      
+      // Set phase based on draftTiles option
+      state.phase = draftTiles ? 'DRAFTING' : 'CAMPAIGN';
       state.playerCount = playerCount;
+      
+      // If skipping draft, move all dealt tiles to keptTiles
+      if (!draftTiles) {
+        state.players = state.players.map(player => ({
+          ...player,
+          keptTiles: [...player.hand],
+          hand: []
+        }));
+        console.log('[KRED] Tiles moved to keptTiles for player 0:', state.players[0].keptTiles.length);
+      }
+      
       // Save updated state
       await db.query(
         `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
         [JSON.stringify(state), roomId.toLowerCase()]
       );
-      // Broadcast game start with full game state to all players
-      io.to(`kred:${roomId}`).emit('kred:game:started', {
+      
+      // Broadcast game start to the GENERIC room (where lobby players are listening)
+      // Players will join kred:${roomId} when they navigate to the game page
+      io.to(`room:${roomId}`).emit('kred:game:started', {
         playerCount: playerCount,
         initialGameState: state
       });
-      console.log(`[KRED] Game ${roomId} started with ${playerCount} players (tiles dealt)`);
+      
+      console.log(`[KRED] Game ${roomId} started with ${playerCount} players, phase: ${state.phase}`);
       callback({ success: true, playerCount: playerCount, initialGameState: state });
     } catch (error) {
       console.error('[KRED] Error starting game:', error);
@@ -688,6 +705,11 @@ module.exports = function setupKREDHandlers(io, socket, db) {
   socket.on('kred:campaign:playTile', async (data, callback) => {
     const { roomId, playerIndex, tileId, targetPlayerId } = data;
     
+    if (!callback || typeof callback !== 'function') {
+      console.error('[KRED] playTile: callback not provided');
+      return;
+    }
+    
     try {
       console.log(`[KRED] Player ${playerIndex} playing tile ${tileId} to player ${targetPlayerId}`);
       
@@ -901,10 +923,42 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       if (accepted) {
         // Move to pending challenge phase
         state.phase = 'PENDING_CHALLENGE';
+        
+        // Calculate bystanders (players who are neither placer nor receiver)
+        const placerId = state.playedTile?.playerId || state.tileTransaction?.placerId;
+        const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
+        
+        const bystanderPlayers = state.players.filter(
+          p => p.id !== placerId && p.id !== receiverId
+        );
+        
+        // Sort bystanders by turn order (clockwise from placer)
+        const placerIndex = state.players.findIndex(p => p.id === placerId);
+        const sortedBystanders = bystanderPlayers.sort((a, b) => {
+          const indexA = state.players.findIndex(p => p.id === a.id);
+          const indexB = state.players.findIndex(p => p.id === b.id);
+          const relativeA = (indexA - placerIndex + state.playerCount) % state.playerCount;
+          const relativeB = (indexB - placerIndex + state.playerCount) % state.playerCount;
+          return relativeA - relativeB;
+        });
+        
+        state.bystanders = sortedBystanders;
+        state.bystanderIndex = 0;
+        
+        // Set current player to first bystander
+        if (sortedBystanders.length > 0) {
+          const firstBystanderIndex = state.players.findIndex(
+            p => p.id === sortedBystanders[0].id
+          );
+          state.currentPlayerIndex = firstBystanderIndex;
+        }
       } else {
         // Rejected - return to placer's turn (CAMPAIGN)
         state.phase = 'CAMPAIGN';
         state.tileTransaction = null;
+        state.playedTile = null;
+        state.bystanders = [];
+        state.bystanderIndex = 0;
       }
       
       // Save state
@@ -918,7 +972,10 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         gameState: {
           players: state.players,
           phase: state.phase,
+          playedTile: state.playedTile,
           tileTransaction: state.tileTransaction,
+          bystanders: state.bystanders,
+          bystanderIndex: state.bystanderIndex,
           currentPlayerIndex: state.currentPlayerIndex,
           playerCount: state.playerCount,
           pieces: state.pieces,
@@ -927,10 +984,131 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         }
       });
       
-      console.log(`[KRED] Receiver decision processed. Phase: ${state.phase}`);
+      console.log(`[KRED] Receiver decision processed. Phase: ${state.phase}, Bystanders: ${state.bystanders?.length || 0}`);
       callback({ success: true, phase: state.phase });
     } catch (error) {
       console.error('[KRED] Error processing receiver decision:', error);
+      callback({ success: false, error: error.message });
+    }
+  });
+
+  // Handle challenger's decision (challenge/pass)
+  socket.on('kred:campaign:challengerDecision', async (data, callback) => {
+    const { roomId, challenge } = data;
+    
+    try {
+      console.log(`[KRED] Challenger decision: ${challenge ? 'CHALLENGE' : 'PASS'}`);
+      
+      const [gameState] = await db.query(
+        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
+        [roomId.toLowerCase()]
+      );
+      
+      if (gameState.length === 0) {
+        return callback({ success: false, error: 'Game not found' });
+      }
+      
+      const state = JSON.parse(gameState[0].game_state);
+      
+      if (challenge) {
+        // TODO: Implement challenge logic
+        // For now, treat challenge as resolved - tile goes to receiver
+        console.log('[KRED] Challenge initiated - resolving transaction');
+        
+        // Add tile to receiver's bureaucracy tiles
+        const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
+        const receiverIndex = state.players.findIndex(p => p.id === receiverId);
+        if (receiverIndex !== -1) {
+          const tile = state.playedTile?.tile || state.tileTransaction?.tile;
+          if (!state.players[receiverIndex].bureaucracyTiles) {
+            state.players[receiverIndex].bureaucracyTiles = [];
+          }
+          state.players[receiverIndex].bureaucracyTiles.push(tile);
+        }
+        
+        // Remove tile from board
+        const boardTileId = state.tileTransaction?.boardTileId;
+        if (boardTileId) {
+          state.boardTiles = state.boardTiles.filter(bt => bt.id !== boardTileId);
+        }
+        
+        // Set current player to receiver and return to CAMPAIGN phase
+        state.currentPlayerIndex = receiverIndex;
+        state.phase = 'CAMPAIGN';
+        state.playedTile = null;
+        state.tileTransaction = null;
+        state.bystanders = [];
+        state.bystanderIndex = 0;
+        
+      } else {
+        // Pass - check if there are more bystanders
+        const nextBystanderIndex = state.bystanderIndex + 1;
+        
+        if (nextBystanderIndex >= state.bystanders.length) {
+          // No more bystanders - resolve transaction without challenge
+          console.log('[KRED] All bystanders passed - resolving transaction');
+          
+          // Add tile to receiver's bureaucracy tiles
+          const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
+          const receiverIndex = state.players.findIndex(p => p.id === receiverId);
+          if (receiverIndex !== -1) {
+            const tile = state.playedTile?.tile || state.tileTransaction?.tile;
+            if (!state.players[receiverIndex].bureaucracyTiles) {
+              state.players[receiverIndex].bureaucracyTiles = [];
+            }
+            state.players[receiverIndex].bureaucracyTiles.push(tile);
+          }
+          
+          // Remove tile from board
+          const boardTileId = state.tileTransaction?.boardTileId;
+          if (boardTileId) {
+            state.boardTiles = state.boardTiles.filter(bt => bt.id !== boardTileId);
+          }
+          
+          // Set current player to receiver and return to CAMPAIGN phase
+          state.currentPlayerIndex = receiverIndex;
+          state.phase = 'CAMPAIGN';
+          state.playedTile = null;
+          state.tileTransaction = null;
+          state.bystanders = [];
+          state.bystanderIndex = 0;
+          
+        } else {
+          // Move to next bystander
+          state.bystanderIndex = nextBystanderIndex;
+          const nextBystander = state.bystanders[nextBystanderIndex];
+          const nextBystanderIndex = state.players.findIndex(p => p.id === nextBystander.id);
+          state.currentPlayerIndex = nextBystanderIndex;
+        }
+      }
+      
+      // Save state
+      await db.query(
+        `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
+        [JSON.stringify(state), roomId.toLowerCase()]
+      );
+      
+      // Broadcast to all players
+      io.in(`kred:${roomId}`).emit('kred:stateUpdate', { 
+        gameState: {
+          players: state.players,
+          phase: state.phase,
+          playedTile: state.playedTile,
+          tileTransaction: state.tileTransaction,
+          bystanders: state.bystanders,
+          bystanderIndex: state.bystanderIndex,
+          currentPlayerIndex: state.currentPlayerIndex,
+          playerCount: state.playerCount,
+          pieces: state.pieces,
+          boardTiles: state.boardTiles,
+          community: state.community
+        }
+      });
+      
+      console.log(`[KRED] Challenger decision processed. Phase: ${state.phase}`);
+      callback({ success: true, phase: state.phase });
+    } catch (error) {
+      console.error('[KRED] Error processing challenger decision:', error);
       callback({ success: false, error: error.message });
     }
   });

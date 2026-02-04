@@ -501,7 +501,9 @@ const App: React.FC<MultiplayerProps> = ({
     setCurrentPlayerIndex,
     setPlayerIndex: setLivePlayerIndex,
     setPlayerCount,
-    setPlayedTile
+    setPlayedTile,
+    setBystanders,
+    setBystanderIndex
   });
 
   // Initialize campaign pieces when phase transitions to CAMPAIGN in multiplayer
@@ -3605,6 +3607,12 @@ const App: React.FC<MultiplayerProps> = ({
             </div>
           );
         }
+        
+        // In multiplayer, currentPlayerId should be the VIEWING player, not the active turn player
+        const viewingPlayerId = isMultiplayer && playerIndex !== undefined 
+          ? playerIndex + 1 
+          : currentPlayer.id;
+        
         return (
           <CampaignScreen
             gameState={gameState}
@@ -3613,7 +3621,7 @@ const App: React.FC<MultiplayerProps> = ({
             pieces={pieces}
             boardTiles={boardTiles}
             bankedTiles={bankedTiles}
-            currentPlayerId={currentPlayer.id}
+            currentPlayerId={viewingPlayerId}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
             lastDroppedPosition={lastDroppedPosition}

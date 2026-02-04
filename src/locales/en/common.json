@@ -1,0 +1,66 @@
+{
+  "game": {
+    "title": "KRED",
+    "tagline": "You can't trust anyone, not even yourself!",
+    "loading": "Loading...",
+    "waiting": "Waiting for players...",
+    "yourTurn": "Your Turn",
+    "notYourTurn": "Not Your Turn",
+    "gameOver": "Game Over",
+    "winner": "Winner"
+  },
+  "phases": {
+    "campaign": "Campaign",
+    "bureaucracy": "Bureaucracy",
+    "challenge": "Challenge",
+    "drafting": "Drafting",
+    "playerSelection": "Player Selection"
+  },
+  "pieces": {
+    "pawn": "Pawn",
+    "heel": "Heel",
+    "mark": "Mark",
+    "pawns": "Pawns",
+    "heels": "Heels",
+    "marks": "Marks"
+  },
+  "locations": {
+    "office": "Office",
+    "rostrum": "Rostrum",
+    "seat": "Seat",
+    "community": "Community",
+    "rostrums": "Rostrums",
+    "seats": "Seats"
+  },
+  "ui": {
+    "player": "Player",
+    "players": "Players",
+    "turn": "Turn",
+    "round": "Round",
+    "credibility": "Credibility",
+    "funding": "Funding",
+    "tiles": "Tiles",
+    "manual": "Manual",
+    "language": "Language"
+  },
+  "messages": {
+    "tilePlayedHonestly": "Tile played honestly",
+    "tilePlayedDishonestly": "Tile played dishonestly",
+    "challengeSuccessful": "Challenge successful!",
+    "challengeFailed": "Challenge failed!",
+    "pieceMovedToOffice": "Pawn moved to Office",
+    "pieceMovedToRostrum": "Heel moved to Rostrum",
+    "pieceMovedToSeat": "Piece moved to Seat",
+    "invalidMove": "Invalid move",
+    "notEnoughFunding": "Not enough funding",
+    "purchaseComplete": "Purchase complete"
+  },
+  "actions": {
+    "play": "Play",
+    "pass": "Pass",
+    "challenge": "Challenge",
+    "skip": "Skip",
+    "purchase": "Purchase",
+    "endTurn": "End Turn"
+  }
+}

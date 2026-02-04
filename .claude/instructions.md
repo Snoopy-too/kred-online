@@ -15,6 +15,11 @@ KRED Online is a multiplayer digital implementation of the KRED strategic board 
 - **Multiplayer Architecture:** `MULTIPLAYER_ARCHITECTURE.md`
 - **Implementation Status:** `IMPLEMENTATION_STATUS.md`
 
+### Skills System
+Before implementing multiplayer features, consult relevant skills:
+- **[skills/multiplayer-game-architecture.md](skills/multiplayer-game-architecture.md)** - Player-specific views, turn management, phase systems, bystander challenges
+- **[skills/database-design.md](skills/database-design.md)** - Two-tier schema, JSON vs normalized tables, race condition prevention, query patterns
+
 ### Key Documentation
 - `README.md` - Getting started, project structure
 - `GAME_RULES.md` - Game mechanics reference

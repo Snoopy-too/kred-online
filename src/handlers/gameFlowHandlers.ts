@@ -163,16 +163,19 @@ export function createGameFlowHandlers(
         id: p.id,
         name: p.name,
         handSize: p.hand?.length || 0,
-        tiles: p.hand?.map((t: any) => ({ id: t.id, url: t.url })) || []
+        keptTilesSize: p.keptTiles?.length || 0,
+        hand: p.hand?.map((t: any) => ({ id: t.id })) || [],
+        keptTiles: p.keptTiles?.map((t: any) => ({ id: t.id })) || []
       })), null, 2));
       
       // Restore all state
       deps.setPlayers(initialGameState.players || []);
-      deps.setGameState(initialGameState.phase === 'drafting' ? 'DRAFTING' : 'CAMPAIGN');
+      const phase = initialGameState.phase.toUpperCase();
+      deps.setGameState(phase === 'DRAFTING' ? 'DRAFTING' : 'CAMPAIGN');
       deps.setCurrentPlayerIndex(initialGameState.currentPlayerIndex || 0);
       
       // If in campaign phase, also restore campaign state
-      if (initialGameState.phase === 'campaign') {
+      if (phase === 'CAMPAIGN') {
         deps.setPieces(initialGameState.pieces || deps.initializeCampaignPieces(count));
         deps.setBoardTiles(initialGameState.boardTiles || []);
         deps.setBankedTiles(initialGameState.bankedTiles || []);

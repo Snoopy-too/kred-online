@@ -31,6 +31,8 @@ export interface MultiplayerSyncProps {
   setPlayerIndex?: (index: number) => void;
   setPlayerCount?: (count: number) => void;
   setPlayedTile?: (tile: PlayedTileState | null) => void;
+  setBystanders?: (bystanders: Player[]) => void;
+  setBystanderIndex?: (index: number) => void;
 }
 
 export function useMultiplayerSync(props: MultiplayerSyncProps) {
@@ -50,7 +52,9 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
     setBoardTiles,
     setCurrentPlayerIndex,
     setPlayerCount,
-    setPlayedTile
+    setPlayedTile,
+    setBystanders,
+    setBystanderIndex
   } = props;
   // Log when hook is called
   console.log('[MULTIPLAYER SYNC] Hook called with socket:', !!socket, 'roomId:', roomId);
@@ -124,6 +128,14 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
         console.log('[MULTIPLAYER] Syncing playedTile:', update.playedTile);
         setPlayedTile(update.playedTile);
       }
+      if (update.bystanders !== undefined && typeof setBystanders === 'function') {
+        console.log('[MULTIPLAYER] Syncing bystanders:', update.bystanders.length);
+        setBystanders(update.bystanders);
+      }
+      if (update.bystanderIndex !== undefined && typeof setBystanderIndex === 'function') {
+        console.log('[MULTIPLAYER] Syncing bystanderIndex:', update.bystanderIndex);
+        setBystanderIndex(update.bystanderIndex);
+      }
     };
 
     const handlePhaseChange = (data: { newPhase: GameState; currentPlayer: number }) => {
@@ -152,8 +164,33 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
       alert(`Game error: ${data.message}`);
     };
 
+    // Campaign phase decision handlers
+    const handleReceiverDecision = (data: { accepted: boolean }) => {
+      console.log('[MULTIPLAYER] Receiver decision:', data.accepted ? 'ACCEPT' : 'REJECT');
+      // State will be updated via game:stateUpdate
+    };
+
+    const handleChallengerDecision = (data: { challenge: boolean }) => {
+      console.log('[MULTIPLAYER] Challenger decision:', data.challenge ? 'CHALLENGE' : 'PASS');
+      // State will be updated via game:stateUpdate
+    };
+
+    const handleBonusMoveComplete = () => {
+      console.log('[MULTIPLAYER] Bonus move completed');
+      // State will be updated via game:stateUpdate
+    };
+
+    const handleCorrectionComplete = () => {
+      console.log('[MULTIPLAYER] Correction completed');
+      // State will be updated via game:stateUpdate
+    };
+
     // Register event listeners
     socket.on('kred:stateUpdate', handleStateUpdate);
+    socket.on('kred:campaign:receiverDecision', handleReceiverDecision);
+    socket.on('kred:campaign:challengerDecision', handleChallengerDecision);
+    socket.on('kred:campaign:bonusMoveComplete', handleBonusMoveComplete);
+    socket.on('kred:campaign:correctionComplete', handleCorrectionComplete);
 
     // Also listen for initial state via custom window event
     const handleInitialState = (event: Event) => {
@@ -164,6 +201,10 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
 
     return () => {
       socket.off('kred:stateUpdate', handleStateUpdate);
+      socket.off('kred:campaign:receiverDecision', handleReceiverDecision);
+      socket.off('kred:campaign:challengerDecision', handleChallengerDecision);
+      socket.off('kred:campaign:bonusMoveComplete', handleBonusMoveComplete);
+      socket.off('kred:campaign:correctionComplete', handleCorrectionComplete);
       window.removeEventListener('kred:initialState', handleInitialState);
     };
   }, [socket, setGameState, setPlayers, setPieces, setBoardTiles, setCurrentPlayerIndex]);
