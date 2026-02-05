@@ -6,6 +6,7 @@ import HttpBackend from 'i18next-http-backend';
 // Import KRED-specific translations (game UI)
 import enCommon from '../locales/en/common.json';
 import esCommon from '../locales/es/common.json';
+import jaCommon from '../locales/ja/common.json';
 
 const resources = {
   en: {
@@ -13,6 +14,9 @@ const resources = {
   },
   es: {
     common: esCommon,
+  },
+  ja: {
+    common: jaCommon,
   },
 };
 

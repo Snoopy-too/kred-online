@@ -13,6 +13,7 @@ const LanguageModal: React.FC<LanguageModalProps> = ({ isOpen, onClose }) => {
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'ja', name: '日本語', flag: '🇯🇵' },
   ];
 
   const handleLanguageChange = (languageCode: string) => {

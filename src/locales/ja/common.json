@@ -1,0 +1,66 @@
+{
+  "game": {
+    "title": "KRED",
+    "tagline": "誰も信用できない、自分さえも！",
+    "loading": "読み込み中...",
+    "waiting": "プレイヤーを待っています...",
+    "yourTurn": "あなたの番です",
+    "notYourTurn": "あなたの番ではありません",
+    "gameOver": "ゲーム終了",
+    "winner": "勝者"
+  },
+  "phases": {
+    "campaign": "キャンペーン",
+    "bureaucracy": "官僚主義",
+    "challenge": "チャレンジ",
+    "drafting": "ドラフト",
+    "playerSelection": "プレイヤー選択"
+  },
+  "pieces": {
+    "pawn": "ポーン",
+    "heel": "ヒール",
+    "mark": "マーク",
+    "pawns": "ポーン",
+    "heels": "ヒール",
+    "marks": "マーク"
+  },
+  "locations": {
+    "office": "オフィス",
+    "rostrum": "演壇",
+    "seat": "座席",
+    "community": "コミュニティ",
+    "rostrums": "演壇",
+    "seats": "座席"
+  },
+  "ui": {
+    "player": "プレイヤー",
+    "players": "プレイヤー",
+    "turn": "ターン",
+    "round": "ラウンド",
+    "credibility": "信頼度",
+    "funding": "資金",
+    "tiles": "タイル",
+    "manual": "マニュアル",
+    "language": "言語"
+  },
+  "messages": {
+    "tilePlayedHonestly": "タイルが正直にプレイされました",
+    "tilePlayedDishonestly": "タイルが不正にプレイされました",
+    "challengeSuccessful": "チャレンジ成功！",
+    "challengeFailed": "チャレンジ失敗！",
+    "pieceMovedToOffice": "ポーンがオフィスに移動しました",
+    "pieceMovedToRostrum": "ヒールが演壇に移動しました",
+    "pieceMovedToSeat": "駒が座席に移動しました",
+    "invalidMove": "無効な移動",
+    "notEnoughFunding": "資金が不足しています",
+    "purchaseComplete": "購入完了"
+  },
+  "actions": {
+    "play": "プレイ",
+    "pass": "パス",
+    "challenge": "チャレンジ",
+    "skip": "スキップ",
+    "purchase": "購入",
+    "endTurn": "ターン終了"
+  }
+}
