@@ -12,6 +12,8 @@
  */
 
 import React, { useState, useRef, useEffect } from "react";
+import { useSocket } from "../../contexts/SocketContext";
+import ConnectionStatus from "../shared/ConnectionStatus";
 
 // ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
@@ -43,13 +45,13 @@ import {
 // UTILITY IMPORTS - Helper functions
 // ============================================================================
 import { calculatePieceRotation } from "../../utils/positioning";
-import { findNearestVacantLocation } from "../../../game";
-import { validatePieceMovement } from "../../../game";
+import { findNearestVacantLocation } from "../../game";
+import { validatePieceMovement } from "../../rules";
 import {
   getBureaucracyMenu,
   getAvailablePurchases,
 } from "../../game/bureaucracy";
-import { getPlayerById, getPieceById } from "../../../utils";
+import { getPlayerById, getPieceById } from "../../utils";
 import LanguageModal from "../shared/LanguageModal";
 
 // ============================================================================
@@ -64,6 +66,7 @@ interface CampaignScreenProps {
   boardTiles: BoardTile[];
   bankedTiles: (BoardTile & { faceUp: boolean })[];
   currentPlayerId: number;
+  currentPlayerIndex: number; // Index of whose turn it is (for turn validation)
   playerIndex?: number; // Index of the player viewing this screen (multiplayer)
   isMultiplayer?: boolean; // Whether this is a multiplayer game
   lastDroppedPosition: { top: number; left: number } | null;
@@ -195,6 +198,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   boardTiles,
   bankedTiles,
   currentPlayerId,
+  currentPlayerIndex,
   playerIndex,
   isMultiplayer = false,
   lastDroppedPosition,
@@ -282,6 +286,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   // STATE HOOKS
   // ============================================================================
+  // Socket connection info (for multiplayer mode)
+  const socketContext = isMultiplayer ? useSocket() : { connected: false, roomId: null, playerIndex: null };
+  
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{
@@ -636,6 +643,11 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     viewingPlayerHandSize: viewingPlayer?.hand?.length || 0,
     allPlayers: players.map(p => ({ id: p.id, name: p.name, handSize: p.hand?.length || 0 }))
   });
+
+  // Check if it's the viewing player's turn to act
+  // In test mode (single-player), allow controlling all players
+  // In multiplayer, only allow actions when it's this player's turn
+  const isMyTurn = !isMultiplayer || (playerIndex !== undefined && playerIndex === currentPlayerIndex);
 
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
   // In test mode (single-player), allow controlling all players
@@ -1078,12 +1090,15 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               // Check if this piece has been moved this turn
               const hasMoved = movedPiecesThisTurn.has(piece.id);
 
+              // Only allow dragging pieces during the viewing player's turn
+              const canDragPiece = isMyTurn;
+
               return (
                 <img
                   key={piece.id}
                   src={piece.imageUrl}
                   alt={piece.name}
-                  draggable="true"
+                  draggable={canDragPiece}
                   onDragStart={(e) => handleDragStartPiece(e, piece.id)}
                   onDragEnd={handleDragEndPiece}
                   className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved
@@ -1296,9 +1311,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {/* Info Section */}
             <div id="campaign-info" className="w-full bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-3 text-center">
               <h2 className="text-xl font-bold text-cyan-300 tracking-wide">
-                {isMultiplayer && playerIndex !== undefined && playerIndex + 1 === currentPlayerId
+                {isMyTurn && isMultiplayer
                   ? "Your Turn"
-                  : `${players[currentPlayerId - 1]?.name || `Player ${currentPlayerId}`}'s Turn`}
+                  : `${players[currentPlayerIndex]?.name || `Player ${currentPlayerIndex + 1}`}'s Turn`}
               </h2>
             </div>
 
@@ -1343,11 +1358,11 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 {viewingPlayer?.hand?.map((tile) => (
                   <div
                     key={tile.id}
-                    draggable={!hasPlayedTileThisTurn && (!isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId))}
+                    draggable={!hasPlayedTileThisTurn && isMyTurn}
                     onDragStart={(e) => handleDragStartTile(e, tile.id)}
                     onDragEnd={() => setIsDraggingTile(false)}
                     className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 flex-shrink-0 ${
-                      hasPlayedTileThisTurn || gameState !== "CAMPAIGN" || (isMultiplayer && playerIndex !== undefined && playerIndex + 1 !== currentPlayerId)
+                      hasPlayedTileThisTurn || gameState !== "CAMPAIGN" || !isMyTurn
                         ? "cursor-not-allowed opacity-60"
                         : "cursor-grab"
                     }`}
@@ -1398,6 +1413,19 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Connection Status (Multiplayer Only) */}
+            {isMultiplayer && (
+              <div className="mt-4">
+                <ConnectionStatus
+                  isConnected={socketContext.connected}
+                  roomId={socketContext.roomId || undefined}
+                  playerIndex={playerIndex}
+                  players={players}
+                  currentPlayerIndex={currentPlayerId - 1}
+                />
+              </div>
+            )}
 
             {/* Bonus Move Notification */}
             {showBonusMoveModal && bonusMovePlayerId !== null && (

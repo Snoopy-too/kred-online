@@ -29,9 +29,6 @@ export function ConnectionStatus({
   return (
     <div
       style={{
-        position: 'fixed',
-        top: '10px',
-        right: '10px',
         background: isConnected
           ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
           : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -40,8 +37,6 @@ export function ConnectionStatus({
         borderRadius: '8px',
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
         fontSize: '14px',
-        zIndex: 1000,
-        minWidth: '200px',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>

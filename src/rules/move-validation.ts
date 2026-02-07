@@ -12,7 +12,7 @@
  * @module rules/move-validation
  */
 
-import { getPieceById } from "../../utils";
+import { getPieceById } from "../utils";
 
 // ============================================================================
 // TYPE IMPORTS

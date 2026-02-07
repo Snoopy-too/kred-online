@@ -4,15 +4,11 @@ import type {
   BureaucracyPlayerState,
   BureaucracyMenuItem,
   BureaucracyPurchase,
-} from "../../../game";
-import {
-  getBureaucracyMenu,
-  getAvailablePurchases,
-  validatePieceMovement,
-} from "../../../game";
+} from "../../game";
+import { validatePieceMovement } from "../../rules";
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation } from "../../game/locations";
-import { getPlayerById, getPieceById } from "../../../utils";
+import { getPlayerById, getPieceById } from "../../utils";
 import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,

@@ -15,7 +15,7 @@ import type {
   PlayedTileState,
 } from "../types";
 import type { Dispatch, SetStateAction } from "react";
-import { getPieceById } from "../../utils";
+import { getPieceById } from "../utils";
 
 // ============================================================================
 // DEPENDENCY INTERFACE
@@ -100,7 +100,7 @@ export interface PieceMovementHandlers {
     pieceId: string,
     newPosition: { top: number; left: number },
     locationId?: string
-  ) => void;
+  ) => { success: boolean; pieces?: Piece[]; movedPiecesThisTurn?: string[] };
   handleResetTurn: () => void;
   handleResetPiecesCorrection: () => void;
   handleResetBonusMove: () => void;
@@ -130,7 +130,7 @@ export function createPieceMovementHandlers(
     pieceId: string,
     newPosition: { top: number; left: number },
     locationId?: string
-  ): void => {
+  ): { success: boolean; pieces?: Piece[]; movedPiecesThisTurn?: string[] } => {
     // Check if this piece has already been moved this turn
     if (
       deps.movedPiecesThisTurn.has(pieceId) ||
@@ -141,16 +141,16 @@ export function createPieceMovementHandlers(
         deps.ALERTS.PIECE_ALREADY_MOVED.message,
         "warning"
       );
-      return;
+      return { success: false };
     }
 
     const movingPiece = getPieceById(deps.pieces, pieceId);
-    if (!movingPiece) return;
+    if (!movingPiece) return { success: false };
 
     // Check if player is trying to move opponent's piece within opponent's domain
     if (locationId) {
       const currentPlayer = deps.players[deps.currentPlayerIndex];
-      if (!currentPlayer) return;
+      if (!currentPlayer) return { success: false };
 
       const validation = deps.validatePieceMovement(
         pieceId,
@@ -161,7 +161,7 @@ export function createPieceMovementHandlers(
       );
       if (!validation.isAllowed) {
         deps.showAlert("Invalid Move", validation.reason, "error");
-        return;
+        return { success: false };
       }
     }
 
@@ -190,7 +190,7 @@ export function createPieceMovementHandlers(
             deps.ALERTS.CANNOT_MOVE_PIECE.message,
             "warning"
           );
-          return;
+          return { success: false };
         }
 
         // If moving a Pawn, check if Heels are in community
@@ -207,7 +207,7 @@ export function createPieceMovementHandlers(
               deps.ALERTS.CANNOT_MOVE_PIECE.message,
               "warning"
             );
-            return;
+            return { success: false };
           }
         }
       }
@@ -236,7 +236,7 @@ export function createPieceMovementHandlers(
             )}. This move violates game rules.`,
             "error"
           );
-          return;
+          return { success: false };
         }
       }
     }
@@ -250,26 +250,33 @@ export function createPieceMovementHandlers(
     );
 
     // Update the piece position and location
-    deps.setPieces((prevPieces) =>
-      prevPieces.map((p) =>
-        p.id === pieceId
-          ? {
-              ...p,
-              position: newPosition,
-              rotation: newRotation,
-              ...(locationId !== undefined && { locationId }),
-            }
-          : p
-      )
+    const updatedPieces = deps.pieces.map((p) =>
+      p.id === pieceId
+        ? {
+            ...p,
+            position: newPosition,
+            rotation: newRotation,
+            ...(locationId !== undefined && { locationId }),
+          }
+        : p
     );
+    deps.setPieces(updatedPieces);
 
     // Track that this piece has been moved this turn
-    deps.setMovedPiecesThisTurn((prev) => new Set(prev).add(pieceId));
+    const updatedMovedPieces = new Set(deps.movedPiecesThisTurn).add(pieceId);
+    deps.setMovedPiecesThisTurn(updatedMovedPieces);
 
     // If piece is moved to community, mark it as "pending"
     if (locationId && locationId.includes("community")) {
       deps.setPendingCommunityPieces((prev) => new Set(prev).add(pieceId));
     }
+
+    // Return success with updated state for multiplayer sync
+    return {
+      success: true,
+      pieces: updatedPieces,
+      movedPiecesThisTurn: Array.from(updatedMovedPieces)
+    };
   };
 
   // ============================================================================

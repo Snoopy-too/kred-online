@@ -59,13 +59,25 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socketRef.current = socket;
 
     // Connection event handlers
-    // Listen for game started broadcast (sent to all players simultaneously)
+    // Listen for game started broadcast - request updated state
     socket.on('kred:game:started', (data: any) => {
-      if (data.initialGameState) {
-        window.dispatchEvent(new CustomEvent('kred:initialState', { 
-          detail: { gameState: data.initialGameState } 
-        }));
-      }
+      console.log('[SOCKET] Game started notification received:', data);
+      // Request our filtered state from the server
+      socket.emit('kred:request:state', { 
+        roomId: session.roomId,
+        playerId: session.playerId,
+        playerIndex: session.playerIndex
+      }, (response: any) => {
+        console.log('[SOCKET] State received after game:started:', response?.success);
+        if (response.success && response.initialGameState) {
+          console.log('[SOCKET] Dispatching kred:initialState event with players:', response.initialGameState.players?.length);
+          window.dispatchEvent(new CustomEvent('kred:initialState', { 
+            detail: { gameState: response.initialGameState } 
+          }));
+        } else {
+          console.error('[SOCKET] Failed to get state after game:started:', response);
+        }
+      });
     });
 
     socket.on('connect', () => {
@@ -80,7 +92,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         hasRejoined.current = true;
 
         // Request current game state (for players joining mid-game or after refresh)
-        socket.emit('kred:request:state', { roomId: session.roomId }, (response: any) => {
+        socket.emit('kred:request:state', { 
+          roomId: session.roomId,
+          playerId: session.playerId,
+          playerIndex: session.playerIndex
+        }, (response: any) => {
           if (response.success && response.initialGameState) {
             window.dispatchEvent(new CustomEvent('kred:initialState', { 
               detail: { gameState: response.initialGameState } 

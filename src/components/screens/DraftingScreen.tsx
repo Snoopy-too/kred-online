@@ -65,15 +65,6 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
   const availableTiles = Array.isArray(myPlayer.hand) ? myPlayer.hand : [];
   const hand = Array.isArray(myPlayer.keptTiles) ? myPlayer.keptTiles : [];
 
-  console.log('[DRAFTING] Full player state:', JSON.stringify({
-    playerIndex,
-    availableTilesCount: availableTiles.length,
-    availableTileIds: availableTiles.map(t => t.id),
-    handCount: hand.length,
-    handTileIds: hand.map(t => t.id),
-    myPlayer
-  }, null, 2));
-
   // Show waiting screen if no available tiles
   if (isMultiplayer && availableTiles.length === 0) {
     // Determine if player is waiting for tiles or waiting for game to progress

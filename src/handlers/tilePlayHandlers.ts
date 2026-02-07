@@ -24,7 +24,7 @@ import type {
 } from "../types";
 import { PlayedTileState } from "../hooks/useTilePlayWorkflow";
 import { ALERTS } from "../config";
-import { getPlayerById } from "../../utils";
+import { getPlayerById } from "../utils";
 
 // ============================================================================
 // DEPENDENCY INTERFACE

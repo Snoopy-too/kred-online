@@ -8,7 +8,7 @@
 
 import type { Piece, TrackedMove } from "../types";
 import { DefinedMoveType } from "../types";
-import { getPieceById } from "../../utils";
+import { getPieceById } from "../utils";
 
 /**
  * Helper functions for location type detection

@@ -15,7 +15,7 @@ import {
   THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
   FIVE_PLAYER_BUREAUCRACY_MENU,
 } from "../config";
-import { getPieceById } from "../../utils";
+import { getPieceById } from "../utils";
 
 /**
  * Calculates the total Kredcoin value for a player based on their bureaucracy tiles

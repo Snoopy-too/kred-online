@@ -54,3 +54,22 @@ export function formatLocationId(locationId: string): string {
 
   return `Player ${playerId}'s ${locationName}`;
 }
+
+/**
+ * Formats an array of winner IDs into winner names
+ *
+ * @param winners - Array of winning player IDs
+ * @param players - Array of all players
+ * @returns Comma-separated string of winner names
+ */
+export function formatWinnerNames(
+  winners: number[],
+  players: any[]
+): string {
+  const getPlayerById = (players: any[], id: number) => players.find(p => p.id === id);
+  const getPlayerName = (player: any, id: number) => player?.name || `Player ${id}`;
+  
+  return winners
+    .map((id) => getPlayerName(getPlayerById(players, id), id))
+    .join(", ");
+}

@@ -9,3 +9,13 @@ export { formatLocationId, formatWinnerNames } from "./formatting";
 
 // Array utilities - array manipulation helpers
 export { shuffle, uniqueBy, groupBy } from "./array";
+
+// Lookup utilities - finding entities by ID and checking locations
+export { 
+  getPlayerById, 
+  getPieceById,
+  getPlayerName,
+  getPlayerNameSimple,
+  isPlayerDomain,
+  isCommunityLocation
+} from "./lookup";

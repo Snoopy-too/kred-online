@@ -46,6 +46,9 @@ The KRED codebase must be:
 - ✅ **ALWAYS** verify changes don't break existing tests
 - ✅ **ALWAYS** add tests for new functionality
 - ✅ **ALWAYS** check official game rules when implementing features
+- ✅ **ALWAYS** rebuild client (`npm run build`) after changing TypeScript/React code
+- ✅ **ALWAYS** restart server (`pm2 restart fly.on`) after changing backend code
+- ✅ **ALWAYS** rebuild/restart immediately after making changes - don't wait to be asked
 
 ## Project Structure
 
@@ -111,6 +114,40 @@ npm run dev  # Start Vite dev server on http://localhost:3000
 npm run build    # Production build
 npm run preview  # Preview production build
 ```
+
+### Deploying Code Changes
+
+**CRITICAL:** After making any code changes, you MUST rebuild and/or restart the appropriate services:
+
+**When to Rebuild Client (`npm run build`):**
+- ✅ Changes to any files in `src/` directory
+- ✅ Changes to `src/components/`, `src/handlers/`, `src/hooks/`, etc.
+- ✅ Changes to TypeScript/React code
+- ✅ Changes to client-side configuration
+
+**When to Restart Server (`pm2 restart fly.on`):**
+- ✅ Changes to `server/socketHandlers.cjs`
+- ✅ Changes to `fly.on.js`
+- ✅ Changes to any backend Node.js files
+- ✅ Changes to server-side configuration
+
+**After Rebuilding/Restarting:**
+- Players must **refresh their browsers** to get updated client code
+- Active games may need to be restarted for some changes
+
+**Complete Deployment Commands:**
+```bash
+# For client changes:
+cd /var/www/fly.on/_KRED && npm run build
+
+# For server changes:
+cd /var/www/fly.on && pm2 restart fly.on
+
+# For both:
+cd /var/www/fly.on/_KRED && npm run build && cd .. && pm2 restart fly.on
+```
+
+**ALWAYS rebuild/restart immediately after making changes. DO NOT wait to be asked.**
 
 ## Multiplayer Architecture
 

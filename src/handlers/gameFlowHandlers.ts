@@ -168,8 +168,12 @@ export function createGameFlowHandlers(
         keptTiles: p.keptTiles?.map((t: any) => ({ id: t.id })) || []
       })), null, 2));
       
-      // Restore all state
-      deps.setPlayers(initialGameState.players || []);
+      // Restore all state - only if we have valid players data
+      if (initialGameState.players && initialGameState.players.length > 0) {
+        deps.setPlayers(initialGameState.players);
+      } else {
+        console.warn('[GAME] initialGameState missing players array - skipping player state restore');
+      }
       const phase = initialGameState.phase.toUpperCase();
       deps.setGameState(phase === 'DRAFTING' ? 'DRAFTING' : 'CAMPAIGN');
       deps.setCurrentPlayerIndex(initialGameState.currentPlayerIndex || 0);

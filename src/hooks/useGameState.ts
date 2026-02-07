@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, SetStateAction } from "react";
 import type { GameState, Player, Piece, BoardTile, Tile } from "../types";
 
 /**
@@ -19,10 +19,11 @@ import type { GameState, Player, Piece, BoardTile, Tile } from "../types";
  */
 export function useGameState() {
   // Primary game state
-  const [gameState, setGameState] = useState<GameState>("PLAYER_SELECTION");
+  const [gameState, setGameState] = useState<GameState>("DRAFTING");
 
   // Player data
   const [players, setPlayers] = useState<Player[]>([]);
+
   const [playerCount, setPlayerCount] = useState<number>(0);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
 

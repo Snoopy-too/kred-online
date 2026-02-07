@@ -1,0 +1,18 @@
+{
+  "id": "kred",
+  "name": "The Flying Dutchmen",
+  "displayName": "KRED",
+  "minPlayers": 2,
+  "maxPlayers": 5,
+  "description": "A strategic board game of exploration, conflict, and credibility",
+  "status": "active",
+  "version": "1.0.0",
+  "routes": {
+    "lobby": "/KRED",
+    "game": "/KRED/play"
+  },
+  "assets": {
+    "icon": "/images/KRED/logo.svg",
+    "thumbnail": "/images/KRED/thumbnail.png"
+  }
+}

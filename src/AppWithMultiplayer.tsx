@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SocketProvider, useSocket } from './contexts/SocketContext';
 import { useMultiplayerActions } from './hooks/useMultiplayerActions';
-import App from '../App';
+import App from './AppRoot';
 
 function MultiplayerGame() {
   const { socket, roomId, playerId, playerIndex } = useSocket();

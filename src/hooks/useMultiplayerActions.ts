@@ -163,14 +163,14 @@ export function useMultiplayerActions() {
         throw new Error('Not connected to server');
       }
 
-      if (!roomId) {
-        throw new Error('Missing room information');
+      if (!roomId || playerIndex === null || playerIndex === undefined) {
+        throw new Error('Missing room or player information');
       }
 
       return new Promise((resolve, reject) => {
         socket.emit(
           'kred:campaign:movePiece',
-          { roomId, pieces, movedPiecesThisTurn },
+          { roomId, playerIndex, pieces, movedPiecesThisTurn },
           (response: any) => {
             if (response.success) {
               resolve();
@@ -181,7 +181,7 @@ export function useMultiplayerActions() {
         );
       });
     },
-    [socket, connected, roomId]
+    [socket, connected, roomId, playerIndex]
   );
 
   /**

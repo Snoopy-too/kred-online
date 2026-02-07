@@ -40,8 +40,8 @@ export function useGameSync(props: UseGameSyncProps) {
       console.log('Received kred:stateUpdate event with data:', data);
       const { gameState } = data;
 
-      if (gameState.gameState) {
-        setGameState(gameState.gameState);
+      if (gameState.phase) {
+        setGameState(gameState.phase);
       }
 
       if (gameState.players) {
