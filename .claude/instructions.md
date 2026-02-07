@@ -9,11 +9,9 @@ KRED Online is a multiplayer digital implementation of the KRED strategic board 
 ## Critical References
 
 ### Always Check First
-- **Action Plan:** `ACTION_PLAN.md` - Current development status, priority tasks, and next actions
 - **Official Game Rules:** https://flyingdutchmen.online/KRED/manual
-- **Codebase Assessment:** `CODEBASE_ASSESSMENT.md`
-- **Multiplayer Architecture:** `MULTIPLAYER_ARCHITECTURE.md`
-- **Implementation Status:** `IMPLEMENTATION_STATUS.md`
+- **Multiplayer Architecture:** `MULTIPLAYER.md`
+- **Socket Events:** `SOCKET_EVENTS.md`
 
 ### Skills System
 Before implementing multiplayer features, consult relevant skills:
@@ -21,10 +19,11 @@ Before implementing multiplayer features, consult relevant skills:
 - **[skills/database-design.md](skills/database-design.md)** - Two-tier schema, JSON vs normalized tables, race condition prevention, query patterns
 
 ### Key Documentation
-- `README.md` - Getting started, project structure
+- `README.md` - Directory overview and quick reference
 - `GAME_RULES.md` - Game mechanics reference
-- `packages/MULTIPLAYER_README.md` - Multiplayer system architecture
-- `packages/TESTING_GUIDE.md` - Testing practices and patterns
+- `MULTIPLAYER.md` - Multiplayer system architecture
+- `TESTING_GUIDE.md` - Testing practices and patterns
+- `I18N.md` - Internationalization guide
 
 ## Tech Stack
 
@@ -44,10 +43,9 @@ The KRED codebase must be:
 ### Critical Rules
 - ❌ **NEVER** change game rules or mechanics without explicit permission
 - ❌ **NEVER** skip running tests before committing changes
-- ✅ **ALWAYS** check `ACTION_PLAN.md` at session start
-- ✅ **ALWAYS** update ACTION_PLAN.md as tasks complete
 - ✅ **ALWAYS** verify changes don't break existing tests
 - ✅ **ALWAYS** add tests for new functionality
+- ✅ **ALWAYS** check official game rules when implementing features
 
 ## Project Structure
 
@@ -79,10 +77,10 @@ _KRED/
 │   │       └── game/               # Shared game logic
 │   └── TESTING_GUIDE.md
 ├── .claude/            # Agent configuration and documentation
-├── App.tsx             # Main React component (3400+ lines)
-├── AppRoot.tsx         # App wrapper for multiplayer mode
-├── game.ts             # Legacy re-exports (being phased out)
-└── test-client.html    # Standalone multiplayer test client
+├── server/             # Current active server (legacy)
+│   └── socketHandlers.cjs  # KRED socket handlers (in use)
+├── index.tsx           # React entry point
+└── AppWithMultiplayer.tsx  # Multiplayer-enabled app wrapper
 ```
 
 ## Development Workflow

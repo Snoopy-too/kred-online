@@ -22,12 +22,12 @@ Should reference `instructions.md` as the source of truth for KRED-specific guid
 
 All documentation is consolidated in this directory:
 
-- **instructions.md** - Comprehensive agent instructions and protocol
-- **ACTION_PLAN.md** - Current phase, tasks, and priorities (check this first!)
-- **CODEBASE_ASSESSMENT.md** - Architecture overview and code quality analysis
+- **instructions.md** - Comprehensive agent instructions and coding standards
 - **GAME_RULES.md** - Game mechanics reference
-- **IMPLEMENTATION_STATUS.md** - Feature completion tracking
-- **MULTIPLAYER_ARCHITECTURE.md** - Socket.IO event system and database design
+- **MULTIPLAYER.md** - Socket.IO architecture, events, and database design
+- **SOCKET_EVENTS.md** - Complete socket event reference
+- **TESTING_GUIDE.md** - Testing practices and patterns
+- **I18N.md** - Internationalization guide
+- **skills/** - Specialized implementation guides (database design, multiplayer patterns)
+- **archives/** - Historical documentation and outdated files
 - **settings.local.json** - Claude Desktop permissions
-
-Always check `ACTION_PLAN.md` at the start of each session to understand current development status.
