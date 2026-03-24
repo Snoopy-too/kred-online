@@ -230,7 +230,6 @@ import {
   isPlayerDomain,
   isCommunityLocation,
 } from "./utils";
-import CampaignScreen from "./components/screens/CampaignScreen";
 
 /**
  * App Component - Main Application Entry Point
@@ -489,6 +488,10 @@ const App: React.FC<MultiplayerProps> = ({
   // ============================================================================
   // Track playerIndex in state so it can be updated from server events
   const [livePlayerIndex, setLivePlayerIndex] = useState<number | undefined>(playerIndex);
+  // Campaign role assigned by server (mover, receiver, challenger, bystander, correcting, waiting)
+  const [campaignRole, setCampaignRole] = useState<string | null>(null);
+  // Track which player is the mover for this turn
+  const [moverPlayerIndex, setMoverPlayerIndex] = useState<number | null>(null);
 
   const { isMultiplayer, isMyTurn, broadcastState } = useMultiplayerSync({
     socket,
@@ -509,7 +512,17 @@ const App: React.FC<MultiplayerProps> = ({
     setPlayerCount,
     setPlayedTile,
     setBystanders,
-    setBystanderIndex
+    setBystanderIndex,
+    setHasPlayedTileThisTurn,
+    setMovedPiecesThisTurn,
+    setTileTransaction,
+    setMoverPlayerIndex,
+    setCampaignRole,
+    setPiecesAtTurnStart,
+    setShowTakeAdvantageModal,
+    setTakeAdvantageChallengerId,
+    setTakeAdvantageChallengerCredibility,
+    setBankedTiles,
   });
 
   // Initialize campaign pieces when phase transitions to CAMPAIGN in multiplayer
@@ -1360,6 +1373,28 @@ const App: React.FC<MultiplayerProps> = ({
   // Wrap turn ending for multiplayer
   const wrappedEndTurn = React.useCallback(async () => {
     if (isMultiplayer && multiplayerActions) {
+      // During CORRECTION_REQUIRED, validate that moves match the tile before allowing End Turn
+      if (gameState === 'CORRECTION_REQUIRED' && playedTile) {
+        const baselinePieces = playedTile.originalPieces;
+        const calculatedMoves = calculateMoves(
+          baselinePieces,
+          pieces,
+          playedTile.playerId
+        );
+        const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
+          playedTile.tileId,
+          calculatedMoves,
+          playedTile.playerId,
+          baselinePieces,
+          pieces,
+          players,
+          playerCount
+        );
+        if (!tileRequirements.allMet) {
+          alert('Your moves do not match the tile requirements. Please make the correct moves before ending your turn.');
+          return;
+        }
+      }
       console.log('[MULTIPLAYER] Ending turn via server');
       try {
         await multiplayerActions.endTurn();
@@ -1371,7 +1406,7 @@ const App: React.FC<MultiplayerProps> = ({
       // Single-player mode
       handleEndTurn();
     }
-  }, [isMultiplayer, multiplayerActions, handleEndTurn]);
+  }, [isMultiplayer, multiplayerActions, handleEndTurn, gameState, playedTile, pieces, players, playerCount]);
   
   // Wrap receiver decision for multiplayer
   const wrappedReceiverDecision = React.useCallback(async (accepted: boolean) => {
@@ -1640,7 +1675,7 @@ const App: React.FC<MultiplayerProps> = ({
           challengeResult = {
             success: !isTilePerfect,
             isPerfect: isTilePerfect,
-            challengerId: challengeOrder[currentChallengerIndex],
+            challengerId: playerIndex !== undefined ? playerIndex + 1 : challengeOrder[currentChallengerIndex],
             tilePlayerId: playedTile.playerId,
             receiverId: playedTile.receivingPlayerId,
             receiverAccepted: receiverAcceptance === true
@@ -2904,6 +2939,21 @@ const App: React.FC<MultiplayerProps> = ({
    * Decline the Take Advantage offer and continue to correction phase
    */
   const handleTakeAdvantageDecline = () => {
+    if (isMultiplayer && socket && roomId) {
+      // Declining means no reward - clear the pending flag on server
+      socket.emit(
+        'kred:campaign:challengerReward',
+        { roomId, choice: 'decline' },
+        (response: any) => {
+          if (!response.success) {
+            console.error('[MULTIPLAYER] Challenger reward decline failed:', response.error);
+          }
+        }
+      );
+      cleanupTakeAdvantageModalState();
+      return;
+    }
+
     const challengerName = getPlayerName(
       getPlayerById(players, takeAdvantageChallengerId!),
       takeAdvantageChallengerId!
@@ -2956,6 +3006,22 @@ const App: React.FC<MultiplayerProps> = ({
   const handleRecoverCredibility = () => {
     if (takeAdvantageChallengerId === null) return;
 
+    if (isMultiplayer && socket && roomId) {
+      // Send choice to server
+      socket.emit(
+        'kred:campaign:challengerReward',
+        { roomId, choice: 'credibility' },
+        (response: any) => {
+          if (!response.success) {
+            console.error('[MULTIPLAYER] Challenger reward failed:', response.error);
+          }
+        }
+      );
+      cleanupTakeAdvantageModalState();
+      return;
+    }
+
+    // Single-player mode
     // Add 1 credibility (max 3)
     setPlayers((prev) =>
       prev.map((p) =>
@@ -3740,6 +3806,8 @@ const App: React.FC<MultiplayerProps> = ({
             currentPlayerIndex={currentPlayerIndex}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
+            campaignRole={campaignRole}
+            moverPlayerIndex={moverPlayerIndex}
             lastDroppedPosition={lastDroppedPosition}
             lastDroppedPieceId={lastDroppedPieceId}
             isTestMode={isTestMode}

@@ -45,7 +45,7 @@ import {
 // UTILITY IMPORTS - Helper functions
 // ============================================================================
 import { calculatePieceRotation } from "../../utils/positioning";
-import { findNearestVacantLocation } from "../../game";
+import { findNearestVacantLocation, calculateMoves, validateTileRequirementsWithImpossibleMoveExceptions } from "../../game";
 import { validatePieceMovement } from "../../rules";
 import {
   getBureaucracyMenu,
@@ -69,6 +69,8 @@ interface CampaignScreenProps {
   currentPlayerIndex: number; // Index of whose turn it is (for turn validation)
   playerIndex?: number; // Index of the player viewing this screen (multiplayer)
   isMultiplayer?: boolean; // Whether this is a multiplayer game
+  campaignRole?: string | null; // Server-assigned role: mover, receiver, challenger, bystander, correcting, waiting
+  moverPlayerIndex?: number | null; // Index of the current mover
   lastDroppedPosition: { top: number; left: number } | null;
   lastDroppedPieceId: string | null;
   isTestMode: boolean;
@@ -201,6 +203,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   currentPlayerIndex,
   playerIndex,
   isMultiplayer = false,
+  campaignRole,
+  moverPlayerIndex,
   lastDroppedPosition,
   lastDroppedPieceId,
   isTestMode,
@@ -626,6 +630,18 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   const currentPlayer = getPlayerById(players, currentPlayerId);
 
+  // Helper to get player name by ID
+  const nameById = (id: number | undefined | null): string => {
+    if (id === undefined || id === null) return 'Unknown';
+    const p = players.find(pl => pl.id === id);
+    return p?.name || `Player ${id}`;
+  };
+  // Helper to get player name by index
+  const nameByIndex = (idx: number | undefined | null): string => {
+    if (idx === undefined || idx === null) return 'Unknown';
+    return players[idx]?.name || `Player ${idx + 1}`;
+  };
+
   // In multiplayer, determine which player's hand to show (viewer's hand)
   // playerIndex is 0-based, player.id is 1-based, so we find by id
   const viewingPlayer = isMultiplayer && playerIndex !== undefined
@@ -646,28 +662,48 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
   // Check if it's the viewing player's turn to act
   // In test mode (single-player), allow controlling all players
-  // In multiplayer, only allow actions when it's this player's turn
-  const isMyTurn = !isMultiplayer || (playerIndex !== undefined && playerIndex === currentPlayerIndex);
+  // In multiplayer, use the server-assigned campaignRole for precise control
+  const isMyTurn = playerIndex !== undefined && playerIndex === currentPlayerIndex;
+  
+  // Use campaignRole from server to determine what this player can do
+  const isMover = campaignRole === 'mover';
+  const isReceiver = campaignRole === 'receiver';
+  const isChallenger = campaignRole === 'challenger';
+  const isCorrecting = campaignRole === 'correcting';
+  const isWaiting = campaignRole === 'waiting' || campaignRole === 'bystander';
 
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
-  // In test mode (single-player), allow controlling all players
-  // In multiplayer, only show decisions to the specific player who needs to decide
-  // NEW WORKFLOW: Uses playedTile for PENDING_ACCEPTANCE
-  // OLD WORKFLOW: Uses tileTransaction for PENDING_CHALLENGE
   const isMyTurnForDecision =
-    (isTestMode && !isMultiplayer) ||
-    (gameState === "PENDING_ACCEPTANCE" &&
-      playedTile &&
-      currentPlayerId === playedTile.receivingPlayerId) ||
-    (gameState === "PENDING_ACCEPTANCE" &&
-      !playedTile &&
-      currentPlayerId === tileTransaction?.receiverId) ||
-    (gameState === "PENDING_CHALLENGE" &&
-      bystanders[bystanderIndex]?.id === currentPlayerId);
+    (isReceiver && gameState === "PENDING_ACCEPTANCE") ||
+    (isChallenger && gameState === "PENDING_CHALLENGE");
+
+  // Check if the mover's moves match the played tile (for receiver decision UI)
+  const movesMatchTile = React.useMemo(() => {
+    if (!playedTile?.originalPieces || !playedTile?.tileId) return false;
+    try {
+      const calculatedMoves = calculateMoves(
+        playedTile.originalPieces,
+        playedTile.piecesAfterMoves || pieces,
+        playedTile.playerId
+      );
+      const result = validateTileRequirementsWithImpossibleMoveExceptions(
+        playedTile.tileId,
+        calculatedMoves,
+        playedTile.playerId,
+        playedTile.originalPieces,
+        playedTile.piecesAfterMoves || pieces,
+        players,
+        playerCount
+      );
+      return result.isMet;
+    } catch {
+      return false;
+    }
+  }, [playedTile, pieces, players, playerCount]);
 
   const showWaitingOverlay =
-    (gameState === "PENDING_ACCEPTANCE" || gameState === "PENDING_CHALLENGE") &&
-    !isMyTurnForDecision;
+    isWaiting &&
+    (gameState === "PENDING_ACCEPTANCE" || gameState === "PENDING_CHALLENGE");
 
   let waitingMessage = "";
   let waitingPlayerId = undefined;
@@ -675,12 +711,41 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     if (gameState === "PENDING_ACCEPTANCE") {
       waitingPlayerId =
         playedTile?.receivingPlayerId || tileTransaction?.receiverId;
-      waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
+      waitingMessage = `Waiting for ${nameById(waitingPlayerId)} to respond...`;
     } else if (gameState === "PENDING_CHALLENGE") {
       waitingPlayerId = bystanders[bystanderIndex]?.id;
-      waitingMessage = `Waiting for Player ${waitingPlayerId} to respond...`;
+      waitingMessage = `Waiting for ${nameById(waitingPlayerId)} to respond...`;
     }
   }
+  
+  // Role banner
+  const getRoleBanner = (): { text: string; color: string } | null => {
+    switch (campaignRole) {
+      case 'mover': {
+        const receiverName = nameById(playedTile?.receivingPlayerId || tileTransaction?.receiverId);
+        return hasPlayedTileThisTurn 
+          ? { text: `Waiting for ${receiverName} to respond...`, color: 'bg-yellow-600' }
+          : { text: 'Your turn — Move pieces and play a tile', color: 'bg-green-700' };
+      }
+      case 'receiver':
+        return { text: 'You received a tile — Accept or Expose?', color: 'bg-blue-700' };
+      case 'challenger':
+        return { text: 'Your turn to Challenge or Pass', color: 'bg-orange-700' };
+      case 'correcting':
+        return { text: 'Make the correct play as shown on the tile', color: 'bg-red-700' };
+      case 'bystander':
+        return { text: 'Waiting for other players...', color: 'bg-gray-800' };
+      case 'waiting':
+      default:
+        if (gameState === 'CAMPAIGN') {
+          const moverIdx = moverPlayerIndex ?? currentPlayerIndex;
+          const moverName = nameByIndex(moverIdx);
+          return { text: `${moverName} is moving pieces...`, color: 'bg-gray-800' };
+        }
+        return { text: 'Waiting...', color: 'bg-gray-800' };
+    }
+  };
+  const roleBanner = getRoleBanner();
 
   let indicatorSizeClass = "";
   if (dropIndicator) {
@@ -909,11 +974,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               const showPlacerPrivateView =
                 placerViewingTileId === boardTile.id;
 
-              // NEW RULE: Giver and receiver can toggle to see the tile face-up by clicking
+              // Only receiver can view the tile (if they have credibility)
               const isGiverOrReceiver =
-                isPlacer ||
-                (isPlayedTile &&
-                  currentPlayerId === playedTile.receivingPlayerId);
+                isPlayedTile && currentPlayerId === playedTile.receivingPlayerId;
               const currentPlayer = players.find(
                 (p) => p.id === currentPlayerId
               );
@@ -1090,8 +1153,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               // Check if this piece has been moved this turn
               const hasMoved = movedPiecesThisTurn.has(piece.id);
 
-              // Only allow dragging pieces during the viewing player's turn
-              const canDragPiece = isMyTurn;
+              // Only allow dragging pieces for:
+              // - Mover during CAMPAIGN phase (before tile played)
+              // - Correcting player during CORRECTION_REQUIRED
+              const canDragPiece = 
+                (isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) || 
+                (isCorrecting && gameState === 'CORRECTION_REQUIRED');
 
               return (
                 <img
@@ -1165,7 +1232,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                         className="bg-gray-800/50 p-3 rounded-lg border border-gray-700 cursor-pointer"
                       >
                         <summary className="font-semibold text-lg text-slate-100">
-                          {isOwnHand ? `Your Tiles (${player.keptTiles.length})` : `Player ${player.id}'s Tiles (${player.keptTiles.length})`}
+                          {isOwnHand ? `Your Tiles (${player.keptTiles.length})` : `${nameById(player.id)}'s Tiles (${player.keptTiles.length})`}
                         </summary>
                         <div className="mt-4">
                           <h4 className="font-semibold text-md text-slate-300">
@@ -1311,13 +1378,21 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {/* Info Section */}
             <div id="campaign-info" className="w-full bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-3 text-center">
               <h2 className="text-xl font-bold text-cyan-300 tracking-wide">
-                {isMyTurn && isMultiplayer
-                  ? "Your Turn"
-                  : `${players[currentPlayerIndex]?.name || `Player ${currentPlayerIndex + 1}`}'s Turn`}
+                {isMover ? "Your Turn" 
+                  : isReceiver ? "Tile Received"
+                  : isChallenger ? "Challenge?"
+                  : isCorrecting ? "Make Correction"
+                  : `${nameByIndex(currentPlayerIndex)}'s Turn`}
               </h2>
+              {roleBanner && (
+                <p className={`mt-2 text-sm font-semibold rounded-md py-1 px-3 ${roleBanner.color} text-white`}>
+                  {roleBanner.text}
+                </p>
+              )}
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons (only for mover / correcting player) */}
+            {(isMover || isCorrecting) && (
             <div id="campaign-action-buttons" className="flex flex-col gap-2">
               {(gameState === "TILE_PLAYED" ||
                 movedPiecesThisTurn.size > 0) &&
@@ -1351,6 +1426,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 End Turn
               </button>
             </div>
+            )}
 
             {/* Player Hand */}
             <div id="campaign-player-hand">
@@ -1377,43 +1453,6 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </div>
             </div>
 
-            {/* Game Log */}
-            <div id="campaign-game-log">
-              <button
-                onClick={() => setIsGameLogExpanded(!isGameLogExpanded)}
-                className="w-full text-left px-3 py-2 bg-gray-800/50 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition-colors flex items-center justify-between"
-              >
-                <h3 className="text-sm font-semibold text-slate-300">Game Log</h3>
-                <span className="text-slate-400 text-sm">
-                  {isGameLogExpanded ? "▼" : "▶"}
-                </span>
-              </button>
-              {isGameLogExpanded && (
-                <div
-                  ref={logContainerRef}
-                  className="h-64 bg-gray-800/50 rounded-lg border border-gray-700 p-4 overflow-y-auto text-sm"
-                >
-                  {gameLog.length === 0 ? (
-                    <p className="text-slate-400 text-center italic m-auto">
-                      No actions logged yet.
-                    </p>
-                  ) : (
-                    [...gameLog].reverse().map((entry, index) => (
-                      <p
-                        key={gameLog.length - 1 - index}
-                        className={`text-slate-300 mb-2 ${entry.startsWith("---")
-                            ? "font-bold text-cyan-300 mt-2 border-b border-gray-600 pb-2"
-                            : ""
-                          }`}
-                      >
-                        {entry}
-                      </p>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
             {/* Connection Status (Multiplayer Only) */}
             {isMultiplayer && (
               <div className="mt-4">
@@ -1422,7 +1461,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   roomId={socketContext.roomId || undefined}
                   playerIndex={playerIndex}
                   players={players}
-                  currentPlayerIndex={currentPlayerId - 1}
+                  currentPlayerIndex={currentPlayerIndex}
                 />
               </div>
             )}
@@ -1434,7 +1473,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   🎉 BONUS MOVE!
                 </h2>
                 <p className="text-green-100 mb-3 text-center font-semibold">
-                  Player {bonusMovePlayerId}, you already had 3 Credibility!
+                  {nameById(bonusMovePlayerId)}, you already had 3 Credibility!
                 </p>
                 <div className="bg-green-800/50 rounded-lg p-4 mb-4">
                   <p className="text-green-100 text-sm mb-2">
@@ -1522,28 +1561,42 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   );
                 }
                 return (
-                  <p className="text-slate-300 mb-6">{`Player ${playedTile?.playerId || tileTransaction?.placerId
-                    } has played a tile to you. You can either accept or reject it.`}</p>
+                  <p className="text-slate-300 mb-4">{`${nameById(playedTile?.playerId || tileTransaction?.placerId)
+                    } has played a tile to you.`}</p>
                 );
               })()}
+              {/* Show the played tile image to receiver */}
               {(() => {
                 const currentPlayer = players.find(
                   (p) => p.id === currentPlayerId
                 );
                 const hasZeroCredibility =
                   (currentPlayer?.credibility ?? 3) === 0;
+                const tileUrl = playedTile?.tile?.url || tileTransaction?.tile?.url;
                 if (hasZeroCredibility) {
                   return (
-                    <p className="text-red-400 text-sm mb-4 font-semibold">
-                      You may not view tiles
-                    </p>
+                    <div className="mb-4">
+                      <div className="w-24 h-24 mx-auto bg-gray-700 rounded-lg flex items-center justify-center border-2 border-gray-500">
+                        <span className="text-gray-400 text-xs text-center">Hidden<br/>(0 Credibility)</span>
+                      </div>
+                      <p className="text-red-400 text-sm mt-2 font-semibold">
+                        You may not view tiles
+                      </p>
+                    </div>
                   );
                 }
-                return (
-                  <p className="text-slate-400 text-sm mb-4">
-                    Click on the tile to view it
-                  </p>
-                );
+                if (tileUrl) {
+                  return (
+                    <div className="mb-4">
+                      <img
+                        src={tileUrl}
+                        alt="Played tile"
+                        className="w-28 h-28 mx-auto rounded-lg border-2 border-cyan-400 shadow-lg"
+                      />
+                    </div>
+                  );
+                }
+                return null;
               })()}
               <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                 {(() => {
@@ -1552,6 +1605,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   );
                   const hasZeroCredibility =
                     (currentPlayer?.credibility ?? 3) === 0;
+                  const canReject = !hasZeroCredibility && !movesMatchTile;
+                  if (!canReject) return null;
                   return (
                     <button
                       onClick={() =>
@@ -1559,13 +1614,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                           ? onReceiverAcceptanceDecision(false)
                           : onReceiverDecision("reject")
                       }
-                      disabled={hasZeroCredibility}
-                      className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md w-full sm:w-auto ${hasZeroCredibility
-                          ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
-                          : "bg-red-700 text-white hover:bg-red-600"
-                        }`}
+                      className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md w-full sm:w-auto"
                     >
-                      Reject Tile
+                      Expose
                     </button>
                   );
                 })()}
@@ -1609,8 +1660,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 );
               }
               return (
-                <p className="text-slate-300 mb-6">{`Player ${playedTile?.receivingPlayerId || tileTransaction?.receiverId
-                  } accepted the tile from Player ${playedTile?.playerId || tileTransaction?.placerId
+                <p className="text-slate-300 mb-6">{`${nameById(playedTile?.receivingPlayerId || tileTransaction?.receiverId)
+                  } accepted the tile from ${nameById(playedTile?.playerId || tileTransaction?.placerId)
                   }.`}</p>
               );
             })()}
@@ -1660,6 +1711,24 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             <h2 className="text-3xl font-bold text-green-400 mb-6 text-center">
               Challenge Successful! 🎯
             </h2>
+
+            {/* Show current funding */}
+            {(() => {
+              const challengerPlayer = players.find(p => p.id === takeAdvantageChallengerId);
+              const tileCount = challengerPlayer?.bureaucracyTiles?.length || 0;
+              return (
+                <div className="bg-gray-700/50 border border-green-500/30 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Your Credibility:</span>
+                    <span className="text-green-400 font-bold text-xl">{takeAdvantageChallengerCredibility}/3</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-slate-300">Banked Tiles:</span>
+                    <span className="text-yellow-400 font-bold text-xl">{tileCount}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Credibility = 3 Message */}
             {takeAdvantageChallengerCredibility === 3 ? (

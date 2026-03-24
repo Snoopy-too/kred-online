@@ -5,9 +5,10 @@
  * Uses new server architecture with game:* events
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { Player, Piece, BoardTile, GameState, PlayedTileState } from '../types';
+import { TILE_SPACES_BY_PLAYER_COUNT, BANK_SPACES_BY_PLAYER_COUNT } from '../config';
 
 export interface MultiplayerSyncProps {
   socket?: Socket;
@@ -26,13 +27,26 @@ export interface MultiplayerSyncProps {
   setGameState: (state: GameState) => void;
   setPlayers: (players: Player[]) => void;
   setPieces: (pieces: Piece[]) => void;
-  setBoardTiles: (tiles: BoardTile[]) => void;
+  setBoardTiles: (tiles: BoardTile[] | ((prev: BoardTile[]) => BoardTile[])) => void;
   setCurrentPlayerIndex: (index: number) => void;
   setPlayerIndex?: (index: number) => void;
   setPlayerCount?: (count: number) => void;
   setPlayedTile?: (tile: PlayedTileState | null) => void;
   setBystanders?: (bystanders: Player[]) => void;
   setBystanderIndex?: (index: number) => void;
+  // Campaign state setters
+  setHasPlayedTileThisTurn?: (val: boolean) => void;
+  setMovedPiecesThisTurn?: (val: Set<string>) => void;
+  setTileTransaction?: (val: any) => void;
+  setMoverPlayerIndex?: (val: number | null) => void;
+  setCampaignRole?: (val: string | null) => void;
+  setPiecesAtTurnStart?: (val: Piece[]) => void;
+  // Take Advantage (challenger reward) sync
+  setShowTakeAdvantageModal?: (val: boolean) => void;
+  setTakeAdvantageChallengerId?: (val: number | null) => void;
+  setTakeAdvantageChallengerCredibility?: (val: number) => void;
+  // Banked tiles sync
+  setBankedTiles?: (val: any[] | ((prev: any[]) => any[])) => void;
 }
 
 export function useMultiplayerSync(props: MultiplayerSyncProps) {
@@ -54,7 +68,17 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
     setPlayerCount,
     setPlayedTile,
     setBystanders,
-    setBystanderIndex
+    setBystanderIndex,
+    setHasPlayedTileThisTurn,
+    setMovedPiecesThisTurn,
+    setTileTransaction,
+    setMoverPlayerIndex,
+    setCampaignRole,
+    setPiecesAtTurnStart,
+    setShowTakeAdvantageModal,
+    setTakeAdvantageChallengerId,
+    setTakeAdvantageChallengerCredibility,
+    setBankedTiles,
   } = props;
   // Log when hook is called
   console.log('[MULTIPLAYER SYNC] Hook called with socket:', !!socket, 'roomId:', roomId);
@@ -91,12 +115,42 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
       const update = data.gameState;
       
       if (update.players) {
-        console.log('[MULTIPLAYER] State update - Player hands:', update.players.map((p, i) => ({
+        console.log('[MULTIPLAYER] State update - Player hands:', update.players.map((p: any, i: number) => ({
           p: i,
           hand: p.hand?.length ?? 0,
           kept: p.keptTiles?.length ?? 0
         })));
         setPlayers(update.players);
+        
+        // Rebuild banked tiles from players' bureaucracyTiles
+        if (typeof setBankedTiles === 'function') {
+          const pc = update.playerCount || update.players.length;
+          const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[pc] || [];
+          const banked: any[] = [];
+          
+          for (const player of update.players) {
+            if (!player.bureaucracyTiles || player.bureaucracyTiles.length === 0) continue;
+            const playerSpaces = allBankSpaces.filter((s: any) => s.ownerId === player.id);
+            
+            player.bureaucracyTiles.forEach((tile: any, idx: number) => {
+              if (idx < playerSpaces.length) {
+                const space = playerSpaces[idx];
+                banked.push({
+                  id: `bank_${player.id}_${idx}`,
+                  tile: tile,
+                  position: space.position,
+                  rotation: space.rotation,
+                  placerId: 0, // Unknown in multiplayer context
+                  ownerId: player.id,
+                  faceUp: false, // Default face-down (accepted tiles)
+                });
+              }
+            });
+          }
+          
+          setBankedTiles(banked);
+          console.log('[MULTIPLAYER] Rebuilt banked tiles:', banked.length);
+        }
       }
       
       if (update.currentPlayerIndex !== undefined) {
@@ -127,6 +181,34 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
       if (update.playedTile !== undefined && typeof setPlayedTile === 'function') {
         console.log('[MULTIPLAYER] Syncing playedTile:', update.playedTile);
         setPlayedTile(update.playedTile);
+        
+        // Derive boardTile from playedTile for visual display
+        if (update.playedTile && update.playedTile.tile && update.playedTile.receivingPlayerId) {
+          const playerCount = update.playerCount || update.players?.length || 0;
+          const tileSpaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+          const targetSpace = tileSpaces.find(s => s.ownerId === update.playedTile.receivingPlayerId);
+          if (targetSpace) {
+            const boardTileId = `mp_boardtile_${update.playedTile.tileId}`;
+            const newBoardTile: BoardTile = {
+              id: boardTileId,
+              tile: update.playedTile.tile,
+              position: targetSpace.position,
+              rotation: targetSpace.rotation,
+              placerId: update.playedTile.playerId,
+              ownerId: update.playedTile.receivingPlayerId,
+            };
+            // Replace any existing mp_boardtile entries, then add this one
+            setBoardTiles((prev: BoardTile[]) => [
+              ...prev.filter((bt: BoardTile) => !bt.id.startsWith('mp_boardtile_')),
+              newBoardTile,
+            ]);
+            console.log('[MULTIPLAYER] Created boardTile for played tile:', boardTileId);
+          }
+        } else if (update.playedTile === null) {
+          // Tile finalized — remove the visual board tile
+          setBoardTiles((prev: BoardTile[]) => prev.filter((bt: BoardTile) => !bt.id.startsWith('mp_boardtile_')));
+          console.log('[MULTIPLAYER] Removed boardTile (tile finalized)');
+        }
       }
       if (update.bystanders !== undefined && typeof setBystanders === 'function') {
         console.log('[MULTIPLAYER] Syncing bystanders:', update.bystanders.length);
@@ -135,6 +217,48 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
       if (update.bystanderIndex !== undefined && typeof setBystanderIndex === 'function') {
         console.log('[MULTIPLAYER] Syncing bystanderIndex:', update.bystanderIndex);
         setBystanderIndex(update.bystanderIndex);
+      }
+      // Campaign state sync
+      if (update.hasPlayedTileThisTurn !== undefined && typeof setHasPlayedTileThisTurn === 'function') {
+        setHasPlayedTileThisTurn(update.hasPlayedTileThisTurn);
+      }
+      if (update.movedPiecesThisTurn !== undefined && typeof setMovedPiecesThisTurn === 'function') {
+        setMovedPiecesThisTurn(new Set(update.movedPiecesThisTurn));
+      }
+      if (update.tileTransaction !== undefined && typeof setTileTransaction === 'function') {
+        setTileTransaction(update.tileTransaction);
+      }
+      if (update.moverPlayerIndex !== undefined && typeof setMoverPlayerIndex === 'function') {
+        setMoverPlayerIndex(update.moverPlayerIndex);
+      }
+      if (update.campaignRole !== undefined && typeof setCampaignRole === 'function') {
+        setCampaignRole(update.campaignRole);
+      }
+      // Challenger reward modal sync
+      if (update.pendingChallengerReward && update.challengerId !== undefined) {
+        // Find the challenger player to get their credibility
+        const challengerPlayer = update.players?.find((p: any) => p.id === update.challengerId);
+        if (typeof setTakeAdvantageChallengerId === 'function') {
+          setTakeAdvantageChallengerId(update.challengerId);
+        }
+        if (typeof setTakeAdvantageChallengerCredibility === 'function') {
+          setTakeAdvantageChallengerCredibility(challengerPlayer?.credibility ?? 0);
+        }
+        if (typeof setShowTakeAdvantageModal === 'function') {
+          setShowTakeAdvantageModal(true);
+        }
+        console.log('[MULTIPLAYER] Challenger reward pending for player', update.challengerId);
+      } else if (update.pendingChallengerReward === false) {
+        // Reward was processed, clean up modal
+        if (typeof setShowTakeAdvantageModal === 'function') {
+          setShowTakeAdvantageModal(false);
+        }
+        if (typeof setTakeAdvantageChallengerId === 'function') {
+          setTakeAdvantageChallengerId(null);
+        }
+        if (typeof setTakeAdvantageChallengerCredibility === 'function') {
+          setTakeAdvantageChallengerCredibility(0);
+        }
       }
     };
 

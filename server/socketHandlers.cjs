@@ -67,38 +67,233 @@ function createAndDealTiles(playerCount, playerNames = []) {
 }
 
 // Helper function to filter game state for a specific player
-// During drafting, players should only see their own hand (tiles they haven't selected yet)
+// Hides private information based on game phase and player role
 function filterStateForPlayer(fullState, playerIndex) {
   const filteredState = { ...fullState };
   
   // During DRAFTING: Hide other players' unselected hands
   if (fullState.phase === 'DRAFTING') {
-    console.log(`[KRED] Filtering state for player index ${playerIndex}`);
-    console.log(`[KRED] Before filter - Player 0 hand:`, fullState.players[0]?.hand?.map(t => t.id).join(', '));
-    if (fullState.players[1]) console.log(`[KRED] Before filter - Player 1 hand:`, fullState.players[1]?.hand?.map(t => t.id).join(', '));
-    if (fullState.players[2]) console.log(`[KRED] Before filter - Player 2 hand:`, fullState.players[2]?.hand?.map(t => t.id).join(', '));
-    
     filteredState.players = fullState.players.map((player, idx) => {
       if (idx === playerIndex) {
-        // This player - send full data
-        console.log(`[KRED] Player ${idx} IS requesting player - sending ${player.hand?.length || 0} tiles`);
         return player;
       } else {
-        // Other players - hide hand during drafting
-        console.log(`[KRED] Player ${idx} is NOT requesting player - hiding hand (had ${player.hand?.length || 0} tiles)`);
         return {
           ...player,
           hand: [],  // Hide tiles they haven't selected yet
-          // keptTiles remain visible (already drafted/public)
         };
       }
     });
   }
   
-  // During other phases (CAMPAIGN, BUREAUCRACY, etc.), 
-  // tiles are generally public, so no filtering needed
+  // During CAMPAIGN phases: Hide other players' hands, control tile visibility
+  const campaignPhases = ['CAMPAIGN', 'TILE_PLAYED', 'PENDING_ACCEPTANCE', 'PENDING_CHALLENGE', 'CORRECTION_REQUIRED'];
+  if (campaignPhases.includes(fullState.phase)) {
+    const thisPlayerId = fullState.players[playerIndex]?.id;
+    
+    filteredState.players = fullState.players.map((player, idx) => {
+      if (idx === playerIndex) {
+        return player; // Full data for this player
+      } else {
+        return {
+          ...player,
+          hand: player.hand ? player.hand.map(() => ({ id: 0, url: '', hidden: true })) : [],
+          // Keep handCount so other players know how many tiles they have
+        };
+      }
+    });
+    
+    // Control playedTile visibility
+    if (fullState.playedTile) {
+      const isMover = thisPlayerId === fullState.playedTile.playerId;
+      const isReceiver = thisPlayerId === fullState.playedTile.receivingPlayerId;
+      const receiverPlayer = fullState.players.find(p => p.id === fullState.playedTile.receivingPlayerId);
+      const receiverHasCredibility = receiverPlayer && receiverPlayer.credibility > 0;
+      
+      // Tile is revealed to all when:
+      // - Receiver exposed the mover (wasExposed = true)
+      // - A challenge was made (challengeSucceeded !== null/undefined)
+      // - During CORRECTION_REQUIRED (everyone needs to see the tile for verification)
+      const tileRevealed = fullState.wasExposed || 
+        fullState.challengeSucceeded !== undefined && fullState.challengeSucceeded !== null ||
+        (fullState.phase === 'CORRECTION_REQUIRED');
+      
+      if (tileRevealed) {
+        // Everyone sees the tile during exposure/challenge/correction
+        filteredState.playedTile = fullState.playedTile;
+      } else if (isMover) {
+        // Mover always knows what tile they played
+        filteredState.playedTile = fullState.playedTile;
+      } else if (isReceiver && receiverHasCredibility) {
+        // Receiver can see the tile if they have credibility
+        filteredState.playedTile = fullState.playedTile;
+      } else {
+        // Other players: know a tile was played but not which one
+        filteredState.playedTile = {
+          ...fullState.playedTile,
+          tileId: null, // Hide tile identity
+          tile: null, // Hide tile object
+        };
+      }
+    }
+  }
   
   return filteredState;
+}
+
+// Helper: Build broadcast data for a specific player (filtered)
+function buildFilteredBroadcast(state, playerIndex) {
+  const filtered = filterStateForPlayer(state, playerIndex);
+  return {
+    gameState: {
+      players: filtered.players,
+      phase: filtered.phase,
+      currentPlayerIndex: filtered.currentPlayerIndex,
+      playerCount: filtered.playerCount,
+      pieces: filtered.pieces,
+      boardTiles: filtered.boardTiles,
+      community: filtered.community,
+      playedTile: filtered.playedTile || null,
+      tileTransaction: filtered.tileTransaction || null,
+      hasPlayedTileThisTurn: filtered.hasPlayedTileThisTurn || false,
+      bystanders: filtered.bystanders || [],
+      bystanderIndex: filtered.bystanderIndex || 0,
+      movedPiecesThisTurn: filtered.movedPiecesThisTurn || [],
+      moverPlayerIndex: filtered.moverPlayerIndex,
+      campaignRole: getCampaignRole(state, playerIndex),
+      pendingChallengerReward: filtered.pendingChallengerReward || false,
+      challengerId: filtered.challengerId || null,
+    }
+  };
+}
+
+// Helper: Determine a player's role in the current campaign turn
+function getCampaignRole(state, playerIndex) {
+  const campaignPhases = ['CAMPAIGN', 'TILE_PLAYED', 'PENDING_ACCEPTANCE', 'PENDING_CHALLENGE', 'CORRECTION_REQUIRED'];
+  if (!campaignPhases.includes(state.phase)) return null;
+  
+  const playerId = state.players[playerIndex]?.id;
+  if (!playerId) return null;
+  
+  // During CAMPAIGN: the mover is the currentPlayerIndex
+  if (state.phase === 'CAMPAIGN') {
+    if (playerIndex === state.currentPlayerIndex) return 'mover';
+    return 'waiting';
+  }
+  
+  // CORRECTION_REQUIRED must be checked before general playedTile check
+  // so the mover gets 'correcting' instead of 'mover'
+  if (state.phase === 'CORRECTION_REQUIRED') {
+    if (state.playedTile && playerId === state.playedTile.playerId) return 'correcting';
+    return 'waiting';
+  }
+  
+  // After tile played: determine mover, receiver, bystander
+  if (state.playedTile) {
+    if (playerId === state.playedTile.playerId) return 'mover';
+    if (playerId === state.playedTile.receivingPlayerId) {
+      if (state.phase === 'PENDING_ACCEPTANCE') return 'receiver';
+      return 'waiting';
+    }
+  }
+  
+  if (state.phase === 'PENDING_CHALLENGE') {
+    const bystanders = state.bystanders || [];
+    const currentBystander = bystanders[state.bystanderIndex || 0];
+    if (currentBystander && currentBystander.id === playerId) return 'challenger';
+    if (bystanders.some(b => b.id === playerId)) return 'bystander';
+  }
+  
+  return 'waiting';
+}
+
+// Helper: Broadcast filtered state to each player individually
+async function broadcastFilteredState(io, roomId, state, db) {
+  // Get all players in the room
+  const [playersInRoom] = await db.query(
+    `SELECT player_id, player_index FROM room_players WHERE room_id = ?`,
+    [roomId.toLowerCase()]
+  );
+  
+  // Get all sockets in the kred room
+  const room = io.sockets.adapter.rooms.get(`kred:${roomId}`);
+  if (!room) {
+    console.log(`[KRED] No sockets in room kred:${roomId}`);
+    return;
+  }
+  
+  for (const socketId of room) {
+    const targetSocket = io.sockets.sockets.get(socketId);
+    if (!targetSocket) continue;
+    
+    // Find this socket's playerIndex
+    const playerData = playersInRoom.find(p => {
+      // Match by stored socket_id or by querying the socket's data
+      return targetSocket.data?.playerIndex === p.player_index;
+    });
+    
+    const pIndex = playerData?.player_index ?? targetSocket.data?.playerIndex;
+    
+    if (pIndex !== undefined && pIndex !== null) {
+      const filtered = buildFilteredBroadcast(state, pIndex);
+      console.log(`[KRED] Broadcasting to player ${pIndex}: phase=${filtered.gameState.phase}, role=${filtered.gameState.campaignRole}, currentPlayerIndex=${filtered.gameState.currentPlayerIndex}`);
+      targetSocket.emit('kred:stateUpdate', filtered);
+    } else {
+      // Fallback: send unfiltered (shouldn't happen normally)
+      console.warn(`[KRED] Could not determine playerIndex for socket ${socketId}`);
+      targetSocket.emit('kred:stateUpdate', { gameState: state });
+    }
+  }
+}
+
+// Helper: Finalize a campaign turn (tile accepted, no challenge or challenge resolved)
+// Receiver becomes the next mover
+function finalizeCampaignTurn(state) {
+  const receiverId = state.playedTile?.receivingPlayerId;
+  const tile = state.playedTile?.tile || state.tileTransaction?.tile;
+  
+  // Add tile to receiver's bureaucracyTiles (face-down = counts as funding)
+  if (receiverId && tile) {
+    const receiver = state.players.find(p => p.id === receiverId);
+    if (receiver) {
+      if (!receiver.bureaucracyTiles) receiver.bureaucracyTiles = [];
+      receiver.bureaucracyTiles.push(tile);
+    }
+  }
+  
+  // Receiver becomes next mover
+  const receiverIndex = state.players.findIndex(p => p.id === receiverId);
+  if (receiverIndex !== -1) {
+    state.currentPlayerIndex = receiverIndex;
+  }
+  
+  // Check if all players have used all their tiles - if so, transition to Bureaucracy
+  const tilesPerPlayer = Math.floor(24 / state.playerCount); // Standard: 24 tiles / N players
+  const allTilesPlayed = state.players.every(p => 
+    (p.hand?.length || 0) === 0 && 
+    (p.bureaucracyTiles?.length || 0) >= tilesPerPlayer
+  );
+  
+  if (allTilesPlayed) {
+    state.phase = 'BUREAUCRACY';
+    console.log('[KRED] All tiles played - transitioning to BUREAUCRACY');
+  } else {
+    state.phase = 'CAMPAIGN';
+  }
+  
+  // Reset turn state
+  state.playedTile = null;
+  state.tileTransaction = null;
+  state.bystanders = [];
+  state.bystanderIndex = 0;
+  state.hasPlayedTileThisTurn = false;
+  state.movedPiecesThisTurn = [];
+  state.piecesAtTurnStart = state.pieces.map(p => ({...p})); // New snapshot for next turn
+  state.receiverAccepted = null;
+  state.wasExposed = false;
+  state.challengeSucceeded = false;
+  state.challengerId = null;
+  state.moverMustWithdraw = false;
+  state.moverPlayerIndex = null;
 }
 
 // Room initialization lock to prevent race conditions
@@ -488,7 +683,9 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       // Join the KRED-specific room to receive updates
       socket.join(`kred:${roomId}`);
-      console.log(`[KRED] Socket ${socket.id} joined kred:${roomId}`);
+      socket.data.playerIndex = playerIndex;
+      socket.data.roomId = roomId;
+      console.log(`[KRED] Socket ${socket.id} joined kred:${roomId} as player ${playerIndex}`);
       
       // Get player count
       const [players] = await db.query(
@@ -509,6 +706,11 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         ? filterStateForPlayer(fullState, playerIndex)
         : fullState;
       
+      // Add campaign role for the requesting player
+      if (filteredState && typeof playerIndex === 'number') {
+        filteredState.campaignRole = getCampaignRole(fullState, playerIndex);
+      }
+      
       console.log(`[KRED] Sending filtered state for room ${roomId}:`, {
         playerCount: players[0].player_count,
         hasState: !!filteredState,
@@ -528,234 +730,6 @@ module.exports = function setupKREDHandlers(io, socket, db) {
     }
   });
 
-  // ============================================================================
-  // CAMPAIGN PHASE HANDLERS
-  // ============================================================================
-  
-  // Play a tile to a target player during Campaign phase
-  socket.on('kred:campaign:play', async (data, callback) => {
-    const { roomId, playerIndex, targetPlayerIndex, tileId, hand } = data;
-    
-    try {
-      console.log(`[KRED] Play tile: player ${playerIndex} → player ${targetPlayerIndex}, tile ${tileId}`);
-      
-      const [gameState] = await db.query(
-        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
-        [roomId.toLowerCase()]
-      );
-      
-      if (gameState.length === 0) {
-        return callback({ success: false, error: 'Game not found' });
-      }
-      
-      const state = JSON.parse(gameState[0].game_state);
-      
-      // Update the target player's played tile
-      const tile = state.players[playerIndex].hand.find(t => t.id === tileId);
-      if (!tile) {
-        return callback({ success: false, error: 'Tile not in hand' });
-      }
-      
-      state.players[targetPlayerIndex].playedTile = tile;
-      state.players[playerIndex].hand = hand; // Update hand after removing tile
-      
-      // Save state
-      await db.query(
-        `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
-        [JSON.stringify(state), roomId.toLowerCase()]
-      );
-      
-      // Broadcast update to all players
-      io.to(`kred:${roomId}`).emit('kred:campaign:update', { players: state.players });
-      
-      console.log(`[KRED] Tile ${tileId} played to player ${targetPlayerIndex}`);
-      callback({ success: true });
-    } catch (error) {
-      console.error('[KRED] Error playing tile:', error);
-      callback({ success: false, error: error.message });
-    }
-  });
-  
-  // Discard a tile after resolving play
-  socket.on('kred:campaign:discard', async (data, callback) => {
-    const { roomId, playerIndex, tileId, sourcePlayerIndex } = data;
-    
-    try {
-      console.log(`[KRED] Discard tile: player ${playerIndex}, tile ${tileId}, source ${sourcePlayerIndex}`);
-      
-      const [gameState] = await db.query(
-        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
-        [roomId.toLowerCase()]
-      );
-      
-      if (gameState.length === 0) {
-        return callback({ success: false, error: 'Game not found' });
-      }
-      
-      const state = JSON.parse(gameState[0].game_state);
-      
-      // Clear the played tile from source player
-      if (sourcePlayerIndex !== undefined) {
-        state.players[sourcePlayerIndex].playedTile = null;
-      }
-      
-      // Add tile to player's discarded tiles
-      const tile = { id: tileId, flipped: false }; // Tiles start face-down
-      if (!state.players[playerIndex].discardedTiles) {
-        state.players[playerIndex].discardedTiles = [];
-      }
-      state.players[playerIndex].discardedTiles.push(tile);
-      
-      // Save state
-      await db.query(
-        `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
-        [JSON.stringify(state), roomId.toLowerCase()]
-      );
-      
-      // Broadcast update
-      io.to(`kred:${roomId}`).emit('kred:campaign:update', { players: state.players });
-      
-      console.log(`[KRED] Tile ${tileId} discarded by player ${playerIndex}`);
-      callback({ success: true });
-    } catch (error) {
-      console.error('[KRED] Error discarding tile:', error);
-      callback({ success: false, error: error.message });
-    }
-  });
-  
-  // Get all tiles on the board (with proper hiding of opponents' tiles)
-  socket.on('kred:campaign:get_tiles', async (data, callback) => {
-    const { roomId, playerIndex } = data;
-    
-    try {
-      const [gameState] = await db.query(
-        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
-        [roomId.toLowerCase()]
-      );
-      
-      if (gameState.length === 0) {
-        return callback({ success: false, error: 'Game not found' });
-      }
-      
-      const state = JSON.parse(gameState[0].game_state);
-      
-      // Build response with hidden information
-      const tiles = {
-        hands: [],
-        playedTiles: [],
-        discardedTiles: []
-      };
-      
-      state.players.forEach((player, i) => {
-        // Hands: show yours, hide others'
-        if (i === playerIndex) {
-          tiles.hands[i] = player.hand;
-        } else {
-          tiles.hands[i] = player.hand.map(() => ({ hidden: true }));
-        }
-        
-        // Played tiles: show if it's your tile, otherwise hide
-        if (player.playedTile) {
-          tiles.playedTiles[i] = (i === playerIndex) ? player.playedTile : { hidden: true };
-        } else {
-          tiles.playedTiles[i] = null;
-        }
-        
-        // Discarded tiles: show flipped tiles, hide unflipped
-        tiles.discardedTiles[i] = (player.discardedTiles || []).map(tile => 
-          tile.flipped ? tile : { hidden: true }
-        );
-      });
-      
-      callback({ success: true, tiles });
-    } catch (error) {
-      console.error('[KRED] Error getting tiles:', error);
-      callback({ success: false, error: error.message });
-    }
-  });
-  
-  // Flip a discarded tile face-up (for challenges/reveals)
-  socket.on('kred:campaign:flip_tile', async (data, callback) => {
-    const { roomId, playerIndex, tileIndex } = data;
-    
-    try {
-      console.log(`[KRED] Flip tile: player ${playerIndex}, tile index ${tileIndex}`);
-      
-      const [gameState] = await db.query(
-        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
-        [roomId.toLowerCase()]
-      );
-      
-      if (gameState.length === 0) {
-        return callback({ success: false, error: 'Game not found' });
-      }
-      
-      const state = JSON.parse(gameState[0].game_state);
-      
-      if (!state.players[playerIndex].discardedTiles[tileIndex]) {
-        return callback({ success: false, error: 'Tile not found' });
-      }
-      
-      // Flip the tile face-up
-      state.players[playerIndex].discardedTiles[tileIndex].flipped = true;
-      
-      // Save state
-      await db.query(
-        `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
-        [JSON.stringify(state), roomId.toLowerCase()]
-      );
-      
-      // Broadcast to all players
-      io.to(`kred:${roomId}`).emit('kred:tile_flipped', { 
-        playerIndex, 
-        tileIndex,
-        tile: state.players[playerIndex].discardedTiles[tileIndex]
-      });
-      
-      console.log(`[KRED] Tile flipped at player ${playerIndex}, index ${tileIndex}`);
-      callback({ success: true });
-    } catch (error) {
-      console.error('[KRED] Error flipping tile:', error);
-      callback({ success: false, error: error.message });
-    }
-  });
-  
-  // Update current player (turn management)
-  socket.on('kred:campaign:next_turn', async (data, callback) => {
-    const { roomId, currentPlayerIndex } = data;
-    
-    try {
-      console.log(`[KRED] Next turn: player ${currentPlayerIndex}`);
-      
-      const [gameState] = await db.query(
-        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
-        [roomId.toLowerCase()]
-      );
-      
-      if (gameState.length === 0) {
-        return callback({ success: false, error: 'Game not found' });
-      }
-      
-      const state = JSON.parse(gameState[0].game_state);
-      state.currentPlayer = currentPlayerIndex;
-      
-      // Save state
-      await db.query(
-        `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
-        [JSON.stringify(state), roomId.toLowerCase()]
-      );
-      
-      // Broadcast to all players
-      io.to(`kred:${roomId}`).emit('kred:turn_update', { currentPlayerIndex });
-      
-      console.log(`[KRED] Turn updated to player ${currentPlayerIndex}`);
-      callback({ success: true });
-    } catch (error) {
-      console.error('[KRED] Error updating turn:', error);
-      callback({ success: false, error: error.message });
-    }
-  });
-  
   // ============================================================================
   // CAMPAIGN PHASE HANDLERS
   // ============================================================================
@@ -783,10 +757,15 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const state = JSON.parse(gameState[0].game_state);
       
-      // TURN VALIDATION: Only the active player can play tiles
+      // TURN VALIDATION: Only the active player (mover) can play tiles
       if (playerIndex !== state.currentPlayerIndex) {
         console.warn(`[KRED] Player ${playerIndex} attempted to play tile, but it's player ${state.currentPlayerIndex}'s turn`);
-        return callback({ success: false, error: `It's not your turn. Current player is ${state.currentPlayerIndex}` });
+        return callback({ success: false, error: `It's not your turn. Current mover is player ${state.currentPlayerIndex}` });
+      }
+      
+      // PHASE VALIDATION: Only allow tile play during CAMPAIGN phase
+      if (state.phase !== 'CAMPAIGN') {
+        return callback({ success: false, error: `Cannot play tile during ${state.phase} phase` });
       }
       
       const player = state.players[playerIndex];
@@ -798,29 +777,32 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       }
       
       const tile = player.hand.splice(tileIndex, 1)[0];
-      player.playedTile = tile;
       
-      // Track that player has played a tile this turn
-      state.hasPlayedTileThisTurn = true;
+      // Use piecesAtTurnStart as the baseline for comparison
+      // This was captured at the START of the mover's turn, before any moves
+      const originalPieces = state.piecesAtTurnStart 
+        ? state.piecesAtTurnStart.map(p => ({...p}))
+        : state.pieces.map(p => ({...p}));
       
-      // Create playedTile tracking object
+      // Store the played tile with both snapshots for challenge comparison
       state.playedTile = {
-        tileId: tileId.toString(),
+        tileId: tileId.toString().padStart(2, '0'),
         playerId: player.id,
         receivingPlayerId: targetPlayerId,
         playedAt: Date.now(),
-        movesPerformed: [], // Will be populated when turn ends
-        originalPieces: state.pieces.map(p => ({...p})), // Snapshot for validation
-        gameStateSnapshot: {
-          pieces: state.pieces.map(p => ({...p})),
-          boardTiles: state.boardTiles.map(b => ({...b}))
-        }
+        movesPerformed: [],
+        originalPieces: originalPieces, // Board state BEFORE mover moved pieces
+        piecesAfterMoves: state.pieces.map(p => ({...p})), // Board state AFTER mover moved pieces
+        tile: tile, // The actual tile object
       };
+      
+      state.hasPlayedTileThisTurn = true;
+      state.moverPlayerIndex = playerIndex; // Track who the mover was
       
       // Update phase to PENDING_ACCEPTANCE
       state.phase = 'PENDING_ACCEPTANCE';
       
-      // Also keep tileTransaction for legacy compatibility
+      // Store transaction info for the workflow
       state.tileTransaction = {
         placerId: player.id,
         receiverId: targetPlayerId,
@@ -833,31 +815,27 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         state.currentPlayerIndex = receiverIndex;
       }
       
+      // Check if receiver has 0 credibility - they must accept without viewing
+      const receiver = state.players.find(p => p.id === targetPlayerId);
+      if (receiver && receiver.credibility === 0) {
+        console.log(`[KRED] Receiver (player ${targetPlayerId}) has 0 credibility - must accept`);
+        // Note: Client will handle showing appropriate UI
+      }
+      
       // Save state
       await db.query(
         `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
         [JSON.stringify(state), roomId.toLowerCase()]
       );
       
-      // Broadcast to all players
-      const playBroadcast = { 
-        gameState: {
-          players: state.players,
-          phase: state.phase,
-          playedTile: state.playedTile,
-          tileTransaction: state.tileTransaction,
-          hasPlayedTileThisTurn: state.hasPlayedTileThisTurn,
-          currentPlayerIndex: state.currentPlayerIndex,
-          playerCount: state.playerCount,
-          pieces: state.pieces,
-          boardTiles: state.boardTiles,
-          community: state.community
-        }
-      };
-      socket.emit('kred:stateUpdate', playBroadcast);
-      socket.to(`kred:${roomId}`).emit('kred:stateUpdate', playBroadcast);
+      // Store playerIndex on socket for filtered broadcasts
+      socket.data = socket.data || {};
+      socket.data.playerIndex = playerIndex;
       
-      console.log(`[KRED] Tile ${tileId} played, phase: ${state.phase}`);
+      // Broadcast filtered state to each player
+      await broadcastFilteredState(io, roomId, state, db);
+      
+      console.log(`[KRED] Tile ${tileId} played to player ${targetPlayerId}, phase: ${state.phase}`);
       callback({ success: true, phase: state.phase });
     } catch (error) {
       console.error('[KRED] Error playing tile:', error);
@@ -865,13 +843,11 @@ module.exports = function setupKREDHandlers(io, socket, db) {
     }
   });
   
-  // Move a piece on the board
+  // Move a piece on the board (during campaign - mover only)
   socket.on('kred:campaign:movePiece', async (data, callback) => {
     const { roomId, playerIndex, pieces, movedPiecesThisTurn } = data;
     
     try {
-      console.log(`[KRED] Updating piece positions: ${pieces.length} pieces`);
-      
       const [gameState] = await db.query(
         `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
         [roomId.toLowerCase()]
@@ -883,10 +859,21 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const state = JSON.parse(gameState[0].game_state);
       
-      // TURN VALIDATION: Only the active player can move pieces
+      // TURN VALIDATION: Only the active player (mover) can move pieces
       if (playerIndex !== undefined && playerIndex !== state.currentPlayerIndex) {
         console.warn(`[KRED] Player ${playerIndex} attempted to move pieces, but it's player ${state.currentPlayerIndex}'s turn`);
-        return callback({ success: false, error: `It's not your turn. Current player is ${state.currentPlayerIndex}` });
+        return callback({ success: false, error: `It's not your turn` });
+      }
+      
+      // PHASE VALIDATION: Only allow moves during CAMPAIGN or CORRECTION_REQUIRED
+      if (state.phase !== 'CAMPAIGN' && state.phase !== 'CORRECTION_REQUIRED') {
+        return callback({ success: false, error: `Cannot move pieces during ${state.phase} phase` });
+      }
+      
+      // Capture piecesAtTurnStart on FIRST move of a turn (if not already set)
+      if (!state.piecesAtTurnStart || state.piecesAtTurnStart.length === 0) {
+        state.piecesAtTurnStart = state.pieces.map(p => ({...p}));
+        console.log(`[KRED] Captured piecesAtTurnStart (${state.piecesAtTurnStart.length} pieces)`);
       }
       
       state.pieces = pieces;
@@ -894,27 +881,29 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         state.movedPiecesThisTurn = movedPiecesThisTurn;
       }
       
+      // Store playerIndex on socket for filtered broadcasts
+      socket.data = socket.data || {};
+      socket.data.playerIndex = playerIndex;
+      
       // Save state
       await db.query(
         `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
         [JSON.stringify(state), roomId.toLowerCase()]
       );
       
-      // Broadcast to all players
+      // Broadcast piece positions to all players (pieces are public info)
       const pieceBroadcast = { 
         gameState: {
-          players: state.players,
           pieces: state.pieces,
           movedPiecesThisTurn: state.movedPiecesThisTurn,
           currentPlayerIndex: state.currentPlayerIndex,
+          phase: state.phase,
           playerCount: state.playerCount,
-          phase: state.phase
         }
       };
       socket.emit('kred:stateUpdate', pieceBroadcast);
       socket.to(`kred:${roomId}`).emit('kred:stateUpdate', pieceBroadcast);
       
-      console.log(`[KRED] Piece positions updated`);
       callback({ success: true });
     } catch (error) {
       console.error('[KRED] Error moving piece:', error);
@@ -927,7 +916,7 @@ module.exports = function setupKREDHandlers(io, socket, db) {
     const { roomId } = data;
     
     try {
-      console.log(`[KRED] Ending turn for room ${roomId}`);
+      console.log(`[KRED] End turn / correction complete for room ${roomId}`);
       
       const [gameState] = await db.query(
         `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
@@ -940,14 +929,22 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const state = JSON.parse(gameState[0].game_state);
       
-      // Move to next player
-      state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.playerCount;
-      state.phase = 'CAMPAIGN';
-      state.hasPlayedTileThisTurn = false;
-      state.movedPiecesThisTurn = [];
-      
-      // Clear transaction
-      state.tileTransaction = null;
+      if (state.phase === 'CORRECTION_REQUIRED') {
+        // Mover finished making the correct play after exposure/challenge
+        // Now finalize the turn: receiver becomes next mover
+        console.log(`[KRED] Correction complete - finalizing turn`);
+        finalizeCampaignTurn(state);
+      } else if (state.phase === 'CAMPAIGN') {
+        // Edge case: mover explicitly ends turn without playing a tile
+        // This shouldn't normally happen but handle gracefully
+        console.log(`[KRED] Mover ended turn during CAMPAIGN phase`);
+        state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.playerCount;
+        state.hasPlayedTileThisTurn = false;
+        state.movedPiecesThisTurn = [];
+        state.piecesAtTurnStart = state.pieces.map(p => ({...p}));
+      } else {
+        return callback({ success: false, error: `Cannot end turn during ${state.phase}` });
+      }
       
       // Save state
       await db.query(
@@ -955,38 +952,23 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         [JSON.stringify(state), roomId.toLowerCase()]
       );
       
-      // Broadcast to all players
-      const endTurnBroadcast = { 
-        gameState: {
-          players: state.players,
-          phase: state.phase,
-          currentPlayerIndex: state.currentPlayerIndex,
-          hasPlayedTileThisTurn: state.hasPlayedTileThisTurn,
-          movedPiecesThisTurn: state.movedPiecesThisTurn,
-          tileTransaction: state.tileTransaction,
-          playerCount: state.playerCount,
-          pieces: state.pieces,
-          boardTiles: state.boardTiles,
-          community: state.community
-        }
-      };
-      socket.emit('kred:stateUpdate', endTurnBroadcast);
-      socket.to(`kred:${roomId}`).emit('kred:stateUpdate', endTurnBroadcast);
+      // Broadcast filtered state to each player
+      await broadcastFilteredState(io, roomId, state, db);
       
-      console.log(`[KRED] Turn ended. Now player ${state.currentPlayerIndex}'s turn`);
-      callback({ success: true, currentPlayerIndex: state.currentPlayerIndex });
+      console.log(`[KRED] Turn ended. Phase: ${state.phase}, Now player ${state.currentPlayerIndex}'s turn`);
+      callback({ success: true, currentPlayerIndex: state.currentPlayerIndex, phase: state.phase });
     } catch (error) {
       console.error('[KRED] Error ending turn:', error);
       callback({ success: false, error: error.message });
     }
   });
   
-  // Receiver accepts or rejects tile
+  // Receiver accepts or rejects (exposes) the played tile
   socket.on('kred:campaign:receiverDecision', async (data, callback) => {
-    const { roomId, accepted } = data;
+    const { roomId, accepted, playerIndex: senderIndex } = data;
     
     try {
-      console.log(`[KRED] Receiver decision: ${accepted ? 'ACCEPT' : 'REJECT'}`);
+      console.log(`[KRED] Receiver decision: ${accepted ? 'ACCEPT' : 'EXPOSE'}`);
       
       const [gameState] = await db.query(
         `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
@@ -999,45 +981,91 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const state = JSON.parse(gameState[0].game_state);
       
+      // Validate phase
+      if (state.phase !== 'PENDING_ACCEPTANCE') {
+        return callback({ success: false, error: `Cannot accept/reject during ${state.phase}` });
+      }
+      
+      const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
+      const moverId = state.playedTile?.playerId || state.tileTransaction?.placerId;
+      
       if (accepted) {
-        // Move to pending challenge phase
+        // ACCEPTED: Move to challenge phase
+        // Tile goes to Accept Line, bystanders can now challenge
         state.phase = 'PENDING_CHALLENGE';
+        state.receiverAccepted = true;
         
-        // Calculate bystanders (players who are neither placer nor receiver)
-        const placerId = state.playedTile?.playerId || state.tileTransaction?.placerId;
-        const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
+        // Calculate bystanders (clockwise from receiver, excluding mover and receiver)
+        const receiverIndex = state.players.findIndex(p => p.id === receiverId);
+        const bystanderPlayers = [];
         
-        const bystanderPlayers = state.players.filter(
-          p => p.id !== placerId && p.id !== receiverId
-        );
+        for (let i = 1; i < state.playerCount; i++) {
+          const idx = (receiverIndex + i) % state.playerCount;
+          const player = state.players[idx];
+          if (player.id !== moverId && player.id !== receiverId) {
+            // Only players with credibility can challenge
+            if (player.credibility > 0) {
+              bystanderPlayers.push(player);
+            }
+          }
+        }
         
-        // Sort bystanders by turn order (clockwise from placer)
-        const placerIndex = state.players.findIndex(p => p.id === placerId);
-        const sortedBystanders = bystanderPlayers.sort((a, b) => {
-          const indexA = state.players.findIndex(p => p.id === a.id);
-          const indexB = state.players.findIndex(p => p.id === b.id);
-          const relativeA = (indexA - placerIndex + state.playerCount) % state.playerCount;
-          const relativeB = (indexB - placerIndex + state.playerCount) % state.playerCount;
-          return relativeA - relativeB;
-        });
-        
-        state.bystanders = sortedBystanders;
+        state.bystanders = bystanderPlayers;
         state.bystanderIndex = 0;
         
-        // Set current player to first bystander
-        if (sortedBystanders.length > 0) {
+        if (bystanderPlayers.length > 0) {
+          // Set current player to first bystander
           const firstBystanderIndex = state.players.findIndex(
-            p => p.id === sortedBystanders[0].id
+            p => p.id === bystanderPlayers[0].id
           );
           state.currentPlayerIndex = firstBystanderIndex;
+          console.log(`[KRED] ${bystanderPlayers.length} bystanders can challenge. First: player ${firstBystanderIndex}`);
+        } else {
+          // No bystanders with credibility - tile accepted, receiver becomes next mover
+          console.log(`[KRED] No bystanders can challenge - finalizing tile play`);
+          finalizeCampaignTurn(state);
         }
       } else {
-        // Rejected - return to placer's turn (CAMPAIGN)
-        state.phase = 'CAMPAIGN';
-        state.tileTransaction = null;
-        state.playedTile = null;
-        state.bystanders = [];
-        state.bystanderIndex = 0;
+        // EXPOSED (Rejected): Receiver exposes the dishonest tile
+        // Per manual:
+        // - Receiver restores up to 2 credibility OR gets a free Advance
+        // - Mover returns pieces to original, makes play per tile, incurs 1 credibility notch
+        
+        state.phase = 'CORRECTION_REQUIRED';
+        state.receiverAccepted = false;
+        state.wasExposed = true;
+        
+        // Revert pieces to the state before mover moved them
+        if (state.playedTile?.originalPieces) {
+          state.pieces = state.playedTile.originalPieces.map(p => ({...p}));
+        }
+        
+        // Clear moved pieces so mover can make fresh moves
+        state.movedPiecesThisTurn = [];
+        
+        // Receiver gains up to 2 credibility
+        const receiver = state.players.find(p => p.id === receiverId);
+        if (receiver) {
+          const oldCred = receiver.credibility;
+          receiver.credibility = Math.min(3, receiver.credibility + 2);
+          console.log(`[KRED] Receiver credibility: ${oldCred} → ${receiver.credibility}`);
+        }
+        
+        // Mover loses 1 credibility
+        const mover = state.players.find(p => p.id === moverId);
+        if (mover && mover.credibility > 0) {
+          mover.credibility -= 1;
+          console.log(`[KRED] Mover credibility reduced to ${mover.credibility}`);
+        }
+        
+        // Set current player to mover for correction
+        const moverIndex = state.players.findIndex(p => p.id === moverId);
+        if (moverIndex !== -1) {
+          state.currentPlayerIndex = moverIndex;
+        }
+        
+        // Store the tile face-up in receiver's bank (no funding value)
+        // Client will handle bank tile display
       }
       
       // Save state
@@ -1046,26 +1074,10 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         [JSON.stringify(state), roomId.toLowerCase()]
       );
       
-      // Broadcast to all players
-      const receiverBroadcast = { 
-        gameState: {
-          players: state.players,
-          phase: state.phase,
-          playedTile: state.playedTile,
-          tileTransaction: state.tileTransaction,
-          bystanders: state.bystanders,
-          bystanderIndex: state.bystanderIndex,
-          currentPlayerIndex: state.currentPlayerIndex,
-          playerCount: state.playerCount,
-          pieces: state.pieces,
-          boardTiles: state.boardTiles,
-          community: state.community
-        }
-      };
-      socket.emit('kred:stateUpdate', receiverBroadcast);
-      socket.to(`kred:${roomId}`).emit('kred:stateUpdate', receiverBroadcast);
+      // Broadcast filtered state to each player
+      await broadcastFilteredState(io, roomId, state, db);
       
-      console.log(`[KRED] Receiver decision processed. Phase: ${state.phase}, Bystanders: ${state.bystanders?.length || 0}`);
+      console.log(`[KRED] Receiver decision processed. Phase: ${state.phase}`);
       callback({ success: true, phase: state.phase });
     } catch (error) {
       console.error('[KRED] Error processing receiver decision:', error);
@@ -1091,109 +1103,105 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const state = JSON.parse(gameState[0].game_state);
       
-      if (challenge && challengeResult) {
-        console.log('[KRED] Processing challenge with result:', challengeResult);
+      if (state.phase !== 'PENDING_CHALLENGE') {
+        return callback({ success: false, error: `Cannot challenge during ${state.phase}` });
+      }
+      
+      const moverId = state.playedTile?.playerId;
+      const receiverId = state.playedTile?.receivingPlayerId;
+      
+      if (challenge) {
+        // CHALLENGED: Apply consequences based on challengeResult from client
+        if (!challengeResult) {
+          return callback({ success: false, error: 'Missing challenge result data' });
+        }
         
-        // Apply credibility changes based on challenge result
+        // Use server's bystander tracking as authoritative challenger identity
+        const currentBystander = (state.bystanders || [])[state.bystanderIndex || 0];
+        const challengerId = currentBystander?.id || challengeResult.challengerId;
+        
+        console.log(`[KRED] Challenge result:`, challengeResult, `challengerId: ${challengerId}`);
+        
         if (challengeResult.isPerfect) {
-          // Challenge FAILED - tile was played perfectly
+          // Challenge FAILED - play was honest
+          // Mover restores 1 credibility (if they had any at start of turn)
+          const mover = state.players.find(p => p.id === moverId);
+          if (mover && mover.credibility > 0 && mover.credibility < 3) {
+            mover.credibility += 1;
+            console.log(`[KRED] Honest play - Mover restores credibility to ${mover.credibility}`);
+          }
+          
           // Challenger loses 1 credibility
-          console.log('[KRED] Challenge failed - tile was perfect. Challenger loses credibility.');
-          state.players = state.players.map(p => {
-            if (p.id === challengeResult.challengerId && p.credibility > 0) {
-              return { ...p, credibility: p.credibility - 1 };
-            }
-            return p;
-          });
+          const challenger = state.players.find(p => p.id === challengerId);
+          if (challenger && challenger.credibility > 0) {
+            challenger.credibility -= 1;
+            console.log(`[KRED] Unsuccessful challenge - Challenger credibility: ${challenger.credibility}`);
+          } else {
+            console.warn(`[KRED] Could not find challenger with id ${challengerId} to deduct credibility`);
+          }
+          
+          // Tile goes to receiver face-down (counts as funding)
+          // Finalize the turn - receiver becomes next mover
+          finalizeCampaignTurn(state);
+          
         } else {
-          // Challenge SUCCEEDED - tile was imperfect
-          console.log('[KRED] Challenge succeeded - tile was imperfect. Applying credibility changes.');
-          
-          // Tile player loses 1 credibility
-          state.players = state.players.map(p => {
-            if (p.id === challengeResult.tilePlayerId && p.credibility > 0) {
-              return { ...p, credibility: p.credibility - 1 };
+          // Challenge SUCCEEDED - play was dishonest
+          // Mover returns pieces to original and must make correct play
+          // Mover loses 1 credibility (if 0, must Withdraw instead)
+          const mover = state.players.find(p => p.id === moverId);
+          if (mover) {
+            if (mover.credibility > 0) {
+              mover.credibility -= 1;
+              console.log(`[KRED] Dishonest play caught - Mover credibility: ${mover.credibility}`);
+            } else {
+              // 0 credibility - must take Withdraw action (client handles)
+              state.moverMustWithdraw = true;
+              console.log(`[KRED] Mover at 0 credibility - must Withdraw`);
             }
-            return p;
-          });
-          
-          // Receiver loses 1 credibility if they accepted
-          if (challengeResult.receiverAccepted) {
-            state.players = state.players.map(p => {
-              if (p.id === challengeResult.receiverId && p.credibility > 0) {
-                return { ...p, credibility: p.credibility - 1 };
-              }
-              return p;
-            });
           }
           
-          // Challenger gains up to 2 credibility (max 3)
-          state.players = state.players.map(p => {
-            if (p.id === challengeResult.challengerId) {
-              const newCredibility = Math.min(3, p.credibility + 2);
-              return { ...p, credibility: newCredibility };
-            }
-            return p;
-          });
+          // Receiver loses 1 credibility (accepted a dishonest play)
+          const receiver = state.players.find(p => p.id === receiverId);
+          if (receiver && receiver.credibility > 0) {
+            receiver.credibility -= 1;
+            console.log(`[KRED] Receiver accepted dishonest play - credibility: ${receiver.credibility}`);
+          }
+          
+          // Challenger gets to choose: restore 1 credibility OR take advantage (use funding)
+          state.challengeSucceeded = true;
+          state.challengerId = challengerId;
+          state.pendingChallengerReward = true;
+          
+          const challenger = state.players.find(p => p.id === challengerId);
+          console.log(`[KRED] Challenger ${challengerId} gets reward choice. Credibility: ${challenger?.credibility}, Tiles: ${challenger?.bureaucracyTiles?.length || 0}`);
+          
+          // Revert pieces to original positions
+          if (state.playedTile?.originalPieces) {
+            state.pieces = state.playedTile.originalPieces.map(p => ({...p}));
+          }
+          
+          // Clear moved pieces so mover can make fresh correction moves
+          state.movedPiecesThisTurn = [];
+          
+          // Set phase to CORRECTION_REQUIRED - mover must make correct play
+          state.phase = 'CORRECTION_REQUIRED';
+          
+          // Set current player to mover for correction
+          const moverIndex = state.players.findIndex(p => p.id === moverId);
+          if (moverIndex !== -1) {
+            state.currentPlayerIndex = moverIndex;
+          }
+          
+          // Tile goes face-up in receiver's bank (no funding value)
         }
+      } else {
+        // PASS: Move to next bystander or finalize
+        const nextBystanderIndex = (state.bystanderIndex || 0) + 1;
         
-        // Add tile to receiver's bureaucracy tiles
-        const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
-        const receiverIndex = state.players.findIndex(p => p.id === receiverId);
-        if (receiverIndex !== -1) {
-          const tile = state.playedTile?.tile || state.tileTransaction?.tile;
-          if (!state.players[receiverIndex].bureaucracyTiles) {
-            state.players[receiverIndex].bureaucracyTiles = [];
-          }
-          state.players[receiverIndex].bureaucracyTiles.push(tile);
-        }
-        
-        // Remove tile from board
-        const boardTileId = state.tileTransaction?.boardTileId;
-        if (boardTileId) {
-          state.boardTiles = state.boardTiles.filter(bt => bt.id !== boardTileId);
-        }
-        
-        // Set current player to receiver and return to CAMPAIGN phase
-        state.currentPlayerIndex = receiverIndex;
-        state.phase = 'CAMPAIGN';
-        state.playedTile = null;
-        state.tileTransaction = null;
-        state.bystanders = [];
-        state.bystanderIndex = 0;
-        
-      } else if (!challenge) {
-        // Pass - check if there are more bystanders
-        const nextBystanderIndex = state.bystanderIndex + 1;
-        
-        if (nextBystanderIndex >= state.bystanders.length) {
-          // No more bystanders - resolve transaction without challenge
-          console.log('[KRED] All bystanders passed - resolving transaction');
-          
-          // Add tile to receiver's bureaucracy tiles
-          const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
-          const receiverIndex = state.players.findIndex(p => p.id === receiverId);
-          if (receiverIndex !== -1) {
-            const tile = state.playedTile?.tile || state.tileTransaction?.tile;
-            if (!state.players[receiverIndex].bureaucracyTiles) {
-              state.players[receiverIndex].bureaucracyTiles = [];
-            }
-            state.players[receiverIndex].bureaucracyTiles.push(tile);
-          }
-          
-          // Remove tile from board
-          const boardTileId = state.tileTransaction?.boardTileId;
-          if (boardTileId) {
-            state.boardTiles = state.boardTiles.filter(bt => bt.id !== boardTileId);
-          }
-          
-          // Set current player to receiver and return to CAMPAIGN phase
-          state.currentPlayerIndex = receiverIndex;
-          state.phase = 'CAMPAIGN';
-          state.playedTile = null;
-          state.tileTransaction = null;
-          state.bystanders = [];
-          state.bystanderIndex = 0;
+        if (nextBystanderIndex >= (state.bystanders || []).length) {
+          // No more bystanders - all passed, finalize turn
+          console.log(`[KRED] All bystanders passed - finalizing`);
+          finalizeCampaignTurn(state);
           
         } else {
           // Move to next bystander
@@ -1201,11 +1209,8 @@ module.exports = function setupKREDHandlers(io, socket, db) {
           const nextBystander = state.bystanders[nextBystanderIndex];
           const nextBystanderPlayerIndex = state.players.findIndex(p => p.id === nextBystander.id);
           state.currentPlayerIndex = nextBystanderPlayerIndex;
+          console.log(`[KRED] Next bystander: player ${nextBystanderPlayerIndex}`);
         }
-      } else {
-        // Challenge without result data - shouldn't happen
-        console.error('[KRED] Challenge initiated but no challenge result data provided');
-        return callback({ success: false, error: 'Missing challenge result data' });
       }
       
       // Save state
@@ -1214,29 +1219,71 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         [JSON.stringify(state), roomId.toLowerCase()]
       );
       
-      // Broadcast to all players
-      const challengerBroadcast = { 
-        gameState: {
-          players: state.players,
-          phase: state.phase,
-          playedTile: state.playedTile,
-          tileTransaction: state.tileTransaction,
-          bystanders: state.bystanders,
-          bystanderIndex: state.bystanderIndex,
-          currentPlayerIndex: state.currentPlayerIndex,
-          playerCount: state.playerCount,
-          pieces: state.pieces,
-          boardTiles: state.boardTiles,
-          community: state.community
-        }
-      };
-      socket.emit('kred:stateUpdate', challengerBroadcast);
-      socket.to(`kred:${roomId}`).emit('kred:stateUpdate', challengerBroadcast);
+      // Broadcast filtered state
+      await broadcastFilteredState(io, roomId, state, db);
       
       console.log(`[KRED] Challenger decision processed. Phase: ${state.phase}`);
       callback({ success: true, phase: state.phase });
     } catch (error) {
       console.error('[KRED] Error processing challenger decision:', error);
+      callback({ success: false, error: error.message });
+    }
+  });
+  
+  // Challenger reward choice after successful challenge
+  socket.on('kred:campaign:challengerReward', async (data, callback) => {
+    const { roomId, choice } = data; // choice: 'credibility' or 'advantage'
+    
+    try {
+      console.log(`[KRED] Challenger reward choice: ${choice}`);
+      
+      const [gameState] = await db.query(
+        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
+        [roomId.toLowerCase()]
+      );
+      
+      if (gameState.length === 0) {
+        return callback({ success: false, error: 'Game not found' });
+      }
+      
+      const state = JSON.parse(gameState[0].game_state);
+      
+      if (!state.pendingChallengerReward) {
+        return callback({ success: false, error: 'No pending challenger reward' });
+      }
+      
+      const challengerId = state.challengerId;
+      const challenger = state.players.find(p => p.id === challengerId);
+      
+      if (!challenger) {
+        return callback({ success: false, error: 'Challenger not found' });
+      }
+      
+      if (choice === 'credibility') {
+        // Restore 1 credibility (max 3)
+        const oldCred = challenger.credibility;
+        challenger.credibility = Math.min(3, challenger.credibility + 1);
+        console.log(`[KRED] Challenger chose credibility: ${oldCred} → ${challenger.credibility}`);
+      }
+      // 'advantage' choice: client handles the bureaucracy action locally
+      // (tile selection + action purchase is done client-side)
+      
+      // Clear the pending reward flag
+      state.pendingChallengerReward = false;
+      
+      // Save state
+      await db.query(
+        `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
+        [JSON.stringify(state), roomId.toLowerCase()]
+      );
+      
+      // Broadcast updated state
+      await broadcastFilteredState(io, roomId, state, db);
+      
+      console.log(`[KRED] Challenger reward processed: ${choice}`);
+      callback({ success: true });
+    } catch (error) {
+      console.error('[KRED] Error processing challenger reward:', error);
       callback({ success: false, error: error.message });
     }
   });

@@ -2,6 +2,7 @@ import type { Server, Socket } from 'socket.io';
 import type { GameRoomState } from './types';
 import type { Player } from '@kred/shared';
 
+
 // Helper: shuffle array in-place
 function shuffle<T>(array: T[]): T[] {
 	for (let i = array.length - 1; i > 0; i--) {
@@ -10,6 +11,7 @@ function shuffle<T>(array: T[]): T[] {
 	}
 	return array;
 }
+
 
 // Helper: deal tiles to players
 function dealTilesAndStartGame(state: GameRoomState): GameRoomState {
@@ -36,6 +38,7 @@ function dealTilesAndStartGame(state: GameRoomState): GameRoomState {
 		currentPlayerIndex: 0,
 	};
 }
+
 
 export function setupSocketHandlers(io: Server, roomManager: any) {
 	io.on('connection', (socket: Socket) => {

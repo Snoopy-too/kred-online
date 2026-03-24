@@ -4,7 +4,7 @@
 
 KRED Online is a multiplayer digital implementation of the KRED strategic board game. The project supports 3-5 players through three game phases: Player Selection, Drafting, and Campaign with Bureaucracy rounds.
 
-**Primary Objective:** ONLINE MULTIPLAYER KRED. Single-player mode exists only for testing game logic.
+**Primary Objective:** ONLINE MULTIPLAYER KRED. There is no single-player mode.
 
 ## Critical References
 

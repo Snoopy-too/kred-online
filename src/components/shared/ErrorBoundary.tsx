@@ -37,7 +37,17 @@ class ErrorBoundary extends React.Component<
 
   render(): React.ReactNode {
     if (this.state.hasError) {
-      return this.props.fallback;
+      return (
+        <div style={{ padding: 20, color: 'red', background: '#fff', margin: 10, borderRadius: 8 }}>
+          <h3>Error Loading Game</h3>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {this.state.error?.message}
+          </pre>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.8em', color: '#666' }}>
+            {this.state.error?.stack}
+          </pre>
+        </div>
+      );
     }
     return this.props.children;
   }
