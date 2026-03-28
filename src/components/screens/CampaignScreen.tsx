@@ -46,7 +46,7 @@ import {
 // ============================================================================
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation, calculateMoves, validateTileRequirementsWithImpossibleMoveExceptions } from "../../game";
-import { validatePieceMovement } from "../../rules";
+import { validatePieceMovement, areSeatsAdjacent } from "../../rules";
 import {
   getBureaucracyMenu,
   getAvailablePurchases,
@@ -132,6 +132,10 @@ interface CampaignScreenProps {
   onReceiverAcceptanceDecision?: (accepted: boolean) => void;
   onChallengerDecision?: (challenge: boolean) => void;
   onCorrectionComplete?: () => void;
+  tileRevealed?: boolean;
+  pendingReceiverReward?: boolean;
+  receiverAdvanceInProgress?: boolean;
+  onReceiverRewardChoice?: (choice: 'credibility' | 'advance') => void;
   tileRejected?: boolean;
   showMoveCheckResult?: boolean;
   moveCheckResult?: {
@@ -242,6 +246,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   onReceiverAcceptanceDecision,
   onChallengerDecision,
   onCorrectionComplete,
+  tileRevealed,
+  pendingReceiverReward,
+  receiverAdvanceInProgress,
+  onReceiverRewardChoice,
   tileRejected,
   showMoveCheckResult,
   moveCheckResult,
@@ -670,6 +678,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   const isReceiver = campaignRole === 'receiver';
   const isChallenger = campaignRole === 'challenger';
   const isCorrecting = campaignRole === 'correcting';
+  const isFreeAdvancer = campaignRole === 'freeAdvance';
   const isWaiting = campaignRole === 'waiting' || campaignRole === 'bystander';
 
   // Check if it's the current player's turn for a decision (accept/reject or challenge)
@@ -679,24 +688,37 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
   // Check if the mover's moves match the played tile (for receiver decision UI)
   const movesMatchTile = React.useMemo(() => {
-    if (!playedTile?.originalPieces || !playedTile?.tileId) return false;
+    if (!playedTile?.originalPieces || !playedTile?.tileId) {
+      console.log('[MOVESMATCH] Early return false - originalPieces:', !!playedTile?.originalPieces, 'tileId:', playedTile?.tileId);
+      return false;
+    }
     try {
+      const origPieces = playedTile.originalPieces;
+      const afterPieces = playedTile.piecesAfterMoves || pieces;
+      console.log('[MOVESMATCH] tileId:', playedTile.tileId, 'playerId:', playedTile.playerId);
+      console.log('[MOVESMATCH] originalPieces count:', origPieces.length, 'afterPieces count:', afterPieces.length);
+      console.log('[MOVESMATCH] piecesAfterMoves exists:', !!playedTile.piecesAfterMoves, 'using fallback pieces:', !playedTile.piecesAfterMoves);
       const calculatedMoves = calculateMoves(
-        playedTile.originalPieces,
-        playedTile.piecesAfterMoves || pieces,
-        playedTile.playerId
+        origPieces,
+        afterPieces,
+        playedTile.playerId,
+        playerCount,
+        areSeatsAdjacent
       );
+      console.log('[MOVESMATCH] calculatedMoves:', calculatedMoves.map(m => ({ type: m.moveType, from: m.fromLocationId, to: m.toLocationId, piece: m.pieceId })));
       const result = validateTileRequirementsWithImpossibleMoveExceptions(
         playedTile.tileId,
         calculatedMoves,
         playedTile.playerId,
-        playedTile.originalPieces,
-        playedTile.piecesAfterMoves || pieces,
+        origPieces,
+        afterPieces,
         players,
         playerCount
       );
+      console.log('[MOVESMATCH] result:', JSON.stringify(result));
       return result.isMet;
-    } catch {
+    } catch (e) {
+      console.error('[MOVESMATCH] Error:', e);
       return false;
     }
   }, [playedTile, pieces, players, playerCount]);
@@ -725,7 +747,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         const receiverName = nameById(playedTile?.receivingPlayerId || tileTransaction?.receiverId);
         return hasPlayedTileThisTurn 
           ? { text: `Waiting for ${receiverName} to respond...`, color: 'bg-yellow-600' }
-          : { text: 'Your turn — Move pieces and play a tile', color: 'bg-green-700' };
+          : { text: 'Move pieces and pass a tile.', color: 'bg-green-700' };
       }
       case 'receiver':
         return { text: 'You received a tile — Accept or Expose?', color: 'bg-blue-700' };
@@ -733,14 +755,26 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         return { text: 'Your turn to Challenge or Pass', color: 'bg-orange-700' };
       case 'correcting':
         return { text: 'Make the correct play as shown on the tile', color: 'bg-red-700' };
+      case 'freeAdvance':
+        return { text: 'Make your free Advance move!', color: 'bg-green-700' };
       case 'bystander':
-        return { text: 'Waiting for other players...', color: 'bg-gray-800' };
       case 'waiting':
       default:
+        if (gameState === 'PENDING_ACCEPTANCE') {
+          const receiverName = nameById(playedTile?.receivingPlayerId || tileTransaction?.receiverId);
+          return { text: `Waiting for ${receiverName} to respond...`, color: 'bg-yellow-600' };
+        }
+        if (gameState === 'PENDING_CHALLENGE') {
+          const challengerName = bystanders[bystanderIndex]?.id ? nameById(bystanders[bystanderIndex].id) : 'challenger';
+          return { text: `Waiting for ${challengerName} to respond...`, color: 'bg-yellow-600' };
+        }
         if (gameState === 'CAMPAIGN') {
           const moverIdx = moverPlayerIndex ?? currentPlayerIndex;
           const moverName = nameByIndex(moverIdx);
           return { text: `${moverName} is moving pieces...`, color: 'bg-gray-800' };
+        }
+        if (gameState === 'CORRECTION_REQUIRED' && receiverAdvanceInProgress) {
+          return { text: `Waiting for ${nameByIndex(currentPlayerIndex)} to make free Advance...`, color: 'bg-gray-800' };
         }
         return { text: 'Waiting...', color: 'bg-gray-800' };
     }
@@ -995,16 +1029,22 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               const showCorrectionView =
                 isPlayedTile && gameState === "CORRECTION_REQUIRED" && isPlacer;
 
+              // Tile is publicly revealed after expose or successful challenge
+              const showExposedView =
+                isPlayedTile && tileRevealed && boardTile.tile?.url;
+
               const isRevealed =
                 isPubliclyRevealed ||
                 showReceiverPrivateView ||
                 showPlacerPrivateView ||
                 showGiverReceiverView ||
-                showCorrectionView;
+                showCorrectionView ||
+                showExposedView;
 
               // During tile play workflow, show white back unless it's being viewed by giver/receiver
+              // Don't show white back if the tile has been exposed/challenged (should be face-up)
               const shouldShowWhiteBack =
-                isTilePlayedButNotYetAccepted && !showGiverReceiverView;
+                isTilePlayedButNotYetAccepted && !showGiverReceiverView && !showExposedView;
 
               const handleTileClick = () => {
                 if (canPlacerClickToView) {
@@ -1033,10 +1073,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                       : undefined
                   }
                   onClick={isTileClickable ? handleTileClick : undefined}
-                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 ${!isRevealed && !shouldShowWhiteBack
-                      ? ""
-                      : "bg-stone-100 p-1"
-                    }`}
+                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1`}
                   style={{
                     top: `${boardTile.position.top}%`,
                     left: `${boardTile.position.left}%`,
@@ -1054,8 +1091,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                     // Show white back for tile in play
                     <div className="w-full h-full bg-white rounded-lg border-2 border-gray-400 shadow-inner"></div>
                   ) : !isRevealed ? (
-                    // Show gray back for old workflow tiles
-                    <div className="w-full h-full bg-gray-700 rounded-lg border-2 border-white shadow-inner"></div>
+                    // Show white back for face-down tiles
+                    <div className="w-full h-full bg-white rounded-lg border-2 border-gray-300 shadow-inner"></div>
                   ) : (
                     // Show tile face for revealed tiles
                     <img
@@ -1156,9 +1193,11 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               // Only allow dragging pieces for:
               // - Mover during CAMPAIGN phase (before tile played)
               // - Correcting player during CORRECTION_REQUIRED
+              // - Receiver making their free Advance move
               const canDragPiece = 
                 (isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) || 
-                (isCorrecting && gameState === 'CORRECTION_REQUIRED');
+                (isCorrecting && gameState === 'CORRECTION_REQUIRED') ||
+                (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED');
 
               return (
                 <img
@@ -1382,6 +1421,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   : isReceiver ? "Tile Received"
                   : isChallenger ? "Challenge?"
                   : isCorrecting ? "Make Correction"
+                  : isFreeAdvancer ? "Free Advance"
                   : `${nameByIndex(currentPlayerIndex)}'s Turn`}
               </h2>
               {roleBanner && (
@@ -1391,8 +1431,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               )}
             </div>
 
-            {/* Action Buttons (only for mover / correcting player) */}
-            {(isMover || isCorrecting) && (
+            {/* Action Buttons (only for mover / correcting player / free advance receiver) */}
+            {(isMover || isCorrecting || isFreeAdvancer) && (
             <div id="campaign-action-buttons" className="flex flex-col gap-2">
               {(gameState === "TILE_PLAYED" ||
                 movedPiecesThisTurn.size > 0) &&
@@ -1423,7 +1463,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 }
                 className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
               >
-                End Turn
+                {isFreeAdvancer ? 'Complete Advance' : 'End Turn'}
               </button>
             </div>
             )}
@@ -1634,6 +1674,65 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             </div>
           </div>
         )}
+
+      {/* Receiver Reward Choice Modal (after exposing a dishonest play) */}
+      {pendingReceiverReward && onReceiverRewardChoice && 
+        currentPlayerId === (playedTile?.receivingPlayerId || tileTransaction?.receiverId) && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div className="bg-gray-800 border-2 border-green-500 rounded-lg p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-3xl font-bold text-green-400 mb-4 text-center">
+              Expose Successful!
+            </h2>
+            <p className="text-slate-200 text-lg mb-2 text-center leading-relaxed">
+              You exposed a dishonest play. Choose your reward:
+            </p>
+            {(() => {
+              const receiver = players.find(p => p.id === currentPlayerId);
+              const currentCred = receiver?.credibility ?? 0;
+              const maxRestore = Math.min(2, 3 - currentCred);
+              return (
+                <>
+                  {currentCred < 3 && (
+                    <p className="text-slate-400 text-sm mb-6 text-center italic">
+                      Credibility restore: {currentCred} → {currentCred + maxRestore} (up to 2 notches, max 3)
+                    </p>
+                  )}
+                  {currentCred >= 3 && (
+                    <p className="text-slate-400 text-sm mb-6 text-center italic">
+                      Your credibility is already full. Choose a free Advance!
+                    </p>
+                  )}
+                </>
+              );
+            })()}
+            <div className="flex gap-4 justify-center">
+              {(() => {
+                const receiver = players.find(p => p.id === currentPlayerId);
+                const currentCred = receiver?.credibility ?? 0;
+                if (currentCred >= 3) return null;
+                return (
+                  <button
+                    onClick={() => onReceiverRewardChoice('credibility')}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Restore Credibility
+                  </button>
+                );
+              })()}
+              <button
+                onClick={() => onReceiverRewardChoice('advance')}
+                className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+              >
+                Free Advance
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bystander Challenge Modal */}
       {isMyTurnForDecision && gameState === "PENDING_CHALLENGE" && (
@@ -2315,15 +2414,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         </div>
       )}
 
-      {showWaitingOverlay && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4">
-          <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 p-6 rounded-xl text-center shadow-2xl">
-            <h2 className="text-2xl font-bold text-slate-200 animate-pulse">
-              {waitingMessage}
-            </h2>
-          </div>
-        </div>
-      )}
+
 
       {/* Move Check Result Modal */}
       {showMoveCheckResult && moveCheckResult && (

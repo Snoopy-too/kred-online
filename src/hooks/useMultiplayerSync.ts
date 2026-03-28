@@ -40,7 +40,11 @@ export interface MultiplayerSyncProps {
   setTileTransaction?: (val: any) => void;
   setMoverPlayerIndex?: (val: number | null) => void;
   setCampaignRole?: (val: string | null) => void;
+  setTileRevealed?: (val: boolean) => void;
   setPiecesAtTurnStart?: (val: Piece[]) => void;
+  // Receiver reward (expose) sync
+  setPendingReceiverReward?: (val: boolean) => void;
+  setReceiverAdvanceInProgress?: (val: boolean) => void;
   // Take Advantage (challenger reward) sync
   setShowTakeAdvantageModal?: (val: boolean) => void;
   setTakeAdvantageChallengerId?: (val: number | null) => void;
@@ -74,7 +78,10 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
     setTileTransaction,
     setMoverPlayerIndex,
     setCampaignRole,
+    setTileRevealed,
     setPiecesAtTurnStart,
+    setPendingReceiverReward,
+    setReceiverAdvanceInProgress,
     setShowTakeAdvantageModal,
     setTakeAdvantageChallengerId,
     setTakeAdvantageChallengerCredibility,
@@ -142,7 +149,7 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
                   rotation: space.rotation,
                   placerId: 0, // Unknown in multiplayer context
                   ownerId: player.id,
-                  faceUp: false, // Default face-down (accepted tiles)
+                  faceUp: tile.faceUp || false, // Exposed/challenged tiles are face-up
                 });
               }
             });
@@ -173,7 +180,12 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
         setPieces(update.pieces);
       }
       if (update.boardTiles !== undefined) {
-        setBoardTiles(update.boardTiles);
+        // Preserve any temporary mp_boardtile_* entries (in-flight tile play)
+        // Server boardTiles is always empty — accepted tiles go to bank via bureaucracyTiles
+        setBoardTiles((prev: BoardTile[]) => {
+          const tempTiles = prev.filter((bt: BoardTile) => bt.id.startsWith('mp_boardtile_'));
+          return [...tempTiles];
+        });
       }
       if (update.playerIndex !== undefined && typeof setPlayerIndex === 'function') {
         setPlayerIndex(update.playerIndex);
@@ -234,8 +246,21 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
       if (update.campaignRole !== undefined && typeof setCampaignRole === 'function') {
         setCampaignRole(update.campaignRole);
       }
-      // Challenger reward modal sync
+      if (update.tileRevealed !== undefined && typeof setTileRevealed === 'function') {
+        setTileRevealed(update.tileRevealed);
+      }
+      // Receiver reward sync (after exposing a dishonest play)
+      if (update.pendingReceiverReward !== undefined && typeof setPendingReceiverReward === 'function') {
+        setPendingReceiverReward(update.pendingReceiverReward);
+        console.log('[MULTIPLAYER] Syncing pendingReceiverReward:', update.pendingReceiverReward);
+      }
+      if (update.receiverAdvanceInProgress !== undefined && typeof setReceiverAdvanceInProgress === 'function') {
+        setReceiverAdvanceInProgress(update.receiverAdvanceInProgress);
+        console.log('[MULTIPLAYER] Syncing receiverAdvanceInProgress:', update.receiverAdvanceInProgress);
+      }
+      // Challenger reward modal sync — only show to the challenger
       if (update.pendingChallengerReward && update.challengerId !== undefined) {
+        const isChallenger = playerIndex !== undefined && (playerIndex + 1) === update.challengerId;
         // Find the challenger player to get their credibility
         const challengerPlayer = update.players?.find((p: any) => p.id === update.challengerId);
         if (typeof setTakeAdvantageChallengerId === 'function') {
@@ -244,10 +269,10 @@ export function useMultiplayerSync(props: MultiplayerSyncProps) {
         if (typeof setTakeAdvantageChallengerCredibility === 'function') {
           setTakeAdvantageChallengerCredibility(challengerPlayer?.credibility ?? 0);
         }
-        if (typeof setShowTakeAdvantageModal === 'function') {
+        if (isChallenger && typeof setShowTakeAdvantageModal === 'function') {
           setShowTakeAdvantageModal(true);
         }
-        console.log('[MULTIPLAYER] Challenger reward pending for player', update.challengerId);
+        console.log('[MULTIPLAYER] Challenger reward pending for player', update.challengerId, isChallenger ? '(this player)' : '(other player)');
       } else if (update.pendingChallengerReward === false) {
         // Reward was processed, clean up modal
         if (typeof setShowTakeAdvantageModal === 'function') {

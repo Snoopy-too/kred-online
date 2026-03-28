@@ -81,6 +81,9 @@ export interface MultiplayerProps {
     selectAdvantageTiles: (tileIds: string[]) => Promise<void>;
     purchaseAdvantage: (purchase: any) => Promise<void>;
 
+    // Receiver reward (after expose)
+    receiverRewardChoice: (choice: 'credibility' | 'advance') => Promise<void>;
+
     // Bureaucracy
     purchaseBureaucracy: (purchase: any) => Promise<void>;
 
@@ -490,6 +493,12 @@ const App: React.FC<MultiplayerProps> = ({
   const [livePlayerIndex, setLivePlayerIndex] = useState<number | undefined>(playerIndex);
   // Campaign role assigned by server (mover, receiver, challenger, bystander, correcting, waiting)
   const [campaignRole, setCampaignRole] = useState<string | null>(null);
+  // Whether the played tile has been revealed (exposed or successfully challenged)
+  const [tileRevealed, setTileRevealed] = useState<boolean>(false);
+  // Whether the receiver has a pending reward choice (after exposing dishonest play)
+  const [pendingReceiverReward, setPendingReceiverReward] = useState<boolean>(false);
+  // Whether the receiver's free Advance action is in progress
+  const [receiverAdvanceInProgress, setReceiverAdvanceInProgress] = useState<boolean>(false);
   // Track which player is the mover for this turn
   const [moverPlayerIndex, setMoverPlayerIndex] = useState<number | null>(null);
 
@@ -518,6 +527,9 @@ const App: React.FC<MultiplayerProps> = ({
     setTileTransaction,
     setMoverPlayerIndex,
     setCampaignRole,
+    setTileRevealed,
+    setPendingReceiverReward,
+    setReceiverAdvanceInProgress,
     setPiecesAtTurnStart,
     setShowTakeAdvantageModal,
     setTakeAdvantageChallengerId,
@@ -532,8 +544,16 @@ const App: React.FC<MultiplayerProps> = ({
       const initialPieces = initializeCampaignPieces(players.length);
       setPieces(initialPieces);
       setPiecesAtTurnStart(initialPieces);
+      // Send initial pieces to server so it has the correct baseline for move comparison
+      if (socket && roomId) {
+        socket.emit('kred:campaign:initPieces', { roomId, pieces: initialPieces }, (res: { success: boolean }) => {
+          if (res?.success) {
+            console.log('[MULTIPLAYER] Server received initial campaign pieces');
+          }
+        });
+      }
     }
-  }, [isMultiplayer, gameState, pieces.length, players.length, setPieces, setPiecesAtTurnStart]);
+  }, [isMultiplayer, gameState, pieces.length, players.length, setPieces, setPiecesAtTurnStart, socket, roomId]);
 
   // ============================================================================
   // HANDLER FACTORIES - Created via factory pattern for testability
@@ -1373,34 +1393,12 @@ const App: React.FC<MultiplayerProps> = ({
   // Wrap turn ending for multiplayer
   const wrappedEndTurn = React.useCallback(async () => {
     if (isMultiplayer && multiplayerActions) {
-      // During CORRECTION_REQUIRED, validate that moves match the tile before allowing End Turn
-      if (gameState === 'CORRECTION_REQUIRED' && playedTile) {
-        const baselinePieces = playedTile.originalPieces;
-        const calculatedMoves = calculateMoves(
-          baselinePieces,
-          pieces,
-          playedTile.playerId
-        );
-        const tileRequirements = validateTileRequirementsWithImpossibleMoveExceptions(
-          playedTile.tileId,
-          calculatedMoves,
-          playedTile.playerId,
-          baselinePieces,
-          pieces,
-          players,
-          playerCount
-        );
-        if (!tileRequirements.allMet) {
-          alert('Your moves do not match the tile requirements. Please make the correct moves before ending your turn.');
-          return;
-        }
-      }
       console.log('[MULTIPLAYER] Ending turn via server');
       try {
         await multiplayerActions.endTurn();
       } catch (error) {
         console.error('[MULTIPLAYER] End turn failed:', error);
-        alert(`Failed to end turn: ${error.message}`);
+        showAlert('Invalid Correction', error.message, 'error');
       }
     } else {
       // Single-player mode
@@ -1427,6 +1425,22 @@ const App: React.FC<MultiplayerProps> = ({
       handleReceiverAcceptanceDecision(accepted);
     }
   }, [isMultiplayer, multiplayerActions, handleReceiverAcceptanceDecision]);
+
+  /**
+   * Handle receiver reward choice after exposing a dishonest play
+   * Per manual: Receiver restores up to 2 credibility notches OR gets a free Advance
+   */
+  const handleReceiverRewardChoice = React.useCallback(async (choice: 'credibility' | 'advance') => {
+    if (isMultiplayer && multiplayerActions) {
+      console.log('[MULTIPLAYER] Receiver reward choice:', choice);
+      try {
+        await multiplayerActions.receiverRewardChoice(choice);
+      } catch (error: any) {
+        console.error('[MULTIPLAYER] Receiver reward choice failed:', error);
+        alert(`Failed to process reward choice: ${error.message}`);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions]);
 
   /**
    * Handle challenger's decision (challenge or pass)
@@ -3840,6 +3854,10 @@ const App: React.FC<MultiplayerProps> = ({
             onContinueAfterChallenge={handleContinueAfterChallenge}
             onPlacerViewTile={handlePlacerViewTile}
             onSetGiveReceiverViewingTileId={setGiveReceiverViewingTileId}
+            tileRevealed={tileRevealed}
+            pendingReceiverReward={pendingReceiverReward}
+            receiverAdvanceInProgress={receiverAdvanceInProgress}
+            onReceiverRewardChoice={handleReceiverRewardChoice}
             playedTile={playedTile}
             receiverAcceptance={receiverAcceptance}
             onReceiverAcceptanceDecision={wrappedReceiverDecision}

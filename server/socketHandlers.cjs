@@ -11,6 +11,232 @@ function shuffleArray(array) {
   return shuffled;
 }
 
+// Tile requirements for correction validation (tile ID → required move types)
+const TILE_REQUIREMENTS = {
+  '01': ['REMOVE', 'ADVANCE'],
+  '02': ['REMOVE', 'ADVANCE'],
+  '03': ['INFLUENCE', 'ADVANCE'],
+  '04': ['INFLUENCE', 'ADVANCE'],
+  '05': ['ADVANCE'],
+  '06': ['ADVANCE'],
+  '07': ['ASSIST', 'ADVANCE'],
+  '08': ['ASSIST', 'ADVANCE'],
+  '09': ['REMOVE', 'ORGANIZE'],
+  '10': ['REMOVE', 'ORGANIZE'],
+  '11': ['INFLUENCE'],
+  '12': ['ORGANIZE'],
+  '13': ['ASSIST', 'ORGANIZE'],
+  '14': ['ASSIST', 'ORGANIZE'],
+  '15': ['REMOVE'],
+  '16': ['REMOVE'],
+  '17': ['INFLUENCE', 'WITHDRAW'],
+  '18': ['INFLUENCE', 'WITHDRAW'],
+  '19': ['WITHDRAW'],
+  '20': ['WITHDRAW'],
+  '21': ['WITHDRAW'],
+  '22': ['ASSIST', 'WITHDRAW'],
+  '23': ['ASSIST', 'WITHDRAW'],
+  '24': ['ASSIST', 'WITHDRAW'],
+  'BLANK': [],
+};
+
+// Get tile ID string from tile object (e.g. { id: 19 } → '19')
+function getTileIdFromTile(tile) {
+  if (!tile) return null;
+  if (tile.id === 25) return 'BLANK';
+  return String(tile.id).padStart(2, '0');
+}
+
+// Determine the move type from source/destination locations
+function determineMoveTypeServer(fromLocationId, toLocationId, playerId) {
+  if (!fromLocationId || !toLocationId) return null;
+
+  // REMOVE: opponent's seat → community
+  if (fromLocationId.includes('_seat') &&
+      !fromLocationId.includes(`p${playerId}_`) &&
+      toLocationId.includes('community')) {
+    return 'REMOVE';
+  }
+
+  // INFLUENCE:
+  // A) opponent's rostrum → any rostrum (own or other opponent's)
+  // B) opponent's seat → any other seat (own or opponent's)
+  if (fromLocationId.includes('_rostrum') &&
+      !fromLocationId.includes(`p${playerId}_`) &&
+      toLocationId.includes('_rostrum')) {
+    return 'INFLUENCE';
+  }
+  if (fromLocationId.includes('_seat') &&
+      !fromLocationId.includes(`p${playerId}_`) &&
+      toLocationId.includes('_seat')) {
+    return 'INFLUENCE';
+  }
+
+  // ASSIST: community → opponent's seat
+  if (fromLocationId.includes('community') &&
+      toLocationId.includes('_seat') &&
+      !toLocationId.includes(`p${playerId}_`)) {
+    return 'ASSIST';
+  }
+
+  // ADVANCE: community→own seat, own seat→own rostrum, own rostrum1→own office
+  if ((fromLocationId.includes('community') && toLocationId.includes(`p${playerId}_seat`)) ||
+      (fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes(`p${playerId}_rostrum`)) ||
+      (fromLocationId === `p${playerId}_rostrum1` && toLocationId === `p${playerId}_office`)) {
+    return 'ADVANCE';
+  }
+
+  // WITHDRAW: own seat → community, own rostrum → own seat, own office → own rostrum
+  if ((fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes('community')) ||
+      (fromLocationId.includes(`p${playerId}_rostrum`) && toLocationId.includes(`p${playerId}_seat`)) ||
+      (fromLocationId === `p${playerId}_office` && toLocationId.includes(`p${playerId}_rostrum`))) {
+    return 'WITHDRAW';
+  }
+
+  // ORGANIZE: own rostrum↔rostrum or own seat↔seat
+  if ((fromLocationId.includes(`p${playerId}_rostrum`) && toLocationId.includes(`p${playerId}_rostrum`)) ||
+      (fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes(`p${playerId}_seat`))) {
+    return 'ORGANIZE';
+  }
+
+  return null;
+}
+
+// Check if a move type is possible given the current board state
+function isMoveTypePossible(moveType, moverPlayerId, pieces) {
+  const moverPrefix = `p${moverPlayerId}_`;
+
+  switch (moveType) {
+    case 'REMOVE':
+      // Any opponent has a Mark in their seat
+      return pieces.some(p =>
+        p.name?.toLowerCase() === 'mark' &&
+        p.locationId?.includes('_seat') &&
+        !p.locationId?.includes(moverPrefix)
+      );
+
+    case 'ADVANCE':
+      // Mover has pieces that can move up the hierarchy
+      return pieces.some(p => {
+        if (!p.locationId) return false;
+        // Community → own seat
+        if (p.locationId.includes('community')) return true;
+        // Own seat → own rostrum
+        if (p.locationId.includes(`${moverPrefix}seat`)) return true;
+        // Own rostrum1 → office (if office not occupied)
+        if (p.locationId === `${moverPrefix}rostrum1`) {
+          return !pieces.some(op => op.locationId === `${moverPrefix}office`);
+        }
+        return false;
+      });
+
+    case 'WITHDRAW':
+      // Mover has pieces on their own seat, rostrum, or office
+      return pieces.some(p =>
+        p.locationId?.includes(`${moverPrefix}seat`) ||
+        p.locationId?.includes(`${moverPrefix}rostrum`) ||
+        p.locationId === `${moverPrefix}office`
+      );
+
+    case 'INFLUENCE':
+      // Any opponent has a piece on their rostrum or seat
+      return pieces.some(p =>
+        (p.locationId?.includes('_rostrum') || p.locationId?.includes('_seat')) &&
+        !p.locationId?.includes(moverPrefix)
+      );
+
+    case 'ASSIST':
+      // Pieces in community AND some opponent seat exists
+      return pieces.some(p => p.locationId?.includes('community'));
+
+    case 'ORGANIZE':
+      // Mover has any pieces on their own seat or rostrum
+      return pieces.some(p =>
+        p.locationId?.includes(`${moverPrefix}seat`) ||
+        p.locationId?.includes(`${moverPrefix}rostrum`)
+      );
+
+    default:
+      return false;
+  }
+}
+
+// Validate that correction moves match tile requirements
+function validateCorrectionMoves(state) {
+  const tile = state.playedTile?.tile || state.tileTransaction?.tile;
+  if (!tile) return { valid: true };
+
+  const tileId = getTileIdFromTile(tile);
+  if (!tileId) return { valid: true };
+
+  const requiredMoves = TILE_REQUIREMENTS[tileId];
+  if (!requiredMoves || requiredMoves.length === 0) return { valid: true };
+
+  const moverId = state.playedTile?.playerId;
+  const moverPlayer = state.players.find(p => p.id === moverId);
+  if (!moverPlayer) return { valid: true };
+
+  // Use the pieces from before correction (the restored original pieces)
+  const originalPieces = state.playedTile?.originalPieces || state.piecesAtTurnStart || [];
+
+  // Determine what moves the player actually made during correction
+  const executedMoveTypes = new Set();
+
+  if (state.movedPiecesThisTurn && state.movedPiecesThisTurn.length > 0) {
+    for (const pieceId of state.movedPiecesThisTurn) {
+      const originalPiece = originalPieces.find(p => p.id === pieceId);
+      const currentPiece = state.pieces.find(p => p.id === pieceId);
+
+      if (originalPiece && currentPiece) {
+        const moveType = determineMoveTypeServer(
+          originalPiece.locationId,
+          currentPiece.locationId,
+          moverPlayer.id
+        );
+        if (moveType) {
+          executedMoveTypes.add(moveType);
+        }
+      }
+    }
+  }
+
+  console.log(`[KRED] Correction validation - Tile ${tileId} requires: [${requiredMoves}], executed: [${[...executedMoveTypes]}]`);
+
+  // Check for wrong move types (moves not on the tile)
+  const wrongMoves = [];
+  for (const executed of executedMoveTypes) {
+    if (!requiredMoves.includes(executed)) {
+      wrongMoves.push(executed);
+    }
+  }
+
+  if (wrongMoves.length > 0) {
+    return {
+      valid: false,
+      error: `Tile requires: ${requiredMoves.join(' + ')}. You made a ${wrongMoves.join(', ')} move which is not on this tile. Pieces have been reset — try again.`
+    };
+  }
+
+  // Check for missing required moves (only if they were possible)
+  const missingMoves = [];
+  for (const required of requiredMoves) {
+    if (!executedMoveTypes.has(required)) {
+      if (isMoveTypePossible(required, moverPlayer.id, originalPieces)) {
+        missingMoves.push(required);
+      }
+    }
+  }
+
+  if (missingMoves.length > 0) {
+    return {
+      valid: false,
+      error: `Tile requires: ${requiredMoves.join(' + ')}. Missing: ${missingMoves.join(', ')}. Pieces have been reset — try again.`
+    };
+  }
+
+  return { valid: true };
+}
+
 // Helper function to create and deal tiles to players
 function createAndDealTiles(playerCount, playerNames = []) {
   // Create all 24 standard tiles
@@ -111,11 +337,16 @@ function filterStateForPlayer(fullState, playerIndex) {
       
       // Tile is revealed to all when:
       // - Receiver exposed the mover (wasExposed = true)
-      // - A challenge was made (challengeSucceeded !== null/undefined)
+      // - Any challenge was made (challengeWasMade = true) - per manual: "the tile is turned over for all to see"
       // - During CORRECTION_REQUIRED (everyone needs to see the tile for verification)
       const tileRevealed = fullState.wasExposed || 
-        fullState.challengeSucceeded !== undefined && fullState.challengeSucceeded !== null ||
-        (fullState.phase === 'CORRECTION_REQUIRED');
+        fullState.challengeWasMade === true ||
+        fullState.phase === 'CORRECTION_REQUIRED';
+      
+      // During PENDING_CHALLENGE, the current bystander needs tile data to evaluate the challenge
+      const isCurrentChallenger = fullState.phase === 'PENDING_CHALLENGE' &&
+        fullState.bystanders && fullState.bystanders[fullState.bystanderIndex || 0] &&
+        fullState.bystanders[fullState.bystanderIndex || 0].id === thisPlayerId;
       
       if (tileRevealed) {
         // Everyone sees the tile during exposure/challenge/correction
@@ -125,6 +356,9 @@ function filterStateForPlayer(fullState, playerIndex) {
         filteredState.playedTile = fullState.playedTile;
       } else if (isReceiver && receiverHasCredibility) {
         // Receiver can see the tile if they have credibility
+        filteredState.playedTile = fullState.playedTile;
+      } else if (isCurrentChallenger) {
+        // Current challenger needs full playedTile data to compute challenge result
         filteredState.playedTile = fullState.playedTile;
       } else {
         // Other players: know a tile was played but not which one
@@ -143,6 +377,9 @@ function filterStateForPlayer(fullState, playerIndex) {
 // Helper: Build broadcast data for a specific player (filtered)
 function buildFilteredBroadcast(state, playerIndex) {
   const filtered = filterStateForPlayer(state, playerIndex);
+  // Only send pendingChallengerReward=true to the actual challenger
+  const thisPlayerId = state.players[playerIndex]?.id;
+  const isThisPlayerChallenger = state.pendingChallengerReward && thisPlayerId === state.challengerId;
   return {
     gameState: {
       players: filtered.players,
@@ -160,7 +397,10 @@ function buildFilteredBroadcast(state, playerIndex) {
       movedPiecesThisTurn: filtered.movedPiecesThisTurn || [],
       moverPlayerIndex: filtered.moverPlayerIndex,
       campaignRole: getCampaignRole(state, playerIndex),
-      pendingChallengerReward: filtered.pendingChallengerReward || false,
+      tileRevealed: !!(state.wasExposed || state.challengeWasMade),
+      pendingReceiverReward: filtered.pendingReceiverReward || false,
+      receiverAdvanceInProgress: !!state.receiverAdvanceInProgress,
+      pendingChallengerReward: isThisPlayerChallenger,
       challengerId: filtered.challengerId || null,
     }
   };
@@ -183,6 +423,12 @@ function getCampaignRole(state, playerIndex) {
   // CORRECTION_REQUIRED must be checked before general playedTile check
   // so the mover gets 'correcting' instead of 'mover'
   if (state.phase === 'CORRECTION_REQUIRED') {
+    // Free Advance in progress: receiver is active, mover waits
+    if (state.receiverAdvanceInProgress) {
+      const receiverId = state.playedTile?.receivingPlayerId;
+      if (playerId === receiverId) return 'freeAdvance';
+      return 'waiting';
+    }
     if (state.playedTile && playerId === state.playedTile.playerId) return 'correcting';
     return 'waiting';
   }
@@ -249,16 +495,31 @@ async function broadcastFilteredState(io, roomId, state, db) {
 // Receiver becomes the next mover
 function finalizeCampaignTurn(state) {
   const receiverId = state.playedTile?.receivingPlayerId;
+  const moverId = state.playedTile?.playerId;
   const tile = state.playedTile?.tile || state.tileTransaction?.tile;
+  const tileId = state.playedTile?.tileId;
   
-  // Add tile to receiver's bureaucracyTiles (face-down = counts as funding)
+  // Add tile to receiver's bureaucracyTiles
   if (receiverId && tile) {
     const receiver = state.players.find(p => p.id === receiverId);
     if (receiver) {
       if (!receiver.bureaucracyTiles) receiver.bureaucracyTiles = [];
-      receiver.bureaucracyTiles.push(tile);
+      if (state.wasExposed) {
+        // Exposed by receiver: face-up, no funding value
+        receiver.bureaucracyTiles.push({ ...tile, faceUp: true, noFunding: true });
+      } else if (state.challengeSucceeded && !state.receiverHadNoCredibility) {
+        // Challenge succeeded but receiver had credibility (could see tile): face-up, no funding
+        receiver.bureaucracyTiles.push({ ...tile, faceUp: true, noFunding: true });
+      } else {
+        // Normal acceptance OR challenge succeeded but receiver had 0 credibility:
+        // face-down, counts as funding
+        receiver.bureaucracyTiles.push(tile);
+      }
     }
   }
+  
+  // Clear boardTiles — accepted tiles live in bureaucracyTiles (bank), not on the board
+  state.boardTiles = [];
   
   // Receiver becomes next mover
   const receiverIndex = state.players.findIndex(p => p.id === receiverId);
@@ -267,17 +528,25 @@ function finalizeCampaignTurn(state) {
   }
   
   // Check if all players have used all their tiles - if so, transition to Bureaucracy
-  const tilesPerPlayer = Math.floor(24 / state.playerCount); // Standard: 24 tiles / N players
-  const allTilesPlayed = state.players.every(p => 
-    (p.hand?.length || 0) === 0 && 
-    (p.bureaucracyTiles?.length || 0) >= tilesPerPlayer
-  );
+  const allTilesPlayed = state.players.every(p => (p.hand?.length || 0) === 0);
   
   if (allTilesPlayed) {
     state.phase = 'BUREAUCRACY';
     console.log('[KRED] All tiles played - transitioning to BUREAUCRACY');
   } else {
     state.phase = 'CAMPAIGN';
+    // If current player has no tiles in hand, skip to next player who does
+    const current = state.players[state.currentPlayerIndex];
+    if ((current?.hand?.length || 0) === 0) {
+      for (let i = 1; i < state.playerCount; i++) {
+        const nextIdx = (state.currentPlayerIndex + i) % state.playerCount;
+        if ((state.players[nextIdx]?.hand?.length || 0) > 0) {
+          console.log(`[KRED] Player ${current.name} has no tiles - skipping to player ${state.players[nextIdx].name}`);
+          state.currentPlayerIndex = nextIdx;
+          break;
+        }
+      }
+    }
   }
   
   // Reset turn state
@@ -291,9 +560,14 @@ function finalizeCampaignTurn(state) {
   state.receiverAccepted = null;
   state.wasExposed = false;
   state.challengeSucceeded = false;
+  state.challengeWasMade = false;
   state.challengerId = null;
   state.moverMustWithdraw = false;
   state.moverPlayerIndex = null;
+  state.moverCredibilityAtTurnStart = null;
+  state.pendingReceiverReward = false;
+  state.receiverFreeAdvancePending = false;
+  state.receiverAdvanceInProgress = false;
 }
 
 // Room initialization lock to prevent race conditions
@@ -701,28 +975,32 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const fullState = gameState.length > 0 ? JSON.parse(gameState[0].game_state) : null;
       
-      // Filter state for this specific player (hide other hands during drafting)
-      const filteredState = (fullState && typeof playerIndex === 'number') 
-        ? filterStateForPlayer(fullState, playerIndex)
-        : fullState;
-      
-      // Add campaign role for the requesting player
-      if (filteredState && typeof playerIndex === 'number') {
-        filteredState.campaignRole = getCampaignRole(fullState, playerIndex);
+      // Use buildFilteredBroadcast for campaign phases so the initial state
+      // has the same shape as regular state updates (includes tileRevealed, etc.)
+      // For non-campaign phases, use raw filtered state to preserve phase-specific fields
+      const campaignPhases = ['CAMPAIGN', 'TILE_PLAYED', 'PENDING_ACCEPTANCE', 'PENDING_CHALLENGE', 'CORRECTION_REQUIRED'];
+      let initialGameState;
+      if (fullState && typeof playerIndex === 'number' && campaignPhases.includes(fullState.phase)) {
+        const broadcast = buildFilteredBroadcast(fullState, playerIndex);
+        initialGameState = broadcast.gameState;
+      } else if (fullState && typeof playerIndex === 'number') {
+        initialGameState = filterStateForPlayer(fullState, playerIndex);
+      } else {
+        initialGameState = fullState;
       }
       
       console.log(`[KRED] Sending filtered state for room ${roomId}:`, {
         playerCount: players[0].player_count,
-        hasState: !!filteredState,
-        playersInState: filteredState?.players?.length || 0,
-        phase: filteredState?.phase,
+        hasState: !!initialGameState,
+        playersInState: initialGameState?.players?.length || 0,
+        phase: initialGameState?.phase,
         requestingPlayerIndex: playerIndex
       });
       
       callback({ 
         success: true, 
         playerCount: players[0].player_count,
-        initialGameState: filteredState
+        initialGameState
       });
     } catch (error) {
       console.error('[KRED] Error getting state:', error);
@@ -733,6 +1011,46 @@ module.exports = function setupKREDHandlers(io, socket, db) {
   // ============================================================================
   // CAMPAIGN PHASE HANDLERS
   // ============================================================================
+  
+  // Receive initial campaign pieces from client
+  // This ensures the server has piece positions BEFORE any moves are made
+  socket.on('kred:campaign:initPieces', async (data, callback) => {
+    const { roomId, pieces } = data;
+    
+    try {
+      if (!pieces || !pieces.length) {
+        return callback({ success: false, error: 'No pieces provided' });
+      }
+      
+      const [gameState] = await db.query(
+        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
+        [roomId.toLowerCase()]
+      );
+      
+      if (gameState.length === 0) {
+        return callback({ success: false, error: 'Game not found' });
+      }
+      
+      const state = JSON.parse(gameState[0].game_state);
+      
+      // Only set if server pieces are empty (first client to send wins)
+      if (!state.pieces || state.pieces.length === 0) {
+        state.pieces = pieces.map(p => ({...p}));
+        state.piecesAtTurnStart = pieces.map(p => ({...p}));
+        
+        await db.query(
+          `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
+          [JSON.stringify(state), roomId.toLowerCase()]
+        );
+        console.log(`[KRED] Initialized ${pieces.length} campaign pieces for room ${roomId}`);
+      }
+      
+      callback({ success: true });
+    } catch (error) {
+      console.error('[KRED] Error initializing campaign pieces:', error);
+      callback({ success: false, error: error.message });
+    }
+  });
   
   // Play a tile to another player
   socket.on('kred:campaign:playTile', async (data, callback) => {
@@ -770,20 +1088,33 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const player = state.players[playerIndex];
       
+      // Validate receiver eligibility
+      const receiver = state.players.find(p => p.id === targetPlayerId);
+      if (!receiver) {
+        return callback({ success: false, error: 'Receiver not found' });
+      }
+      if ((receiver.hand?.length || 0) === 0) {
+        return callback({ success: false, error: 'Cannot pass a tile to a player with no hand.' });
+      }
+      const tilesPerPlayer = Math.floor(24 / state.playerCount);
+      if ((receiver.bureaucracyTiles?.length || 0) >= tilesPerPlayer) {
+        return callback({ success: false, error: 'Cannot pass a tile to a player whose bank is full.' });
+      }
+
       // Find and remove tile from hand
       const tileIndex = player.hand.findIndex(t => t.id === tileId || t.id === parseInt(tileId));
       if (tileIndex === -1) {
         return callback({ success: false, error: 'Tile not in hand' });
       }
-      
+
       const tile = player.hand.splice(tileIndex, 1)[0];
-      
+
       // Use piecesAtTurnStart as the baseline for comparison
       // This was captured at the START of the mover's turn, before any moves
       const originalPieces = state.piecesAtTurnStart 
         ? state.piecesAtTurnStart.map(p => ({...p}))
         : state.pieces.map(p => ({...p}));
-      
+
       // Store the played tile with both snapshots for challenge comparison
       state.playedTile = {
         tileId: tileId.toString().padStart(2, '0'),
@@ -795,20 +1126,21 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         piecesAfterMoves: state.pieces.map(p => ({...p})), // Board state AFTER mover moved pieces
         tile: tile, // The actual tile object
       };
-      
+
       state.hasPlayedTileThisTurn = true;
       state.moverPlayerIndex = playerIndex; // Track who the mover was
-      
+      state.moverCredibilityAtTurnStart = player.credibility; // Track credibility at turn start for challenge rules
+
       // Update phase to PENDING_ACCEPTANCE
       state.phase = 'PENDING_ACCEPTANCE';
-      
+
       // Store transaction info for the workflow
       state.tileTransaction = {
         placerId: player.id,
         receiverId: targetPlayerId,
         tile: tile
       };
-      
+
       // Switch to receiving player
       const receiverIndex = state.players.findIndex(p => p.id === targetPlayerId);
       if (receiverIndex !== -1) {
@@ -816,10 +1148,39 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       }
       
       // Check if receiver has 0 credibility - they must accept without viewing
+      // Per manual: "If the Receiver has no remaining Credibility, skip to 'The Challenge'."
       const receiver = state.players.find(p => p.id === targetPlayerId);
       if (receiver && receiver.credibility === 0) {
-        console.log(`[KRED] Receiver (player ${targetPlayerId}) has 0 credibility - must accept`);
-        // Note: Client will handle showing appropriate UI
+        console.log(`[KRED] Receiver (player ${targetPlayerId}) has 0 credibility - auto-accepting, skip to challenge phase`);
+        state.phase = 'PENDING_CHALLENGE';
+        state.receiverAccepted = true;
+        state.receiverHadNoCredibility = true;
+        
+        // Calculate bystanders (clockwise from receiver, excluding mover and receiver)
+        const bystanderPlayers = [];
+        for (let i = 1; i < state.playerCount; i++) {
+          const idx = (receiverIndex + i) % state.playerCount;
+          const bp = state.players[idx];
+          if (bp.id !== player.id && bp.id !== targetPlayerId) {
+            if (bp.credibility > 0) {
+              bystanderPlayers.push(bp);
+            }
+          }
+        }
+        
+        state.bystanders = bystanderPlayers;
+        state.bystanderIndex = 0;
+        
+        if (bystanderPlayers.length > 0) {
+          const firstBystanderIndex = state.players.findIndex(
+            p => p.id === bystanderPlayers[0].id
+          );
+          state.currentPlayerIndex = firstBystanderIndex;
+          console.log(`[KRED] ${bystanderPlayers.length} bystanders can challenge. First: player ${firstBystanderIndex}`);
+        } else {
+          console.log(`[KRED] No bystanders can challenge - finalizing tile play`);
+          finalizeCampaignTurn(state);
+        }
       }
       
       // Save state
@@ -930,10 +1291,58 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       const state = JSON.parse(gameState[0].game_state);
       
       if (state.phase === 'CORRECTION_REQUIRED') {
-        // Mover finished making the correct play after exposure/challenge
-        // Now finalize the turn: receiver becomes next mover
-        console.log(`[KRED] Correction complete - finalizing turn`);
-        finalizeCampaignTurn(state);
+        if (state.receiverAdvanceInProgress) {
+          // Receiver finished their free Advance move
+          console.log(`[KRED] Receiver free Advance complete - finalizing turn`);
+          state.receiverAdvanceInProgress = false;
+          finalizeCampaignTurn(state);
+        } else if (state.receiverFreeAdvancePending) {
+          // Mover finished correction — validate before proceeding
+          const validation = validateCorrectionMoves(state);
+          if (!validation.valid) {
+            console.log(`[KRED] Correction validation failed: ${validation.error}`);
+            // Auto-reset pieces to original positions
+            if (state.playedTile?.originalPieces) {
+              state.pieces = state.playedTile.originalPieces.map(p => ({...p}));
+            }
+            state.movedPiecesThisTurn = [];
+            await db.query(
+              `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
+              [JSON.stringify(state), roomId.toLowerCase()]
+            );
+            await broadcastFilteredState(io, roomId, state, db);
+            return callback({ success: false, error: validation.error });
+          }
+          console.log(`[KRED] Correction complete - receiver gets free Advance`);
+          state.receiverFreeAdvancePending = false;
+          state.receiverAdvanceInProgress = true;
+          state.movedPiecesThisTurn = [];
+          // Switch to receiver as active player
+          const receiverId = state.playedTile?.receivingPlayerId;
+          const receiverIndex = state.players.findIndex(p => p.id === receiverId);
+          if (receiverIndex !== -1) {
+            state.currentPlayerIndex = receiverIndex;
+          }
+        } else {
+          // Mover finished making the correct play — validate before finalizing
+          const validation = validateCorrectionMoves(state);
+          if (!validation.valid) {
+            console.log(`[KRED] Correction validation failed: ${validation.error}`);
+            // Auto-reset pieces to original positions
+            if (state.playedTile?.originalPieces) {
+              state.pieces = state.playedTile.originalPieces.map(p => ({...p}));
+            }
+            state.movedPiecesThisTurn = [];
+            await db.query(
+              `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
+              [JSON.stringify(state), roomId.toLowerCase()]
+            );
+            await broadcastFilteredState(io, roomId, state, db);
+            return callback({ success: false, error: validation.error });
+          }
+          console.log(`[KRED] Correction complete - finalizing turn`);
+          finalizeCampaignTurn(state);
+        }
       } else if (state.phase === 'CAMPAIGN') {
         // Edge case: mover explicitly ends turn without playing a tile
         // This shouldn't normally happen but handle gracefully
@@ -1028,8 +1437,9 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       } else {
         // EXPOSED (Rejected): Receiver exposes the dishonest tile
         // Per manual:
-        // - Receiver restores up to 2 credibility OR gets a free Advance
+        // - Receiver restores up to 2 credibility OR gets a free Advance (choice pending)
         // - Mover returns pieces to original, makes play per tile, incurs 1 credibility notch
+        // - Tile placed face-up in receiver's bank (no funding value)
         
         state.phase = 'CORRECTION_REQUIRED';
         state.receiverAccepted = false;
@@ -1043,13 +1453,9 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         // Clear moved pieces so mover can make fresh moves
         state.movedPiecesThisTurn = [];
         
-        // Receiver gains up to 2 credibility
-        const receiver = state.players.find(p => p.id === receiverId);
-        if (receiver) {
-          const oldCred = receiver.credibility;
-          receiver.credibility = Math.min(3, receiver.credibility + 2);
-          console.log(`[KRED] Receiver credibility: ${oldCred} → ${receiver.credibility}`);
-        }
+        // Per manual: Receiver reward is a CHOICE - restore up to 2 notches OR free Advance
+        // Mark as pending so client can show choice UI
+        state.pendingReceiverReward = true;
         
         // Mover loses 1 credibility
         const mover = state.players.find(p => p.id === moverId);
@@ -1058,14 +1464,13 @@ module.exports = function setupKREDHandlers(io, socket, db) {
           console.log(`[KRED] Mover credibility reduced to ${mover.credibility}`);
         }
         
+        // Tile stays in drop location during correction, moved to bank face-up at finalization
+        
         // Set current player to mover for correction
         const moverIndex = state.players.findIndex(p => p.id === moverId);
         if (moverIndex !== -1) {
           state.currentPlayerIndex = moverIndex;
         }
-        
-        // Store the tile face-up in receiver's bank (no funding value)
-        // Client will handle bank tile display
       }
       
       // Save state
@@ -1081,6 +1486,64 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       callback({ success: true, phase: state.phase });
     } catch (error) {
       console.error('[KRED] Error processing receiver decision:', error);
+      callback({ success: false, error: error.message });
+    }
+  });
+
+  // Receiver reward choice after exposing a dishonest play
+  // Per manual: Receiver restores up to 2 notches on Credibility Token OR takes a free Advance action
+  socket.on('kred:campaign:receiverReward', async (data, callback) => {
+    const { roomId, choice } = data; // choice: 'credibility' or 'advance'
+    
+    try {
+      console.log(`[KRED] Receiver reward choice: ${choice}`);
+      
+      const [gameState] = await db.query(
+        `SELECT game_state FROM kred_game_state WHERE room_id = ?`,
+        [roomId.toLowerCase()]
+      );
+      
+      if (gameState.length === 0) {
+        return callback({ success: false, error: 'Game not found' });
+      }
+      
+      const state = JSON.parse(gameState[0].game_state);
+      
+      if (!state.pendingReceiverReward) {
+        return callback({ success: false, error: 'No pending receiver reward' });
+      }
+      
+      const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
+      const receiver = state.players.find(p => p.id === receiverId);
+      
+      if (!receiver) {
+        return callback({ success: false, error: 'Receiver not found' });
+      }
+      
+      if (choice === 'credibility') {
+        // Restore up to 2 notches (max 3)
+        const oldCred = receiver.credibility;
+        receiver.credibility = Math.min(3, receiver.credibility + 2);
+        console.log(`[KRED] Receiver chose credibility restore: ${oldCred} -> ${receiver.credibility}`);
+      } else if (choice === 'advance') {
+        // Free Advance: receiver gets to make one Advance move after mover corrects
+        state.receiverFreeAdvancePending = true;
+        console.log(`[KRED] Receiver chose free Advance - will execute after mover correction`);
+      }
+      
+      state.pendingReceiverReward = false;
+      
+      await db.query(
+        `UPDATE kred_game_state SET game_state = ? WHERE room_id = ?`,
+        [JSON.stringify(state), roomId.toLowerCase()]
+      );
+      
+      await broadcastFilteredState(io, roomId, state, db);
+      
+      console.log(`[KRED] Receiver reward processed: ${choice}`);
+      callback({ success: true });
+    } catch (error) {
+      console.error('[KRED] Error processing receiver reward:', error);
       callback({ success: false, error: error.message });
     }
   });
@@ -1123,12 +1586,15 @@ module.exports = function setupKREDHandlers(io, socket, db) {
         console.log(`[KRED] Challenge result:`, challengeResult, `challengerId: ${challengerId}`);
         
         if (challengeResult.isPerfect) {
-          // Challenge FAILED - play was honest
-          // Mover restores 1 credibility (if they had any at start of turn)
+          // Challenge FAILED - play was honest (WITCH HUNT)
+          // Per manual: Mover restores 1 credibility IF they had credibility at the start of that turn
           const mover = state.players.find(p => p.id === moverId);
-          if (mover && mover.credibility > 0 && mover.credibility < 3) {
+          const moverHadCredAtStart = (state.moverCredibilityAtTurnStart || 0) > 0;
+          if (mover && moverHadCredAtStart && mover.credibility < 3) {
             mover.credibility += 1;
             console.log(`[KRED] Honest play - Mover restores credibility to ${mover.credibility}`);
+          } else if (!moverHadCredAtStart) {
+            console.log(`[KRED] Honest play - Mover had no credibility at turn start, no restore`);
           }
           
           // Challenger loses 1 credibility
@@ -1140,23 +1606,29 @@ module.exports = function setupKREDHandlers(io, socket, db) {
             console.warn(`[KRED] Could not find challenger with id ${challengerId} to deduct credibility`);
           }
           
+          // Tile revealed for all (challengeWasMade = true)
+          state.challengeWasMade = true;
+          
           // Tile goes to receiver face-down (counts as funding)
           // Finalize the turn - receiver becomes next mover
           finalizeCampaignTurn(state);
           
         } else {
-          // Challenge SUCCEEDED - play was dishonest
-          // Mover returns pieces to original and must make correct play
-          // Mover loses 1 credibility (if 0, must Withdraw instead)
+          // Challenge SUCCEEDED - play was dishonest (SMOKING GUN)
+          // Per manual: Mover loses 1 credibility. If 0 credibility at start of turn, must Withdraw
           const mover = state.players.find(p => p.id === moverId);
+          const moverHadCredAtStart = (state.moverCredibilityAtTurnStart || 0) > 0;
           if (mover) {
-            if (mover.credibility > 0) {
+            if (moverHadCredAtStart && mover.credibility > 0) {
               mover.credibility -= 1;
               console.log(`[KRED] Dishonest play caught - Mover credibility: ${mover.credibility}`);
-            } else {
-              // 0 credibility - must take Withdraw action (client handles)
+            } else if (!moverHadCredAtStart) {
+              // 0 credibility at start of turn - must take Withdraw action
               state.moverMustWithdraw = true;
-              console.log(`[KRED] Mover at 0 credibility - must Withdraw`);
+              console.log(`[KRED] Mover had 0 credibility at turn start - must Withdraw`);
+            } else {
+              // Current credibility already 0 but had it at start
+              console.log(`[KRED] Mover credibility already at 0`);
             }
           }
           
@@ -1169,6 +1641,7 @@ module.exports = function setupKREDHandlers(io, socket, db) {
           
           // Challenger gets to choose: restore 1 credibility OR take advantage (use funding)
           state.challengeSucceeded = true;
+          state.challengeWasMade = true;
           state.challengerId = challengerId;
           state.pendingChallengerReward = true;
           
@@ -1182,6 +1655,8 @@ module.exports = function setupKREDHandlers(io, socket, db) {
           
           // Clear moved pieces so mover can make fresh correction moves
           state.movedPiecesThisTurn = [];
+          
+          // Tile stays in drop location during correction, moved to bank face-up at finalization
           
           // Set phase to CORRECTION_REQUIRED - mover must make correct play
           state.phase = 'CORRECTION_REQUIRED';

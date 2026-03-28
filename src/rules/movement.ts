@@ -84,6 +84,20 @@ export function validatePieceMovement(
 ): { isAllowed: boolean; reason: string } {
   // Community locations are always accessible
   if (targetLocationId.includes("community")) {
+    // REMOVE rule: Can only remove Marks from opponent's seats (not Heels or Pawns)
+    if (currentLocationId?.includes("_seat")) {
+      const currentOwnerId = getPlayerIdFromLocationId(currentLocationId);
+      if (currentOwnerId && currentOwnerId !== movingPlayerId) {
+        // This is a Remove action — find the piece being moved
+        const piece = pieces.find(p => p.id === pieceId);
+        if (piece && piece.name !== "Mark") {
+          return {
+            isAllowed: false,
+            reason: `Remove can only target Marks, not ${piece.name}s`,
+          };
+        }
+      }
+    }
     return {
       isAllowed: true,
       reason: "Community spaces are always accessible",

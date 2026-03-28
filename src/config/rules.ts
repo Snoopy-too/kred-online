@@ -59,9 +59,9 @@ export const DEFINED_MOVES: { [key in DefinedMoveType]: DefinedMove } = {
     category: "O",
     requirement: MoveRequirementType.OPTIONAL,
     description:
-      "(O) Remove – Take a Mark or a Heel from a seat in an opponent's domain and return it to the community.",
+      "(O) Remove – Take a Mark from a seat in an opponent's domain and return it to the community.",
     options: [
-      "a. Take a Mark or Heel from an opponent's seat",
+      "a. Take a Mark from an opponent's seat",
       "b. Return the piece to the community",
     ],
     canTargetOwnDomain: false,

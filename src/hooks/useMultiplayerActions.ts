@@ -503,6 +503,36 @@ export function useMultiplayerActions() {
   }, [socket, connected, roomId]);
 
   /**
+   * Receiver reward choice after exposing a dishonest play
+   * Per manual: Receiver restores up to 2 notches OR takes a free Advance action
+   */
+  const receiverRewardChoice = useCallback(
+    async (choice: 'credibility' | 'advance'): Promise<void> => {
+      if (!socket || !connected) {
+        throw new Error('Not connected to server');
+      }
+      if (!roomId) {
+        throw new Error('Missing room information');
+      }
+
+      return new Promise((resolve, reject) => {
+        socket.emit(
+          'kred:campaign:receiverReward',
+          { roomId, choice },
+          (response: any) => {
+            if (response.success) {
+              resolve();
+            } else {
+              reject(new Error(response.error));
+            }
+          }
+        );
+      });
+    },
+    [socket, connected, roomId]
+  );
+
+  /**
    * Complete correction
    */
   const completeCorrection = useCallback(async (): Promise<void> => {
@@ -560,6 +590,7 @@ export function useMultiplayerActions() {
     // Campaign decision completion
     completeBonusMove,
     completeCorrection,
+    receiverRewardChoice,
 
     // Take Advantage actions
     selectAdvantageTiles,

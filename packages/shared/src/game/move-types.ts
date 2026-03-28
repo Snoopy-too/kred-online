@@ -40,11 +40,20 @@ export function determineMoveType(
     return DefinedMoveType.REMOVE;
   }
 
-  // INFLUENCE: opponent's rostrum -> own rostrum
+  // INFLUENCE:
+  // A) opponent's rostrum -> any rostrum (own or other opponent's)
+  // B) opponent's seat -> any other seat (own or opponent's)
   if (
     fromLocationId.includes("_rostrum") &&
     !fromLocationId.includes(`p${playerId}_`) &&
-    toLocationId.includes(`p${playerId}_rostrum`)
+    toLocationId.includes("_rostrum")
+  ) {
+    return DefinedMoveType.INFLUENCE;
+  }
+  if (
+    fromLocationId.includes("_seat") &&
+    !fromLocationId.includes(`p${playerId}_`) &&
+    toLocationId.includes("_seat")
   ) {
     return DefinedMoveType.INFLUENCE;
   }
@@ -73,10 +82,11 @@ export function determineMoveType(
     return DefinedMoveType.ADVANCE;
   }
 
-  // WITHDRAW: rostrum -> seat (own)
+  // WITHDRAW: own seat -> community, own rostrum -> own seat, own office -> own rostrum
   if (
-    fromLocationId.includes(`p${playerId}_rostrum`) &&
-    toLocationId.includes(`p${playerId}_seat`)
+    (fromLocationId.includes(`p${playerId}_seat`) && toLocationId.includes('community')) ||
+    (fromLocationId.includes(`p${playerId}_rostrum`) && toLocationId.includes(`p${playerId}_seat`)) ||
+    (fromLocationId === `p${playerId}_office` && toLocationId.includes(`p${playerId}_rostrum`))
   ) {
     return DefinedMoveType.WITHDRAW;
   }
