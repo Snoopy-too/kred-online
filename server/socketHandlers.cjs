@@ -1274,7 +1274,7 @@ module.exports = function setupKREDHandlers(io, socket, db) {
   
   // End current player's turn
   socket.on('kred:campaign:endTurn', async (data, callback) => {
-    const { roomId } = data;
+    const { roomId, playerIndex } = data;
     
     try {
       console.log(`[KRED] End turn / correction complete for room ${roomId}`);
@@ -1289,6 +1289,11 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       }
       
       const state = JSON.parse(gameState[0].game_state);
+
+      // TURN VALIDATION: Only the active player can end their turn
+      if (playerIndex !== undefined && playerIndex !== state.currentPlayerIndex) {
+        return callback({ success: false, error: `It's not your turn` });
+      }
       
       if (state.phase === 'CORRECTION_REQUIRED') {
         if (state.receiverAdvanceInProgress) {
@@ -1397,6 +1402,13 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       const receiverId = state.playedTile?.receivingPlayerId || state.tileTransaction?.receiverId;
       const moverId = state.playedTile?.playerId || state.tileTransaction?.placerId;
+
+      // IDENTITY VALIDATION: Only the actual receiver can accept/reject
+      const receiverPlayer = state.players.find(p => p.id === receiverId);
+      const receiverIdx = receiverPlayer ? state.players.indexOf(receiverPlayer) : -1;
+      if (senderIndex !== undefined && receiverIdx !== -1 && senderIndex !== receiverIdx) {
+        return callback({ success: false, error: 'Only the tile receiver can accept or reject' });
+      }
       
       if (accepted) {
         // ACCEPTED: Move to challenge phase
@@ -1550,7 +1562,7 @@ module.exports = function setupKREDHandlers(io, socket, db) {
 
   // Handle challenger's decision (challenge/pass)
   socket.on('kred:campaign:challengerDecision', async (data, callback) => {
-    const { roomId, challenge, challengeResult } = data;
+    const { roomId, challenge, challengeResult, playerIndex: senderIndex } = data;
     
     try {
       console.log(`[KRED] Challenger decision: ${challenge ? 'CHALLENGE' : 'PASS'}`);
@@ -1568,6 +1580,15 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       
       if (state.phase !== 'PENDING_CHALLENGE') {
         return callback({ success: false, error: `Cannot challenge during ${state.phase}` });
+      }
+
+      // IDENTITY VALIDATION: Only the current bystander can submit a challenge decision
+      const currentBystander = (state.bystanders || [])[state.bystanderIndex || 0];
+      if (currentBystander && senderIndex !== undefined) {
+        const bystanderIdx = state.players.findIndex(p => p.id === currentBystander.id);
+        if (bystanderIdx !== -1 && senderIndex !== bystanderIdx) {
+          return callback({ success: false, error: 'It is not your turn to challenge' });
+        }
       }
       
       const moverId = state.playedTile?.playerId;
@@ -1822,6 +1843,16 @@ module.exports = function setupKREDHandlers(io, socket, db) {
       }
       
       const state = JSON.parse(gameState[0].game_state);
+
+      // PHASE VALIDATION
+      if (state.phase !== 'BUREAUCRACY') {
+        return callback({ success: false, error: `Cannot purchase during ${state.phase} phase` });
+      }
+
+      // BOUNDS VALIDATION: playerIndex must be valid
+      if (playerIndex < 0 || playerIndex >= state.players.length) {
+        return callback({ success: false, error: 'Invalid player index' });
+      }
       
       // Track purchases in player state
       if (!state.players[playerIndex].bureaucracyPurchases) {
