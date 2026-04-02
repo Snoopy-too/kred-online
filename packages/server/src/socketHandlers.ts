@@ -2,6 +2,9 @@ import type { Server, Socket } from 'socket.io';
 import type { GameRoomState } from './types';
 import type { Player } from '@kred/shared';
 
+const DEBUG = process.env.DEBUG === 'true';
+const log = (...args: unknown[]) => { if (DEBUG) console.log(...args); };
+
 
 // Helper: shuffle array in-place
 function shuffle<T>(array: T[]): T[] {
@@ -52,7 +55,7 @@ export function setupSocketHandlers(io: Server, roomManager: any) {
 			}
 			const state: GameRoomState = engine.getState();
 			callback?.({ success: true, state });
-			console.log('[SERVER] Emitting kred:stateUpdate:', { gameState: state });
+			log('[SERVER] Emitting kred:stateUpdate for room:', roomId);
 			socket.emit('kred:stateUpdate', { gameState: state });
 		});
 
@@ -86,19 +89,19 @@ export function setupSocketHandlers(io: Server, roomManager: any) {
 						let playerIndex = -1;
 						if (clientSocket.handshake.auth && clientSocket.handshake.auth.playerId) {
 							playerIndex = newState.players.findIndex(p => p.id === clientSocket.handshake.auth.playerId);
-							console.log('[SERVER] Received playerId in handshake.auth:', clientSocket.handshake.auth.playerId);
+							log('[SERVER] Matched playerId in handshake.auth:', clientSocket.handshake.auth.playerId, '→ index', playerIndex);
 						}
 						if (playerIndex === -1) playerIndex = 0; // fallback
 						clientSocket.emit('kred:stateUpdate', { gameState: newState, playerIndex, players: newState.players });
-						console.log('[SERVER] kred:stateUpdate event data:', { gameState: newState, playerIndex, players: newState.players });
+						log('[SERVER] kred:stateUpdate sent to socket:', clientId, 'playerIndex:', playerIndex);
 					}
 				}
 			} else {
 				// Fallback: broadcast to all
 				io.to(roomId).emit('kred:stateUpdate', { gameState: newState, players: newState.players });
-				console.log('[SERVER] Broadcasting kred:stateUpdate:', { gameState: newState, players: newState.players });
+				log('[SERVER] Fallback broadcast kred:stateUpdate to room:', roomId);
 			}
-			console.log('[SERVER] Players in newState:', newState.players);
+			log('[SERVER] Game started. Player count:', newState.players.length);
 			callback?.({ success: true });
 		});
 	});

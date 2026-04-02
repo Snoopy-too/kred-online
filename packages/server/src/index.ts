@@ -32,10 +32,17 @@ const pool = mysql.createPool({
 const MySQLStoreSession = MySQLStore(session);
 const sessionStore = new MySQLStoreSession({}, pool);
 
+// Session secret — required in production, falls back to dev-only value
+const sessionSecret = process.env.SESSION_SECRET;
+if (process.env.NODE_ENV === 'production' && !sessionSecret) {
+  console.error('FATAL: SESSION_SECRET env var is required in production');
+  process.exit(1);
+}
+
 // Session middleware
 const sessionMiddleware = session({
   key: 'kred_session',
-  secret: process.env.SESSION_SECRET || 'kred-secret-key-change-in-production',
+  secret: sessionSecret || 'kred-dev-secret-not-for-production',
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
@@ -43,6 +50,7 @@ const sessionMiddleware = session({
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
   },
 } as any);
 
