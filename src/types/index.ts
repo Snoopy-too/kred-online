@@ -5,7 +5,8 @@ export type { GamePieceInfo, Piece } from './piece';
 export type { Tile, BoardTile, TileReceivingSpace } from './tile';
 export type { Player } from './player';
 export type { GameState, DropLocation, BankSpace } from './game';
-export type { DefinedMoveType, MoveRequirementType, DefinedMove, TrackedMove } from './move';
+export { DefinedMoveType, MoveRequirementType } from './move';
+export type { DefinedMove, TrackedMove } from './move';
 export type {
   BureaucracyItemType,
   BureaucracyMoveType,
