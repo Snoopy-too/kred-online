@@ -27,6 +27,7 @@ interface DraftingScreenProps {
   onSelectTile: (tile: Tile) => void;
   playerIndex?: number; // The current player's index in multiplayer
   isMultiplayer?: boolean;
+  playerNames?: string[];
 }
 
 const DraftingScreen: React.FC<DraftingScreenProps> = ({
@@ -36,6 +37,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
   onSelectTile,
   playerIndex,
   isMultiplayer = false,
+  playerNames,
 }) => {
 
   // Defensive: Check player array and indices
@@ -68,10 +70,20 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
   // Show waiting screen if no available tiles
   if (isMultiplayer && availableTiles.length === 0) {
     // Determine if player is waiting for tiles or waiting for game to progress
-    const hasCompletedDrafting = hand.length >= 8; // Players should have 8 tiles after drafting
-    const waitingMessage = hasCompletedDrafting 
+    const totalTilesPerPlayer = Math.floor((players.length === 5 ? 25 : 24) / players.length);
+    const hasCompletedDrafting = hand.length >= totalTilesPerPlayer;
+
+    // Find players who still have tiles in hand (haven't picked yet)
+    const waitingFor = players
+      .map((p, i) => ({ name: playerNames?.[i] || `Player ${i + 1}`, hasHand: (p.hand?.length || 0) > 0 }))
+      .filter(p => p.hasHand)
+      .map(p => p.name);
+
+    const waitingMessage = hasCompletedDrafting
       ? "Waiting for other players to complete their selections..."
-      : "You will receive tiles after the player on your right selects";
+      : waitingFor.length > 0
+      ? `Waiting for ${waitingFor.join(', ')} to select a tile...`
+      : "Tiles are being passed to you...";
     const waitingTitle = hasCompletedDrafting
       ? "Draft Complete!"
       : "Waiting for tiles...";

@@ -5,7 +5,7 @@ import { useLobby } from '../contexts/LobbyContext';
 type ActionHandler = (action: { type: string; playerId: string; payload: any }) => void;
 
 export function useSupabaseActions() {
-  const { lobbyId, userId, isHost } = useLobby();
+  const { lobbyId, userId, isHost, playerIndex: myPlayerIndex } = useLobby();
   const onActionReceivedRef = useRef<ActionHandler | null>(null);
 
   /**
@@ -50,8 +50,8 @@ export function useSupabaseActions() {
   // -------------------------------------------------------------------------
 
   const selectDraftTile = useCallback(
-    (tileId: string) => emitAction('SELECT_DRAFT_TILE', { tileId }),
-    [emitAction]
+    (tileId: string) => emitAction('SELECT_DRAFT_TILE', { tileId, playerIndex: myPlayerIndex }),
+    [emitAction, myPlayerIndex]
   );
 
   const playTile = useCallback(

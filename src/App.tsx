@@ -3490,11 +3490,63 @@ const App: React.FC<MultiplayerProps> = ({
     setActionDispatch((action) => {
       switch (action.type) {
         case 'SELECT_DRAFT_TILE': {
-          // Find the tile object from the guest's hand by tileId
-          const tile = players
-            .flatMap(p => p.hand || [])
-            .find((t: any) => String(t.id) === String(action.payload.tileId));
-          if (tile) originalHandleSelectTile(tile);
+          const { tileId, playerIndex: selectingPlayerIndex } = action.payload;
+          if (typeof selectingPlayerIndex !== 'number') break;
+
+          // Find the tile in the selecting player's hand
+          const selectingPlayer = players[selectingPlayerIndex];
+          if (!selectingPlayer) break;
+          const tile = selectingPlayer.hand.find((t: any) => String(t.id) === String(tileId));
+          if (!tile) break;
+
+          // Move tile from hand to keptTiles for the selecting player
+          const updatedPlayers = players.map((p, i) => {
+            if (i === selectingPlayerIndex) {
+              return {
+                ...p,
+                keptTiles: [...p.keptTiles, tile],
+                hand: p.hand.filter((t: any) => t.id !== tile.id),
+              };
+            }
+            return p;
+          });
+
+          // Check if ALL players have selected this round
+          // After each pick, that player's hand is 1 less. When all hands are equal, everyone has picked.
+          const handSizes = updatedPlayers.map(p => p.hand.length);
+          const allSelected = handSizes.every(s => s === handSizes[0]);
+
+          if (allSelected) {
+            const totalTilesPerPlayer = Math.floor((playerCount === 5 ? 25 : 24) / playerCount);
+
+            if (handSizes[0] === 0) {
+              // Drafting complete — move to Campaign
+              setGameState('CAMPAIGN');
+              const initialPieces = initializeCampaignPieces(playerCount);
+              setPieces(initialPieces);
+              setPiecesAtTurnStart(initialPieces);
+
+              // Player with tile 03 goes first
+              const startingIdx = updatedPlayers.findIndex(
+                p => p.keptTiles?.some((t: any) => t.id === 3)
+              );
+              setCurrentPlayerIndex(startingIdx !== -1 ? startingIdx : 0);
+              setHasPlayedTileThisTurn(false);
+              setPlayers(updatedPlayers);
+            } else {
+              // Rotate hands to the left for next round
+              const handsToPass = updatedPlayers.map(p => p.hand);
+              const rotated = updatedPlayers.map((p, i) => ({
+                ...p,
+                hand: handsToPass[(i - 1 + playerCount) % playerCount],
+              }));
+              setPlayers(rotated);
+              setDraftRound(draftRound + 1);
+            }
+          } else {
+            // Not all players have picked yet — just update state
+            setPlayers(updatedPlayers);
+          }
           break;
         }
         case 'PLAY_TILE': {
@@ -3584,6 +3636,7 @@ const App: React.FC<MultiplayerProps> = ({
             onSelectTile={handleSelectTile}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
+            playerNames={playerNames}
           />
         );
       }
@@ -3623,6 +3676,7 @@ const App: React.FC<MultiplayerProps> = ({
             onSelectTile={handleSelectTile}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
+            playerNames={playerNames}
           />
         );
       case "BUREAUCRACY":
