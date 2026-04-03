@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLobby } from './contexts/LobbyContext';
 import LobbyScreen from './components/screens/LobbyScreen';
 import WaitingRoom from './components/screens/WaitingRoom';
@@ -28,6 +28,15 @@ export default function KredApp() {
   const handleRejoinComplete = useCallback(() => {
     setGameReady(true);
   }, []);
+
+  // Wire host's local emitAction to the App.tsx action dispatch
+  useEffect(() => {
+    if (isHost) {
+      actions.setActionHandler((action) => {
+        actionDispatchRef.current?.(action);
+      });
+    }
+  }, [isHost, actions.setActionHandler]);
 
   // No lobby yet — show lobby screen
   if (!lobbyId) {
