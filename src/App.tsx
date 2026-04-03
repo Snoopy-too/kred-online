@@ -683,6 +683,14 @@ const App: React.FC<MultiplayerProps> = ({
   // Destructure handlers for convenience
   const { handleStartGame, handleNewGame, handleSelectTile: originalHandleSelectTile } = gameFlowHandlers;
 
+  // Auto-start game in multiplayer mode (lobby already handled player selection)
+  React.useEffect(() => {
+    if (isMultiplayer && gameState === 'PLAYER_SELECTION' && playerCount > 0) {
+      console.log('[APP] Auto-starting multiplayer game with', playerCount, 'players');
+      handleStartGame(playerCount, false, false, false);
+    }
+  }, [isMultiplayer, gameState, playerCount, handleStartGame]);
+
   // Log playerIndex for debugging
   React.useEffect(() => {
     if (isMultiplayer && playerIndex !== undefined) {
