@@ -1464,10 +1464,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             </div>
             )}
 
-            {/* Player Hand */}
+            {/* Player Hand (keptTiles are the playable tiles from drafting) */}
             <div id="campaign-player-hand">
               <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
-                {viewingPlayer?.hand?.map((tile) => (
+                {(viewingPlayer?.keptTiles?.length > 0 ? viewingPlayer.keptTiles : viewingPlayer?.hand)?.map((tile) => (
                   <div
                     key={tile.id}
                     draggable={!hasPlayedTileThisTurn && isMyTurn}
