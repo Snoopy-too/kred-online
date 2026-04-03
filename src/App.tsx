@@ -695,16 +695,19 @@ const App: React.FC<MultiplayerProps> = ({
 
 
   // Wrap tile selection for multiplayer coordination
+  const draftPickPendingRef = React.useRef(false);
   const handleSelectTile = React.useCallback(async (tile: any) => {
     if (isMultiplayer && multiplayerActions) {
-      // In multiplayer, use server-coordinated tile selection
-      console.log('[MULTIPLAYER] Selecting tile via server:', tile.id);
+      // Prevent rapid double-clicks before state syncs back
+      if (draftPickPendingRef.current) return;
+      draftPickPendingRef.current = true;
       try {
         await multiplayerActions.selectDraftTile(tile.id);
       } catch (error) {
         console.error('[MULTIPLAYER] Tile selection failed:', error);
-        alert(`Tile selection failed: ${error.message}`);
       }
+      // Reset after a short delay to allow state sync
+      setTimeout(() => { draftPickPendingRef.current = false; }, 2000);
     } else {
       // Single-player mode - use local handler
       originalHandleSelectTile(tile);
@@ -3496,6 +3499,11 @@ const App: React.FC<MultiplayerProps> = ({
           // Find the tile in the selecting player's hand
           const selectingPlayer = players[selectingPlayerIndex];
           if (!selectingPlayer) break;
+
+          // Guard: only allow 1 pick per round (player's hand must equal the max hand size)
+          const maxHandSize = Math.max(...players.map(p => p.hand.length));
+          if (selectingPlayer.hand.length < maxHandSize) break;
+
           const tile = selectingPlayer.hand.find((t: any) => String(t.id) === String(tileId));
           if (!tile) break;
 

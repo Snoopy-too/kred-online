@@ -67,8 +67,12 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
   const availableTiles = Array.isArray(myPlayer.hand) ? myPlayer.hand : [];
   const hand = Array.isArray(myPlayer.keptTiles) ? myPlayer.keptTiles : [];
 
-  // Show waiting screen if no available tiles
-  if (isMultiplayer && availableTiles.length === 0) {
+  // In multiplayer, detect if this player already picked this round
+  const maxHandSize = isMultiplayer ? Math.max(...players.map(p => (p.hand?.length || 0))) : 0;
+  const alreadyPickedThisRound = isMultiplayer && availableTiles.length < maxHandSize;
+
+  // Show waiting screen if no available tiles OR already picked this round
+  if (isMultiplayer && (availableTiles.length === 0 || alreadyPickedThisRound)) {
     // Determine if player is waiting for tiles or waiting for game to progress
     const totalTilesPerPlayer = Math.floor((players.length === 5 ? 25 : 24) / players.length);
     const hasCompletedDrafting = hand.length >= totalTilesPerPlayer;
