@@ -693,13 +693,6 @@ const App: React.FC<MultiplayerProps> = ({
     }
   }, [isMultiplayer, multiplayerPlayerCount, players.length, handleStartGame]);
 
-  // Log playerIndex for debugging
-  React.useEffect(() => {
-    if (isMultiplayer && playerIndex !== undefined) {
-      console.log('[APP] My playerIndex:', playerIndex, 'of', playerCount, 'players');
-      console.log('[APP] Current players state:', players);
-    }
-  }, [isMultiplayer, playerIndex, playerCount, players]);
 
   // Wrap tile selection for multiplayer coordination
   const handleSelectTile = React.useCallback(async (tile: any) => {
@@ -3557,14 +3550,6 @@ const App: React.FC<MultiplayerProps> = ({
   const renderGameState = () => {
     // Multiplayer: Check gameState and render appropriate screen
     if (isMultiplayer) {
-      // Log state for debugging
-      console.log('[APP] Multiplayer render:', {
-        gameState,
-        players: players.length,
-        playerIndex: playerIndex,
-        currentPlayerIndex
-      });
-
       // Wait for all required props to be defined and valid
       const isValidPlayers = Array.isArray(players) && players.length > 0 && players.every(p => p && typeof p === 'object');
       const isValidPlayerIndex = typeof playerIndex === 'number' && playerIndex >= 0 && playerIndex < players.length;

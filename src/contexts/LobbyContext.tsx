@@ -164,7 +164,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
   }, [lobbyId]);
 
   // --------------------------------------------------------------------------
-  // Subscribe to lobby status changes
+  // Subscribe to lobby status changes (realtime + polling fallback)
   // --------------------------------------------------------------------------
   useEffect(() => {
     if (!lobbyId) return;
@@ -180,8 +180,24 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
 
-    return () => { channel.unsubscribe(); };
-  }, [lobbyId]);
+    // Polling fallback in case kred_lobbies isn't in realtime publication
+    const pollStatus = async () => {
+      const { data } = await supabase
+        .from('kred_lobbies')
+        .select('status')
+        .eq('id', lobbyId)
+        .single();
+      if (data && data.status !== lobbyStatus) {
+        setLobbyStatus(data.status);
+      }
+    };
+    const interval = setInterval(pollStatus, 2000);
+
+    return () => {
+      clearInterval(interval);
+      channel.unsubscribe();
+    };
+  }, [lobbyId, lobbyStatus]);
 
   // --------------------------------------------------------------------------
   // Create lobby

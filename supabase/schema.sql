@@ -138,6 +138,7 @@ CREATE POLICY "Users can insert own actions"
 -- REALTIME
 -- ============================================================================
 
+ALTER PUBLICATION supabase_realtime ADD TABLE kred_lobbies;
 ALTER PUBLICATION supabase_realtime ADD TABLE kred_game_actions;
 ALTER PUBLICATION supabase_realtime ADD TABLE kred_game_states;
 ALTER PUBLICATION supabase_realtime ADD TABLE kred_players;
