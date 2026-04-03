@@ -1377,7 +1377,7 @@ const App: React.FC<MultiplayerProps> = ({
     // Then sync to server in multiplayer
     if (isMultiplayer && multiplayerActions && result.success) {
       try {
-        await multiplayerActions.movePiece(result.pieces!, result.movedPiecesThisTurn);
+        await multiplayerActions.movePiece(pieceId, newPosition, locationId);
       } catch (error) {
         console.error('[MULTIPLAYER] Piece movement sync failed:', error);
       }
@@ -3740,10 +3740,41 @@ const App: React.FC<MultiplayerProps> = ({
         }
         
         // In multiplayer, currentPlayerId should be the VIEWING player, not the active turn player
-        const viewingPlayerId = isMultiplayer && playerIndex !== undefined 
-          ? playerIndex + 1 
+        const viewingPlayerId = isMultiplayer && playerIndex !== undefined
+          ? playerIndex + 1
           : currentPlayer.id;
-        
+
+        // Compute campaignRole dynamically for the viewing player
+        let computedCampaignRole = campaignRole;
+        if (isMultiplayer && playerIndex !== undefined) {
+          const myIdx = playerIndex;
+          if (gameState === 'CAMPAIGN' || gameState === 'TILE_PLAYED') {
+            computedCampaignRole = myIdx === currentPlayerIndex ? 'mover' : 'waiting';
+          } else if (gameState === 'PENDING_ACCEPTANCE') {
+            const receiverIdx = tileTransaction?.receiverId != null
+              ? players.findIndex(p => p.id === tileTransaction.receiverId)
+              : -1;
+            if (myIdx === receiverIdx) {
+              computedCampaignRole = 'receiver';
+            } else if (myIdx === currentPlayerIndex) {
+              computedCampaignRole = 'mover';
+            } else {
+              computedCampaignRole = 'waiting';
+            }
+          } else if (gameState === 'PENDING_CHALLENGE') {
+            const currentBystander = bystanders[bystanderIndex];
+            if (myIdx + 1 === currentBystander) {
+              computedCampaignRole = 'challenger';
+            } else if (myIdx === currentPlayerIndex) {
+              computedCampaignRole = 'mover';
+            } else {
+              computedCampaignRole = 'waiting';
+            }
+          } else if (gameState === 'CORRECTION_REQUIRED') {
+            computedCampaignRole = myIdx === currentPlayerIndex ? 'correcting' : 'waiting';
+          }
+        }
+
         return (
           <CampaignScreen
             gameState={gameState}
@@ -3756,7 +3787,7 @@ const App: React.FC<MultiplayerProps> = ({
             currentPlayerIndex={currentPlayerIndex}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
-            campaignRole={campaignRole}
+            campaignRole={computedCampaignRole}
             moverPlayerIndex={moverPlayerIndex}
             lastDroppedPosition={lastDroppedPosition}
             lastDroppedPieceId={lastDroppedPieceId}

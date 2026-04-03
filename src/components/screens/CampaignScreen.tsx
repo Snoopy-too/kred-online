@@ -1258,7 +1258,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   .filter((p) => p.id !== currentPlayerId)
                   .map((player) => {
                     // In multiplayer, hide opponent hands (show only your own tiles)
-                    const isOwnHand = !isMultiplayer || (playerIndex !== undefined && player.id === playerIndex);
+                    const isOwnHand = !isMultiplayer || (playerIndex !== undefined && player.id === playerIndex + 1);
                     const showTiles = isTestMode || isOwnHand;
 
                     return (
@@ -1982,7 +1982,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   Take Advantage
                 </h2>
                 <p className="text-xl text-slate-200">
-                  Player {takeAdvantageChallengerId}'s Reward
+                  {nameById(takeAdvantageChallengerId)}'s Reward
                 </p>
                 <div className="mt-2 text-lg">
                   <span className="text-yellow-400 font-bold">
