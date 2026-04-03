@@ -12,8 +12,6 @@
  */
 
 import React, { useState, useRef, useEffect } from "react";
-import { useSocket } from "../../contexts/SocketContext";
-import ConnectionStatus from "../shared/ConnectionStatus";
 
 // ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
@@ -298,8 +296,6 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   // STATE HOOKS
   // ============================================================================
-  // Socket connection info (for multiplayer mode)
-  const socketContext = isMultiplayer ? useSocket() : { connected: false, roomId: null, playerIndex: null };
   
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [isDraggingTile, setIsDraggingTile] = useState(false);
@@ -1493,18 +1489,6 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </div>
             </div>
 
-            {/* Connection Status (Multiplayer Only) */}
-            {isMultiplayer && (
-              <div className="mt-4">
-                <ConnectionStatus
-                  isConnected={socketContext.connected}
-                  roomId={socketContext.roomId || undefined}
-                  playerIndex={playerIndex}
-                  players={players}
-                  currentPlayerIndex={currentPlayerIndex}
-                />
-              </div>
-            )}
 
             {/* Bonus Move Notification */}
             {showBonusMoveModal && bonusMovePlayerId !== null && (

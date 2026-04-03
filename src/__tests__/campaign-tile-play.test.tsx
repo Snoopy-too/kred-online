@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import App from "../../App";
+import App from "../App";
 
 describe("Campaign Phase - Tile Play and Movement", () => {
   const skipToCampaign = async (user: ReturnType<typeof userEvent.setup>, playerCount: number = 3) => {

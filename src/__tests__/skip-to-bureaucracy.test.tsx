@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import App from "../../App";
+import App from "../App";
 
 describe("Skip to Bureaucracy Phase", () => {
   it("allows starting game with test mode, skip draft, and skip campaign all checked", async () => {
