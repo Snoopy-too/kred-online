@@ -39,7 +39,8 @@
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
       "Bash(npx vitest:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(xargs grep:*)"
     ],
     "deny": [],
     "ask": []

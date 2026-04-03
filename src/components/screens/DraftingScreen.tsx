@@ -79,14 +79,26 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
 
     // Find players who still have tiles in hand (haven't picked yet)
     const waitingFor = players
-      .map((p, i) => ({ name: playerNames?.[i] || `Player ${i + 1}`, hasHand: (p.hand?.length || 0) > 0 }))
+      .map((p, i) => ({ 
+        name: playerNames?.[i] || p.name || `Player ${i + 1}`, 
+        hasHand: (p.hand?.length || 0) > 0 
+      }))
       .filter(p => p.hasHand)
       .map(p => p.name);
+
+    const formatList = (list: string[]) => {
+      if (list.length === 0) return "";
+      if (list.length === 1) return list[0];
+      if (list.length === 2) return `${list[0]} and ${list[1]}`;
+      const last = list[list.length - 1];
+      const rest = list.slice(0, -1).join(", ");
+      return `${rest}, and ${last}`;
+    };
 
     const waitingMessage = hasCompletedDrafting
       ? "Waiting for other players to complete their selections..."
       : waitingFor.length > 0
-      ? `Waiting for ${waitingFor.join(', ')} to select a tile...`
+      ? `Waiting for ${formatList(waitingFor)} to select a tile...`
       : "Tiles are being passed to you...";
     const waitingTitle = hasCompletedDrafting
       ? "Draft Complete!"
@@ -100,7 +112,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
           </h1>
           {isMultiplayer && playerIndex !== undefined && (
             <h2 className="text-2xl text-slate-100 mt-4">
-              You are Player {playerIndex + 1}
+              You are {playerNames?.[playerIndex] || players[playerIndex]?.name || `Player ${playerIndex + 1}`}
             </h2>
           )}
         </div>
@@ -150,7 +162,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
         </h1>
         {isMultiplayer && playerIndex !== undefined && (
           <h2 className="text-2xl text-slate-100 mt-4">
-            You are Player {playerIndex + 1}
+            You are {playerNames?.[playerIndex] || players[playerIndex]?.name || `Player ${playerIndex + 1}`}
           </h2>
         )}
         <p className="text-slate-400 mt-2">Select one tile to keep, then remaining tiles pass left.</p>

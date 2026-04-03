@@ -1,14 +1,17 @@
 import React, { useState } from "react";
-import type { Player, Piece, BoardTile } from "../../types";
 import type {
+  Player,
+  Piece,
+  BoardTile,
   BureaucracyPlayerState,
   BureaucracyMenuItem,
   BureaucracyPurchase,
-} from "../../game";
+} from "../../types";
 import { validatePieceMovement } from "../../rules";
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation } from "../../game/locations";
-import { getPlayerById, getPieceById } from "../../utils";
+import { getPlayerById, getPieceById, getPlayerName } from "../../utils";
+import { getBureaucracyMenu, getAvailablePurchases } from "../../game";
 import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
@@ -252,7 +255,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
           Bureaucracy Phase
         </h1>
         <p className="text-2xl text-slate-200 mt-2">
-          Player {currentPlayerId}'s Turn
+          {currentPlayer?.name || `Player ${currentPlayerId}`}'s Turn
         </p>
         <div className="mt-2 text-lg">
           <span className="text-yellow-400 font-bold">
@@ -454,7 +457,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                   >
                     <img
                       src={credibilityImage}
-                      alt={`Credibility for Player ${location.ownerId}`}
+                      alt={`Credibility for ${getPlayerName(player, location.ownerId)}`}
                       className="w-full h-full object-contain"
                     />
                   </div>
@@ -684,7 +687,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                           : "bg-gray-700 border-gray-500 text-gray-300"
                       }`}
                   >
-                    Player {playerId} {isComplete && "✓"}
+                    {getPlayerName(getPlayerById(players, playerId), playerId)} {isComplete && "✓"}
                   </div>
                 );
               })}
