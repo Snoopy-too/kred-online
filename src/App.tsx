@@ -707,7 +707,7 @@ const App: React.FC<MultiplayerProps> = ({
         console.error('[MULTIPLAYER] Tile selection failed:', error);
       }
       // Reset after a short delay to allow state sync
-      setTimeout(() => { draftPickPendingRef.current = false; }, 2000);
+      setTimeout(() => { draftPickPendingRef.current = false; }, 500);
     } else {
       // Single-player mode - use local handler
       originalHandleSelectTile(tile);

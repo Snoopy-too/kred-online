@@ -123,28 +123,58 @@ export default function GameStateSynchronizer({
   }, [pushState]);
 
   // ==========================================================================
-  // HOST: Listen for guest actions
+  // HOST: Listen for guest actions (realtime + polling fallback)
   // ==========================================================================
+
+  const lastProcessedActionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!lobbyId || !isHost || !onActionReceived) return;
 
+    const processAction = (action: any) => {
+      // Skip already-processed actions
+      if (action.id === lastProcessedActionIdRef.current) return;
+      lastProcessedActionIdRef.current = action.id;
+      onActionReceived({
+        type: action.action_type,
+        playerId: action.player_id,
+        payload: action.payload,
+      });
+    };
+
+    // Realtime channel
     const channel = supabase
       .channel(`kred_actions:${lobbyId}`)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'kred_game_actions', filter: `lobby_id=eq.${lobbyId}` },
-        (payload) => {
-          const action = payload.new as any;
-          onActionReceived({
-            type: action.action_type,
-            playerId: action.player_id,
-            payload: action.payload,
-          });
-        }
+        (payload) => { processAction(payload.new); }
       )
       .subscribe();
 
-    return () => { channel.unsubscribe(); };
+    // Polling fallback — pick up any actions missed by realtime
+    const processedIds = new Set<string>();
+    const pollActions = async () => {
+      const { data } = await supabase
+        .from('kred_game_actions')
+        .select('*')
+        .eq('lobby_id', lobbyId)
+        .order('created_at', { ascending: true });
+
+      if (data) {
+        for (const action of data) {
+          if (!processedIds.has(action.id)) {
+            processedIds.add(action.id);
+            processAction(action);
+          }
+        }
+      }
+    };
+    const interval = setInterval(pollActions, 2000);
+
+    return () => {
+      clearInterval(interval);
+      channel.unsubscribe();
+    };
   }, [lobbyId, isHost, onActionReceived]);
 
   // ==========================================================================
