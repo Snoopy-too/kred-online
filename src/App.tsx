@@ -3559,7 +3559,13 @@ const App: React.FC<MultiplayerProps> = ({
         }
         case 'PLAY_TILE': {
           const { tileId, targetPlayerId } = action.payload;
-          handlePlaceTile(Number(tileId), { ownerId: targetPlayerId, position: null, rotation: 0 });
+          const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+          const matchedSpace = spaces.find(s => s.ownerId === targetPlayerId);
+          if (matchedSpace) {
+            handlePlaceTile(Number(tileId), matchedSpace);
+          } else {
+            handlePlaceTile(Number(tileId), { ownerId: targetPlayerId, position: { left: 0, top: 0 }, rotation: 0 });
+          }
           break;
         }
         case 'MOVE_PIECE': {

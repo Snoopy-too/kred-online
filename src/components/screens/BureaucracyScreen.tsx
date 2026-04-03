@@ -350,7 +350,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
             )}
 
             {/* Render pieces */}
-            {pieces.filter(piece => piece?.position?.top != null && piece?.position?.left != null).map((piece) => {
+            {pieces.map((piece) => {
               let pieceSizeClass = "w-10 h-10 sm:w-14 sm:h-14"; // Mark
               if (piece.name === "Heel")
                 pieceSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
