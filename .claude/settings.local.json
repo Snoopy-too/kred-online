@@ -24,7 +24,22 @@
       "Bash(ls:*)",
       "Bash(awk:*)",
       "Bash(git merge:*)",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(git pull:*)",
+      "Bash(gh api:*)",
+      "Bash(git fetch:*)",
+      "Bash(npm list:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm test:*)",
+      "Bash(mkdir -p .claude/archives/multiplayer-v1/hooks)",
+      "Bash(mkdir -p .claude/archives/multiplayer-v1/contexts)",
+      "Bash(mkdir -p .claude/archives/multiplayer-v1/server-package)",
+      "Bash(mkdir -p .claude/archives/multiplayer-v1/server-socket)",
+      "Bash(cp src/contexts/SocketContext.tsx .claude/archives/multiplayer-v1/contexts/)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx vitest:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": []
