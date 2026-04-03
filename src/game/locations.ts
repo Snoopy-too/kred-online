@@ -84,6 +84,7 @@ export function findNearestVacantLocation(
     // Count how many pieces are already at this exact coordinate.
     const piecesAtCoord = allPieces.filter(
       (piece) =>
+        piece.position != null &&
         Math.abs(piece.position.left - loc.position.left) < 0.01 &&
         Math.abs(piece.position.top - loc.position.top) < 0.01
     ).length;
