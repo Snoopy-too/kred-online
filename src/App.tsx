@@ -464,6 +464,10 @@ const App: React.FC<MultiplayerProps> = ({
     remainingKredcoin: 0,
   });
 
+  // Snapshot of each player's credibility at the start of their turn as Mover
+  // Used for 0-credibility penalty rules (forced Withdraw, no restore on honest challenge)
+  const [credibilityAtTurnStart, setCredibilityAtTurnStart] = useState<Record<number, number>>({});
+
   // ============================================================================
   // MULTIPLAYER STATE
   // ============================================================================
@@ -1169,9 +1173,27 @@ const App: React.FC<MultiplayerProps> = ({
         setIsPrivatelyViewing(false);
         setPlacerViewingTileId(null);
       } else {
+        // Snapshot credibility for the next mover in normal advance
+        const nextIdx = (currentPlayerIndex + 1) % players.length;
+        const nextMover = players[nextIdx];
+        if (nextMover) {
+          setCredibilityAtTurnStart(prev => ({
+            ...prev,
+            [nextMover.id]: nextMover.credibility,
+          }));
+        }
         advanceTurnNormally();
       }
     } else {
+      // Snapshot credibility for the next mover in normal advance
+      const nextIdx = (currentPlayerIndex + 1) % players.length;
+      const nextMover = players[nextIdx];
+      if (nextMover) {
+        setCredibilityAtTurnStart(prev => ({
+          ...prev,
+          [nextMover.id]: nextMover.credibility,
+        }));
+      }
       advanceTurnNormally();
     }
   };
@@ -1227,14 +1249,15 @@ const App: React.FC<MultiplayerProps> = ({
       setReceiverAcceptance(false);
       setTileRejected(true);
 
-      // Check if tile player has 0 credibility - if so, they MUST perform a WITHDRAW during correction
+      // Check if tile player had 0 credibility at turn start - if so, they MUST perform a WITHDRAW during correction
+      // Manual rule: mover caught dishonest with 0 credibility at turn start → forced Withdraw action
       const tilePlayer = getPlayerById(players, playedTile.playerId);
-      const playerHasZeroCredibility =
-        tilePlayer && tilePlayer.credibility === 0;
+      const playerHadZeroCredibilityAtTurnStart =
+        tilePlayer && (credibilityAtTurnStart[tilePlayer.id] ?? tilePlayer.credibility) === 0;
       const movesMeetRequirements =
         tileRequirements.isMet && uniqueExtraMoves.length === 0;
 
-      if (playerHasZeroCredibility && !movesMeetRequirements) {
+      if (playerHadZeroCredibilityAtTurnStart && !movesMeetRequirements) {
         setTilePlayerMustWithdraw(true);
       } else {
         setTilePlayerMustWithdraw(false);
@@ -1941,6 +1964,16 @@ const App: React.FC<MultiplayerProps> = ({
     // Set piece state snapshot for the start of this new turn
     setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
 
+    // Snapshot credibility at turn start for the new mover (0-cred penalty rules)
+    const newMoverId = playedTile.receivingPlayerId;
+    const newMover = getPlayerById(players, newMoverId);
+    if (newMover !== undefined && newMover !== null) {
+      setCredibilityAtTurnStart(prev => ({
+        ...prev,
+        [newMoverId]: newMover.credibility,
+      }));
+    }
+
     // Clear piece movement tracking for new turn
     setMovedPiecesThisTurn(new Set());
     // Clear pending community pieces
@@ -2272,6 +2305,16 @@ const App: React.FC<MultiplayerProps> = ({
 
     // Set piece state snapshot for the start of this new turn
     setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
+
+    // Snapshot credibility at turn start for the new mover (0-cred penalty rules)
+    const newMoverId = updatedPlayedTile.receivingPlayerId;
+    const newMover = getPlayerById(updatedPlayers, newMoverId);
+    if (newMover !== undefined && newMover !== null) {
+      setCredibilityAtTurnStart(prev => ({
+        ...prev,
+        [newMoverId]: newMover.credibility,
+      }));
+    }
 
     // Clear piece movement tracking for new turn
     setMovedPiecesThisTurn(new Set());
@@ -2871,10 +2914,12 @@ const App: React.FC<MultiplayerProps> = ({
     if (!playedTile) return;
 
     const tilePlayer = getPlayerById(players, playedTile.playerId);
-    const playerHasZeroCredibility = tilePlayer && tilePlayer.credibility === 0;
+    // Use credibility at turn start for penalty rules (manual: 0 cred at turn start → forced Withdraw)
+    const playerHadZeroCredibilityAtTurnStart =
+      tilePlayer && (credibilityAtTurnStart[tilePlayer.id] ?? tilePlayer.credibility) === 0;
 
     // Determine if tile player must withdraw (0 credibility penalty)
-    if (playerHasZeroCredibility) {
+    if (playerHadZeroCredibilityAtTurnStart) {
       setTilePlayerMustWithdraw(true);
     } else {
       setTilePlayerMustWithdraw(false);
