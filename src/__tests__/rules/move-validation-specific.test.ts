@@ -159,6 +159,36 @@ describe("Specific Move Type Validation", () => {
 
       expect(validateAdvanceMove(move, 1, pieces)).toBe(false);
     });
+
+    it("validates rostrum2 to office when both rostrums occupied", () => {
+      const move = createMove(
+        "p1_rostrum2",
+        "p1_office",
+        "piece1",
+        DefinedMoveType.ADVANCE
+      );
+      const pieces: Piece[] = [
+        createPiece("piece1", "p1_rostrum2", "Heel"),
+        createPiece("piece2", "p1_rostrum1", "Heel"),
+      ];
+
+      expect(validateAdvanceMove(move, 1, pieces)).toBe(true);
+    });
+
+    it("rejects rostrum2 to office when rostrum1 is empty", () => {
+      const move = createMove(
+        "p1_rostrum2",
+        "p1_office",
+        "piece1",
+        DefinedMoveType.ADVANCE
+      );
+      const pieces: Piece[] = [
+        createPiece("piece1", "p1_rostrum2", "Heel"),
+        // rostrum1 empty
+      ];
+
+      expect(validateAdvanceMove(move, 1, pieces)).toBe(false);
+    });
   });
 
   describe("validateWithdrawMove", () => {

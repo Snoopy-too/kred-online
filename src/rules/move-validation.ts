@@ -104,6 +104,17 @@ export function validateAdvanceMove(
     return rostrum2Occupied;
   }
 
+  // Option E: Rostrum2 to office (if both rostrums occupied)
+  if (
+    toLocationId === `p${playerId}_office` &&
+    fromLocationId === `p${playerId}_rostrum2`
+  ) {
+    const rostrum1Occupied = pieces.some(
+      (p) => p.locationId === `p${playerId}_rostrum1`
+    );
+    return rostrum1Occupied;
+  }
+
   return false;
 }
 
