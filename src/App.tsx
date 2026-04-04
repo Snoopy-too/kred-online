@@ -978,6 +978,17 @@ const App: React.FC<MultiplayerProps> = ({
   };
 
   /**
+   * Take Advantage Flow
+   *
+   * Manual reference: "The Challenger may either restore 1 notch on their
+   * Credibility token or use funding to perform one Bureaucracy action."
+   *
+   * This flow implements the "use funding" option. The challenger selects
+   * tiles from the dishonest mover's bank, converts them to kredcoin,
+   * and performs one Bureaucracy menu action.
+   */
+
+  /**
    * Helper: Reset Take Advantage modal state
    * Used after declining, completing, or canceling Take Advantage
    */
