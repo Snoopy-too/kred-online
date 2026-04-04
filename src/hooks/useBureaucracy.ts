@@ -91,8 +91,8 @@ export function useBureaucracy() {
    *
    * @param players - Array of all players
    */
-  const startBureaucracyPhase = (players: Player[]) => {
-    const turnOrder = getBureaucracyTurnOrder(players);
+  const startBureaucracyPhase = (players: Player[], pieces: Piece[] = []) => {
+    const turnOrder = getBureaucracyTurnOrder(players, pieces);
 
     const initialStates: BureaucracyPlayerState[] = players.map((player) => {
       const kredcoin = calculatePlayerKredcoin(player);

@@ -96,7 +96,7 @@ export interface GameFlowDependencies {
   // --- Initialization Functions ---
   initializePlayers: (count: number) => Player[];
   initializeCampaignPieces: (count: number) => Piece[];
-  getBureaucracyTurnOrder: (players: Player[]) => number[];
+  getBureaucracyTurnOrder: (players: Player[], pieces?: Piece[]) => number[];
   calculatePlayerKredcoin: (player: Player) => number;
 
   // --- Configuration ---
@@ -238,7 +238,7 @@ export function createGameFlowHandlers(
       deps.setPieces(campaignPieces);
 
       // Initialize Bureaucracy phase
-      const turnOrder = deps.getBureaucracyTurnOrder(playersWithTiles);
+      const turnOrder = deps.getBureaucracyTurnOrder(playersWithTiles, campaignPieces);
       const initialStates: BureaucracyPlayerState[] = playersWithTiles.map(
         (p) => ({
           playerId: p.id,

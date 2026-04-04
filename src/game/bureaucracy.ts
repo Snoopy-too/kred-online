@@ -28,19 +28,60 @@ export function calculatePlayerKredcoin(player: Player): number {
 
 /**
  * Determines the turn order for Bureaucracy phase based on Kredcoin amounts
- * Returns player IDs sorted by Kredcoin (descending)
+ * Returns player IDs sorted by Kredcoin (descending), with manual tiebreakers:
+ * 1. Pawn owner goes first
+ * 2. Most Heels in domain
+ * 3. Most Marks in domain
+ * 4. Most Credibility
+ * 5. Player ID ascending (stable fallback)
  */
-export function getBureaucracyTurnOrder(players: Player[]): number[] {
+export function getBureaucracyTurnOrder(players: Player[], pieces: Piece[] = []): number[] {
   const playerKredcoin = players.map((p) => ({
     id: p.id,
     kredcoin: calculatePlayerKredcoin(p),
   }));
 
-  // Sort by kredcoin descending, then by player id ascending (for tie-breaking)
   playerKredcoin.sort((a, b) => {
     if (b.kredcoin !== a.kredcoin) {
       return b.kredcoin - a.kredcoin;
     }
+
+    // Tiebreaker 1: player with a Pawn in their domain goes first
+    const aHasPawn = pieces.some(
+      (p) => p.name === "Pawn" && p.locationId?.startsWith(`p${a.id}_`)
+    );
+    const bHasPawn = pieces.some(
+      (p) => p.name === "Pawn" && p.locationId?.startsWith(`p${b.id}_`)
+    );
+    if (aHasPawn && !bHasPawn) return -1;
+    if (!aHasPawn && bHasPawn) return 1;
+
+    // Tiebreaker 2: most Heels in domain
+    const aHeels = pieces.filter(
+      (p) => p.name === "Heel" && p.locationId?.startsWith(`p${a.id}_`)
+    ).length;
+    const bHeels = pieces.filter(
+      (p) => p.name === "Heel" && p.locationId?.startsWith(`p${b.id}_`)
+    ).length;
+    if (aHeels !== bHeels) return bHeels - aHeels;
+
+    // Tiebreaker 3: most Marks in domain
+    const aMarks = pieces.filter(
+      (p) => p.name === "Mark" && p.locationId?.startsWith(`p${a.id}_`)
+    ).length;
+    const bMarks = pieces.filter(
+      (p) => p.name === "Mark" && p.locationId?.startsWith(`p${b.id}_`)
+    ).length;
+    if (aMarks !== bMarks) return bMarks - aMarks;
+
+    // Tiebreaker 4: most Credibility
+    const aPlayer = players.find((p) => p.id === a.id);
+    const bPlayer = players.find((p) => p.id === b.id);
+    const aCred = aPlayer?.credibility ?? 0;
+    const bCred = bPlayer?.credibility ?? 0;
+    if (bCred !== aCred) return bCred - aCred;
+
+    // Final fallback: player ID ascending (stable sort)
     return a.id - b.id;
   });
 

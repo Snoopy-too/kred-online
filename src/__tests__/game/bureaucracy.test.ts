@@ -135,6 +135,58 @@ describe("getBureaucracyTurnOrder", () => {
     const turnOrder = getBureaucracyTurnOrder(players);
     expect(turnOrder).toEqual([1]);
   });
+
+  it("should break kredcoin ties by Pawn ownership", () => {
+    // Tiles 20 and 22 both have kredcoin value 7
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 20, url: "" }], credibility: 1 },
+      { id: 2, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 22, url: "" }], credibility: 3 },
+    ];
+    const pieces: Piece[] = [
+      { id: "p1", name: "Pawn", imageUrl: "", locationId: "p1_office", position: { left: 0, top: 0 }, rotation: 0 },
+    ];
+    // Both tiles worth 7 kredcoin. Player 1 has Pawn in domain, should go first.
+    const order = getBureaucracyTurnOrder(players, pieces);
+    expect(order[0]).toBe(1);
+  });
+
+  it("should break kredcoin ties by most Heels when no Pawn difference", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 20, url: "" }], credibility: 1 },
+      { id: 2, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 22, url: "" }], credibility: 1 },
+    ];
+    const pieces: Piece[] = [
+      { id: "h1", name: "Heel", imageUrl: "", locationId: "p2_rostrum1", position: { left: 0, top: 0 }, rotation: 0 },
+      { id: "h2", name: "Heel", imageUrl: "", locationId: "p2_rostrum2", position: { left: 0, top: 0 }, rotation: 0 },
+    ];
+    // Player 2 has more Heels, should go first
+    const order = getBureaucracyTurnOrder(players, pieces);
+    expect(order[0]).toBe(2);
+  });
+
+  it("should break kredcoin ties by most Marks when Pawn and Heel counts equal", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 20, url: "" }], credibility: 1 },
+      { id: 2, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 22, url: "" }], credibility: 1 },
+    ];
+    const pieces: Piece[] = [
+      { id: "m1", name: "Mark", imageUrl: "", locationId: "p1_seat1", position: { left: 0, top: 0 }, rotation: 0 },
+      { id: "m2", name: "Mark", imageUrl: "", locationId: "p1_seat2", position: { left: 0, top: 0 }, rotation: 0 },
+    ];
+    // Player 1 has 2 marks, player 2 has 0; player 1 goes first
+    const order = getBureaucracyTurnOrder(players, pieces);
+    expect(order[0]).toBe(1);
+  });
+
+  it("should break kredcoin ties by most Credibility when pieces are equal", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 20, url: "" }], credibility: 1 },
+      { id: 2, hand: [], keptTiles: [], bureaucracyTiles: [{ id: 22, url: "" }], credibility: 3 },
+    ];
+    // No pieces, player 2 has more credibility → goes first
+    const order = getBureaucracyTurnOrder(players, []);
+    expect(order[0]).toBe(2);
+  });
 });
 
 describe("getBureaucracyMenu", () => {

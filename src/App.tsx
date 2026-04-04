@@ -1838,7 +1838,7 @@ const App: React.FC<MultiplayerProps> = ({
 
       setTimeout(() => {
         // Initialize Bureaucracy phase
-        const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
+        const turnOrder = getBureaucracyTurnOrder(updatedPlayers, pieces);
         const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(
           (p) => ({
             playerId: p.id,
@@ -2201,7 +2201,7 @@ const App: React.FC<MultiplayerProps> = ({
 
       setTimeout(() => {
         // Initialize Bureaucracy phase
-        const turnOrder = getBureaucracyTurnOrder(updatedPlayers);
+        const turnOrder = getBureaucracyTurnOrder(updatedPlayers, pieces);
         const initialStates: BureaucracyPlayerState[] = updatedPlayers.map(
           (p) => ({
             playerId: p.id,
