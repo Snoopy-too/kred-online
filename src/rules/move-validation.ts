@@ -226,7 +226,7 @@ export function validateRemoveMove(
   if (!movingPiece) return false;
 
   const pieceName = movingPiece.name.toLowerCase();
-  return pieceName === "mark" || pieceName === "heel";
+  return pieceName === "mark";
 }
 
 /**

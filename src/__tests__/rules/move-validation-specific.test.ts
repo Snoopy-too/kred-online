@@ -266,7 +266,7 @@ describe("Specific Move Type Validation", () => {
       expect(validateRemoveMove(move, 1, pieces, 3)).toBe(true);
     });
 
-    it("validates removing Heel from opponent seat to community", () => {
+    it("rejects removing Heel from opponent seat (only Marks can be Removed)", () => {
       const move = createMove(
         "p2_seat1",
         "community1",
@@ -275,7 +275,7 @@ describe("Specific Move Type Validation", () => {
       );
       const pieces: Piece[] = [createPiece("piece1", "p2_seat1", "Heel")];
 
-      expect(validateRemoveMove(move, 1, pieces, 3)).toBe(true);
+      expect(validateRemoveMove(move, 1, pieces, 3)).toBe(false);
     });
 
     it("rejects removing from own seat", () => {
@@ -324,6 +324,19 @@ describe("Specific Move Type Validation", () => {
       const pieces: Piece[] = [createPiece("piece1", "p2_rostrum1", "Heel")];
 
       expect(validateRemoveMove(move, 1, pieces, 3)).toBe(false);
+    });
+
+    it("should reject REMOVE of a Heel from opponent seat", () => {
+      const heelPiece: Piece = {
+        id: "h1", name: "Heel", displayName: "H1",
+        locationId: "p2_seat3", position: { left: 50, top: 50 }, rotation: 0,
+      };
+      const move: TrackedMove = {
+        pieceId: "h1", moveType: DefinedMoveType.REMOVE, category: "O",
+        fromLocationId: "p2_seat3", toLocationId: "community1",
+      };
+      const result = validateRemoveMove(move, 1, [heelPiece], 3);
+      expect(result).toBe(false);
     });
   });
 
