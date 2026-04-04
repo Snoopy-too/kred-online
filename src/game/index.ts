@@ -42,3 +42,9 @@ export { determineMoveType, validatePurchasedMove } from "./move-types";
 
 // Move calculation - track and calculate player moves
 export { calculateMoves } from "./move-calculation";
+
+// Win conditions - check if players have achieved victory
+export { checkPlayerWinCondition, checkBureaucracyWinCondition } from "../rules/win-conditions";
+
+// Credibility - credibility deduction and loss handling
+export { deductCredibility, handleCredibilityLoss } from "../rules/credibility";

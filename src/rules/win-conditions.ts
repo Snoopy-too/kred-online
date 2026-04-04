@@ -50,8 +50,14 @@ import type {
  */
 export function checkPlayerWinCondition(
   playerId: number,
-  pieces: Piece[]
+  pieces: Piece[],
+  currentTileId?: string
 ): boolean {
+  // Blank tile cannot achieve a winning setup (per manual rules)
+  if (currentTileId === "BLANK") {
+    return false;
+  }
+
   // Check Office: must have a Pawn
   const officeLocation = `p${playerId}_office`;
   const officePiece = pieces.find((p) => p.locationId === officeLocation);

@@ -12,7 +12,7 @@ import type { Player, Piece } from "../../types";
 import {
   checkPlayerWinCondition,
   checkBureaucracyWinCondition,
-} from "../../../game";
+} from "../../game";
 
 describe("checkPlayerWinCondition", () => {
   const createValidWinningSetup = (playerId: number): Piece[] => [
@@ -170,6 +170,32 @@ describe("checkPlayerWinCondition", () => {
       );
       expect(checkPlayerWinCondition(1, pieces)).toBe(false);
     });
+  });
+});
+
+describe("checkPlayerWinCondition - blank tile", () => {
+  const pieces: Piece[] = [
+    { id: "p1", name: "Pawn", displayName: "P1", imageUrl: "", locationId: "p1_office", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "h1", name: "Heel", displayName: "H1", imageUrl: "", locationId: "p1_rostrum1", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "h2", name: "Heel", displayName: "H2", imageUrl: "", locationId: "p1_rostrum2", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "m1", name: "Mark", displayName: "M1", imageUrl: "", locationId: "p1_seat1", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "m2", name: "Mark", displayName: "M2", imageUrl: "", locationId: "p1_seat2", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "m3", name: "Mark", displayName: "M3", imageUrl: "", locationId: "p1_seat3", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "m4", name: "Mark", displayName: "M4", imageUrl: "", locationId: "p1_seat4", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "m5", name: "Mark", displayName: "M5", imageUrl: "", locationId: "p1_seat5", position: { left: 0, top: 0 }, rotation: 0 },
+    { id: "m6", name: "Mark", displayName: "M6", imageUrl: "", locationId: "p1_seat6", position: { left: 0, top: 0 }, rotation: 0 },
+  ];
+
+  it("should not count a win achieved via blank tile play", () => {
+    expect(checkPlayerWinCondition(1, pieces, "BLANK")).toBe(false);
+  });
+
+  it("should still count a win with a normal tile", () => {
+    expect(checkPlayerWinCondition(1, pieces, "05")).toBe(true);
+  });
+
+  it("should still count a win when no tile specified", () => {
+    expect(checkPlayerWinCondition(1, pieces)).toBe(true);
   });
 });
 
