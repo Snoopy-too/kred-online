@@ -32,11 +32,13 @@ import { getPlayerById } from "../utils";
 
 export interface TilePlayDependencies {
   // Current state values
+  gameState: GameState;
   players: Player[];
   playerCount: number;
   currentPlayerIndex: number;
   hasPlayedTileThisTurn: boolean;
   piecesAtTurnStart: Piece[];
+  pieces: Piece[];
   boardTiles: BoardTile[];
   bankSpacesByPlayerCount: Record<number, Array<{ ownerId: number }>>;
 
@@ -55,9 +57,12 @@ export interface TilePlayDependencies {
   setRevealedTileId: (id: string | null) => void;
   setIsPrivatelyViewing: React.Dispatch<React.SetStateAction<boolean>>;
   setPlacerViewingTileId: React.Dispatch<React.SetStateAction<string | null>>;
+  setReceiverAcceptance: (value: boolean | null) => void;
+  setCurrentPlayerIndex: (index: number) => void;
 
   // Utility functions
   showAlert: (title: string, message: string, type: string) => void;
+  calculateMoves: (original: Piece[], current: Piece[], playerId: number) => any[];
 }
 
 // ============================================================================
@@ -67,11 +72,13 @@ export interface TilePlayDependencies {
 export function createTilePlayHandlers(deps: TilePlayDependencies) {
   const {
     // Current state values
+    gameState,
     players,
     playerCount,
     currentPlayerIndex,
     hasPlayedTileThisTurn,
     piecesAtTurnStart,
+    pieces,
     boardTiles,
     bankSpacesByPlayerCount,
 
@@ -90,9 +97,12 @@ export function createTilePlayHandlers(deps: TilePlayDependencies) {
     setRevealedTileId,
     setIsPrivatelyViewing,
     setPlacerViewingTileId,
+    setReceiverAcceptance,
+    setCurrentPlayerIndex,
 
     // Utility functions
     showAlert,
+    calculateMoves,
   } = deps;
 
   /**
@@ -197,15 +207,6 @@ export function createTilePlayHandlers(deps: TilePlayDependencies) {
       ownerId: targetSpace.ownerId,
     };
 
-    setPlayedTile({
-      tileId: tileIdStr,
-      playerId: currentPlayer.id,
-      receivingPlayerId: targetSpace.ownerId,
-      movesPerformed: [],
-      originalPieces: piecesAtTurnStart.map((p) => ({ ...p })),
-      originalBoardTiles: boardTiles.map((t) => ({ ...t })),
-    });
-
     // Add the board tile to display in the receiving space
     setBoardTiles((prev) => [...prev, newBoardTile]);
 
@@ -217,6 +218,47 @@ export function createTilePlayHandlers(deps: TilePlayDependencies) {
           : p
       )
     );
+
+    // MOVES-FIRST FLOW: If in SELECTING_TILE, moves already happened — go straight to acceptance
+    if (gameState === "SELECTING_TILE") {
+      const calculatedMoves = calculateMoves(
+        piecesAtTurnStart,
+        pieces,
+        currentPlayer.id
+      );
+
+      setPlayedTile({
+        tileId: tileIdStr,
+        playerId: currentPlayer.id,
+        receivingPlayerId: targetSpace.ownerId,
+        movesPerformed: calculatedMoves,
+        originalPieces: piecesAtTurnStart.map((p) => ({ ...p })),
+        originalBoardTiles: boardTiles.map((t) => ({ ...t })),
+      });
+
+      setHasPlayedTileThisTurn(true);
+      setReceiverAcceptance(null);
+      setGameState("PENDING_ACCEPTANCE");
+
+      // Switch to receiving player
+      const receiverIndex = players.findIndex(
+        (p) => p.id === targetSpace.ownerId
+      );
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+      }
+      return;
+    }
+
+    // LEGACY FLOW: Tile selected first, then moves
+    setPlayedTile({
+      tileId: tileIdStr,
+      playerId: currentPlayer.id,
+      receivingPlayerId: targetSpace.ownerId,
+      movesPerformed: [],
+      originalPieces: piecesAtTurnStart.map((p) => ({ ...p })),
+      originalBoardTiles: boardTiles.map((t) => ({ ...t })),
+    });
 
     // Set game state to allow moves (tile not yet visible to others)
     setGameState("TILE_PLAYED");

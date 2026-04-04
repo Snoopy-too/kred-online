@@ -84,6 +84,7 @@ interface CampaignScreenProps {
   showGridOverlay: boolean;
   setShowGridOverlay: (show: boolean) => void;
   hasPlayedTileThisTurn: boolean;
+  matchingTileIds?: string[];
   revealedTileId: string | null;
   tileTransaction: {
     placerId: number;
@@ -217,6 +218,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   showGridOverlay,
   setShowGridOverlay,
   hasPlayedTileThisTurn,
+  matchingTileIds = [],
   revealedTileId,
   tileTransaction,
   isPrivatelyViewing,
@@ -1454,38 +1456,51 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 disabled={
                   (gameState !== "CAMPAIGN" &&
                     gameState !== "TILE_PLAYED" &&
-                    gameState !== "CORRECTION_REQUIRED") ||
-                  (gameState === "CAMPAIGN" && !hasPlayedTileThisTurn)
+                    gameState !== "CORRECTION_REQUIRED")
                 }
                 className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
               >
-                {isFreeAdvancer ? 'Complete Advance' : 'End Turn'}
+                {isFreeAdvancer ? 'Complete Advance' : gameState === "CAMPAIGN" && !hasPlayedTileThisTurn ? 'Done Moving' : 'End Turn'}
               </button>
             </div>
             )}
 
             {/* Player Hand (keptTiles are the playable tiles from drafting) */}
             <div id="campaign-player-hand">
+              {gameState === "SELECTING_TILE" && isMyTurn && (
+                <div className="text-center text-sm text-green-300 font-semibold mb-1">
+                  Select a tile to play — drag it to a player's space
+                </div>
+              )}
               <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
-                {(viewingPlayer?.keptTiles?.length > 0 ? viewingPlayer.keptTiles : viewingPlayer?.hand)?.map((tile) => (
-                  <div
-                    key={tile.id}
-                    draggable={!hasPlayedTileThisTurn && isMyTurn}
-                    onDragStart={(e) => handleDragStartTile(e, tile.id)}
-                    onDragEnd={() => setIsDraggingTile(false)}
-                    className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md border border-gray-300 transition-transform hover:scale-105 flex-shrink-0 ${
-                      hasPlayedTileThisTurn || gameState !== "CAMPAIGN" || !isMyTurn
-                        ? "cursor-not-allowed opacity-60"
-                        : "cursor-grab"
-                    }`}
-                  >
-                    <img
-                      src={tile.url}
-                      alt={`Tile ${tile.id}`}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ))}
+                {(viewingPlayer?.keptTiles?.length > 0 ? viewingPlayer.keptTiles : viewingPlayer?.hand)?.map((tile) => {
+                  const tileKey = tile.id === 0 ? "BLANK" : tile.id.toString().padStart(2, "0");
+                  const isHonestMatch = matchingTileIds.includes(tileKey);
+                  const canDragTile = gameState === "SELECTING_TILE" && isMyTurn;
+                  return (
+                    <div
+                      key={tile.id}
+                      draggable={canDragTile}
+                      onDragStart={(e) => handleDragStartTile(e, tile.id)}
+                      onDragEnd={() => setIsDraggingTile(false)}
+                      className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md transition-transform hover:scale-105 flex-shrink-0 ${
+                        canDragTile
+                          ? "cursor-grab"
+                          : "cursor-not-allowed opacity-60"
+                      } ${
+                        isHonestMatch && gameState === "SELECTING_TILE"
+                          ? "border-2 border-green-400 ring-2 ring-green-400/60 animate-pulse"
+                          : "border border-gray-300"
+                      }`}
+                    >
+                      <img
+                        src={tile.url}
+                        alt={`Tile ${tile.id}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

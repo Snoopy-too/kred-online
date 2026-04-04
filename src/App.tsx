@@ -128,6 +128,7 @@ import { formatLocationId } from "./utils/formatting";
 // GAME LOGIC IMPORTS - Core game logic functions
 // ============================================================================
 import { calculateMoves as calculateMovesCore } from "./game";
+import { getMatchingTileIds, isLegalMoveSet } from "./game/tile-matching";
 
 // ============================================================================
 // GAME LOGIC IMPORTS - Functions still in game.ts (to be extracted)
@@ -393,6 +394,11 @@ const App: React.FC<MultiplayerProps> = ({
     setCurrentChallengerIndex,
     setTileRejected,
   } = useTilePlayWorkflow();
+
+  // Matching tile IDs for the SELECTING_TILE state (honest tile hints)
+  const [matchingTileIds, setMatchingTileIds] = React.useState<string[]>([]);
+  // Selected tile during SELECTING_TILE state (before receiver is chosen)
+  const [selectedTileForPlay, setSelectedTileForPlay] = React.useState<number | null>(null);
 
   const {
     bystanders,
@@ -856,11 +862,13 @@ const App: React.FC<MultiplayerProps> = ({
     () =>
       createTilePlayHandlers({
         // Current state values
+        gameState,
         players,
         playerCount,
         currentPlayerIndex,
         hasPlayedTileThisTurn,
         piecesAtTurnStart,
+        pieces,
         boardTiles,
         bankSpacesByPlayerCount: BANK_SPACES_BY_PLAYER_COUNT,
 
@@ -879,16 +887,22 @@ const App: React.FC<MultiplayerProps> = ({
         setRevealedTileId,
         setIsPrivatelyViewing,
         setPlacerViewingTileId,
+        setReceiverAcceptance,
+        setCurrentPlayerIndex,
 
         // Utility functions
         showAlert,
+        calculateMoves: (original: Piece[], current: Piece[], playerId: number) =>
+          calculateMovesCore(original, current, playerId, playerCount, areSeatsAdjacent),
       }),
     [
+      gameState,
       players,
       playerCount,
       currentPlayerIndex,
       hasPlayedTileThisTurn,
       piecesAtTurnStart,
+      pieces,
       boardTiles,
       setPlayers,
       setBoardTiles,
@@ -904,6 +918,8 @@ const App: React.FC<MultiplayerProps> = ({
       setRevealedTileId,
       setIsPrivatelyViewing,
       setPlacerViewingTileId,
+      setReceiverAcceptance,
+      setCurrentPlayerIndex,
       showAlert,
     ]
   );
@@ -1096,6 +1112,44 @@ const App: React.FC<MultiplayerProps> = ({
     if (gameState === "CORRECTION_REQUIRED" && playedTile) {
       // Use handleCorrectionComplete which calculates moves from actual piece positions
       handleCorrectionComplete();
+      return;
+    }
+
+    // MOVES-FIRST WORKFLOW: Player done moving, transition to tile selection
+    if (gameState === "CAMPAIGN" && !playedTile && !hasPlayedTileThisTurn) {
+      const currentPlayer = players[currentPlayerIndex];
+      const calculatedMoves = calculateMoves(
+        piecesAtTurnStart,
+        pieces,
+        currentPlayer.id
+      );
+
+      // Validate moves (max 2, separate pieces, etc.)
+      const movesValidation = validateMovesForTilePlay(calculatedMoves);
+      if (!movesValidation.isValid) {
+        showAlert(
+          "Invalid Moves",
+          movesValidation.error || "Invalid move combination",
+          "error"
+        );
+        return;
+      }
+
+      // Check if moves match any tile in the game (illegal move detection)
+      if (!isLegalMoveSet(calculatedMoves)) {
+        showAlert(
+          "Illegal Move",
+          "This combination of moves does not match any tile in the game. Please undo and try different moves.",
+          "error"
+        );
+        return;
+      }
+
+      // Compute which tiles in hand match honestly
+      const matches = getMatchingTileIds(calculatedMoves, currentPlayer.keptTiles);
+      setMatchingTileIds(matches);
+      setSelectedTileForPlay(null);
+      setGameState("SELECTING_TILE");
       return;
     }
 
@@ -3759,6 +3813,7 @@ const App: React.FC<MultiplayerProps> = ({
           />
         );
       case "CAMPAIGN":
+      case "SELECTING_TILE":
       case "TILE_PLAYED":
       case "PENDING_ACCEPTANCE":
       case "PENDING_CHALLENGE":
@@ -3788,7 +3843,7 @@ const App: React.FC<MultiplayerProps> = ({
         let computedCampaignRole = campaignRole;
         if (isMultiplayer && playerIndex !== undefined) {
           const myIdx = playerIndex;
-          if (gameState === 'CAMPAIGN' || gameState === 'TILE_PLAYED') {
+          if (gameState === 'CAMPAIGN' || gameState === 'SELECTING_TILE' || gameState === 'TILE_PLAYED') {
             computedCampaignRole = myIdx === currentPlayerIndex ? 'mover' : 'waiting';
           } else if (gameState === 'PENDING_ACCEPTANCE') {
             const receiverIdx = tileTransaction?.receiverId != null
@@ -3835,6 +3890,7 @@ const App: React.FC<MultiplayerProps> = ({
             dummyTile={dummyTile}
             setDummyTile={setDummyTile}
             hasPlayedTileThisTurn={hasPlayedTileThisTurn}
+            matchingTileIds={matchingTileIds}
             revealedTileId={revealedTileId}
             tileTransaction={tileTransaction}
             isPrivatelyViewing={isPrivatelyViewing}

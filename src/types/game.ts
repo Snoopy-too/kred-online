@@ -4,6 +4,7 @@ export type GameState =
   | 'PLAYER_SELECTION'
   | 'DRAFTING'
   | 'CAMPAIGN'
+  | 'SELECTING_TILE'
   | 'TILE_PLAYED'
   | 'PENDING_ACCEPTANCE'
   | 'PENDING_CHALLENGE'
