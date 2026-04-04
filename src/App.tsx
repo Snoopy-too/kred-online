@@ -1275,28 +1275,9 @@ const App: React.FC<MultiplayerProps> = ({
       setMovedPiecesThisTurn(new Set());
       setPendingCommunityPieces(new Set());
 
-      // Add tile to receiving player's bureaucracy tiles for tracking
-      const receivingPlayer = players.find(
-        (p) => p.id === playedTile.receivingPlayerId
-      );
-      if (receivingPlayer) {
-        setPlayers((prev) =>
-          prev.map((p) =>
-            p.id === receivingPlayer.id
-              ? {
-                ...p,
-                bureaucracyTiles: [
-                  ...p.bureaucracyTiles,
-                  {
-                    id: parseInt(playedTile.tileId),
-                    url: `./images/${playedTile.tileId}.svg`,
-                  },
-                ],
-              }
-              : p
-          )
-        );
-      }
+      // NOTE: Rejected (face-up) tiles do NOT count toward Bureaucracy funding.
+      // bureaucracyTiles addition is intentionally omitted here per the manual rule
+      // that only face-down tiles count for kredcoin funding.
 
       // Tile player loses 1 credibility when tile is rejected by receiver
       setPlayers((prev) =>
@@ -1807,18 +1788,21 @@ const App: React.FC<MultiplayerProps> = ({
       setBankedTiles((prev) => [...prev, newBankedTile]);
     }
 
-    // Receiving player keeps the tile in their bureaucracy (always, even if bank display is full)
+    // Only face-down tiles (not rejected) count toward Bureaucracy funding per the manual.
+    // Face-up (rejected) tiles are tracked in bankedTiles for display but NOT added to bureaucracyTiles.
     const tile = {
       id: parseInt(playedTile.tileId),
       url: `./images/${playedTile.tileId}.svg`,
     };
 
     // Calculate the updated players array directly from current state
-    let updatedPlayers = players.map((p) =>
-      p.id === playedTile.receivingPlayerId
-        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
-        : p
-    );
+    let updatedPlayers = tileWasRejected
+      ? players // face-up tile: do not add to bureaucracyTiles
+      : players.map((p) =>
+          p.id === playedTile.receivingPlayerId
+            ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
+            : p
+        );
 
     // Apply credibility loss for unsuccessful challenge
     // If wasChallenged=true and challengerId is set, the challenge was unsuccessful
@@ -2204,22 +2188,16 @@ const App: React.FC<MultiplayerProps> = ({
       )
     );
 
-    // Receiving player gets the tile in their bureaucracy
-    const tile = {
-      id: parseInt(updatedPlayedTile.tileId),
-      url: `./images/${updatedPlayedTile.tileId}.svg`,
-    };
+    // NOTE: This path is the correction-complete handler (successful challenge = tile is face-up/dishonest).
+    // Face-up tiles do NOT count toward Bureaucracy funding per the manual.
+    // bureaucracyTiles addition is intentionally omitted here.
 
     // Reset challenge state FIRST before setting turn
     resetChallengeState();
 
     // Update players and set turn to receiver using latest state
-    // Calculate the updated players array directly from current state
-    const updatedPlayers = players.map((p) =>
-      p.id === updatedPlayedTile.receivingPlayerId
-        ? { ...p, bureaucracyTiles: [...p.bureaucracyTiles, tile] }
-        : p
-    );
+    // (tile is face-up/rejected — not added to bureaucracyTiles)
+    const updatedPlayers = players.slice();
 
     // Move to receiving player for their turn
     const receiverIndex = updatedPlayers.findIndex(
