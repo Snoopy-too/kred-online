@@ -546,16 +546,16 @@ describe("Specific Move Type Validation", () => {
       expect(validateOrganizeMove(move, 1, pieces)).toBe(true);
     });
 
-    it("validates moving own piece to adjacent opponent seat", () => {
+    it("validates moving own piece to adjacent opponent seat (p1_seat6 -> p3_seat1, 3-player)", () => {
       const move = createMove(
-        "p1_seat1",
-        "p2_seat1",
+        "p1_seat6",
+        "p3_seat1",
         "piece1",
         DefinedMoveType.ORGANIZE
       );
-      const pieces: Piece[] = [createPiece("piece1", "p1_seat1", "Mark")];
+      const pieces: Piece[] = [createPiece("piece1", "p1_seat6", "Mark")];
 
-      expect(validateOrganizeMove(move, 1, pieces)).toBe(true);
+      expect(validateOrganizeMove(move, 1, pieces, 3)).toBe(true);
     });
 
     it("rejects organizing opponent piece", () => {
@@ -585,16 +585,16 @@ describe("Specific Move Type Validation", () => {
       expect(validateOrganizeMove(move, 1, pieces)).toBe(false);
     });
 
-    it("validates moving own piece from rostrum to adjacent rostrum", () => {
+    it("validates moving own piece from rostrum to adjacent cross-domain rostrum (p1_rostrum2 -> p3_rostrum1, 3-player)", () => {
       const move = createMove(
-        "p1_rostrum1",
         "p1_rostrum2",
+        "p3_rostrum1",
         "piece1",
         DefinedMoveType.ORGANIZE
       );
-      const pieces: Piece[] = [createPiece("piece1", "p1_rostrum1", "Heel")];
+      const pieces: Piece[] = [createPiece("piece1", "p1_rostrum2", "Heel")];
 
-      expect(validateOrganizeMove(move, 1, pieces)).toBe(true);
+      expect(validateOrganizeMove(move, 1, pieces, 3)).toBe(true);
     });
 
     it("rejects organizing from opponent rostrum", () => {
@@ -607,6 +607,50 @@ describe("Specific Move Type Validation", () => {
       const pieces: Piece[] = [createPiece("piece1", "p2_rostrum1", "Heel")];
 
       expect(validateOrganizeMove(move, 1, pieces)).toBe(false);
+    });
+
+    it("should reject ORGANIZE from own rostrum1 to own rostrum2 (same domain)", () => {
+      const pieces: Piece[] = [
+        { id: "h1", name: "Heel", displayName: "H1", locationId: "p1_rostrum1", position: { left: 0, top: 0 }, rotation: 0 },
+      ];
+      const move: TrackedMove = {
+        pieceId: "h1", moveType: DefinedMoveType.ORGANIZE, category: "M",
+        fromLocationId: "p1_rostrum1", toLocationId: "p1_rostrum2",
+      };
+      expect(validateOrganizeMove(move, 1, pieces, 3)).toBe(false);
+    });
+
+    it("should allow ORGANIZE from p1_rostrum2 to adjacent p3_rostrum1 (3-player)", () => {
+      const pieces: Piece[] = [
+        { id: "h1", name: "Heel", displayName: "H1", locationId: "p1_rostrum2", position: { left: 0, top: 0 }, rotation: 0 },
+      ];
+      const move: TrackedMove = {
+        pieceId: "h1", moveType: DefinedMoveType.ORGANIZE, category: "M",
+        fromLocationId: "p1_rostrum2", toLocationId: "p3_rostrum1",
+      };
+      expect(validateOrganizeMove(move, 1, pieces, 3)).toBe(true);
+    });
+
+    it("should reject ORGANIZE from p1_rostrum1 to non-adjacent p3_rostrum1 (3-player)", () => {
+      const pieces: Piece[] = [
+        { id: "h1", name: "Heel", displayName: "H1", locationId: "p1_rostrum1", position: { left: 0, top: 0 }, rotation: 0 },
+      ];
+      const move: TrackedMove = {
+        pieceId: "h1", moveType: DefinedMoveType.ORGANIZE, category: "M",
+        fromLocationId: "p1_rostrum1", toLocationId: "p3_rostrum1",
+      };
+      expect(validateOrganizeMove(move, 1, pieces, 3)).toBe(false);
+    });
+
+    it("should reject ORGANIZE seat-to-seat when seats are not adjacent", () => {
+      const pieces: Piece[] = [
+        { id: "m1", name: "Mark", displayName: "M1", locationId: "p1_seat1", position: { left: 0, top: 0 }, rotation: 0 },
+      ];
+      const move: TrackedMove = {
+        pieceId: "m1", moveType: DefinedMoveType.ORGANIZE, category: "M",
+        fromLocationId: "p1_seat1", toLocationId: "p1_seat3",
+      };
+      expect(validateOrganizeMove(move, 1, pieces, 3)).toBe(false);
     });
   });
 });

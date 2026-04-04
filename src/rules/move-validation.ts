@@ -23,6 +23,7 @@ import type { TrackedMove, Piece } from "../types";
 // FUNCTION IMPORTS - Rules and utilities
 // ============================================================================
 import { areSeatsAdjacent, canMoveFromCommunity } from "./adjacency";
+import { ROSTRUM_ADJACENCY_BY_PLAYER_COUNT } from "../config/rules";
 
 // ============================================================================
 // MOVE VALIDATORS
@@ -373,7 +374,8 @@ export function validateAssistMove(
 export function validateOrganizeMove(
   move: TrackedMove,
   playerId: number,
-  pieces: Piece[]
+  pieces: Piece[],
+  playerCount: number = 3
 ): boolean {
   const fromLocationId = move.fromLocationId;
   const toLocationId = move.toLocationId;
@@ -384,19 +386,26 @@ export function validateOrganizeMove(
     if (!fromLocationId?.includes(`p${playerId}_seat`)) return false;
     // Target seat must be vacant
     const targetOccupied = pieces.some((p) => p.locationId === toLocationId);
-    return !targetOccupied;
+    if (targetOccupied) return false;
+    return areSeatsAdjacent(fromLocationId, toLocationId, playerCount);
   }
 
-  // Case 2: Rostrum to adjacent rostrum (can cross player boundaries)
+  // Case 2: Rostrum to adjacent rostrum (cross-domain only, using adjacency config)
   if (
     fromLocationId?.includes("_rostrum") &&
     toLocationId?.includes("_rostrum")
   ) {
-    // Must be from player's own rostrum
     if (!fromLocationId?.includes(`p${playerId}_rostrum`)) return false;
-    // Target rostrum must be vacant
     const targetOccupied = pieces.some((p) => p.locationId === toLocationId);
-    return !targetOccupied;
+    if (targetOccupied) return false;
+
+    // Check rostrum adjacency from config
+    const adjacencies = ROSTRUM_ADJACENCY_BY_PLAYER_COUNT[playerCount] || [];
+    return adjacencies.some(
+      (adj) =>
+        (adj.rostrum1 === fromLocationId && adj.rostrum2 === toLocationId) ||
+        (adj.rostrum2 === fromLocationId && adj.rostrum1 === toLocationId)
+    );
   }
 
   return false;

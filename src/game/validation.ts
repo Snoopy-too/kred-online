@@ -277,7 +277,7 @@ export function validateSingleMove(
 
     case DefinedMoveType.ORGANIZE:
       return {
-        isValid: validateOrganizeMove(move, playerId, pieces),
+        isValid: validateOrganizeMove(move, playerId, pieces, playerCount),
         reason: "ORGANIZE move validation",
       };
 
