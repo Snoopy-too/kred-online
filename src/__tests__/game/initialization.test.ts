@@ -181,8 +181,8 @@ describe("initializeCampaignPieces", () => {
 
   it("creates correct total number of pieces for 4-player game", () => {
     const pieces = initializeCampaignPieces(4);
-    // 4 players: 14 marks + 13 heels + 4 pawns = 31 pieces
-    expect(pieces).toHaveLength(31);
+    // 4 players: 15 marks + 13 heels + 4 pawns = 32 pieces
+    expect(pieces).toHaveLength(32);
   });
 
   it("creates correct total number of pieces for 5-player game", () => {
@@ -208,7 +208,7 @@ describe("initializeCampaignPieces", () => {
     const heels = pieces.filter((p) => p.name === "Heel");
     const pawns = pieces.filter((p) => p.name === "Pawn");
 
-    expect(marks).toHaveLength(14);
+    expect(marks).toHaveLength(15);
     expect(heels).toHaveLength(13);
     expect(pawns).toHaveLength(4);
   });
