@@ -266,6 +266,11 @@ export function validateInfluenceMove(
 
   if (!fromLocationId || !toLocationId) return false;
 
+  // Pawns may NOT be Influenced (manual: "A Pawn may not be Influenced into or out of any Domain")
+  const movingPiece = getPieceById(pieces, move.pieceId);
+  if (!movingPiece) return false;
+  if (movingPiece.name.toLowerCase() === "pawn") return false;
+
   // Case 1: Seat to adjacent seat
   if (fromLocationId.includes("_seat") && toLocationId.includes("_seat")) {
     // Must be opponent's piece

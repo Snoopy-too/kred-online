@@ -454,6 +454,18 @@ describe("Specific Move Type Validation", () => {
 
       expect(validateInfluenceMove(move, 1, pieces, 3)).toBe(false);
     });
+
+    it("should reject INFLUENCE of a Pawn (Pawns may not be Influenced)", () => {
+      const pawnPiece: Piece = {
+        id: "pawn1", name: "Pawn", displayName: "Pawn1",
+        locationId: "p2_seat1", position: { left: 0, top: 0 }, rotation: 0,
+      };
+      const move: TrackedMove = {
+        pieceId: "pawn1", moveType: DefinedMoveType.INFLUENCE, category: "M",
+        fromLocationId: "p2_seat1", toLocationId: "p2_seat2",
+      };
+      expect(validateInfluenceMove(move, 1, [pawnPiece], 3)).toBe(false);
+    });
   });
 
   describe("validateAssistMove", () => {
