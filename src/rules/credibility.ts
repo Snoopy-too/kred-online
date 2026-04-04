@@ -75,6 +75,29 @@ export function deductCredibility(
  * const updatedPlayers = updateFn(gameState.players);
  * ```
  */
+/**
+ * Restores credibility for a Receiver who exposes a dishonest play.
+ * Manual: Restore up to 2 notches (max 3). If already full, grant free Advance instead.
+ */
+export function restoreReceiverCredibility(
+  players: Player[],
+  receiverId: number
+): { players: Player[]; freeAdvance: boolean } {
+  const receiver = players.find((p) => p.id === receiverId);
+  if (!receiver) return { players, freeAdvance: false };
+
+  if (receiver.credibility >= 3) {
+    return { players, freeAdvance: true };
+  }
+
+  const newCredibility = Math.min(3, receiver.credibility + 2);
+  const updatedPlayers = players.map((p) =>
+    p.id === receiverId ? { ...p, credibility: newCredibility } : p
+  );
+
+  return { players: updatedPlayers, freeAdvance: false };
+}
+
 export function handleCredibilityLoss(
   reason:
     | "tile_rejected_by_receiver"

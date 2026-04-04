@@ -47,4 +47,4 @@ export { calculateMoves } from "./move-calculation";
 export { checkPlayerWinCondition, checkBureaucracyWinCondition } from "../rules/win-conditions";
 
 // Credibility - credibility deduction and loss handling
-export { deductCredibility, handleCredibilityLoss } from "../rules/credibility";
+export { deductCredibility, handleCredibilityLoss, restoreReceiverCredibility } from "../rules/credibility";

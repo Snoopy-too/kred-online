@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import type { Player } from "../../types";
-import { deductCredibility, handleCredibilityLoss } from "../../../game";
+import { deductCredibility, handleCredibilityLoss, restoreReceiverCredibility } from "../../game";
 
 describe("deductCredibility", () => {
   it("deducts 1 credibility from the specified player", () => {
@@ -275,5 +275,52 @@ describe("handleCredibilityLoss", () => {
       expect(result).not.toBe(players);
       expect(result[0]).not.toBe(players[0]);
     });
+  });
+});
+
+describe("restoreReceiverCredibility", () => {
+  it("should restore 2 notches when at credibility 1", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [], credibility: 1 },
+    ];
+    const result = restoreReceiverCredibility(players, 1);
+    expect(result.players[0].credibility).toBe(3);
+    expect(result.freeAdvance).toBe(false);
+  });
+
+  it("should restore 1 notch when at credibility 2 (capped at 3)", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [], credibility: 2 },
+    ];
+    const result = restoreReceiverCredibility(players, 1);
+    expect(result.players[0].credibility).toBe(3);
+    expect(result.freeAdvance).toBe(false);
+  });
+
+  it("should grant free Advance when already at full credibility (3)", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [], credibility: 3 },
+    ];
+    const result = restoreReceiverCredibility(players, 1);
+    expect(result.players[0].credibility).toBe(3);
+    expect(result.freeAdvance).toBe(true);
+  });
+
+  it("should restore up to 2 when at 0 credibility", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [], credibility: 0 },
+    ];
+    const result = restoreReceiverCredibility(players, 1);
+    expect(result.players[0].credibility).toBe(2);
+    expect(result.freeAdvance).toBe(false);
+  });
+
+  it("should not affect other players", () => {
+    const players: Player[] = [
+      { id: 1, hand: [], keptTiles: [], bureaucracyTiles: [], credibility: 1 },
+      { id: 2, hand: [], keptTiles: [], bureaucracyTiles: [], credibility: 1 },
+    ];
+    const result = restoreReceiverCredibility(players, 1);
+    expect(result.players[1].credibility).toBe(1);
   });
 });
