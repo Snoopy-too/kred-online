@@ -123,7 +123,7 @@ export function validateAdvanceMove(
  *
  * WITHDRAW options (from official manual):
  * a. Seat to community
- * b. Rostrum to vacant seat (rostrum1 → seats 1-3, rostrum2 → seats 3-5)
+ * b. Rostrum to vacant seat (rostrum1 → seats 1-3, rostrum2 → seats 4-6)
  * c. Office to vacant rostrum
  *
  * @param move - The move to validate
@@ -164,11 +164,11 @@ export function validateWithdrawMove(
   }
 
   if (fromLocationId === `p${playerId}_rostrum2`) {
-    // rostrum2 can go to seats 3, 4, or 5
+    // rostrum2 can go to seats 4, 5, or 6
     const validSeats = [
-      `p${playerId}_seat3`,
       `p${playerId}_seat4`,
       `p${playerId}_seat5`,
+      `p${playerId}_seat6`,
     ];
     if (validSeats.includes(toLocationId)) {
       const targetOccupied = pieces.some((p) => p.locationId === toLocationId);

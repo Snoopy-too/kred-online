@@ -243,6 +243,30 @@ describe("Specific Move Type Validation", () => {
       expect(validateWithdrawMove(move, 1, pieces)).toBe(true);
     });
 
+    it("validates rostrum2 to vacant seat 6", () => {
+      const move = createMove(
+        "p1_rostrum2",
+        "p1_seat6",
+        "piece1",
+        DefinedMoveType.WITHDRAW
+      );
+      const pieces: Piece[] = [createPiece("piece1", "p1_rostrum2", "Heel")];
+
+      expect(validateWithdrawMove(move, 1, pieces)).toBe(true);
+    });
+
+    it("rejects rostrum2 to seat3 (seat3 is not in Faction 2)", () => {
+      const move = createMove(
+        "p1_rostrum2",
+        "p1_seat3",
+        "piece1",
+        DefinedMoveType.WITHDRAW
+      );
+      const pieces: Piece[] = [createPiece("piece1", "p1_rostrum2", "Heel")];
+
+      expect(validateWithdrawMove(move, 1, pieces)).toBe(false);
+    });
+
     it("validates office to vacant rostrum", () => {
       const move = createMove(
         "p1_office",
