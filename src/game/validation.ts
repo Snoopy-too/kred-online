@@ -58,6 +58,16 @@ export function validateMovesForTilePlay(movesPerformed: TrackedMove[]): {
     };
   }
 
+  // Two moves must affect separate pieces (manual rule)
+  if (movesPerformed.length === 2) {
+    if (movesPerformed[0].pieceId === movesPerformed[1].pieceId) {
+      return {
+        isValid: false,
+        error: "Two moves in a turn must affect separate pieces",
+      };
+    }
+  }
+
   return { isValid: true };
 }
 

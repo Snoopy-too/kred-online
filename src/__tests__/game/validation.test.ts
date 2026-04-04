@@ -76,8 +76,8 @@ describe("validateMovesForTilePlay", () => {
 
   it("should allow 1 O-move and 1 M-move", () => {
     const moves = [
-      createMove(DefinedMoveType.ADVANCE, "O"),
-      createMove(DefinedMoveType.REMOVE, "M"),
+      createMove(DefinedMoveType.ADVANCE, "O", "p1_m1"),
+      createMove(DefinedMoveType.REMOVE, "M", "p2_m1"),
     ];
     const result = validateMovesForTilePlay(moves);
     expect(result.isValid).toBe(true);
@@ -85,8 +85,8 @@ describe("validateMovesForTilePlay", () => {
 
   it("should allow 2 moves of different categories", () => {
     const moves = [
-      createMove(DefinedMoveType.WITHDRAW, "O"),
-      createMove(DefinedMoveType.INFLUENCE, "M"),
+      createMove(DefinedMoveType.WITHDRAW, "O", "p1_m1"),
+      createMove(DefinedMoveType.INFLUENCE, "M", "p2_m1"),
     ];
     const result = validateMovesForTilePlay(moves);
     expect(result.isValid).toBe(true);
@@ -131,6 +131,25 @@ describe("validateMovesForTilePlay", () => {
     ];
     const result = validateMovesForTilePlay(moves);
     expect(result.isValid).toBe(false);
+  });
+
+  it("should reject two moves that affect the same piece", () => {
+    const moves: TrackedMove[] = [
+      { pieceId: "m1", moveType: DefinedMoveType.INFLUENCE, category: "O", fromLocationId: "p2_seat3", toLocationId: "p1_seat6" },
+      { pieceId: "m1", moveType: DefinedMoveType.ADVANCE, category: "M", fromLocationId: "p1_seat6", toLocationId: "p1_rostrum2" },
+    ];
+    const result = validateMovesForTilePlay(moves);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toContain("separate pieces");
+  });
+
+  it("should allow two moves that affect different pieces", () => {
+    const moves: TrackedMove[] = [
+      { pieceId: "m1", moveType: DefinedMoveType.REMOVE, category: "O", fromLocationId: "p2_seat3", toLocationId: "community1" },
+      { pieceId: "m2", moveType: DefinedMoveType.ADVANCE, category: "M", fromLocationId: "community2", toLocationId: "p1_seat1" },
+    ];
+    const result = validateMovesForTilePlay(moves);
+    expect(result.isValid).toBe(true);
   });
 });
 
