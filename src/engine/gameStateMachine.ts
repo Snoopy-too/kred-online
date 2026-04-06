@@ -2,10 +2,12 @@
 import {
   DefinedMoveType,
   TILE_KREDCOIN_VALUES,
-  ROSTRUM_SUPPORT_RULES,
   getNextPlayerClockwise,
-  checkPlayerWinCondition,
 } from '@kred/shared';
+import {
+  THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
+  FIVE_PLAYER_BUREAUCRACY_MENU,
+} from '../config/bureaucracy';
 import { PIECE_COUNTS_BY_PLAYER_COUNT } from '../config/pieces';
 import { SeededRandom } from './seededRandom';
 import { validateMove, checkSupportViolations } from './moveValidation';
@@ -355,19 +357,25 @@ function handleReceiverDecision(state: KredGameState, action: ReceiverDecision):
     // Check honesty
     const honest = determineHonesty(state);
     if (!honest) {
-      // Whistle Blown: mover was bluffing, receiver correctly rejected
+      // Whistle Blown: mover was bluffing, receiver correctly rejected.
+      // resolveWhistleBlown calls removeTileFromHand (no-op since tile was already
+      // removed from hand in handleSelectTile) then pushes tile to receiver.bankFaceUp.
       state = resolveWhistleBlown(state);
     } else {
-      // False rejection: mover was honest, receiver wrongly rejected
-      // Mover keeps moves, receiver loses cred (by game rules, treated like Witch Hunt variant)
-      // Per game rules: receiver who rejects an honest tile pays a penalty
+      // False rejection: mover was honest, receiver wrongly rejected.
+      // Per game rules: pieces are restored, tile goes back to mover's hand,
+      // receiver loses 1 credibility.
+      // The tile was removed from hand in handleSelectTile, so we must restore it.
+      const tileId = state.turn.tilePlayedId!;
+      const mover = getPlayer(state, state.turn.moverId);
+      mover.hand.push(tileId);
+      // Restore pieces to before-move state
+      if (state.piecesBeforeMove) {
+        state.pieces = state.piecesBeforeMove;
+      }
+      state.piecesBeforeMove = null;
       const receiver = getPlayer(state, action.playerId);
       receiver.credibility = Math.max(0, receiver.credibility - 1);
-      state.piecesBeforeMove = null;
-      // Tile stays in mover's hand (move is cancelled)
-      // Actually per game rules on honest REJECT: mover's pieces are restored
-      // and tile stays in mover's hand. Receiver loses credibility.
-      // We don't remove tile from hand for an honest play that was rejected.
     }
     return advanceToNextMover(state);
   }
@@ -459,7 +467,6 @@ function handleBureaucracyPurchase(state: KredGameState, action: BureaucracyPurc
   const funding = state.bureaucracy.remainingFunding[action.playerId] ?? 0;
 
   // Get menu
-  const { THREE_FOUR_PLAYER_BUREAUCRACY_MENU, FIVE_PLAYER_BUREAUCRACY_MENU } = require('../config/bureaucracy-menu');
   const menu = state.config.playerCount === 5
     ? FIVE_PLAYER_BUREAUCRACY_MENU
     : THREE_FOUR_PLAYER_BUREAUCRACY_MENU;
