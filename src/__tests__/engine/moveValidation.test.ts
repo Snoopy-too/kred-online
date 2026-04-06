@@ -93,6 +93,21 @@ describe('validateMove', () => {
       expect(validateMove(move, 1, pieces, 3)).toBe(true);
     });
 
+    it('rejects Seat -> Rostrum when rostrum already occupied', () => {
+      const pieces = makeStartingPieces();
+      // Fill p1 seat2 to complete faction 1
+      pieces.push({ id: 'mark_extra', type: 'MARK', locationId: 'p1_seat2' });
+      // Put a piece on the rostrum already
+      pieces.push({ id: 'mark_blocker', type: 'MARK', locationId: 'p1_rostrum1' });
+      const move: EngineMove = {
+        moveType: DefinedMoveType.ADVANCE,
+        pieceId: 'mark_1', // p1_seat1
+        fromLocationId: 'p1_seat1',
+        toLocationId: 'p1_rostrum1',
+      };
+      expect(validateMove(move, 1, pieces, 3)).toBe(false);
+    });
+
     it('takes Marks before Heels from community', () => {
       const pieces = makeStartingPieces(); // has marks in community
       const heelMove: EngineMove = {
@@ -177,6 +192,34 @@ describe('validateMove', () => {
         toLocationId: 'community',
       };
       expect(validateMove(move, 1, pieces, 3)).toBe(false);
+    });
+
+    it('allows Office -> vacant Rostrum', () => {
+      const pieces: KredPiece[] = [
+        { id: 'mark_office', type: 'MARK', locationId: 'p1_office' },
+        // rostrums are vacant
+      ];
+      const move: EngineMove = {
+        moveType: DefinedMoveType.WITHDRAW,
+        pieceId: 'mark_office',
+        fromLocationId: 'p1_office',
+        toLocationId: 'p1_rostrum1',
+      };
+      expect(validateMove(move, 1, pieces, 3)).toBe(true);
+    });
+
+    it('allows Rostrum -> vacant Seat in same faction', () => {
+      const pieces: KredPiece[] = [
+        { id: 'mark_rostrum', type: 'MARK', locationId: 'p1_rostrum1' },
+        // supporting seats are vacant
+      ];
+      const move: EngineMove = {
+        moveType: DefinedMoveType.WITHDRAW,
+        pieceId: 'mark_rostrum',
+        fromLocationId: 'p1_rostrum1',
+        toLocationId: 'p1_seat1',
+      };
+      expect(validateMove(move, 1, pieces, 3)).toBe(true);
     });
   });
 
@@ -285,7 +328,7 @@ describe('findLegalMoves', () => {
     expect(moves.every(m => m.moveType === DefinedMoveType.ADVANCE)).toBe(true);
   });
 
-  it('returns empty for ADVANCE when no vacant seats and no full factions', () => {
+  it('returns seat->rostrum ADVANCE options when all seats filled (both factions full)', () => {
     const pieces: KredPiece[] = [];
     for (let s = 1; s <= 6; s++) {
       pieces.push({ id: `mark_${s}`, type: 'MARK', locationId: `p1_seat${s}` });

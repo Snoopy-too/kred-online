@@ -6,7 +6,6 @@ import {
   areRostrumsAdjacent,
   getAdjacentRostrum,
   ROSTRUM_SUPPORT_RULES,
-  ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
 } from '@kred/shared';
 import type { KredPiece, EngineMove } from './types';
 
@@ -131,6 +130,8 @@ function validateAdvance(move: EngineMove, playerId: number, pieces: KredPiece[]
     // Seat must support this specific rostrum
     const supportingRostrum = getRostrumForSeat(from);
     if (supportingRostrum !== to) return false;
+    // Target rostrum must be vacant
+    if (!isVacant(to, pieces)) return false;
     // All 3 supporting seats must be occupied
     return isFactionFull(to, pieces);
   }
