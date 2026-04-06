@@ -20,7 +20,7 @@ export {
   handleCredibilityLoss
 } from './rules/credibility';
 export { checkPlayerWinCondition } from './rules/win-conditions';
-export { getNextPlayerClockwise, getPrevPlayerClockwise } from './rules/adjacency';
+export { getNextPlayerClockwise, getPrevPlayerClockwise, areSeatsAdjacent, getAdjacentSeats } from './rules/adjacency';
 export {
   getPlayerRostrumRules,
   getRostrumSupportRule,
