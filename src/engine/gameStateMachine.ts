@@ -3,6 +3,7 @@ import {
   DefinedMoveType,
   TILE_KREDCOIN_VALUES,
   getNextPlayerClockwise,
+  getTileRequirements,
 } from '@kred/shared';
 import {
   THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
@@ -10,7 +11,12 @@ import {
 } from '../config/bureaucracy';
 import { PIECE_COUNTS_BY_PLAYER_COUNT } from '../config/pieces';
 import { SeededRandom } from './seededRandom';
-import { validateMove, checkSupportViolations } from './moveValidation';
+import {
+  validateMove,
+  checkSupportViolations,
+  isValidTileCombination,
+} from './moveValidation';
+import { TILE_REQUIREMENTS } from '../config/rules';
 import {
   determineHonesty,
   resolveQuietIsKept,
@@ -33,6 +39,7 @@ import {
   type ResolveSupport,
   type BureaucracyPurchase,
   type EndBureaucracyTurn,
+  type InvariantResult,
 } from './types';
 
 // ============================================================================
@@ -231,12 +238,31 @@ export function gameReducer(state: KredGameState, action: KredAction): KredGameS
     newState.turn.phase !== TurnPhase.GAME_OVER
   ) {
     const results = runAllInvariants(newState);
-    const failed = results.filter(r => !r.passed);
-    if (failed.length > 0) {
-      throw new InvariantViolationError(
-        failed[0].name,
-        failed[0].details ?? 'No details',
-      );
+    const fatalNames = [
+      'fundingChecksum',
+      'pieceConservation',
+      'onePawnPerPlayer',
+      'credibilityBounds',
+      'separatePiecesPerTurn',
+      'removeRestrictions',
+    ];
+    const fatal = results.find(r => !r.passed && fatalNames.includes(r.name));
+    if (fatal) {
+      throw new InvariantViolationError(fatal.name, fatal.details || '');
+    }
+
+    const supportViolation = results.find(r => !r.passed && r.name === 'supportRule');
+    if (supportViolation) {
+      // If we are already in RESOLVE_SUPPORT, keep going until it's fixed
+      // If not, switch to it
+      if (newState.turn.phase !== TurnPhase.RESOLVE_SUPPORT) {
+        newState.phaseBeforeSupport = newState.turn.phase;
+        newState.turn.phase = TurnPhase.RESOLVE_SUPPORT;
+      }
+    } else if (newState.turn.phase === TurnPhase.RESOLVE_SUPPORT) {
+      // Violations fixed! Return to previous phase
+      newState.turn.phase = newState.phaseBeforeSupport ?? TurnPhase.MOVING;
+      newState.phaseBeforeSupport = null;
     }
   }
 
@@ -277,6 +303,14 @@ function handleMakeMoves(state: KredGameState, action: MakeMoves): KredGameState
     if (!piece) throw new ActionError(`Piece ${move.pieceId} not found`);
     piece.locationId = move.toLocationId;
     appliedMoves.push(move);
+  }
+
+  // Rule 287/477: Illegal move detection
+  const executedTypes = appliedMoves.map(m => m.moveType);
+  if (!isValidTileCombination(executedTypes, TILE_REQUIREMENTS)) {
+    throw new ActionError(
+      `Illegal play: Moves [${executedTypes.join(', ')}] do not match any existing tile.`
+    );
   }
 
   state.turn.movesExecuted = appliedMoves;
@@ -487,8 +521,22 @@ function handleBureaucracyPurchase(state: KredGameState, action: BureaucracyPurc
     if (!action.targetPieceId) throw new ActionError('BUREAUCRACY_PURCHASE: PROMOTION requires targetPieceId');
     const piece = state.pieces.find(p => p.id === action.targetPieceId);
     if (!piece) throw new ActionError(`BUREAUCRACY_PURCHASE: piece ${action.targetPieceId} not found`);
+    
+    const ownerMatch = piece.locationId.match(/^p(\d+)_/);
+    const ownerId = ownerMatch ? parseInt(ownerMatch[1]) : null;
+
     if (piece.type === 'MARK') piece.type = 'HEEL';
-    else if (piece.type === 'HEEL') piece.type = 'PAWN';
+    else if (piece.type === 'HEEL') {
+      // Only one Pawn per player allowed
+      // Check if player ALREADY has a Pawn in their domain
+      if (ownerId !== null) {
+        const hasPawn = state.pieces.some(
+          p => p.type === 'PAWN' && p.locationId.startsWith(`p${ownerId}_`)
+        );
+        if (hasPawn) throw new ActionError(`BUREAUCRACY_PURCHASE: player ${ownerId} already has a Pawn in their domain`);
+      }
+      piece.type = 'PAWN';
+    }
     else throw new ActionError(`BUREAUCRACY_PURCHASE: Pawn cannot be promoted`);
   } else if (item.type === 'MOVE') {
     if (!action.targetPieceId || !action.targetLocationId) {
@@ -551,14 +599,18 @@ function handleEndBureaucracyTurn(state: KredGameState, action: EndBureaucracyTu
 // ============================================================================
 
 function checkWinCondition(state: KredGameState, playerId: number): boolean {
+  // Rule 61: The blank tile cannot be used to achieve a winning setup.
+  if (state.turn.tilePlayedId === 'BLANK') return false;
+
   const officeLocation = `p${playerId}_office`;
   const officePiece = state.pieces.find(p => p.locationId === officeLocation);
   if (!officePiece || officePiece.type !== 'PAWN') return false;
 
   const rostrum1 = state.pieces.find(p => p.locationId === `p${playerId}_rostrum1`);
   const rostrum2 = state.pieces.find(p => p.locationId === `p${playerId}_rostrum2`);
-  if (!rostrum1 || rostrum1.type !== 'HEEL') return false;
-  if (!rostrum2 || rostrum2.type !== 'HEEL') return false;
+  // Must be HEEL or PAWN
+  if (!rostrum1 || rostrum1.type === 'MARK') return false;
+  if (!rostrum2 || rostrum2.type === 'MARK') return false;
 
   for (let i = 1; i <= 6; i++) {
     if (!state.pieces.some(p => p.locationId === `p${playerId}_seat${i}`)) return false;
@@ -649,6 +701,16 @@ function advanceToNextMover(state: KredGameState): KredGameState {
   };
   state.piecesBeforeMove = null;
   state.phaseBeforeSupport = null;
+
+  // Rule 445: Check win condition before next mover
+  const winners = state.players
+    .map(p => p.id)
+    .filter(id => checkWinCondition(state, id));
+
+  if (winners.length > 0) {
+    state.turn.phase = TurnPhase.GAME_OVER;
+    return state;
+  }
 
   return state;
 }

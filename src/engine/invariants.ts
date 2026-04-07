@@ -1,7 +1,6 @@
-// src/engine/invariants.ts
 import { DefinedMoveType, TILE_KREDCOIN_VALUES, ROSTRUM_SUPPORT_RULES } from '@kred/shared';
 import { PIECE_COUNTS_BY_PLAYER_COUNT } from '../config/pieces';
-import type { KredGameState, InvariantResult } from './types';
+import { type KredGameState, type InvariantResult, TurnPhase } from './types';
 
 /**
  * Collect all tile IDs across all players (hand, bankFaceDown, bankFaceUp)
@@ -217,11 +216,61 @@ export function checkRemoveRestrictions(state: KredGameState): InvariantResult {
 }
 
 /**
- * Community piece priority is checked at move time.
- * Post-hoc this invariant always passes.
+ * When taking a piece from the Community (for Advance or Assist):
+ * 1. Take a Mark first (if any Marks are in the Community).
+ * 2. Only if zero Marks remain in the Community, take a Heel.
  */
 export function checkCommunityPiecePriority(state: KredGameState): InvariantResult {
-  return { passed: true, name: 'communityPiecePriority' };
+  const name = 'communityPiecePriority';
+  const pieces = state.pieces;
+  const hasMarksInCommunity = pieces.some(p => p.type === 'MARK' && p.locationId === 'community');
+
+  // Check moves that targeted community this turn
+  for (const move of state.turn.movesExecuted) {
+    if (move.fromLocationId === 'community') {
+      const piece = pieces.find(p => p.id === move.pieceId);
+      if (piece && piece.type === 'HEEL' && hasMarksInCommunity) {
+        return {
+          passed: false,
+          name,
+          details: `Took HEEL from Community while MARKS were available.`,
+        };
+      }
+    }
+  }
+
+  return { passed: true, name };
+}
+
+/**
+ * The blank tile cannot be used to achieve a winning setup.
+ */
+export function checkBlankTileCannotWin(state: KredGameState): InvariantResult {
+  const name = 'blankTileCannotWin';
+  const winners = state.players.filter(p => {
+    // Determine if player has winning board setup
+    // Office: PAWN, Rostrums: HEEL+, Seats: all occupied
+    const office = state.pieces.find(pc => pc.locationId === `p${p.id}_office`);
+    if (!office || office.type !== 'PAWN') return false;
+    const r1 = state.pieces.find(pc => pc.locationId === `p${p.id}_rostrum1`);
+    const r2 = state.pieces.find(pc => pc.locationId === `p${p.id}_rostrum2`);
+    if (!r1 || r1.type === 'MARK') return false;
+    if (!r2 || r2.type === 'MARK') return false;
+    for (let i = 1; i <= 6; i++) {
+      if (!state.pieces.some(pc => pc.locationId === `p${p.id}_seat${i}`)) return false;
+    }
+    return true;
+  });
+
+  if (winners.length > 0 && state.turn.tilePlayedId === 'BLANK') {
+    return {
+      passed: false,
+      name,
+      details: `Player(s) ${winners.map(w => w.id).join(', ')} achieved winning setup but last tile played was BLANK`,
+    };
+  }
+
+  return { passed: true, name };
 }
 
 export function runAllInvariants(state: KredGameState): InvariantResult[] {
@@ -234,5 +283,6 @@ export function runAllInvariants(state: KredGameState): InvariantResult[] {
     checkSeparatePiecesPerTurn(state),
     checkRemoveRestrictions(state),
     checkCommunityPiecePriority(state),
+    checkBlankTileCannotWin(state),
   ];
 }

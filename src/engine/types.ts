@@ -164,6 +164,7 @@ export interface InvariantResult {
   details?: string;
 }
 
+
 export interface InvariantViolation {
   invariantName: string;
   details: string;

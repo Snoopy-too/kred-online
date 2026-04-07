@@ -194,10 +194,11 @@ describe('validateMove', () => {
       expect(validateMove(move, 1, pieces, 3)).toBe(false);
     });
 
-    it('allows Office -> vacant Rostrum', () => {
+    it('allows Office -> vacant Rostrum when supporting seat is occupied', () => {
       const pieces: KredPiece[] = [
         { id: 'mark_office', type: 'MARK', locationId: 'p1_office' },
-        // rostrums are vacant
+        // At least one supporting seat for rostrum1 must be occupied
+        { id: 'mark_seat', type: 'MARK', locationId: 'p1_seat1' },
       ];
       const move: EngineMove = {
         moveType: DefinedMoveType.WITHDRAW,
@@ -206,6 +207,20 @@ describe('validateMove', () => {
         toLocationId: 'p1_rostrum1',
       };
       expect(validateMove(move, 1, pieces, 3)).toBe(true);
+    });
+
+    it('rejects Office -> Rostrum when no supporting seat is occupied', () => {
+      const pieces: KredPiece[] = [
+        { id: 'mark_office', type: 'MARK', locationId: 'p1_office' },
+        // No supporting seats occupied
+      ];
+      const move: EngineMove = {
+        moveType: DefinedMoveType.WITHDRAW,
+        pieceId: 'mark_office',
+        fromLocationId: 'p1_office',
+        toLocationId: 'p1_rostrum1',
+      };
+      expect(validateMove(move, 1, pieces, 3)).toBe(false);
     });
 
     it('allows Rostrum -> vacant Seat in same faction', () => {

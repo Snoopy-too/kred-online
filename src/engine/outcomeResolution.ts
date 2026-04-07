@@ -1,5 +1,5 @@
-// src/engine/outcomeResolution.ts
 import { getTileRequirements } from '@kred/shared';
+import { findLegalMoves } from './moveValidation';
 import type { KredGameState } from './types';
 
 function cloneState(state: KredGameState): KredGameState {
@@ -22,6 +22,10 @@ function removeTileFromHand(state: KredGameState, playerId: number, tileId: stri
 
 export function determineHonesty(state: KredGameState): boolean {
   const tileId = state.turn.tilePlayedId;
+  const playerId = state.turn.moverId;
+  const piecesBefore = state.piecesBeforeMove || state.pieces;
+  const playerCount = state.config.playerCount;
+
   if (!tileId) return true;
   if (tileId === 'BLANK') return true;
 
@@ -29,17 +33,30 @@ export function determineHonesty(state: KredGameState): boolean {
   if (!req) return true;
 
   const executedTypes = state.turn.movesExecuted.map(m => m.moveType);
-  const required = req.requiredMoves;
+  const required = [...req.requiredMoves];
 
-  if (required.length !== executedTypes.length) return false;
-
-  const executedCopy = [...executedTypes];
-  for (const reqMove of required) {
-    const idx = executedCopy.indexOf(reqMove);
-    if (idx === -1) return false;
-    executedCopy.splice(idx, 1);
+  // For each required move, if it's in executed, consumption.
+  for (const move of executedTypes) {
+    const idx = required.indexOf(move);
+    if (idx !== -1) {
+      required.splice(idx, 1);
+    } else {
+      // Extra move that wasn't required? Dishonest.
+      return false;
+    }
   }
-  return executedCopy.length === 0;
+
+  // Any leftover requirements must be impossible
+  for (const remaining of required) {
+    const moves = findLegalMoves(remaining, playerId, piecesBefore, playerCount);
+    if (moves.length > 0) {
+      // Rule 462: "If impossible... forgone... still honest".
+      // But here it WAS possible. So dishonest.
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function resolveQuietIsKept(state: KredGameState): KredGameState {

@@ -1,5 +1,9 @@
 // src/engine/randomBot.ts
 import { getTileRequirements, DefinedMoveType } from '@kred/shared';
+import {
+  THREE_FOUR_PLAYER_BUREAUCRACY_MENU,
+  FIVE_PLAYER_BUREAUCRACY_MENU,
+} from '../config/bureaucracy';
 import { findLegalMoves } from './moveValidation';
 import { determineHonesty } from './outcomeResolution';
 import { SeededRandom } from './seededRandom';
@@ -9,7 +13,9 @@ import {
   type KredAction,
   type KredPiece,
   type EngineMove,
+  type ResolveSupport,
 } from './types';
+import { checkSupportViolations } from './moveValidation';
 
 /**
  * Given the current game state and which player the bot is acting as,
@@ -30,7 +36,9 @@ export function randomBot(
     case TurnPhase.AWAITING_CHALLENGES:
       return botBystanderDecision(state, playerId, rng);
     case TurnPhase.BUREAUCRACY:
-      return botBureaucracy(state, playerId);
+      return botBureaucracy(state, playerId, rng);
+    case TurnPhase.RESOLVE_SUPPORT:
+      return botResolveSupport(state, playerId, rng);
     default:
       throw new Error(`randomBot: unexpected phase ${state.turn.phase}`);
   }
@@ -64,8 +72,13 @@ function botMakeMoves(
     }
   }
 
-  // Bluff or fallback: pick any 1 legal move we can find
-  const fallbackMoves = buildAnyLegalMoves(playerId, state.pieces, playerCount, rng, 1);
+  // Bluff or fallback: pick 1-3 legal moves we can find
+  const moveCount = rng.weightedChoice([
+    { value: 1, weight: 20 },
+    { value: 2, weight: 50 },
+    { value: 3, weight: 30 },
+  ]);
+  const fallbackMoves = buildAnyLegalMoves(playerId, state.pieces, playerCount, rng, moveCount);
   return { type: 'MAKE_MOVES', playerId, moves: fallbackMoves };
 }
 
@@ -91,7 +104,8 @@ function buildHonestMoves(
     // Filter to pieces not already used in this turn (separate-pieces rule)
     const usedPieceIds = new Set(moves.map(m => m.pieceId));
     const available = legal.filter(m => !usedPieceIds.has(m.pieceId));
-    const chosen = available.length > 0 ? rng.pick(available) : rng.pick(legal);
+    if (available.length === 0) return null;
+    const chosen = rng.pick(available);
 
     moves.push(chosen);
     // Apply the move to the simulated pieces so subsequent moves see the updated board
@@ -113,15 +127,6 @@ function buildAnyLegalMoves(
   rng: SeededRandom,
   count: number
 ): EngineMove[] {
-  const allTypes = [
-    DefinedMoveType.ADVANCE,
-    DefinedMoveType.WITHDRAW,
-    DefinedMoveType.ORGANIZE,
-    DefinedMoveType.REMOVE,
-    DefinedMoveType.INFLUENCE,
-    DefinedMoveType.ASSIST,
-  ];
-
   const moves: EngineMove[] = [];
   let simulatedPieces = pieces.map(p => ({ ...p }));
 
@@ -130,9 +135,28 @@ function buildAnyLegalMoves(
 
     // Gather all legal moves across all types
     let allLegal: EngineMove[] = [];
-    for (const mt of allTypes) {
-      const legal = findLegalMoves(mt, playerId, simulatedPieces, playerCount);
-      allLegal = allLegal.concat(legal.filter(m => !usedPieceIds.has(m.pieceId)));
+    const moveTypes = [
+      { type: DefinedMoveType.ADVANCE, weight: 100 },
+      { type: DefinedMoveType.ORGANIZE, weight: 60 },
+      { type: DefinedMoveType.ASSIST, weight: 40 },
+      { type: DefinedMoveType.INFLUENCE, weight: 40 },
+      { type: DefinedMoveType.REMOVE, weight: 30 },
+      { type: DefinedMoveType.WITHDRAW, weight: 10 },
+    ];
+
+    for (const { type, weight } of moveTypes) {
+      const legal = findLegalMoves(type, playerId, simulatedPieces, playerCount);
+      const filtered = legal.filter(m => !usedPieceIds.has(m.pieceId));
+      for (const m of filtered) {
+        // Double weight if it moves TO the player's own domain
+        const isToMyDomain = m.toLocationId.startsWith(`p${playerId}_`);
+        const finalWeight = isToMyDomain ? weight * 2 : weight;
+        
+        // Add to pool multiple times to simulate weighted pick
+        for (let w = 0; w < finalWeight; w++) {
+          allLegal.push(m);
+        }
+      }
     }
 
     if (allLegal.length === 0) break;
@@ -228,8 +252,138 @@ function botBystanderDecision(
 
 function botBureaucracy(
   state: KredGameState,
-  playerId: number
+  playerId: number,
+  rng: SeededRandom
 ): KredAction {
-  // Simplified: always end turn immediately
-  return { type: 'END_BUREAUCRACY_TURN', playerId };
+  const funding = state.bureaucracy.remainingFunding[playerId] ?? 0;
+  const menu = state.config.playerCount === 5
+    ? FIVE_PLAYER_BUREAUCRACY_MENU
+    : THREE_FOUR_PLAYER_BUREAUCRACY_MENU;
+
+  // Find all affordable items that have valid targets
+  const options: Array<{
+    action: KredAction;
+    weight: number;
+  }> = [];
+
+  for (const item of menu) {
+    if (item.price > funding) continue;
+
+    if (item.type === 'CREDIBILITY') {
+      const player = state.players.find(p => p.id === playerId)!;
+      if (player.credibility < 3) {
+        options.push({
+          action: { type: 'BUREAUCRACY_PURCHASE', playerId, menuItemId: item.id },
+          weight: player.credibility === 0 ? 500 : 100, // Desperate for credibility if 0
+        });
+      }
+    } else if (item.type === 'PROMOTION') {
+      const promotablePieces = findPromotablePieces(state, playerId, item.promotionLocation!);
+      for (const piece of promotablePieces) {
+        options.push({
+          action: {
+            type: 'BUREAUCRACY_PURCHASE',
+            playerId,
+            menuItemId: item.id,
+            targetPieceId: piece.id
+          },
+          weight: 200, // Very high priority
+        });
+      }
+    } else if (item.type === 'MOVE') {
+      const moveType = item.moveType as DefinedMoveType;
+      const legalMoves = findLegalMoves(moveType, playerId, state.pieces, state.config.playerCount);
+      for (const move of legalMoves) {
+        const isToMyDomain = move.toLocationId.startsWith(`p${playerId}_`);
+        let weight = 50;
+        if (moveType === DefinedMoveType.ADVANCE) weight = 150;
+        if (moveType === DefinedMoveType.WITHDRAW) weight = 5;
+        if (isToMyDomain) weight *= 2;
+
+        options.push({
+          action: {
+            type: 'BUREAUCRACY_PURCHASE',
+            playerId,
+            menuItemId: item.id,
+            targetPieceId: move.pieceId,
+            targetLocationId: move.toLocationId
+          },
+          weight,
+        });
+      }
+    }
+  }
+
+  // Lower stop chance (10%) to encourage spending
+  if (options.length === 0 || rng.next() < 0.1) {
+    return { type: 'END_BUREAUCRACY_TURN', playerId };
+  }
+
+  const choice = rng.weightedChoice(options.map(o => ({ value: o.action, weight: o.weight })));
+  return choice;
+}
+
+function botResolveSupport(
+  state: KredGameState,
+  playerId: number,
+  rng: SeededRandom
+): KredAction {
+  const violations = checkSupportViolations(state.pieces, state.config.playerCount);
+  const myViolation = violations.find(v => v.playerId === playerId);
+
+  if (!myViolation) {
+    // If no violations for this player, maybe wait for others?
+    // Actually, RESOLVE_SUPPORT should only be active for the player who needs to act.
+    // For now, return a dummy move if no violation found (should be handled by state machine)
+    return { type: 'END_BUREAUCRACY_TURN', playerId } as any; 
+  }
+
+  if (myViolation.type === 'OFFICE') {
+    // Move from Office to one of the rostrums
+    const targetRostrum = rng.next() < 0.5 ? 'rostrum1' : 'rostrum2';
+    const action: ResolveSupport = {
+      type: 'RESOLVE_SUPPORT',
+      playerId,
+      pieceId: myViolation.pieceId,
+      targetLocationId: `p${playerId}_${targetRostrum}`,
+    };
+    return action;
+  } else {
+    // Move from Rostrum to one of the supporting seats
+    const isR1 = myViolation.locationId.includes('rostrum1');
+    const seats = isR1 ? [1, 2, 3] : [4, 5, 6];
+    const targetSeatNum = seats[Math.floor(rng.next() * 3)];
+    const action: ResolveSupport = {
+      type: 'RESOLVE_SUPPORT',
+      playerId,
+      pieceId: myViolation.pieceId,
+      targetLocationId: `p${playerId}_seat${targetSeatNum}`,
+    };
+    return action;
+  }
+}
+function findPromotablePieces(
+  state: KredGameState,
+  playerId: number,
+  promotionLocation: string
+): KredPiece[] {
+  const hasPawn = state.pieces.some(
+    p => p.type === 'PAWN' && p.locationId.startsWith(`p${playerId}_`)
+  );
+
+  return state.pieces.filter(piece => {
+    // Can't promote Pawns
+    if (piece.type === 'PAWN') return false;
+    // Can't promote Heel to Pawn if player already has one
+    if (piece.type === 'HEEL' && hasPawn) return false;
+
+    const loc = piece.locationId;
+    const ownerMatch = loc.match(/^p(\d+)_/);
+    if (!ownerMatch || parseInt(ownerMatch[1]) !== playerId) return false;
+
+    if (promotionLocation === 'OFFICE') return loc.includes('_office');
+    if (promotionLocation === 'ROSTRUM') return loc.includes('_rostrum');
+    if (promotionLocation === 'SEAT') return loc.includes('_seat');
+    return false;
+  });
 }

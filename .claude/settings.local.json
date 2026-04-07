@@ -40,7 +40,20 @@
       "Bash(npm uninstall:*)",
       "Bash(npx vitest:*)",
       "Bash(sed:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(where pdftotext:*)",
+      "Bash(pdftotext \"c:/FidelsStuff/Docs/Apps/kred-online/KRED_Manual_27x19.pdf\" -)",
+      "Bash(git stash:*)",
+      "Bash(where pdftoppm:*)",
+      "Bash(where magick:*)",
+      "Bash(npm run:*)",
+      "Bash(python -m json.tool)",
+      "Bash(node --input-type=module)",
+      "Bash(2>&1)",
+      "Bash(node --loader tsx/esm src/scripts/playtest.ts --games 10 --players 3 --seed 3 --verbose)",
+      "Bash(node --import tsx/esm src/scripts/playtest.ts --games 10 --players 3 --seed 3 --verbose)",
+      "Bash(node --import tsx/esm src/scripts/playtest.ts --games 10 --players 4 --seed 0 --verbose)",
+      "Bash(node --import tsx/esm src/scripts/playtest.ts --games 5 --players 3 --verbose)"
     ],
     "deny": [],
     "ask": []
