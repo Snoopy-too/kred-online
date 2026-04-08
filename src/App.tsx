@@ -50,6 +50,7 @@ export interface MultiplayerProps {
   playerIndex?: number;
   playerCount?: number;
   playerNames?: string[];
+  skipDraft?: boolean;
 
   multiplayerActions?: {
     createGame: (playerName: string, playerCount: number) => Promise<any>;
@@ -271,6 +272,7 @@ const App: React.FC<MultiplayerProps> = ({
   playerIndex,
   playerCount: multiplayerPlayerCount,
   playerNames,
+  skipDraft: multiplayerSkipDraft = false,
   multiplayerActions,
   getStatePacketRef,
   applyStatePacketRef,
@@ -698,8 +700,8 @@ const App: React.FC<MultiplayerProps> = ({
   React.useEffect(() => {
     if (isMultiplayer && !hasAutoStartedRef.current && multiplayerPlayerCount && multiplayerPlayerCount > 0 && players.length === 0) {
       hasAutoStartedRef.current = true;
-      console.log('[APP] Auto-starting multiplayer game with', multiplayerPlayerCount, 'players');
-      handleStartGame(multiplayerPlayerCount, false, false, false);
+      console.log('[APP] Auto-starting multiplayer game with', multiplayerPlayerCount, 'players', multiplayerSkipDraft ? '(skip draft)' : '');
+      handleStartGame(multiplayerPlayerCount, false, multiplayerSkipDraft, false);
     }
   }, [isMultiplayer, multiplayerPlayerCount, players.length, handleStartGame]);
 

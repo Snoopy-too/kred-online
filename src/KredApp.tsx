@@ -9,7 +9,7 @@ import App from './App';
 type ActionPayload = { type: string; playerId: string; payload: any };
 
 export default function KredApp() {
-  const { lobbyId, lobbyStatus, isHost, playerIndex, playerCount, lobbyPlayers } = useLobby();
+  const { lobbyId, lobbyStatus, isHost, playerIndex, playerCount, lobbyPlayers, skipDraft } = useLobby();
   const actions = useSupabaseActions();
 
   const [gameReady, setGameReady] = useState(false);
@@ -63,6 +63,7 @@ export default function KredApp() {
         playerIndex={playerIndex ?? 0}
         playerCount={playerCount ?? 3}
         playerNames={lobbyPlayers.map(p => p.name)}
+        skipDraft={isHost ? skipDraft : false}
         multiplayerActions={{
           createGame: async () => {},
           joinGame: async () => {},

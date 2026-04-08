@@ -26,8 +26,11 @@ interface LobbyContextType {
   isRejoining: boolean;
   rejoinAvailable: { pin: string; name: string; lobbyId: string } | null;
 
+  // State
+  skipDraft: boolean;
+
   // Actions
-  createLobby: (hostName: string, playerCount: number) => Promise<void>;
+  createLobby: (hostName: string, playerCount: number, skipDraft?: boolean) => Promise<void>;
   joinLobby: (pin: string, playerName: string) => Promise<void>;
   startGame: () => Promise<void>;
   rejoinGame: () => Promise<void>;
@@ -66,6 +69,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
   const [lobbyPlayers, setLobbyPlayers] = useState<LobbyPlayer[]>([]);
   const [isRejoining, setIsRejoining] = useState(false);
   const [rejoinAvailable, setRejoinAvailable] = useState<{ pin: string; name: string; lobbyId: string } | null>(null);
+  const [skipDraft, setSkipDraft] = useState(false);
 
   const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -202,7 +206,8 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
   // --------------------------------------------------------------------------
   // Create lobby
   // --------------------------------------------------------------------------
-  const createLobby = useCallback(async (hostName: string, playerCount: number) => {
+  const createLobby = useCallback(async (hostName: string, playerCount: number, skipDraftOption = false) => {
+    setSkipDraft(skipDraftOption);
     const uid = await ensureAuth();
     const pin = generatePin();
 
@@ -390,7 +395,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
 
   const value: LobbyContextType = {
     lobbyId, lobbyPin, isHost, userId, playerIndex, playerCount,
-    lobbyStatus, lobbyPlayers, isRejoining, rejoinAvailable,
+    lobbyStatus, lobbyPlayers, isRejoining, rejoinAvailable, skipDraft,
     createLobby, joinLobby, startGame, rejoinGame, dismissRejoin, leaveLobby,
   };
 
