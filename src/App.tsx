@@ -3574,8 +3574,12 @@ const App: React.FC<MultiplayerProps> = ({
 
   // ============================================================================
   // HOST: Register action dispatch for processing guest actions
+  // useLayoutEffect ensures the dispatch ref is updated synchronously after
+  // render, BEFORE any queued setTimeout(0) callbacks from the action queue
+  // can fire. This guarantees that when MOVE_PIECE triggers a re-render and
+  // the next queued action (END_TURN) processes, it reads fresh state.
   // ============================================================================
-  useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!setActionDispatch || !isHost) return;
 
     setActionDispatch((action) => {

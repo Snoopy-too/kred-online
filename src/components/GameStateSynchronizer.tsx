@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import type { MutableRefObject } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLobby } from '../contexts/LobbyContext';
 
@@ -56,8 +57,8 @@ export interface SyncProps {
   /** Guest: applies a received state packet */
   applyStatePacket: (packet: GameStatePacket) => void;
 
-  /** Host: handler for guest actions from kred_game_actions table */
-  onActionReceived?: (action: { type: string; playerId: string; payload: any }) => void;
+  /** Host: ref to handler for guest actions from kred_game_actions table */
+  onActionReceived?: MutableRefObject<((action: { type: string; playerId: string; payload: any }) => void) | undefined>;
 
   /** Called when rejoin hydration is complete */
   onRejoinComplete?: () => void;
@@ -126,33 +127,53 @@ export default function GameStateSynchronizer({
   // HOST: Listen for guest actions (realtime + polling fallback)
   // ==========================================================================
 
-  const lastProcessedActionIdRef = useRef<string | null>(null);
+  // Persistent set of ALL processed action IDs — survives effect re-runs
+  const processedActionIdsRef = useRef<Set<string>>(new Set());
+  // Queue for sequential processing — ensures React state commits between actions
+  const actionQueueRef = useRef<any[]>([]);
+  const isProcessingQueueRef = useRef(false);
+
+  // Process queued actions one at a time, yielding between each so React can
+  // commit state updates (e.g., setPieces from MOVE_PIECE) before the next
+  // action (e.g., END_TURN) reads that state via the dispatch ref.
+  const drainQueue = useCallback(() => {
+    if (isProcessingQueueRef.current || actionQueueRef.current.length === 0) return;
+    isProcessingQueueRef.current = true;
+
+    const action = actionQueueRef.current.shift()!;
+    onActionReceived?.current?.({
+      type: action.action_type,
+      playerId: action.player_id,
+      payload: action.payload,
+    });
+
+    // Yield to let React commit state updates, then process next action
+    setTimeout(() => {
+      isProcessingQueueRef.current = false;
+      drainQueue();
+    }, 0);
+  }, [onActionReceived]);
+
+  const enqueueAction = useCallback((action: any) => {
+    if (processedActionIdsRef.current.has(action.id)) return;
+    processedActionIdsRef.current.add(action.id);
+    actionQueueRef.current.push(action);
+    drainQueue();
+  }, [drainQueue]);
 
   useEffect(() => {
     if (!lobbyId || !isHost || !onActionReceived) return;
-
-    const processAction = (action: any) => {
-      // Skip already-processed actions
-      if (action.id === lastProcessedActionIdRef.current) return;
-      lastProcessedActionIdRef.current = action.id;
-      onActionReceived({
-        type: action.action_type,
-        playerId: action.player_id,
-        payload: action.payload,
-      });
-    };
 
     // Realtime channel
     const channel = supabase
       .channel(`kred_actions:${lobbyId}`)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'kred_game_actions', filter: `lobby_id=eq.${lobbyId}` },
-        (payload) => { processAction(payload.new); }
+        (payload) => { enqueueAction(payload.new); }
       )
       .subscribe();
 
     // Polling fallback — pick up any actions missed by realtime
-    const processedIds = new Set<string>();
     const pollActions = async () => {
       const { data } = await supabase
         .from('kred_game_actions')
@@ -162,10 +183,7 @@ export default function GameStateSynchronizer({
 
       if (data) {
         for (const action of data) {
-          if (!processedIds.has(action.id)) {
-            processedIds.add(action.id);
-            processAction(action);
-          }
+          enqueueAction(action);
         }
       }
     };
@@ -175,7 +193,7 @@ export default function GameStateSynchronizer({
       clearInterval(interval);
       channel.unsubscribe();
     };
-  }, [lobbyId, isHost, onActionReceived]);
+  }, [lobbyId, isHost, onActionReceived, enqueueAction]);
 
   // ==========================================================================
   // BOTH: Set up broadcast channel

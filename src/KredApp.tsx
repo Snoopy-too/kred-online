@@ -54,9 +54,7 @@ export default function KredApp() {
       <GameStateSynchronizer
         getStatePacket={() => getStatePacketRef.current()}
         applyStatePacket={(packet) => applyStatePacketRef.current(packet)}
-        onActionReceived={isHost ? (action) => {
-          actionDispatchRef.current?.(action);
-        } : undefined}
+        onActionReceived={isHost ? actionDispatchRef : undefined}
         onRejoinComplete={handleRejoinComplete}
       />
       <App

@@ -53,7 +53,8 @@
       "Bash(node --loader tsx/esm src/scripts/playtest.ts --games 10 --players 3 --seed 3 --verbose)",
       "Bash(node --import tsx/esm src/scripts/playtest.ts --games 10 --players 3 --seed 3 --verbose)",
       "Bash(node --import tsx/esm src/scripts/playtest.ts --games 10 --players 4 --seed 0 --verbose)",
-      "Bash(node --import tsx/esm src/scripts/playtest.ts --games 5 --players 3 --verbose)"
+      "Bash(node --import tsx/esm src/scripts/playtest.ts --games 5 --players 3 --verbose)",
+      "Bash(npx vite:*)"
     ],
     "deny": [],
     "ask": []
