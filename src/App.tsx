@@ -1635,6 +1635,43 @@ const App: React.FC<MultiplayerProps> = ({
         );
         finalPlayers = credibilityResult.newPlayers;
 
+        // Check if challenger had max credibility (same as receiver bonus move)
+        if (credibilityResult.hadMaxCredibility) {
+          // Challenger already had 3 credibility, show bonus move modal
+          setBonusMovePlayerId(challengerId);
+          setShowBonusMoveModal(true);
+
+          // Capture the reverted piece state for bonus move reset
+          setPiecesBeforeBonusMove(revertedPieces);
+
+          // Don't proceed to Take Advantage - wait for bonus move to complete
+          // Still apply players update for other credibility changes
+          setPlayers(finalPlayers);
+
+          addCredibilityLossLog(
+            playedTile.playerId,
+            "Challenge succeeded - tile did not meet requirements"
+          );
+
+          if (receiverAcceptance === true) {
+            addCredibilityLossLog(
+              playedTile.receivingPlayerId,
+              "Accepted a tile that was successfully challenged"
+            );
+          }
+
+          const challenger = getPlayerById(finalPlayers, challengerId);
+          const challengerName = challenger
+            ? getPlayerName(challenger, challengerId)
+            : "Player";
+          addGameLog(
+            `${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0})`
+          );
+
+          return; // Exit early, wait for bonus move to complete
+        }
+
+        // No bonus move - proceed with normal successful challenge flow
         // Step 2: Apply the final result in one setState call
         setPlayers(finalPlayers);
 
