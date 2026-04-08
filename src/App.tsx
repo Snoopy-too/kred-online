@@ -4030,7 +4030,7 @@ const App: React.FC<MultiplayerProps> = ({
 
       {/* Perfect Tile Modal */}
       <PerfectTileModal
-        isOpen={showPerfectTileModal}
+        isOpen={showPerfectTileModal && (!isMultiplayer || playerIndex + 1 === (playedTile?.receivingPlayerId || tileTransaction?.receiverId))}
         onContinue={handlePerfectTileContinue}
       />
 

@@ -1516,7 +1516,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
 
             {/* Bonus Move Notification */}
-            {showBonusMoveModal && bonusMovePlayerId !== null && (
+            {showBonusMoveModal && bonusMovePlayerId !== null && (!isMultiplayer || bonusMovePlayerId === currentPlayerId) && (
               <div className="mt-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 shadow-2xl border-2 border-green-400 animate-pulse">
                 <h2 className="text-3xl font-extrabold text-white mb-3 text-center">
                   🎉 BONUS MOVE!
@@ -1813,7 +1813,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
       )}
 
       {/* Take Advantage Initial Choice Modal */}
-      {showTakeAdvantageModal && takeAdvantageChallengerId !== null && (
+      {showTakeAdvantageModal && takeAdvantageChallengerId !== null && (!isMultiplayer || takeAdvantageChallengerId === currentPlayerId) && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 border-2 border-green-500 rounded-lg p-8 max-w-lg shadow-2xl">
             <h2 className="text-3xl font-bold text-green-400 mb-6 text-center">
@@ -1892,7 +1892,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
       )}
 
       {/* Take Advantage Tile Selection Screen */}
-      {showTakeAdvantageTileSelection && takeAdvantageChallengerId !== null && (
+      {showTakeAdvantageTileSelection && takeAdvantageChallengerId !== null && (!isMultiplayer || takeAdvantageChallengerId === currentPlayerId) && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-gray-800 border-2 border-yellow-500 rounded-lg p-8 max-w-4xl w-full my-8 shadow-2xl">
             <h2 className="text-3xl font-bold text-yellow-400 mb-4 text-center">
@@ -1997,7 +1997,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
       )}
 
       {/* Take Advantage Action Menu */}
-      {showTakeAdvantageMenu && takeAdvantageChallengerId !== null && (
+      {showTakeAdvantageMenu && takeAdvantageChallengerId !== null && (!isMultiplayer || takeAdvantageChallengerId === currentPlayerId) && (
         <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 overflow-y-auto">
           <div className="w-full max-w-7xl my-8 px-4">
             <div className="bg-gray-900 rounded-lg shadow-2xl border-2 border-yellow-600 p-6">
@@ -2426,7 +2426,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
 
       {/* Move Check Result Modal */}
-      {showMoveCheckResult && moveCheckResult && (
+      {showMoveCheckResult && isMyTurn && moveCheckResult && (
         <div
           className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
           aria-modal="true"
