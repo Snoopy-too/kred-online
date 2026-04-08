@@ -239,14 +239,7 @@ export function createTilePlayHandlers(deps: TilePlayDependencies) {
       setHasPlayedTileThisTurn(true);
       setReceiverAcceptance(null);
       setGameState("PENDING_ACCEPTANCE");
-
-      // Switch to receiving player
-      const receiverIndex = players.findIndex(
-        (p) => p.id === targetSpace.ownerId
-      );
-      if (receiverIndex !== -1) {
-        setCurrentPlayerIndex(receiverIndex);
-      }
+      // currentPlayerIndex intentionally NOT changed — mover stays active until turn resolves
       return;
     }
 

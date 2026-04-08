@@ -1181,14 +1181,7 @@ const App: React.FC<MultiplayerProps> = ({
       );
       setReceiverAcceptance(null); // Reset for acceptance decision
       setGameState("PENDING_ACCEPTANCE");
-
-      // Switch to receiving player
-      const receiverIndex = players.findIndex(
-        (p) => p.id === playedTile.receivingPlayerId
-      );
-      if (receiverIndex !== -1) {
-        setCurrentPlayerIndex(receiverIndex);
-      }
+      // currentPlayerIndex intentionally NOT changed — mover stays active until turn resolves
       return;
     }
 
@@ -1223,7 +1216,7 @@ const App: React.FC<MultiplayerProps> = ({
       );
       if (receiverIndex !== -1) {
         setGameState("PENDING_ACCEPTANCE");
-        setCurrentPlayerIndex(receiverIndex);
+        // currentPlayerIndex intentionally NOT changed — mover stays active until turn resolves
         setHasPlayedTileThisTurn(false);
         setRevealedTileId(null);
         setIsPrivatelyViewing(false);
@@ -3852,21 +3845,33 @@ const App: React.FC<MultiplayerProps> = ({
           if (gameState === 'CAMPAIGN' || gameState === 'SELECTING_TILE' || gameState === 'TILE_PLAYED') {
             computedCampaignRole = myIdx === currentPlayerIndex ? 'mover' : 'waiting';
           } else if (gameState === 'PENDING_ACCEPTANCE') {
-            const receiverIdx = tileTransaction?.receiverId != null
-              ? players.findIndex(p => p.id === tileTransaction.receiverId)
+            // Receiver: use playedTile as primary source (tileTransaction may be null in MOVES-FIRST flow)
+            const receiverPlayerId = tileTransaction?.receiverId ?? playedTile?.receivingPlayerId ?? null;
+            const receiverIdx = receiverPlayerId != null
+              ? players.findIndex(p => p.id === receiverPlayerId)
               : -1;
+            // Mover: use playedTile.playerId (currentPlayerIndex stays as mover since we don't change it)
+            const moverPlayerId = playedTile?.playerId ?? tileTransaction?.placerId ?? null;
+            const moverIdx = moverPlayerId != null
+              ? players.findIndex(p => p.id === moverPlayerId)
+              : currentPlayerIndex;
             if (myIdx === receiverIdx) {
               computedCampaignRole = 'receiver';
-            } else if (myIdx === currentPlayerIndex) {
+            } else if (myIdx === moverIdx) {
               computedCampaignRole = 'mover';
             } else {
               computedCampaignRole = 'waiting';
             }
           } else if (gameState === 'PENDING_CHALLENGE') {
-            const currentBystander = bystanders[bystanderIndex];
-            if (myIdx + 1 === currentBystander) {
+            // challengeOrder contains 1-indexed player IDs; myIdx is 0-indexed so myIdx+1 = player ID
+            const currentChallengerId = challengeOrder[currentChallengerIndex];
+            const moverPlayerId = playedTile?.playerId ?? tileTransaction?.placerId ?? null;
+            const moverIdx = moverPlayerId != null
+              ? players.findIndex(p => p.id === moverPlayerId)
+              : currentPlayerIndex;
+            if (currentChallengerId !== undefined && myIdx + 1 === currentChallengerId) {
               computedCampaignRole = 'challenger';
-            } else if (myIdx === currentPlayerIndex) {
+            } else if (myIdx === moverIdx) {
               computedCampaignRole = 'mover';
             } else {
               computedCampaignRole = 'waiting';

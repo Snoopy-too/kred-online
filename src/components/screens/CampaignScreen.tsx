@@ -743,8 +743,14 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     switch (campaignRole) {
       case 'mover': {
         const receiverName = nameById(playedTile?.receivingPlayerId || tileTransaction?.receiverId);
-        return hasPlayedTileThisTurn 
-          ? { text: `Waiting for ${receiverName} to respond...`, color: 'bg-yellow-600' }
+        if (gameState === 'PENDING_ACCEPTANCE') {
+          return { text: `Waiting for ${receiverName} to respond...`, color: 'bg-yellow-600' };
+        }
+        if (gameState === 'PENDING_CHALLENGE') {
+          return { text: `Waiting for challenger to respond...`, color: 'bg-yellow-600' };
+        }
+        return hasPlayedTileThisTurn
+          ? { text: `Tile played — click 'End Turn' to finalize.`, color: 'bg-yellow-600' }
           : { text: 'Move pieces and pass a tile.', color: 'bg-green-700' };
       }
       case 'receiver':
@@ -1415,12 +1421,14 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {/* Info Section */}
             <div id="campaign-info" className="w-full bg-gray-800/80 backdrop-blur-sm border border-cyan-700/50 shadow-lg rounded-xl px-6 py-3 text-center">
               <h2 className="text-xl font-bold text-cyan-300 tracking-wide">
-                {isMover ? "Your Turn" 
+                {isMover ? "Your Turn"
                   : isReceiver ? "Tile Received"
                   : isChallenger ? "Challenge?"
                   : isCorrecting ? "Make Correction"
                   : isFreeAdvancer ? "Free Advance"
-                  : `${nameByIndex(currentPlayerIndex)}'s Turn`}
+                  : (gameState === 'PENDING_ACCEPTANCE' || gameState === 'PENDING_CHALLENGE')
+                    ? `${nameById(playedTile?.playerId || tileTransaction?.placerId)}'s Turn`
+                    : `${nameByIndex(currentPlayerIndex)}'s Turn`}
               </h2>
               {roleBanner && (
                 <p className={`mt-2 text-sm font-semibold rounded-md py-1 px-3 ${roleBanner.color} text-white`}>
@@ -1435,6 +1443,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               {(gameState === "TILE_PLAYED" ||
                 movedPiecesThisTurn.size > 0) &&
                 gameState !== "CORRECTION_REQUIRED" &&
+                gameState !== "PENDING_ACCEPTANCE" &&
+                gameState !== "PENDING_CHALLENGE" &&
                 !showBonusMoveModal && (
                   <button
                     onClick={onResetTurn}
