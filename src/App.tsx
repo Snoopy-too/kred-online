@@ -439,6 +439,13 @@ const App: React.FC<MultiplayerProps> = ({
     setTakeAdvantageValidationError,
   } = useChallengeFlow();
 
+  const [pendingChallengerReward, setPendingChallengerReward] = React.useState<{
+    challengerId: number;
+    rewardType: 'BONUS_MOVE' | 'TAKE_ADVANTAGE';
+    credibility: number;
+    receiverId: number;
+  } | null>(null);
+
   // Bureaucracy Phase State (from useBureaucracy hook)
   const {
     bureaucracyStates,
@@ -523,11 +530,11 @@ const App: React.FC<MultiplayerProps> = ({
       showTakeAdvantageModal,
       takeAdvantageChallengerId,
       takeAdvantageChallengerCredibility,
-      bureaucracyStates,
       bureaucracyTurnOrder,
       currentBureaucracyPlayerIndex,
       challengeResultMessage,
       challengeResultMessagePlayerId,
+      pendingChallengerReward,
       stateVersion: 0,
       lastUpdated: Date.now(),
     });
@@ -562,6 +569,7 @@ const App: React.FC<MultiplayerProps> = ({
       setCurrentBureaucracyPlayerIndex(packet.currentBureaucracyPlayerIndex);
       setChallengeResultMessage(packet.challengeResultMessage);
       setChallengeResultMessagePlayerId(packet.challengeResultMessagePlayerId);
+      setPendingChallengerReward(packet.pendingChallengerReward);
     };
   });
 
@@ -579,6 +587,7 @@ const App: React.FC<MultiplayerProps> = ({
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
+    pendingChallengerReward,
   ]);
 
   // Initialize campaign pieces when phase transitions to CAMPAIGN in multiplayer
@@ -1111,15 +1120,19 @@ const App: React.FC<MultiplayerProps> = ({
     setBonusMovePlayerId(null);
     setBonusMoveWasCompleted(true);
 
-    // Capture the current pieces state as baseline for correction phase (after bonus move)
-    setPiecesAtCorrectionStart(pieces.map((p) => ({ ...p })));
-
-    // Now switch back to tile player for correction
-    const playerIndex = players.findIndex((p) => p.id === playedTile.playerId);
-    if (playerIndex !== -1) {
-      setCurrentPlayerIndex(playerIndex);
-      setGameState("CORRECTION_REQUIRED");
-      setMovesThisTurn([]);
+    // Since correction happened BEFORE the bonus move in this new flow,
+    // we now transition directly to the receiver's turn
+    if (playedTile) {
+      const receiverIndex = players.findIndex((p) => p.id === playedTile.receivingPlayerId);
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+        setGameState("CAMPAIGN");
+        setMovesThisTurn([]);
+        setHasPlayedTileThisTurn(false);
+        setPlayedTile(null);
+        setTileRejected(false);
+        resetChallengeState();
+      }
     }
   };
 
@@ -1654,18 +1667,16 @@ const App: React.FC<MultiplayerProps> = ({
 
         // Check if challenger had max credibility (same as receiver bonus move)
         if (credibilityResult.hadMaxCredibility) {
-          // Challenger already had 3 credibility, show bonus move modal
-          setGameState("BONUS_MOVE");
-          setBonusMovePlayerId(challengerId);
-          setShowBonusMoveModal(true);
-
-          // Capture the reverted piece state for bonus move reset
-          setPiecesBeforeBonusMove(revertedPieces);
-
-          // Don't proceed to Take Advantage - wait for bonus move to complete
-          // Still apply players update for other credibility changes
+          // Challenger already had 3 credibility, queue bonus move for AFTER correction
+          setPendingChallengerReward({
+            challengerId,
+            rewardType: 'BONUS_MOVE',
+            credibility: credibilityResult.newPlayers.find(p => p.id === challengerId)?.credibility ?? 3,
+            receiverId: playedTile.receivingPlayerId
+          });
+          
           setPlayers(finalPlayers);
-
+          
           addCredibilityLossLog(
             playedTile.playerId,
             "Challenge succeeded - tile did not meet requirements"
@@ -1686,7 +1697,9 @@ const App: React.FC<MultiplayerProps> = ({
             `${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0})`
           );
 
-          return; // Exit early, wait for bonus move to complete
+          // Proceed to correction phase (reward is queued)
+        transitionToCorrectionPhase();
+        return;
         }
 
         // No bonus move - proceed with normal successful challenge flow
@@ -1721,15 +1734,17 @@ const App: React.FC<MultiplayerProps> = ({
             challenger.bureaucracyTiles &&
             challenger.bureaucracyTiles.length > 0;
 
-          // Store challenger context with UPDATED credibility
-          setTakeAdvantageChallengerId(challengerId);
-          setTakeAdvantageChallengerCredibility(challenger.credibility);
-
-          // Only show modal if they have tiles, otherwise skip to correction
+          // Only queue modal if they have tiles, otherwise skip reward
           if (hasTiles) {
-            // Transition to the new TAKE_ADVANTAGE state to clear bypass orders/waiting overlays
-            setGameState("TAKE_ADVANTAGE");
-            setShowTakeAdvantageModal(true);
+            setPendingChallengerReward({
+              challengerId,
+              rewardType: 'TAKE_ADVANTAGE',
+              credibility: challenger.credibility,
+              receiverId: playedTile.receivingPlayerId
+            });
+            
+            // Go straight to correction phase
+            transitionToCorrectionPhase();
 
             // Store the challenge result message to show after modal closes
             setTimeout(() => {
@@ -1737,8 +1752,6 @@ const App: React.FC<MultiplayerProps> = ({
               setChallengeResultMessagePlayerId(null);
             }, TIMEOUTS.CHALLENGE_MESSAGE_DISMISS);
 
-            // DON'T transition to CORRECTION_REQUIRED yet
-            // Wait for user's choice in the modal
             return; // Exit early
           } else {
             // No tiles, skip Take Advantage and go straight to correction
@@ -2308,10 +2321,36 @@ const App: React.FC<MultiplayerProps> = ({
     // (tile is face-up/rejected — not added to bureaucracyTiles)
     const updatedPlayers = players.slice();
 
-    // Move to receiving player for their turn
+    // Move to receiving player for their turn (default next turn)
     const receiverIndex = updatedPlayers.findIndex(
       (p) => p.id === updatedPlayedTile.receivingPlayerId
     );
+
+    // IF there is a pending reward for the challenger, trigger it NOW
+    if (pendingChallengerReward) {
+      const { challengerId, rewardType, credibility } = pendingChallengerReward;
+      
+      if (rewardType === 'BONUS_MOVE') {
+        setGameState("BONUS_MOVE");
+        setBonusMovePlayerId(challengerId);
+        setShowBonusMoveModal(true);
+        // Captured pieces at this point serve as baseline for bonus move reset
+        setPiecesBeforeBonusMove(pieces.map(p => ({ ...p })));
+      } else {
+        setGameState("TAKE_ADVANTAGE");
+        setTakeAdvantageChallengerId(challengerId);
+        setTakeAdvantageChallengerCredibility(credibility);
+        setShowTakeAdvantageModal(true);
+      }
+      
+      // Clear the queue
+      setPendingChallengerReward(null);
+      
+      // Update players state
+      setPlayers(updatedPlayers);
+      return; // DO NOT transition turn yet
+    }
+
     if (receiverIndex !== -1) {
       setCurrentPlayerIndex(receiverIndex);
     }
@@ -3058,8 +3097,19 @@ const App: React.FC<MultiplayerProps> = ({
     // Clean up modal state
     cleanupTakeAdvantageModalState();
 
-    // Continue to correction phase
-    transitionToCorrectionPhase();
+    // Since correction happened BEFORE Take Advantage in this new flow,
+    // we now transition directly to the receiver's turn
+    if (playedTile) {
+      const receiverIndex = players.findIndex((p) => p.id === playedTile.receivingPlayerId);
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+        setGameState("CAMPAIGN");
+        setHasPlayedTileThisTurn(false);
+        setPlayedTile(null);
+        setTileRejected(false);
+        resetChallengeState();
+      }
+    }
   };
 
   /**
@@ -3120,8 +3170,19 @@ const App: React.FC<MultiplayerProps> = ({
     // Clean up modal state
     cleanupTakeAdvantageModalState();
 
-    // Continue to correction phase
-    transitionToCorrectionPhase();
+    // Since correction happened BEFORE Take Advantage in this new flow,
+    // we now transition directly to the receiver's turn
+    if (playedTile) {
+      const receiverIndex = players.findIndex((p) => p.id === playedTile.receivingPlayerId);
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+        setGameState("CAMPAIGN");
+        setHasPlayedTileThisTurn(false);
+        setPlayedTile(null);
+        setTileRejected(false);
+        resetChallengeState();
+      }
+    }
   };
 
   /**
@@ -3579,10 +3640,19 @@ const App: React.FC<MultiplayerProps> = ({
     setMovesThisTurn([]);
     setMovedPiecesThisTurn(new Set());
 
-    // Continue to correction phase, passing current pieces to preserve Take Advantage changes
-    // Take Advantage transactions occur within the Campaign phase, so promotions
-    // and moves must be preserved as part of the ongoing game state
-    transitionToCorrectionPhase(pieces.map((p) => ({ ...p })));
+    // Since correction happened BEFORE Take Advantage in this new flow,
+    // we now transition directly to the receiver's turn
+    if (playedTile) {
+      const receiverIndex = players.findIndex((p) => p.id === playedTile.receivingPlayerId);
+      if (receiverIndex !== -1) {
+        setCurrentPlayerIndex(receiverIndex);
+        setGameState("CAMPAIGN");
+        setHasPlayedTileThisTurn(false);
+        setPlayedTile(null);
+        setTileRejected(false);
+        resetChallengeState();
+      }
+    }
   };
 
   /**
