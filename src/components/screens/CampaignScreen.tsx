@@ -2216,9 +2216,18 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
                         const isPromotionPurchase =
                           takeAdvantagePurchase?.item.type === "PROMOTION";
-                        const isDraggable =
-                          !isPromotionPurchase &&
-                          takeAdvantagePurchase?.item.type === "MOVE";
+                        
+                        let isDraggable = false;
+                        if (gameState === "TAKE_ADVANTAGE") {
+                          isDraggable = !isPromotionPurchase && takeAdvantagePurchase?.item.type === "MOVE" && 
+                            (!isMultiplayer || takeAdvantageChallengerId === viewingPlayerId);
+                        } else if (gameState === "BONUS_MOVE") {
+                          isDraggable = (!isMultiplayer || bonusMovePlayerId === viewingPlayerId);
+                        } else if (gameState === "CORRECTION_REQUIRED") {
+                          isDraggable = (!isMultiplayer || playedTile?.playerId === viewingPlayerId);
+                        } else if (gameState === "CAMPAIGN") {
+                          isDraggable = (!isMultiplayer || playerIndex === currentPlayerIndex);
+                        }
 
                         return (
                           <img
