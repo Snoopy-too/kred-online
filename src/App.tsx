@@ -1655,6 +1655,7 @@ const App: React.FC<MultiplayerProps> = ({
         // Check if challenger had max credibility (same as receiver bonus move)
         if (credibilityResult.hadMaxCredibility) {
           // Challenger already had 3 credibility, show bonus move modal
+          setGameState("BONUS_MOVE");
           setBonusMovePlayerId(challengerId);
           setShowBonusMoveModal(true);
 
@@ -3876,6 +3877,7 @@ const App: React.FC<MultiplayerProps> = ({
       case "PENDING_ACCEPTANCE":
       case "PENDING_CHALLENGE":
       case "TAKE_ADVANTAGE":
+      case "BONUS_MOVE":
       case "CORRECTION_REQUIRED":
         const currentPlayer = players[currentPlayerIndex];
         if (!currentPlayer || players.length === 0) {
@@ -3936,6 +3938,12 @@ const App: React.FC<MultiplayerProps> = ({
           } else if (gameState === 'TAKE_ADVANTAGE') {
             if (myIdx + 1 === takeAdvantageChallengerId) {
               computedCampaignRole = 'takeAdvantageChallenger';
+            } else {
+              computedCampaignRole = 'waiting';
+            }
+          } else if (gameState === 'BONUS_MOVE') {
+            if (myIdx + 1 === bonusMovePlayerId) {
+              computedCampaignRole = 'bonusMover';
             } else {
               computedCampaignRole = 'waiting';
             }
@@ -4103,6 +4111,7 @@ const App: React.FC<MultiplayerProps> = ({
         message={challengeResultMessage} 
         targetPlayerId={challengeResultMessagePlayerId}
         currentPlayerId={viewingPlayerId}
+        onClose={clearChallengeResult}
       />
 
       {/* Alert Modal */}

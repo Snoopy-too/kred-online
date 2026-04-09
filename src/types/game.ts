@@ -9,6 +9,7 @@ export type GameState =
   | 'PENDING_ACCEPTANCE'
   | 'PENDING_CHALLENGE'
   | 'TAKE_ADVANTAGE'
+  | 'BONUS_MOVE'
   | 'CORRECTION_REQUIRED'
   | 'BUREAUCRACY';
 

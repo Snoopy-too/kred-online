@@ -729,6 +729,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   const isMover = campaignRole === 'mover';
   const isReceiver = campaignRole === 'receiver';
   const isChallenger = (campaignRole === 'challenger' || campaignRole === 'takeAdvantageChallenger');
+  const isBonusMover = campaignRole === 'bonusMover';
   const isCorrecting = campaignRole === 'correcting';
   const isFreeAdvancer = campaignRole === 'freeAdvance';
   const isWaiting = campaignRole === 'waiting' || campaignRole === 'bystander';
@@ -779,7 +780,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     isWaiting &&
     (gameState === "PENDING_ACCEPTANCE" || 
      gameState === "PENDING_CHALLENGE" || 
-     gameState === "TAKE_ADVANTAGE");
+     gameState === "TAKE_ADVANTAGE" ||
+     gameState === "BONUS_MOVE");
 
   let waitingMessage = "";
   let waitingPlayerId = undefined;
@@ -795,6 +797,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
       // Find who the challenger is
       waitingPlayerId = takeAdvantageChallengerId;
       waitingMessage = `Waiting for ${nameById(waitingPlayerId)} to choose a reward...`;
+    } else if (gameState === "BONUS_MOVE") {
+      waitingPlayerId = bonusMovePlayerId;
+      waitingMessage = `Waiting for ${nameById(waitingPlayerId)} to complete bonus move...`;
     }
   }
   
@@ -1583,7 +1588,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
 
             {/* Bonus Move Notification */}
-            {showBonusMoveModal && bonusMovePlayerId !== null && (!isMultiplayer || bonusMovePlayerId === currentPlayerId) && (
+            {(gameState === "BONUS_MOVE" || (showBonusMoveModal && bonusMovePlayerId !== null)) && (!isMultiplayer || bonusMovePlayerId === currentPlayerId) && (
               <div className="mt-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 shadow-2xl border-2 border-green-400 animate-pulse">
                 <h2 className="text-3xl font-extrabold text-white mb-3 text-center">
                   🎉 BONUS MOVE!
@@ -1811,7 +1816,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
       )}
 
       {/* Bystander Challenge Modal */}
-      {isMyTurnForDecision && gameState === "PENDING_CHALLENGE" && !showTakeAdvantageModal && (
+      {isMyTurnForDecision && gameState === "PENDING_CHALLENGE" && !showTakeAdvantageModal && !showBonusMoveModal && (
         <div
           className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4"
           aria-modal="true"

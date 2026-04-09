@@ -120,12 +120,14 @@ interface ChallengeResultMessageProps {
   message: string | null;
   targetPlayerId?: number | null;
   currentPlayerId?: number | null;
+  onClose?: () => void;
 }
 
 export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
   message,
   targetPlayerId,
   currentPlayerId,
+  onClose,
 }) => {
   if (!message) return null;
 
@@ -152,7 +154,15 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
         <h2 className="text-2xl font-bold mb-2">
           {isFailed ? "✓ Challenge Failed" : "⚠️ Challenge Successful"}
         </h2>
-        <p className="text-lg">{message}</p>
+        <p className="text-lg mb-4">{message}</p>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 bg-white/20 hover:bg-white/30 text-white text-sm rounded transition-colors"
+          >
+            Dismiss
+          </button>
+        )}
       </div>
     </div>
   );
