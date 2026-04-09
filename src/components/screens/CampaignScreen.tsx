@@ -1045,8 +1045,8 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                       isDraggingTile ? colors.indicator : colors.text
                     }`}
                   >
-                    <div className="uppercase tracking-tighter opacity-80 mb-1">Pass To</div>
-                    <div className="text-[12px] truncate max-w-[44px]">{playerName}</div>
+                    <div className="uppercase tracking-tighter opacity-60 leading-none scale-90 mb-0.5">Pass to</div>
+                    <div className="text-[13px] font-black uppercase leading-tight truncate px-1" title={playerName}>{playerName}</div>
                   </div>
                 </div>
               );

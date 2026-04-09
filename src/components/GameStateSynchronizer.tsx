@@ -40,6 +40,16 @@ export interface GameStatePacket {
   takeAdvantageChallengerId: number | null;
   takeAdvantageChallengerCredibility: number;
 
+  // Bonus Move
+  bonusMovePlayerId: number | null;
+  showBonusMoveModal: boolean;
+  piecesBeforeBonusMove: any[];
+
+  // Pending Actions
+  challengeResultMessage: string;
+  challengeResultMessagePlayerId: number | null;
+  pendingChallengerReward: any | null;
+
   // Bureaucracy
   bureaucracyStates: any;
   bureaucracyTurnOrder: number[];

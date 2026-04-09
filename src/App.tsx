@@ -539,9 +539,11 @@ const App: React.FC<MultiplayerProps> = ({
       takeAdvantageChallengerCredibility,
       bureaucracyTurnOrder,
       currentBureaucracyPlayerIndex,
-      challengeResultMessage,
       challengeResultMessagePlayerId,
       pendingChallengerReward,
+      bonusMovePlayerId,
+      showBonusMoveModal,
+      piecesBeforeBonusMove,
       stateVersion: 0,
       lastUpdated: Date.now(),
     });
@@ -577,6 +579,11 @@ const App: React.FC<MultiplayerProps> = ({
       setChallengeResultMessage(packet.challengeResultMessage);
       setChallengeResultMessagePlayerId(packet.challengeResultMessagePlayerId);
       setPendingChallengerReward(packet.pendingChallengerReward);
+      setBonusMovePlayerId(packet.bonusMovePlayerId);
+      setShowBonusMoveModal(packet.showBonusMoveModal);
+      if (packet.piecesBeforeBonusMove) {
+        setPiecesBeforeBonusMove(packet.piecesBeforeBonusMove);
+      }
     };
   });
 
@@ -594,7 +601,8 @@ const App: React.FC<MultiplayerProps> = ({
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
-    pendingChallengerReward,
+    pendingChallengerReward, bonusMovePlayerId, showBonusMoveModal,
+    piecesBeforeBonusMove,
   ]);
 
   // Initialize campaign pieces when phase transitions to CAMPAIGN in multiplayer
