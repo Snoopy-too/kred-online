@@ -36,6 +36,7 @@ export function useAlerts() {
   const [challengeResultMessage, setChallengeResultMessage] = useState<
     string | null
   >(null);
+  const [challengeResultMessagePlayerId, setChallengeResultMessagePlayerId] = useState<number | null>(null);
   const [tilePlayerMustWithdraw, setTilePlayerMustWithdraw] = useState(false);
 
   // Tile viewing states (for private tile reveal)
@@ -81,6 +82,17 @@ export function useAlerts() {
    */
   const showChallengeResult = (message: string) => {
     setChallengeResultMessage(message);
+    setChallengeResultMessagePlayerId(null);
+  };
+
+  /**
+   * Show a challenge result message targeted at a specific player.
+   * @param message - The challenge result message
+   * @param playerId - The target player ID
+   */
+  const showTargetedChallengeResult = (message: string, playerId: number) => {
+    setChallengeResultMessage(message);
+    setChallengeResultMessagePlayerId(playerId);
   };
 
   /**
@@ -88,6 +100,7 @@ export function useAlerts() {
    */
   const clearChallengeResult = () => {
     setChallengeResultMessage(null);
+    setChallengeResultMessagePlayerId(null);
   };
 
   /**
@@ -110,6 +123,7 @@ export function useAlerts() {
     // State
     alertModal,
     challengeResultMessage,
+    challengeResultMessagePlayerId,
     tilePlayerMustWithdraw,
     placerViewingTileId,
     giveReceiverViewingTileId,
@@ -118,6 +132,7 @@ export function useAlerts() {
     showAlert,
     closeAlert,
     showChallengeResult,
+    showTargetedChallengeResult,
     clearChallengeResult,
     setWithdrawalRequired,
     clearViewingTiles,
@@ -125,6 +140,7 @@ export function useAlerts() {
     // Direct setters (for backward compatibility)
     setAlertModal,
     setChallengeResultMessage,
+    setChallengeResultMessagePlayerId,
     setTilePlayerMustWithdraw,
     setPlacerViewingTileId,
     setGiveReceiverViewingTileId,

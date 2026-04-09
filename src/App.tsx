@@ -312,10 +312,14 @@ const App: React.FC<MultiplayerProps> = ({
     tilePlayerMustWithdraw,
     placerViewingTileId,
     giveReceiverViewingTileId,
+    challengeResultMessagePlayerId,
     showAlert,
     closeAlert,
+    showChallengeResult,
+    showTargetedChallengeResult,
     setAlertModal,
     setChallengeResultMessage,
+    setChallengeResultMessagePlayerId,
     setTilePlayerMustWithdraw,
     setPlacerViewingTileId,
     setGiveReceiverViewingTileId,
@@ -485,6 +489,11 @@ const App: React.FC<MultiplayerProps> = ({
   const [receiverAdvanceInProgress, setReceiverAdvanceInProgress] = useState<boolean>(false);
   const [moverPlayerIndex, setMoverPlayerIndex] = useState<number | null>(null);
 
+  // In multiplayer, viewingPlayerId is the player's 1-indexed ID based on their lobby seat
+  const viewingPlayerId = isMultiplayer && playerIndex !== undefined
+    ? playerIndex + 1
+    : (players[currentPlayerIndex]?.id || 1);
+
   // Wire up GameStateSynchronizer refs for host state push
   useEffect(() => {
     if (!getStatePacketRef || !applyStatePacketRef) return;
@@ -517,6 +526,8 @@ const App: React.FC<MultiplayerProps> = ({
       bureaucracyStates,
       bureaucracyTurnOrder,
       currentBureaucracyPlayerIndex,
+      challengeResultMessage,
+      challengeResultMessagePlayerId,
       stateVersion: 0,
       lastUpdated: Date.now(),
     });
@@ -549,6 +560,8 @@ const App: React.FC<MultiplayerProps> = ({
       setBureaucracyStates(packet.bureaucracyStates);
       setBureaucracyTurnOrder(packet.bureaucracyTurnOrder);
       setCurrentBureaucracyPlayerIndex(packet.currentBureaucracyPlayerIndex);
+      setChallengeResultMessage(packet.challengeResultMessage);
+      setChallengeResultMessagePlayerId(packet.challengeResultMessagePlayerId);
     };
   });
 
@@ -565,6 +578,7 @@ const App: React.FC<MultiplayerProps> = ({
     challengeOrder, currentChallengerIndex, tileRejected, showTakeAdvantageModal,
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
+    challengeResultMessage, challengeResultMessagePlayerId,
   ]);
 
   // Initialize campaign pieces when phase transitions to CAMPAIGN in multiplayer
@@ -695,15 +709,15 @@ const App: React.FC<MultiplayerProps> = ({
   // Destructure handlers for convenience
   const { handleStartGame, handleNewGame, handleSelectTile: originalHandleSelectTile } = gameFlowHandlers;
 
-  // Auto-start game in multiplayer mode (lobby already handled player selection)
+  // Auto-start game in multiplayer mode (host only, lobby already handled player selection)
   const hasAutoStartedRef = React.useRef(false);
   React.useEffect(() => {
-    if (isMultiplayer && !hasAutoStartedRef.current && multiplayerPlayerCount && multiplayerPlayerCount > 0 && players.length === 0) {
+    if (isMultiplayer && isHost && !hasAutoStartedRef.current && multiplayerPlayerCount && multiplayerPlayerCount > 0 && players.length === 0) {
       hasAutoStartedRef.current = true;
       console.log('[APP] Auto-starting multiplayer game with', multiplayerPlayerCount, 'players', multiplayerSkipDraft ? '(skip draft)' : '');
       handleStartGame(multiplayerPlayerCount, false, multiplayerSkipDraft, false);
     }
-  }, [isMultiplayer, multiplayerPlayerCount, players.length, handleStartGame]);
+  }, [isMultiplayer, isHost, multiplayerPlayerCount, players.length, handleStartGame, multiplayerSkipDraft]);
 
 
   // Wrap tile selection for multiplayer coordination
@@ -1570,8 +1584,9 @@ const App: React.FC<MultiplayerProps> = ({
         const challengedPlayerName = getPlayerNameSimple(
           getPlayerById(players, playedTile.playerId)
         );
-        setChallengeResultMessage(
-          `Challenge Failed: ${challengedPlayerName} played the tile perfectly.`
+        showTargetedChallengeResult(
+          `Challenge Failed: ${challengedPlayerName} played the tile perfectly.`,
+          challengerId
         );
 
         // Challenger loses 1 credibility for unsuccessful challenge (applied in finalizeTilePlay)
@@ -1587,6 +1602,7 @@ const App: React.FC<MultiplayerProps> = ({
         // Schedule auto-dismiss of challenge message after 5 seconds
         setTimeout(() => {
           setChallengeResultMessage("");
+          setChallengeResultMessagePlayerId(null);
         }, 5000);
       } else {
         // Challenge is VALID - player did NOT meet requirements perfectly
@@ -1596,6 +1612,7 @@ const App: React.FC<MultiplayerProps> = ({
         setChallengeResultMessage(
           `Challenge Successful: ${challengedPlayerName} must now move as per the tile requirements.`
         );
+        setChallengeResultMessagePlayerId(null); // Show to everyone
 
         // NEW: Offer Take Advantage reward to successful challenger
         const challengerId = challengeOrder[currentChallengerIndex];
@@ -1709,11 +1726,14 @@ const App: React.FC<MultiplayerProps> = ({
 
           // Only show modal if they have tiles, otherwise skip to correction
           if (hasTiles) {
+            // Transition to the new TAKE_ADVANTAGE state to clear bypass orders/waiting overlays
+            setGameState("TAKE_ADVANTAGE");
             setShowTakeAdvantageModal(true);
 
             // Store the challenge result message to show after modal closes
             setTimeout(() => {
               setChallengeResultMessage("");
+              setChallengeResultMessagePlayerId(null);
             }, TIMEOUTS.CHALLENGE_MESSAGE_DISMISS);
 
             // DON'T transition to CORRECTION_REQUIRED yet
@@ -1730,6 +1750,7 @@ const App: React.FC<MultiplayerProps> = ({
 
             setTimeout(() => {
               setChallengeResultMessage("");
+              setChallengeResultMessagePlayerId(null);
             }, 5000);
             return;
           }
@@ -1741,6 +1762,7 @@ const App: React.FC<MultiplayerProps> = ({
         // Schedule auto-dismiss of challenge message after 5 seconds
         setTimeout(() => {
           setChallengeResultMessage("");
+          setChallengeResultMessagePlayerId(null);
         }, 5000);
       }
     } else {
@@ -3853,6 +3875,7 @@ const App: React.FC<MultiplayerProps> = ({
       case "TILE_PLAYED":
       case "PENDING_ACCEPTANCE":
       case "PENDING_CHALLENGE":
+      case "TAKE_ADVANTAGE":
       case "CORRECTION_REQUIRED":
         const currentPlayer = players[currentPlayerIndex];
         if (!currentPlayer || players.length === 0) {
@@ -3870,11 +3893,8 @@ const App: React.FC<MultiplayerProps> = ({
           );
         }
         
-        // In multiplayer, currentPlayerId should be the VIEWING player, not the active turn player
-        const viewingPlayerId = isMultiplayer && playerIndex !== undefined
-          ? playerIndex + 1
-          : currentPlayer.id;
-
+        // In multiplayer, viewingPlayerId is already computed above at component level
+        
         // Compute campaignRole dynamically for the viewing player
         let computedCampaignRole = campaignRole;
         if (isMultiplayer && playerIndex !== undefined) {
@@ -3910,6 +3930,12 @@ const App: React.FC<MultiplayerProps> = ({
               computedCampaignRole = 'challenger';
             } else if (myIdx === moverIdx) {
               computedCampaignRole = 'mover';
+            } else {
+              computedCampaignRole = 'waiting';
+            }
+          } else if (gameState === 'TAKE_ADVANTAGE') {
+            if (myIdx + 1 === takeAdvantageChallengerId) {
+              computedCampaignRole = 'takeAdvantageChallenger';
             } else {
               computedCampaignRole = 'waiting';
             }
@@ -4011,6 +4037,7 @@ const App: React.FC<MultiplayerProps> = ({
             showTakeAdvantageMenu={showTakeAdvantageMenu}
             takeAdvantagePurchase={takeAdvantagePurchase}
             takeAdvantageValidationError={takeAdvantageValidationError}
+            challengeResultMessagePlayerId={challengeResultMessagePlayerId}
             onTakeAdvantageDecline={handleTakeAdvantageDecline}
             onTakeAdvantageYes={handleTakeAdvantageYes}
             onRecoverCredibility={handleRecoverCredibility}
@@ -4072,7 +4099,11 @@ const App: React.FC<MultiplayerProps> = ({
       />
 
       {/* Challenge Result Message - displays for 5 seconds */}
-      <ChallengeResultMessage message={challengeResultMessage} />
+      <ChallengeResultMessage 
+        message={challengeResultMessage} 
+        targetPlayerId={challengeResultMessagePlayerId}
+        currentPlayerId={viewingPlayerId}
+      />
 
       {/* Alert Modal */}
       <AlertModal

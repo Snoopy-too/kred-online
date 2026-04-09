@@ -118,12 +118,21 @@ export const PerfectTileModal: React.FC<PerfectTileModalProps> = ({
 
 interface ChallengeResultMessageProps {
   message: string | null;
+  targetPlayerId?: number | null;
+  currentPlayerId?: number | null;
 }
 
 export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
   message,
+  targetPlayerId,
+  currentPlayerId,
 }) => {
   if (!message) return null;
+
+  // In multiplayer, if a target is specified, only show to that player
+  if (targetPlayerId && currentPlayerId && targetPlayerId !== currentPlayerId) {
+    return null;
+  }
 
   const isFailed = message.includes("Failed");
 

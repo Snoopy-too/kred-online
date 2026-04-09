@@ -53,6 +53,58 @@ import { getPlayerById, getPieceById } from "../../utils";
 import LanguageModal from "../shared/LanguageModal";
 
 // ============================================================================
+// CONSTANTS & THEMES
+// ============================================================================
+
+const PLAYER_COLORS: Record<number, { border: string; bg: string; text: string; draggingBorder: string; draggingBg: string; indicator: string; ring: string }> = {
+  1: { 
+    border: "border-amber-400/30", 
+    bg: "bg-amber-500/5", 
+    text: "text-amber-400/60",
+    draggingBorder: "border-amber-400",
+    draggingBg: "bg-amber-500/20",
+    indicator: "text-amber-300",
+    ring: "ring-amber-400/40"
+  },
+  2: { 
+    border: "border-fuchsia-400/30", 
+    bg: "bg-fuchsia-500/5", 
+    text: "text-fuchsia-400/60",
+    draggingBorder: "border-fuchsia-400",
+    draggingBg: "bg-fuchsia-500/20",
+    indicator: "text-fuchsia-300",
+    ring: "ring-fuchsia-400/40"
+  },
+  3: { 
+    border: "border-cyan-400/30", 
+    bg: "bg-cyan-500/5", 
+    text: "text-cyan-400/60",
+    draggingBorder: "border-cyan-400",
+    draggingBg: "bg-cyan-500/20",
+    indicator: "text-cyan-300",
+    ring: "ring-cyan-400/40"
+  },
+  4: { 
+    border: "border-orange-400/30", 
+    bg: "bg-orange-500/5", 
+    text: "text-orange-400/60",
+    draggingBorder: "border-orange-400",
+    draggingBg: "bg-orange-500/20",
+    indicator: "text-orange-300",
+    ring: "ring-orange-400/40"
+  },
+  5: { 
+    border: "border-emerald-400/30", 
+    bg: "bg-emerald-500/5", 
+    text: "text-emerald-400/60",
+    draggingBorder: "border-emerald-400",
+    draggingBg: "bg-emerald-500/20",
+    indicator: "text-emerald-300",
+    ring: "ring-emerald-400/40"
+  },
+};
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -182,6 +234,7 @@ interface CampaignScreenProps {
   showTakeAdvantageMenu: boolean;
   takeAdvantagePurchase: BureaucracyPurchase | null;
   takeAdvantageValidationError: string | null;
+  challengeResultMessagePlayerId?: number | null;
   onTakeAdvantageDecline: () => void;
   onTakeAdvantageYes: () => void;
   onRecoverCredibility: () => void;
@@ -283,6 +336,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   showTakeAdvantageMenu,
   takeAdvantagePurchase,
   takeAdvantageValidationError,
+  challengeResultMessagePlayerId,
   onTakeAdvantageDecline,
   onTakeAdvantageYes,
   onRecoverCredibility,
@@ -674,7 +728,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // Use campaignRole from server to determine what this player can do
   const isMover = campaignRole === 'mover';
   const isReceiver = campaignRole === 'receiver';
-  const isChallenger = campaignRole === 'challenger';
+  const isChallenger = (campaignRole === 'challenger' || campaignRole === 'takeAdvantageChallenger');
   const isCorrecting = campaignRole === 'correcting';
   const isFreeAdvancer = campaignRole === 'freeAdvance';
   const isWaiting = campaignRole === 'waiting' || campaignRole === 'bystander';
@@ -723,7 +777,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
   const showWaitingOverlay =
     isWaiting &&
-    (gameState === "PENDING_ACCEPTANCE" || gameState === "PENDING_CHALLENGE");
+    (gameState === "PENDING_ACCEPTANCE" || 
+     gameState === "PENDING_CHALLENGE" || 
+     gameState === "TAKE_ADVANTAGE");
 
   let waitingMessage = "";
   let waitingPlayerId = undefined;
@@ -735,6 +791,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     } else if (gameState === "PENDING_CHALLENGE") {
       waitingPlayerId = bystanders[bystanderIndex]?.id;
       waitingMessage = `Waiting for ${nameById(waitingPlayerId)} to respond...`;
+    } else if (gameState === "TAKE_ADVANTAGE") {
+      // Find who the challenger is
+      waitingPlayerId = takeAdvantageChallengerId;
+      waitingMessage = `Waiting for ${nameById(waitingPlayerId)} to choose a reward...`;
     }
   }
   
@@ -952,33 +1012,40 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             )}
 
             {/* Tile Receiving Spaces */}
-            {unoccupiedSpaces.map((space) => (
-              <div
-                key={`space-${space.ownerId}`}
-                onDrop={(e) => handleDropOnTileSpace(e, space)}
-                onDragOver={handleDragOver}
-                className={`absolute w-12 h-24 rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all duration-300
-                  ${isDraggingTile
-                    ? "border-cyan-400 bg-cyan-500/20 scale-105 border-solid"
-                    : "border-cyan-400/50"
-                  }`}
-                style={{
-                  top: `${space.position.top}%`,
-                  left: `${space.position.left}%`,
-                  transform: `translate(-50%, -50%) rotate(${space.rotation}deg)`,
-                }}
-              >
+            {unoccupiedSpaces.map((space) => {
+              const colors = PLAYER_COLORS[space.ownerId] || PLAYER_COLORS[1];
+              const playerName = nameById(space.ownerId);
+              
+              return (
                 <div
-                  style={{
-                    transform: `rotate(${-space.rotation - boardRotation}deg)`,
-                  }}
-                  className={`font-semibold text-xs leading-tight ${isDraggingTile ? "text-cyan-200" : "text-cyan-400/70"
+                  key={`space-${space.ownerId}`}
+                  onDrop={(e) => handleDropOnTileSpace(e, space)}
+                  onDragOver={handleDragOver}
+                  className={`absolute w-12 h-24 rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all duration-300
+                    ${isDraggingTile
+                      ? `${colors.draggingBorder} ${colors.draggingBg} scale-105 border-solid shadow-lg`
+                      : `${colors.border} ${colors.bg}`
                     }`}
+                  style={{
+                    top: `${space.position.top}%`,
+                    left: `${space.position.left}%`,
+                    transform: `translate(-50%, -50%) rotate(${space.rotation}deg)`,
+                  }}
                 >
-                  <div>Drop Tile</div> <div>For P{space.ownerId}</div>
+                  <div
+                    style={{
+                      transform: `rotate(${-space.rotation - boardRotation}deg)`,
+                    }}
+                    className={`font-bold text-[10px] leading-tight transition-colors duration-300 ${
+                      isDraggingTile ? colors.indicator : colors.text
+                    }`}
+                  >
+                    <div className="uppercase tracking-tighter opacity-80 mb-1">Pass To</div>
+                    <div className="text-[12px] truncate max-w-[44px]">{playerName}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Board Tiles */}
             {boardTiles.map((boardTile) => {
@@ -1077,7 +1144,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                       : undefined
                   }
                   onClick={isTileClickable ? handleTileClick : undefined}
-                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1`}
+                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${
+                    PLAYER_COLORS[boardTile.ownerId]?.border || "border-gray-200"
+                  } ${isPlayedTile ? "ring-2 " + (PLAYER_COLORS[boardTile.ownerId]?.ring || "") : ""}`}
                   style={{
                     top: `${boardTile.position.top}%`,
                     left: `${boardTile.position.left}%`,
@@ -1113,7 +1182,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
             {bankedTiles.map((bankedTile) => (
               <div
                 key={bankedTile.id}
-                className="absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1"
+                className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${
+                  PLAYER_COLORS[bankedTile.ownerId]?.border || "border-gray-200"
+                }`}
                 style={{
                   top: `${bankedTile.position.top}%`,
                   left: `${bankedTile.position.left}%`,
@@ -1497,11 +1568,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                         canDragTile
                           ? "cursor-grab"
                           : "cursor-not-allowed opacity-60"
-                      } ${
-                        isHonestMatch && gameState === "SELECTING_TILE"
-                          ? "border-2 border-green-400 ring-2 ring-green-400/60 animate-pulse"
-                          : "border border-gray-300"
-                      }`}
+                      } border border-gray-300`}
                     >
                       <img
                         src={tile.url}
@@ -1592,7 +1659,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         !showBonusMoveModal &&
         receiverAcceptance === null && (
           <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 p-4">
-            <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full pointer-events-auto">
+            <div className="bg-gray-800/80 backdrop-blur-md border-2 border-cyan-500/50 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full pointer-events-auto">
               <h2 className="text-3xl font-bold text-cyan-300 mb-2">
                 Your Decision
               </h2>
@@ -1744,7 +1811,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
       )}
 
       {/* Bystander Challenge Modal */}
-      {isMyTurnForDecision && gameState === "PENDING_CHALLENGE" && (
+      {isMyTurnForDecision && gameState === "PENDING_CHALLENGE" && !showTakeAdvantageModal && (
         <div
           className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4"
           aria-modal="true"
