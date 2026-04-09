@@ -317,6 +317,7 @@ const App: React.FC<MultiplayerProps> = ({
     closeAlert,
     showChallengeResult,
     showTargetedChallengeResult,
+    clearChallengeResult,
     setAlertModal,
     setChallengeResultMessage,
     setChallengeResultMessagePlayerId,
