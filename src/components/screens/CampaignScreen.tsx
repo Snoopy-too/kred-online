@@ -1085,8 +1085,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 placerViewingTileId === boardTile.id;
 
               // Only receiver can view the tile (if they have credibility)
+              // Only receiver or placer can view the tile
               const isGiverOrReceiver =
-                isPlayedTile && currentPlayerId === playedTile.receivingPlayerId;
+                isPlayedTile && (currentPlayerId === playedTile.receivingPlayerId || isPlacer);
               const currentPlayer = players.find(
                 (p) => p.id === currentPlayerId
               );
@@ -1101,7 +1102,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 canGiverReceiverToggleView &&
                 giveReceiverViewingTileId === boardTile.id;
 
-              // CORRECTION_REQUIRED: Show tile face-up for placer to see requirements
+              // CORRECTION_REQUIRED: Automatically show tile face-up for placer to see requirements
               const showCorrectionView =
                 isPlayedTile && gameState === "CORRECTION_REQUIRED" && isPlacer;
 
@@ -1117,10 +1118,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 showCorrectionView ||
                 showExposedView;
 
-              // During tile play workflow, show white back unless it's being viewed by giver/receiver
-              // Don't show white back if the tile has been exposed/challenged (should be face-up)
+              // During tile play workflow, show white back unless it's being viewed
+              // Don't show white back if the tile has been exposed/challenged or is in correction mode
               const shouldShowWhiteBack =
-                isTilePlayedButNotYetAccepted && !showGiverReceiverView && !showExposedView;
+                isTilePlayedButNotYetAccepted && !showGiverReceiverView && !showExposedView && !showCorrectionView;
 
               const handleTileClick = () => {
                 if (canPlacerClickToView) {

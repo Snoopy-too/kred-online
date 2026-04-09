@@ -446,6 +446,12 @@ const App: React.FC<MultiplayerProps> = ({
     credibility: number;
     receiverId: number;
   } | null>(null);
+  // Mirror ref ensures the action dispatch always reads the latest value,
+  // even before React re-renders after a batched setState.
+  const pendingChallengerRewardRef = React.useRef(pendingChallengerReward);
+  React.useEffect(() => {
+    pendingChallengerRewardRef.current = pendingChallengerReward;
+  }, [pendingChallengerReward]);
 
   // Bureaucracy Phase State (from useBureaucracy hook)
   const {
@@ -1669,12 +1675,14 @@ const App: React.FC<MultiplayerProps> = ({
         // Check if challenger had max credibility (same as receiver bonus move)
         if (credibilityResult.hadMaxCredibility) {
           // Challenger already had 3 credibility, queue bonus move for AFTER correction
-          setPendingChallengerReward({
+          const reward = {
             challengerId,
-            rewardType: 'BONUS_MOVE',
+            rewardType: 'BONUS_MOVE' as const,
             credibility: credibilityResult.newPlayers.find(p => p.id === challengerId)?.credibility ?? 3,
             receiverId: playedTile.receivingPlayerId
-          });
+          };
+          setPendingChallengerReward(reward);
+          pendingChallengerRewardRef.current = reward;
           
           setPlayers(finalPlayers);
           
@@ -1737,12 +1745,14 @@ const App: React.FC<MultiplayerProps> = ({
 
           // Only queue modal if they have tiles, otherwise skip reward
           if (hasTiles) {
-            setPendingChallengerReward({
+            const reward = {
               challengerId,
-              rewardType: 'TAKE_ADVANTAGE',
+              rewardType: 'TAKE_ADVANTAGE' as const,
               credibility: challenger.credibility,
               receiverId: playedTile.receivingPlayerId
-            });
+            };
+            setPendingChallengerReward(reward);
+            pendingChallengerRewardRef.current = reward;
             
             // Go straight to correction phase
             transitionToCorrectionPhase();
@@ -2328,8 +2338,10 @@ const App: React.FC<MultiplayerProps> = ({
     );
 
     // IF there is a pending reward for the challenger, trigger it NOW
-    if (pendingChallengerReward) {
-      const { challengerId, rewardType, credibility } = pendingChallengerReward;
+    // Read from the ref to ensure we get the latest value even if React hasn't re-rendered
+    const pendingReward = pendingChallengerRewardRef.current;
+    if (pendingReward) {
+      const { challengerId, rewardType, credibility } = pendingReward;
       
       if (rewardType === 'BONUS_MOVE') {
         setGameState("BONUS_MOVE");
@@ -2346,6 +2358,7 @@ const App: React.FC<MultiplayerProps> = ({
       
       // Clear the queue
       setPendingChallengerReward(null);
+      pendingChallengerRewardRef.current = null;
       
       // Update players state
       setPlayers(updatedPlayers);
