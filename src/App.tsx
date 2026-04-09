@@ -62,6 +62,7 @@ export interface MultiplayerProps {
     endTurn: () => Promise<void>;
     acceptTile: () => Promise<void>;
     rejectTile: () => Promise<void>;
+    resetPiecesCorrection: () => Promise<void>;
     viewTilePrivate: () => Promise<void>;
     initiateChallenge: () => Promise<void>;
     passChallenge: () => Promise<void>;
@@ -1546,6 +1547,21 @@ const App: React.FC<MultiplayerProps> = ({
       handleReceiverAcceptanceDecision(accepted);
     }
   }, [isMultiplayer, multiplayerActions, handleReceiverAcceptanceDecision]);
+
+  // Wrap reset pieces correction for multiplayer
+  const wrappedResetPiecesCorrection = React.useCallback(async () => {
+    // Call local handler first to update UI
+    handleResetPiecesCorrection();
+
+    // Then sync to server in multiplayer
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.resetPiecesCorrection();
+      } catch (error) {
+        console.error('[MULTIPLAYER] Reset pieces correction sync failed:', error);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions, handleResetPiecesCorrection]);
 
   /**
    * Handle receiver reward choice after exposing a dishonest play
@@ -3818,6 +3834,9 @@ const App: React.FC<MultiplayerProps> = ({
         case 'RECEIVER_DECISION':
           handleReceiverAcceptanceDecision(action.payload.accepted);
           break;
+        case 'RESET_PIECES_CORRECTION':
+          pieceMovementHandlers.handleResetPiecesCorrection();
+          break;
         case 'VIEW_TILE_PRIVATE':
           // Guest viewing tile privately — no host action needed
           break;
@@ -4124,7 +4143,7 @@ const App: React.FC<MultiplayerProps> = ({
             onBonusMoveComplete={handleBonusMoveComplete}
             movedPiecesThisTurn={movedPiecesThisTurn}
             onResetTurn={handleResetTurn}
-            onResetPiecesCorrection={handleResetPiecesCorrection}
+            onResetPiecesCorrection={wrappedResetPiecesCorrection}
             onResetBonusMove={handleResetBonusMove}
             showTakeAdvantageModal={showTakeAdvantageModal}
             takeAdvantageChallengerId={takeAdvantageChallengerId}
