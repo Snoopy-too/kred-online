@@ -403,7 +403,7 @@ import {
   StatePacket,
 } from "../sync/packet";
 import { SYNC_DELTAS, FULL_SNAPSHOT_HEARTBEAT_N } from "../sync/flags";
-import { perfIncrement, perfObserve } from "../perf";
+import { incrementCounter, recordMetric } from "../perf";
 
 export function GameStateAggregator(props: GameStateAggregatorProps) {
   const phase = usePhase();
@@ -462,10 +462,10 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
 
       // Perf accounting
       if (packet.kind === "full") {
-        perfIncrement("sync.full.sent");
+        incrementCounter("sync.full.sent");
       } else {
-        perfIncrement("sync.delta.sent");
-        perfObserve("sync.delta.patchKeys", Object.keys(packet.patch).length);
+        incrementCounter("sync.delta.sent");
+        recordMetric("sync.delta.patchKeys", Object.keys(packet.patch).length);
       }
 
       // Hand to the synchronizer's internal send function
@@ -602,14 +602,14 @@ const applyStatePacket = useCallback((raw: unknown) => {
 
   // Version gate
   if (packet.v <= lastAppliedVRef.current) {
-    perfIncrement("sync.staleSkipped");
+    incrementCounter("sync.staleSkipped");
     return;
   }
 
   if (packet.kind === "full") {
     lastAppliedFullRef.current = packet.state;
     lastAppliedVRef.current = packet.v;
-    perfObserve("sync.apply.fullBytes", JSON.stringify(packet.state).length);
+    recordMetric("sync.apply.fullBytes", JSON.stringify(packet.state).length);
     onApplyPacket(packet.state);
     return;
   }
@@ -617,7 +617,7 @@ const applyStatePacket = useCallback((raw: unknown) => {
   // kind === 'delta'
   if (packet.baseV !== lastAppliedVRef.current) {
     // Missed a frame. Request a full snapshot.
-    perfIncrement("sync.requestFull.sent");
+    incrementCounter("sync.requestFull.sent");
     emitRequestFull();
     return;
   }
@@ -626,7 +626,7 @@ const applyStatePacket = useCallback((raw: unknown) => {
   const next = applyDelta(base, packet.patch);
   lastAppliedFullRef.current = next;
   lastAppliedVRef.current = packet.v;
-  perfObserve("sync.apply.deltaBytes", JSON.stringify(packet.patch).length);
+  recordMetric("sync.apply.deltaBytes", JSON.stringify(packet.patch).length);
   onApplyPacket(next);
 }, [onApplyPacket]);
 ```
@@ -650,7 +650,7 @@ Host-side, in the action processing switch (or wherever action types are dispatc
 
 ```tsx
 case "REQUEST_FULL": {
-  perfIncrement("sync.requestFull.served");
+  incrementCounter("sync.requestFull.served");
   // Force the next push to be a full snapshot.
   // The aggregator owns the "force full" flag, so the simplest bridge is
   // a ref the aggregator watches.
@@ -843,7 +843,7 @@ const drainQueue = useCallback(async () => {
 ```tsx
 import { flushSync } from "react-dom";
 import { SYNC_MICROTASK_YIELD } from "../sync/flags";
-import { perfObserve } from "../perf";
+import { recordMetric } from "../perf";
 
 const drainQueue = useCallback(async () => {
   if (isProcessingQueueRef.current) return;
@@ -856,7 +856,7 @@ const drainQueue = useCallback(async () => {
     const action = actionQueueRef.current.shift();
     if (!action) {
       isProcessingQueueRef.current = false;
-      perfObserve("actions.burstYieldMs", performance.now() - burstStart);
+      recordMetric("actions.burstYieldMs", performance.now() - burstStart);
       return;
     }
     // flushSync ensures the setState inside processAction commits before the

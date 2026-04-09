@@ -404,17 +404,17 @@ Template:
 
 ```ts
 import { validateAction } from "../validation";
-import { perfIncrement, perfRecordString } from "../perf";
+import { incrementCounter } from "../perf";
 
 export function handleMovePiece(action: MovePieceAction, state: FullState, dispatch: ...) {
   const result = validateAction(action, state);
   if (!result.ok) {
-    perfIncrement("validation.rejected");
-    perfRecordString("validation.rejected.reasons", `${action.type}:${result.reason}`);
+    incrementCounter("validation.rejected");
+    incrementCounter(`validation.rejected.${action.type}.${result.reason}`);
     console.warn(`[validation] ${action.type} rejected: ${result.reason}`);
     return; // DO NOT mutate
   }
-  perfIncrement("validation.accepted");
+  incrementCounter("validation.accepted");
   // ...existing mutation code
 }
 ```
@@ -584,11 +584,11 @@ async function persistWithRetry(payload: any, attempt = 0): Promise<void> {
     if (error) throw error;
   } catch (err) {
     if (attempt >= backoffMs.length) {
-      perfIncrement("persist.giveUp");
+      incrementCounter("persist.giveUp");
       console.error("[persist] gave up after retries", err);
       return;
     }
-    perfIncrement("persist.retries");
+    incrementCounter("persist.retries");
     await new Promise((r) => setTimeout(r, backoffMs[attempt]));
     return persistWithRetry(payload, attempt + 1);
   }
@@ -759,7 +759,7 @@ git commit -m "test+fix: reconnect + rejoin edge cases (matrix #12, #13, #14, #1
 ```tsx
 // src/components/errors/ErrorBoundary.tsx
 import { Component, ErrorInfo, ReactNode } from "react";
-import { perfIncrement } from "../../perf";
+import { incrementCounter } from "../../perf";
 
 interface ErrorBoundaryProps {
   name: string;
@@ -780,7 +780,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    perfIncrement(`errors.${this.props.name}`);
+    incrementCounter(`errors.${this.props.name}`);
     console.error(`[ErrorBoundary:${this.props.name}]`, error, info.componentStack);
     this.props.onError?.(error, info);
   }

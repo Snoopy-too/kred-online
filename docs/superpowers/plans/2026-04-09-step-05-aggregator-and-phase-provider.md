@@ -795,15 +795,15 @@ git commit -m "test: scenario helpers render real GameProviders tree"
 In `PhaseProvider.tsx`, inside the provider component:
 
 ```tsx
-import { usePerfRenderCount } from "../perf/index";
+import { useRenderCount } from "../perf/index";
 // ...
 export function PhaseProvider({ children, initial }: PhaseProviderProps) {
-  usePerfRenderCount("PhaseProvider");
+  useRenderCount("PhaseProvider");
   // ... existing body
 }
 ```
 
-(`usePerfRenderCount` was added in Step 2. If it doesn't exist yet with that exact name, use whatever the Step 2 plan named it — the pattern is the same.)
+(`useRenderCount` was added in Step 2. If it doesn't exist yet with that exact name, use whatever the Step 2 plan named it — the pattern is the same.)
 
 - [ ] **Step 2: Write the assertion test**
 
@@ -812,11 +812,10 @@ export function PhaseProvider({ children, initial }: PhaseProviderProps) {
 import { describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { PhaseProvider, usePhase, usePhaseDispatch } from "../../providers/PhaseProvider";
-import { readPerfGauge, resetPerf } from "../../perf";
+import { usePerfCounter } from "../../perf";
 
 describe("PhaseProvider render counts", () => {
   it("dispatch-only consumers do not re-render on state changes", () => {
-    resetPerf();
     // Mount a consumer of dispatch only; it should re-render exactly once (initial mount).
     let dispatchRenders = 0;
     function DispatchOnly() {
@@ -844,7 +843,7 @@ describe("PhaseProvider render counts", () => {
 });
 ```
 
-**Note:** getting React Testing Library to report precise render counts for context-split consumers is fiddly. If this test is hard to write cleanly in under 60 lines, simplify it to "provider renders 1 extra time after a state change" using `usePerfRenderCount("PhaseProvider")` and `readPerfGauge("render.PhaseProvider")`. A working-but-loose test is better than a clever-but-broken one.
+**Note:** getting React Testing Library to report precise render counts for context-split consumers is fiddly. If this test is hard to write cleanly in under 60 lines, simplify it to "provider renders 1 extra time after a state change" using `useRenderCount("PhaseProvider")` and `usePerfCounter("render.PhaseProvider")`. A working-but-loose test is better than a clever-but-broken one.
 
 - [ ] **Step 3: Run**
 

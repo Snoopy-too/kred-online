@@ -114,7 +114,7 @@ export interface RosterDispatch {
 
 **Important:** allow functional updaters on setters. Step 5 used plain value setters in PhaseProvider because phase updates are cheap. Roster setters are called in many places where the new value depends on the old value; functional updaters avoid stale-closure bugs.
 
-Add `usePerfRenderCount("RosterProvider")` inside the component body.
+Add `useRenderCount("RosterProvider")` inside the component body.
 
 Expected file size: ≤ 280 lines.
 

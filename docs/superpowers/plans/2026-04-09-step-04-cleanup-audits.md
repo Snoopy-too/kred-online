@@ -23,7 +23,7 @@
 4. `src/components/GameStateSynchronizer.tsx` — same thing. After Step 3, this file has ~10 long-lived refs.
 5. `src/game/phases.ts` (or equivalent) — the phase enum. You need the complete list of phases to build the cleanup matrix.
 6. `src/__tests__/sync/` — the test net Steps 1 and 3 built. Your new tests go here.
-7. `src/perf/index.ts` — you'll add one counter (`subscriptions.openCount`) in Task 7.
+7. `src/perf/index.ts` — you'll add one small gauge helper (`subscriptions.openCount`) in Task 7. Step 2 exposed `recordMetric`, `incrementCounter`, `useRenderCount`, `usePerfCounter`, `usePerfSeries`. This step adds a tiny `setGauge`/`readGauge` pair on top (≤ 15 lines).
 
 **Project conventions:**
 - TypeScript everywhere; `any` is a yellow flag.
@@ -535,32 +535,44 @@ git commit -m "test: phase-change cleanup rules per matrix (spec §4b)"
 - Modify: `src/components/GameStateSynchronizer.tsx` (increment counter on subscribe, decrement on unsubscribe)
 - Create: `src/__tests__/sync/subscription-stability.test.ts`
 
-- [ ] **Step 1: Add the `subscriptions.openCount` counter**
+- [ ] **Step 1: Add a tiny `setGauge`/`readGauge` pair + the `subscriptions.openCount` metric**
 
-In `src/perf/index.ts`, add to the registry:
+Step 2's PerfStore exposes counters and series but not gauges. Add a minimal gauge helper in `src/perf/index.ts` (≤ 15 lines) alongside the existing exports:
 
 ```ts
-export const PERF_METRICS = {
-  // ...existing...
-  "subscriptions.openCount": { kind: "gauge", cap: 64 },
-} as const;
+// src/perf/index.ts — additions
+const gauges: Record<string, number> = Object.create(null);
+
+export function setGauge(name: string, updater: number | ((current: number) => number)): void {
+  if (!PERF_ENABLED) return;
+  const current = gauges[name] ?? 0;
+  gauges[name] = typeof updater === "function" ? updater(current) : updater;
+}
+
+export function readGauge(name: string): number {
+  return gauges[name] ?? 0;
+}
 ```
+
+No registry entry is needed — gauges are sparse by construction.
 
 - [ ] **Step 2: Wire the counter in GameStateSynchronizer**
 
 At every `supabase.channel(...).subscribe(...)` call site:
 
 ```ts
+import { setGauge } from "../perf";
+
 const channel = supabase.channel(`game:${lobbyId}`)
   .on("broadcast", ...)
   .subscribe((status) => {
-    if (status === "SUBSCRIBED") perfSetGauge("subscriptions.openCount", (current) => current + 1);
+    if (status === "SUBSCRIBED") setGauge("subscriptions.openCount", (current) => current + 1);
   });
 
 // And in the cleanup returned from useEffect:
 return () => {
   supabase.removeChannel(channel);
-  perfSetGauge("subscriptions.openCount", (current) => Math.max(0, current - 1));
+  setGauge("subscriptions.openCount", (current) => Math.max(0, current - 1));
 };
 ```
 
@@ -572,7 +584,7 @@ Do this for **every** `supabase.channel` in `GameStateSynchronizer.tsx` (broadca
 // src/__tests__/sync/subscription-stability.test.ts
 import { describe, expect, it } from "vitest";
 import { createMultiplayerScenario, waitForConvergence } from "./helpers/scenario";
-import { readPerfGauge } from "../../perf";
+import { readGauge } from "../../perf";
 
 describe("subscription stability (spec §4f)", () => {
   for (const playerCount of [3, 4, 5] as const) {
@@ -581,7 +593,7 @@ describe("subscription stability (spec §4f)", () => {
       try {
         await waitForConvergence([host, ...guests]);
 
-        const baselineOpen = readPerfGauge("subscriptions.openCount");
+        const baselineOpen = readGauge("subscriptions.openCount");
         // Baseline = 1 broadcast per host + 1 broadcast per guest + 1 actions realtime per host
         // Exact number doesn't matter; the invariant is "stable under state changes."
 
@@ -591,7 +603,7 @@ describe("subscription stability (spec §4f)", () => {
         }
         await waitForConvergence([host, ...guests]);
 
-        const afterOpen = readPerfGauge("subscriptions.openCount");
+        const afterOpen = readGauge("subscriptions.openCount");
         expect(afterOpen).toBe(baselineOpen);
       } finally {
         await cleanup();
