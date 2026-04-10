@@ -640,6 +640,9 @@ const App: React.FC<MultiplayerProps> = ({
         setGameState,
         setGameLog,
 
+        // External Context
+        playerNames,
+
         // State setters from useMoveTracking
         setPiecesAtTurnStart,
         setMovedPiecesThisTurn,
@@ -730,6 +733,7 @@ const App: React.FC<MultiplayerProps> = ({
       setBureaucracyStates,
       setCurrentBureaucracyPlayerIndex,
       setShowBureaucracyMenu,
+      playerNames,
     ]
   );
 

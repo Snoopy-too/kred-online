@@ -335,7 +335,7 @@ export function initializeCampaignPieces(playerCount: number): Piece[] {
  * // Returns 3 players, each with 8 tiles (24 total / 3 players)
  * ```
  */
-export function initializePlayers(playerCount: number): Player[] {
+export function initializePlayers(playerCount: number, playerNames?: string[]): Player[] {
   const allTiles: Tile[] = TILE_IMAGE_URLS.map((url, index) => ({
     id: index + 1,
     url,
@@ -354,6 +354,7 @@ export function initializePlayers(playerCount: number): Player[] {
 
   const players: Player[] = Array.from({ length: playerCount }, (_, i) => ({
     id: i + 1,
+    name: playerNames?.[i],
     hand: [],
     keptTiles: [],
     bureaucracyTiles: [],

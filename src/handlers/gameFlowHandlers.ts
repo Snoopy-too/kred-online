@@ -44,6 +44,9 @@ export interface GameFlowDependencies {
   setGameState: Dispatch<SetStateAction<GameState>>;
   setGameLog: Dispatch<SetStateAction<string[]>>;
 
+  // --- External Context ---
+  playerNames?: string[];
+
   // Piece tracking state setters
   setPiecesAtTurnStart: Dispatch<SetStateAction<Piece[]>>;
   setMovedPiecesThisTurn: Dispatch<SetStateAction<Set<string>>>;
@@ -94,7 +97,7 @@ export interface GameFlowDependencies {
   setShowBureaucracyMenu: Dispatch<SetStateAction<boolean>>;
 
   // --- Initialization Functions ---
-  initializePlayers: (count: number) => Player[];
+  initializePlayers: (count: number, names?: string[]) => Player[];
   initializeCampaignPieces: (count: number) => Piece[];
   getBureaucracyTurnOrder: (players: Player[], pieces?: Piece[]) => number[];
   calculatePlayerKredcoin: (player: Player) => number;
@@ -189,7 +192,7 @@ export function createGameFlowHandlers(
     }
 
     // Use server-provided players if available (multiplayer), otherwise initialize locally
-    const initialPlayers = initialGameState?.players || deps.initializePlayers(count);
+    const initialPlayers = initialGameState?.players || deps.initializePlayers(count, deps.playerNames);
 
     if (skipDraft && skipCampaign) {
       // Skip both phases - distribute tiles randomly and move to bureaucracy
