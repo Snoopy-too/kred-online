@@ -1150,6 +1150,23 @@ const App: React.FC<MultiplayerProps> = ({
         setPlayedTile(null);
         setTileRejected(false);
         resetChallengeState();
+
+        // Clear piece movement tracking from previous turn
+        setMovedPiecesThisTurn(new Set());
+        setPendingCommunityPieces(new Set());
+        
+        // Set piece state snapshot for the start of this new turn
+        setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
+        
+        // Snapshot credibility at turn start for the new mover
+        const newMoverId = playedTile.receivingPlayerId;
+        const newMover = getPlayerById(players, newMoverId);
+        if (newMover !== undefined && newMover !== null) {
+          setCredibilityAtTurnStart(prev => ({
+            ...prev,
+            [newMoverId]: newMover.credibility,
+          }));
+        }
       }
     }
   };
@@ -3178,6 +3195,23 @@ const App: React.FC<MultiplayerProps> = ({
         setPlayedTile(null);
         setTileRejected(false);
         resetChallengeState();
+
+        // Clear piece movement tracking from previous turn
+        setMovedPiecesThisTurn(new Set());
+        setPendingCommunityPieces(new Set());
+        
+        // Set piece state snapshot for the start of this new turn
+        setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
+        
+        // Snapshot credibility at turn start for the new mover
+        const newMoverId = playedTile.receivingPlayerId;
+        const newMover = getPlayerById(players, newMoverId);
+        if (newMover !== undefined && newMover !== null) {
+          setCredibilityAtTurnStart(prev => ({
+            ...prev,
+            [newMoverId]: newMover.credibility,
+          }));
+        }
       }
     }
   };
@@ -3251,6 +3285,23 @@ const App: React.FC<MultiplayerProps> = ({
         setPlayedTile(null);
         setTileRejected(false);
         resetChallengeState();
+
+        // Clear piece movement tracking from previous turn
+        setMovedPiecesThisTurn(new Set());
+        setPendingCommunityPieces(new Set());
+        
+        // Set piece state snapshot for the start of this new turn
+        setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
+        
+        // Snapshot credibility at turn start for the new mover
+        const newMoverId = playedTile.receivingPlayerId;
+        const newMover = getPlayerById(players, newMoverId);
+        if (newMover !== undefined && newMover !== null) {
+          setCredibilityAtTurnStart(prev => ({
+            ...prev,
+            [newMoverId]: newMover.credibility,
+          }));
+        }
       }
     }
   };
@@ -3721,6 +3772,23 @@ const App: React.FC<MultiplayerProps> = ({
         setPlayedTile(null);
         setTileRejected(false);
         resetChallengeState();
+
+        // Clear piece movement tracking from previous turn
+        setMovedPiecesThisTurn(new Set());
+        setPendingCommunityPieces(new Set());
+        
+        // Set piece state snapshot for the start of this new turn
+        setPiecesAtTurnStart(pieces.map((p) => ({ ...p })));
+        
+        // Snapshot credibility at turn start for the new mover
+        const newMoverId = playedTile.receivingPlayerId;
+        const newMover = getPlayerById(players, newMoverId);
+        if (newMover !== undefined && newMover !== null) {
+          setCredibilityAtTurnStart(prev => ({
+            ...prev,
+            [newMoverId]: newMover.credibility,
+          }));
+        }
       }
     }
   };
