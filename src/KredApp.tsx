@@ -77,6 +77,8 @@ export default function KredApp() {
           viewTilePrivate: actions.viewTilePrivate,
           initiateChallenge: actions.initiateChallenge,
           passChallenge: actions.passChallenge,
+          completeBonusMove: actions.completeBonusMove,
+          completeCorrection: actions.completeCorrection,
           selectAdvantageTiles: actions.selectAdvantageTiles,
           purchaseAdvantage: actions.purchaseAdvantage,
           receiverRewardChoice: actions.receiverRewardChoice,

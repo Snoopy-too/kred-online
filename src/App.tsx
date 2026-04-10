@@ -66,6 +66,8 @@ export interface MultiplayerProps {
     viewTilePrivate: () => Promise<void>;
     initiateChallenge: () => Promise<void>;
     passChallenge: () => Promise<void>;
+    completeBonusMove: () => Promise<void>;
+    completeCorrection: () => Promise<void>;
     selectAdvantageTiles: (tileIds: string[]) => Promise<void>;
     purchaseAdvantage: (purchase: any) => Promise<void>;
     receiverRewardChoice: (choice: 'credibility' | 'advance') => Promise<void>;
@@ -1562,6 +1564,36 @@ const App: React.FC<MultiplayerProps> = ({
       }
     }
   }, [isMultiplayer, multiplayerActions, handleResetPiecesCorrection]);
+
+  // Wrap bonus move complete for multiplayer
+  const wrappedBonusMoveComplete = React.useCallback(async () => {
+    if (isMultiplayer && multiplayerActions) {
+      console.log('[MULTIPLAYER] Completing bonus move via server');
+      try {
+        await multiplayerActions.completeBonusMove();
+      } catch (error: any) {
+        console.error('[MULTIPLAYER] Complete bonus move failed:', error);
+      }
+    } else {
+      // Single-player mode
+      handleBonusMoveComplete();
+    }
+  }, [isMultiplayer, multiplayerActions, handleBonusMoveComplete]);
+
+  // Wrap correction complete for multiplayer
+  const wrappedCorrectionComplete = React.useCallback(async () => {
+    if (isMultiplayer && multiplayerActions) {
+      console.log('[MULTIPLAYER] Completing correction via server');
+      try {
+        await multiplayerActions.completeCorrection();
+      } catch (error: any) {
+        console.error('[MULTIPLAYER] Complete correction failed:', error);
+      }
+    } else {
+      // Single-player mode
+      handleCorrectionComplete();
+    }
+  }, [isMultiplayer, multiplayerActions, handleCorrectionComplete]);
 
   /**
    * Handle receiver reward choice after exposing a dishonest play
@@ -4118,7 +4150,7 @@ const App: React.FC<MultiplayerProps> = ({
             receiverAcceptance={receiverAcceptance}
             onReceiverAcceptanceDecision={wrappedReceiverDecision}
             onChallengerDecision={wrappedChallengerDecision}
-            onCorrectionComplete={handleCorrectionComplete}
+            onCorrectionComplete={wrappedCorrectionComplete}
             tileRejected={tileRejected}
             showMoveCheckResult={showMoveCheckResult}
             moveCheckResult={moveCheckResult}
@@ -4140,7 +4172,7 @@ const App: React.FC<MultiplayerProps> = ({
             setShowPerfectTileModal={setShowPerfectTileModal}
             showBonusMoveModal={showBonusMoveModal}
             bonusMovePlayerId={bonusMovePlayerId}
-            onBonusMoveComplete={handleBonusMoveComplete}
+            onBonusMoveComplete={wrappedBonusMoveComplete}
             movedPiecesThisTurn={movedPiecesThisTurn}
             onResetTurn={handleResetTurn}
             onResetPiecesCorrection={wrappedResetPiecesCorrection}

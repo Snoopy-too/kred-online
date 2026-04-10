@@ -1278,7 +1278,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               const canDragPiece = 
                 (isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) || 
                 (isCorrecting && gameState === 'CORRECTION_REQUIRED') ||
-                (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED');
+                (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED') ||
+                (isBonusMover && gameState === 'BONUS_MOVE') ||
+                (isChallenger && gameState === 'TAKE_ADVANTAGE');
 
               return (
                 <img
