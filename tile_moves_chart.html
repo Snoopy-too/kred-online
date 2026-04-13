@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tile Valid Moves Chart</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        table {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #34495e;
+            color: #fff;
+            font-size: 1.1em;
+        }
+        tr:hover {
+            background-color: #f1f2f6;
+        }
+        .tile-number {
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .tile-image {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .tile-image img {
+            max-width: 100px;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .moves-details {
+            line-height: 1.6;
+        }
+        .move-type {
+            font-weight: bold;
+            color: #2980b9;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+        .move-desc {
+            margin-bottom: 10px;
+        }
+        ul {
+            margin-top: 5px;
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Tile Valid Moves Chart</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Tile Number</th>
+            <th>Tile Image</th>
+            <th>Valid Moves Details</th>
+        </tr>
+    </thead>
+    <tbody id="table-body">
+        <!-- Rows will be injected here by JS to keep the file clean and generation dynamic, or I can just print them directly. I will print them directly below -->
+    </tbody>
+</table>
+
+<script>
+    const DEFINED_MOVES = {
+        "REMOVE": {
+            description: "(O) Remove – Take a Mark from a seat in an opponent's domain and return it to the community.",
+            options: [
+                "a. Take a Mark from an opponent's seat",
+                "b. Return the piece to the community"
+            ]
+        },
+        "ADVANCE": {
+            description: "(M) Advance – Player's choice of ONE of the following",
+            options: [
+                "a. Take a piece from the community and add it to an open seat in their domain",
+                "b. Take a piece from a seat in their domain and place it into the open Rostrum that that seat supports",
+                "c. Take a piece from a Rostrum in their domain and place it into the office in their domain"
+            ]
+        },
+        "INFLUENCE": {
+            description: "(O) Influence – A player may move another player's piece from a seat to an adjacent seat (even if that seat is in another player's domain), OR from an opponent's rostrum to an adjacent rostrum in another player's domain.",
+            options: [
+                "a. Move another player's piece from a seat to an adjacent seat",
+                "b. Move another player's piece from a rostrum to an adjacent rostrum in another player's domain"
+            ]
+        },
+        "ASSIST": {
+            description: "(O) Assist – A player may add a piece from the community to an opponent's vacant seat.",
+            options: [
+                "a. Take a piece from the community and add it to an opponent's vacant seat"
+            ]
+        },
+        "WITHDRAW": {
+            description: "(M) Withdraw – A player MUST do one of the following UNLESS they have 0 pieces in their domain",
+            options: [
+                "a. Move a piece from an office to a vacant rostrum in their domain",
+                "b. Move a piece from a rostrum in their domain to a vacant seat in their domain",
+                "c. Move a piece from a seat in their domain to the community"
+            ]
+        },
+        "ORGANIZE": {
+            description: "(M) Organize – A player must do one of the following",
+            options: [
+                "a. Move a piece from a seat in their domain to an adjacent seat, even if it ends up in an opponent's domain",
+                "b. Move a piece from a rostrum in their domain to an adjacent rostrum in an opponent's domain"
+            ]
+        }
+    };
+
+    const TILE_REQUIREMENTS = [
+        { ids: ["01", "02"], moves: ["REMOVE", "ADVANCE"] },
+        { ids: ["03", "04"], moves: ["INFLUENCE", "ADVANCE"] },
+        { ids: ["05", "06"], moves: ["ADVANCE"] },
+        { ids: ["07", "08"], moves: ["ASSIST", "ADVANCE"] },
+        { ids: ["09", "10"], moves: ["REMOVE", "ORGANIZE"] },
+        { ids: ["11"], moves: ["INFLUENCE"] },
+        { ids: ["12"], moves: ["ORGANIZE"] },
+        { ids: ["13", "14"], moves: ["ASSIST", "ORGANIZE"] },
+        { ids: ["15", "16"], moves: ["REMOVE"] },
+        { ids: ["17", "18"], moves: ["INFLUENCE", "WITHDRAW"] },
+        { ids: ["19", "20", "21"], moves: ["WITHDRAW"] },
+        { ids: ["22", "23", "24"], moves: ["ASSIST", "WITHDRAW"] }
+    ];
+
+    const tbody = document.getElementById("table-body");
+
+    // Flatten requirements mapping back to 1..24
+    for (let i = 1; i <= 24; i++) {
+        const idStr = i.toString().padStart(2, '0');
+        const req = TILE_REQUIREMENTS.find(r => r.ids.includes(idStr));
+        const moves = req ? req.moves : [];
+
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.className = "tile-number";
+        tdId.textContent = idStr;
+
+        const tdImage = document.createElement("td");
+        tdImage.className = "tile-image";
+        const img = document.createElement("img");
+        img.src = `public/images/${idStr}.svg`;
+        img.alt = `Tile ${idStr}`;
+        // Fallback in case SVG fails to load, though all are SVGs
+        img.onerror = function() {
+            this.replaceWith(document.createTextNode(`Image not found: ${img.src}`));
+        };
+        tdImage.appendChild(img);
+
+        const tdMoves = document.createElement("td");
+        tdMoves.className = "moves-details";
+        
+        let movesHtml = "";
+        moves.forEach(mType => {
+            const moveInfo = DEFINED_MOVES[mType];
+            movesHtml += `<div class="move-type">${mType}</div>`;
+            movesHtml += `<div class="move-desc">${moveInfo.description}</div>`;
+            if (moveInfo.options && moveInfo.options.length > 0) {
+                movesHtml += `<ul>`;
+                moveInfo.options.forEach(opt => {
+                    movesHtml += `<li>${opt}</li>`;
+                });
+                movesHtml += `</ul>`;
+            }
+        });
+        
+        tdMoves.innerHTML = movesHtml;
+
+        tr.appendChild(tdId);
+        tr.appendChild(tdImage);
+        tr.appendChild(tdMoves);
+
+        tbody.appendChild(tr);
+    }
+</script>
+
+</body>
+</html>

@@ -60,6 +60,11 @@ export function isLegalMoveSet(movesPerformed: TrackedMove[]): boolean {
   const performedTypes = movesPerformed.map((m) => m.moveType);
 
   return Object.values(TILE_REQUIREMENTS).some((req) => {
+    // The BLANK tile acts as a wild card. Since earlier validation
+    // checks enforce structural legality (max 1 O, max 1 M), 
+    // the BLANK tile inherently supports any combination.
+    if (req.tileId === "BLANK") return true;
+
     const required = req.requiredMoves;
     if (required.length !== performedTypes.length) return false;
 
