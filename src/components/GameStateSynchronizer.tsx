@@ -197,11 +197,25 @@ export default function GameStateSynchronizer({
         }
       }
     };
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') pollActions();
+    };
+    const handleOnline = () => pollActions();
+    const handleFocus = () => pollActions();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
+
     const interval = setInterval(pollActions, 2000);
 
     return () => {
       clearInterval(interval);
       channel.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [lobbyId, isHost, onActionReceived, enqueueAction]);
 
@@ -278,8 +292,23 @@ export default function GameStateSynchronizer({
       }
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
+    const handleOnline = () => poll();
+    const handleFocus = () => poll();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
+
     const interval = setInterval(poll, 3000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [lobbyId, isHost, applyStatePacket]);
 
   // ==========================================================================
