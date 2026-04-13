@@ -50,6 +50,15 @@ export interface GameStatePacket {
   challengeResultMessagePlayerId: number | null;
   pendingChallengerReward: any | null;
 
+  // Server Alerts
+  serverAlert: {
+    id: number;
+    title: string;
+    message: string;
+    type: "error" | "warning" | "info";
+    playerId: number | null;
+  } | null;
+
   // Bureaucracy
   bureaucracyStates: any;
   bureaucracyTurnOrder: number[];

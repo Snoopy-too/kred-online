@@ -8,6 +8,7 @@ interface AlertModal {
   title: string;
   message: string;
   type: "error" | "warning" | "info";
+  targetPlayerId?: number | null;
 }
 
 /**
@@ -30,6 +31,7 @@ export function useAlerts() {
     title: "",
     message: "",
     type: "info",
+    targetPlayerId: null,
   });
 
   // Challenge-specific messages
@@ -52,17 +54,20 @@ export function useAlerts() {
    * @param title - The alert title
    * @param message - The alert message
    * @param type - The alert type (error, warning, info)
+   * @param targetPlayerId - The player ID who should see this, or null for everyone
    */
   const showAlert = (
     title: string,
     message: string,
-    type: "error" | "warning" | "info" = "info"
+    type: "error" | "warning" | "info" = "info",
+    targetPlayerId: number | null = null
   ) => {
     setAlertModal({
       isOpen: true,
       title,
       message,
       type,
+      targetPlayerId,
     });
   };
 

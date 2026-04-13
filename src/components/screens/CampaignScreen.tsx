@@ -354,6 +354,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
   const [isDraggingTile, setIsDraggingTile] = useState(false);
   const [boardMousePosition, setBoardMousePosition] = useState<{
     x: number;
@@ -400,6 +401,22 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
       logContainerRef.current.scrollTop = 0;
     }
   }, [gameLog]);
+
+  useEffect(() => {
+    const updateZoom = () => {
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      // Calculate scale to fit 960px height and 1100px width min boundaries
+      if (vh > 0 && vw > 0) {
+        setZoomScale(Math.min(1, vh / 960, vw / 1100));
+      } else {
+        setZoomScale(1);
+      }
+    };
+    updateZoom();
+    window.addEventListener('resize', updateZoom);
+    return () => window.removeEventListener('resize', updateZoom);
+  }, []);
 
   // ============================================================================
   // UTILITY FUNCTIONS
@@ -865,7 +882,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   // ============================================================================
   return (
     <main id="campaign-screen" className="min-h-screen w-full bg-[#808080] flex flex-col items-center justify-start pt-2 pr-2 sm:pt-3 sm:pr-3 lg:pt-4 lg:pr-4 font-sans">
-      <div id="campaign-layout-container" className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8">
+      <div id="campaign-layout-container" className="w-full max-w-7xl flex flex-col lg:flex-row lg:items-start lg:gap-8" style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top center' }}>
         {/* Main Content (Board, Hand, etc.) */}
         <div
           id="campaign-main-content"
@@ -902,6 +919,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               src={BOARD_IMAGE_URLS[playerCount]}
               alt={`A ${playerCount}-player game board`}
               className="w-full h-full object-contain relative z-0"
+              style={playerCount === 4 ? { transform: "translateY(2.5%)" } : undefined}
             />
 
             {/* Grid Overlay */}
@@ -1264,6 +1282,16 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               // Check both position AND locationId to avoid false positives for seats near the community
               const isInCommunity =
                 piece.locationId?.startsWith("community") || false;
+              
+              // Prevent moving Heels until Marks are gone, and Pawns until Heels/Marks are gone
+              let isRestrictedCommunityPiece = false;
+              if (isInCommunity) {
+                const markCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Mark").length;
+                const heelCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Heel").length;
+                if (piece.name === "Heel" && markCount > 0) isRestrictedCommunityPiece = true;
+                if (piece.name === "Pawn" && (markCount > 0 || heelCount > 0)) isRestrictedCommunityPiece = true;
+              }
+              
               const communityCounterRotation = isInCommunity
                 ? -boardRotation
                 : 0;
@@ -1276,11 +1304,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               // - Correcting player during CORRECTION_REQUIRED
               // - Receiver making their free Advance move
               const canDragPiece = 
-                (isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) || 
+                !isRestrictedCommunityPiece &&
+                ((isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) || 
                 (isCorrecting && gameState === 'CORRECTION_REQUIRED') ||
                 (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED') ||
                 (isBonusMover && gameState === 'BONUS_MOVE') ||
-                (isChallenger && gameState === 'TAKE_ADVANTAGE');
+                (isChallenger && gameState === 'TAKE_ADVANTAGE'));
 
               return (
                 <img
@@ -1293,7 +1322,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                   className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved
                       ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
                       : ""
-                    }`}
+                    } ${isRestrictedCommunityPiece ? "opacity-40 grayscale" : ""}`}
                   style={{
                     position: "absolute",
                     top: `${piece.position.top}%`,
@@ -2125,6 +2154,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                         src={BOARD_IMAGE_URLS[playerCount]}
                         alt={`${playerCount}-player board`}
                         className="absolute inset-0 w-full h-full object-contain"
+                        style={playerCount === 4 ? { transform: "translateY(2.5%)" } : undefined}
                         draggable={false}
                       />
 

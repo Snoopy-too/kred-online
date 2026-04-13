@@ -316,7 +316,7 @@ const App: React.FC<MultiplayerProps> = ({
     placerViewingTileId,
     giveReceiverViewingTileId,
     challengeResultMessagePlayerId,
-    showAlert,
+    showAlert: originalShowAlert,
     closeAlert,
     showChallengeResult,
     showTargetedChallengeResult,
@@ -328,6 +328,42 @@ const App: React.FC<MultiplayerProps> = ({
     setPlacerViewingTileId,
     setGiveReceiverViewingTileId,
   } = useAlerts();
+
+  const [serverAlert, setServerAlert] = useState<{
+    id: number;
+    title: string;
+    message: string;
+    type: "error" | "warning" | "info";
+    playerId: number | null;
+  } | null>(null);
+
+  const showAlert = React.useCallback(
+    (title: string, message: string, type: "error" | "warning" | "info" = "info", targetPlayerId?: number | null) => {
+      const resolvedTarget = targetPlayerId !== undefined ? targetPlayerId : (players[currentPlayerIndex]?.id || null);
+      originalShowAlert(title, message, type, resolvedTarget);
+      
+      if (isHost) {
+        setServerAlert({
+          id: Date.now(),
+          title,
+          message,
+          type,
+          playerId: resolvedTarget,
+        });
+      }
+    },
+    [isHost, players, currentPlayerIndex, originalShowAlert]
+  );
+
+  const lastAlertIdRef = React.useRef<number>(0);
+  React.useEffect(() => {
+    if (serverAlert && serverAlert.id > lastAlertIdRef.current) {
+      lastAlertIdRef.current = serverAlert.id;
+      if (!isHost && (serverAlert.playerId === null || serverAlert.playerId === viewingPlayerId)) {
+        originalShowAlert(serverAlert.title, serverAlert.message, serverAlert.type, serverAlert.playerId);
+      }
+    }
+  }, [serverAlert, isHost, viewingPlayerId, originalShowAlert]);
 
   const {
     boardRotationEnabled,
@@ -547,6 +583,7 @@ const App: React.FC<MultiplayerProps> = ({
       bonusMovePlayerId,
       showBonusMoveModal,
       piecesBeforeBonusMove,
+      serverAlert,
       stateVersion: 0,
       lastUpdated: Date.now(),
     });
@@ -587,6 +624,9 @@ const App: React.FC<MultiplayerProps> = ({
       if (packet.piecesBeforeBonusMove) {
         setPiecesBeforeBonusMove(packet.piecesBeforeBonusMove);
       }
+      if (packet.serverAlert) {
+        setServerAlert(packet.serverAlert);
+      }
     };
   });
 
@@ -605,7 +645,7 @@ const App: React.FC<MultiplayerProps> = ({
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
     pendingChallengerReward, bonusMovePlayerId, showBonusMoveModal,
-    piecesBeforeBonusMove,
+    piecesBeforeBonusMove, serverAlert,
   ]);
 
   // Initialize campaign pieces when phase transitions to CAMPAIGN in multiplayer
@@ -4331,7 +4371,7 @@ const App: React.FC<MultiplayerProps> = ({
 
       {/* Alert Modal */}
       <AlertModal
-        isOpen={alertModal.isOpen}
+        isOpen={alertModal.isOpen && (!isMultiplayer || alertModal.targetPlayerId == null || alertModal.targetPlayerId === viewingPlayerId)}
         title={alertModal.title}
         message={alertModal.message}
         type={alertModal.type}
