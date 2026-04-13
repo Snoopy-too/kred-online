@@ -147,7 +147,7 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
       <div
         className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
           isFailed
-            ? "bg-green-900 border-green-500 text-green-300"
+            ? "bg-red-900 border-red-500 text-red-300"
             : "bg-orange-900 border-orange-500 text-orange-300"
         }`}
       >

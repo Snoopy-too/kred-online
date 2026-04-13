@@ -361,12 +361,14 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
               const scaleMultiplier =
                 playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
               const baseScale = 0.798;
-              const finalScale = baseScale * scaleMultiplier;
+              
+              const isInCommunity = piece.locationId?.startsWith("community") || false;
+              const communityScale = (playerCount === 3 || playerCount === 4) && isInCommunity ? 0.8 : 1;
+              
+              const finalScale = baseScale * scaleMultiplier * communityScale;
 
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
               // Check both position AND locationId to avoid false positives for seats near the community
-              const isInCommunity =
-                piece.locationId?.startsWith("community") || false;
               const communityCounterRotation = isInCommunity
                 ? -boardRotation
                 : 0;

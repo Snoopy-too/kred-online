@@ -112,7 +112,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
           </h1>
           {isMultiplayer && playerIndex !== undefined && (
             <h2 className="text-2xl text-slate-100 mt-4">
-              You are {playerNames?.[playerIndex] || players[playerIndex]?.name || `Player ${playerIndex + 1}`}
+              {playerNames?.[playerIndex] || players[playerIndex]?.name || `Player ${playerIndex + 1}`}
             </h2>
           )}
         </div>
@@ -162,7 +162,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
         </h1>
         {isMultiplayer && playerIndex !== undefined && (
           <h2 className="text-2xl text-slate-100 mt-4">
-            You are {playerNames?.[playerIndex] || players[playerIndex]?.name || `Player ${playerIndex + 1}`}
+            {playerNames?.[playerIndex] || players[playerIndex]?.name || `Player ${playerIndex + 1}`}
           </h2>
         )}
         <p className="text-slate-400 mt-2">Select one tile to keep, then remaining tiles pass left.</p>
