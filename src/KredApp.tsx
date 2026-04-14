@@ -18,6 +18,7 @@ export default function KredApp() {
   // Refs for GameStateSynchronizer ↔ App.tsx wiring
   const getStatePacketRef = useRef<() => GameStatePacket>(() => ({} as GameStatePacket));
   const applyStatePacketRef = useRef<(packet: GameStatePacket) => void>(() => {});
+  const pushStateRef = useRef<(() => void) | null>(null);
 
   // Host action dispatcher — App.tsx registers its dispatch function here
   const actionDispatchRef = useRef<(action: ActionPayload) => void>();
@@ -57,6 +58,7 @@ export default function KredApp() {
         applyStatePacket={(packet) => applyStatePacketRef.current(packet)}
         onActionReceived={isHost ? actionDispatchRef : undefined}
         onRejoinComplete={handleRejoinComplete}
+        pushStateRef={pushStateRef}
       />
       <App
         isMultiplayer={true}
@@ -88,6 +90,7 @@ export default function KredApp() {
         }}
         getStatePacketRef={getStatePacketRef}
         applyStatePacketRef={applyStatePacketRef}
+        pushStateRef={pushStateRef}
         setActionDispatch={isHost ? setActionDispatch : undefined}
       />
       <PerfOverlay />

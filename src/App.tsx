@@ -78,6 +78,7 @@ export interface MultiplayerProps {
   // Refs for GameStateSynchronizer to wire into
   getStatePacketRef?: React.MutableRefObject<() => any>;
   applyStatePacketRef?: React.MutableRefObject<(packet: any) => void>;
+  pushStateRef?: React.MutableRefObject<(() => void) | null>;
 
   // Host: register a dispatch function that processes guest actions
   setActionDispatch?: (dispatch: (action: { type: string; playerId: string; payload: any }) => void) => void;
@@ -279,6 +280,7 @@ const App: React.FC<MultiplayerProps> = ({
   multiplayerActions,
   getStatePacketRef,
   applyStatePacketRef,
+  pushStateRef,
   setActionDispatch,
 }) => {
   
@@ -633,8 +635,7 @@ const App: React.FC<MultiplayerProps> = ({
   // Trigger state push whenever game state changes (host only)
   useEffect(() => {
     if (!isHost || !isMultiplayer) return;
-    const push = (window as any).__kred_pushState;
-    if (push) push();
+    pushStateRef?.current?.();
   }, [
     isHost, isMultiplayer, gameState, players, pieces, boardTiles, bankedTiles,
     currentPlayerIndex, playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn,
