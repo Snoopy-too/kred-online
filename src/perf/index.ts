@@ -33,4 +33,4 @@ export type PerfMetricListener = (metric: {
 
 export { PerfStore } from "./PerfStore";
 export { recordMetric, incrementCounter, useRenderCount, usePerfSeries, usePerfCounter } from "./hooks";
-// export { PerfOverlay } from "./PerfOverlay";
+export { PerfOverlay } from "./PerfOverlay";
