@@ -128,64 +128,66 @@ export function createMockSupabase(): MockSupabase {
   // =========================================================================
 
   const fromImpl = (table: string) => {
-    let filters: Array<(row: any) => boolean> = [];
-    let orderField: string | null = null;
-    let orderAsc = true;
-    let limitCount: number | null = null;
+    const createQueryInstance = (): { filters: Array<(row: any) => boolean>; orderField: string | null; orderAsc: boolean; limitCount: number | null } => ({
+      filters: [],
+      orderField: null,
+      orderAsc: true,
+      limitCount: null,
+    });
 
-    const buildQuery = (): MockQuery => ({
+    const buildQuery = (queryState: ReturnType<typeof createQueryInstance>): MockQuery => ({
       eq(field: string, value: any) {
-        filters.push((row: any) => row[field] === value);
+        queryState.filters.push((row: any) => row[field] === value);
         return this;
       },
       neq(field: string, value: any) {
-        filters.push((row: any) => row[field] !== value);
+        queryState.filters.push((row: any) => row[field] !== value);
         return this;
       },
       gt(field: string, value: any) {
-        filters.push((row: any) => row[field] > value);
+        queryState.filters.push((row: any) => row[field] > value);
         return this;
       },
       lt(field: string, value: any) {
-        filters.push((row: any) => row[field] < value);
+        queryState.filters.push((row: any) => row[field] < value);
         return this;
       },
       order(field: string, options: { ascending: boolean }) {
-        orderField = field;
-        orderAsc = options.ascending;
+        queryState.orderField = field;
+        queryState.orderAsc = options.ascending;
         return this;
       },
       limit(count: number) {
-        limitCount = count;
+        queryState.limitCount = count;
         return this;
       },
       async single() {
-        let results = tables[table] || [];
-        filters.forEach(f => results = results.filter(f));
-        if (orderField) {
+        let results = [...(tables[table] || [])];
+        queryState.filters.forEach(f => results = results.filter(f));
+        if (queryState.orderField) {
           results.sort((a: any, b: any) => {
-            const aVal = a[orderField!];
-            const bVal = b[orderField!];
-            if (aVal < bVal) return orderAsc ? -1 : 1;
-            if (aVal > bVal) return orderAsc ? 1 : -1;
+            const aVal = a[queryState.orderField!];
+            const bVal = b[queryState.orderField!];
+            if (aVal < bVal) return queryState.orderAsc ? -1 : 1;
+            if (aVal > bVal) return queryState.orderAsc ? 1 : -1;
             return 0;
           });
         }
         return { data: results[0] || null, error: null };
       },
       async execute() {
-        let results = tables[table] || [];
-        filters.forEach(f => results = results.filter(f));
-        if (orderField) {
+        let results = [...(tables[table] || [])];
+        queryState.filters.forEach(f => results = results.filter(f));
+        if (queryState.orderField) {
           results.sort((a: any, b: any) => {
-            const aVal = a[orderField!];
-            const bVal = b[orderField!];
-            if (aVal < bVal) return orderAsc ? -1 : 1;
-            if (aVal > bVal) return orderAsc ? 1 : -1;
+            const aVal = a[queryState.orderField!];
+            const bVal = b[queryState.orderField!];
+            if (aVal < bVal) return queryState.orderAsc ? -1 : 1;
+            if (aVal > bVal) return queryState.orderAsc ? 1 : -1;
             return 0;
           });
         }
-        if (limitCount) results = results.slice(0, limitCount);
+        if (queryState.limitCount) results = results.slice(0, queryState.limitCount);
         return { data: results, error: null };
       },
     });
@@ -193,14 +195,16 @@ export function createMockSupabase(): MockSupabase {
     return {
       async insert(data: any) {
         const row = { id: genId(), created_at: new Date().toISOString(), ...data };
+        if (!tables[table]) tables[table] = [];
         tables[table].push(row);
         notifyPostgresChanges(table, "INSERT", row);
         return { data: row, error: null };
       },
       select(_fields?: string) {
-        return buildQuery();
+        return buildQuery(createQueryInstance());
       },
       async upsert(data: any) {
+        if (!tables[table]) tables[table] = [];
         const key = Object.keys(data)[0];
         const existingIdx = tables[table].findIndex((r: any) => r[key] === data[key]);
         const row = { id: genId(), created_at: new Date().toISOString(), ...data };
@@ -214,11 +218,12 @@ export function createMockSupabase(): MockSupabase {
         return { data: row, error: null };
       },
       update(data: any) {
+        const queryState = createQueryInstance();
         return {
-          ...buildQuery(),
+          ...buildQuery(queryState),
           async execute() {
-            let results = tables[table] || [];
-            filters.forEach(f => results = results.filter(f));
+            let results = [...(tables[table] || [])];
+            queryState.filters.forEach(f => results = results.filter(f));
             results.forEach((r: any) => {
               Object.assign(r, data);
               notifyPostgresChanges(table, "UPDATE", r);
@@ -228,11 +233,12 @@ export function createMockSupabase(): MockSupabase {
         };
       },
       delete() {
+        const queryState = createQueryInstance();
         return {
-          ...buildQuery(),
+          ...buildQuery(queryState),
           async execute() {
-            let results = tables[table] || [];
-            const toDelete = results.filter((r: any) => filters.every(f => f(r)));
+            let results = [...(tables[table] || [])];
+            const toDelete = results.filter((r: any) => queryState.filters.every(f => f(r)));
             tables[table] = tables[table].filter((r: any) => !toDelete.includes(r));
             toDelete.forEach(r => notifyPostgresChanges(table, "DELETE", r));
             return { data: toDelete, error: null };
