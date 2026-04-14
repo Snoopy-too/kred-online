@@ -2,7 +2,9 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLobby } from '../contexts/LobbyContext';
-import { recordMetric } from '../perf';
+import { recordMetric, incrementCounter } from '../perf';
+
+const PERSIST_THROTTLE_MS = 500;
 
 // ============================================================================
 // Types
@@ -101,10 +103,62 @@ export default function GameStateSynchronizer({
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastBroadcastReceiptRef = useRef<number>(Date.now());
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPersistPacketRef = useRef<GameStatePacket | null>(null);
+  const lastPersistedVersionRef = useRef<number>(0);
+  const lastPersistedPhaseRef = useRef<string | null>(null);
 
   // ==========================================================================
   // HOST: Push state to guests
   // ==========================================================================
+
+  const flushPersist = useCallback(async (packet: GameStatePacket) => {
+    if (!lobbyId) return;
+    if (packet.stateVersion <= lastPersistedVersionRef.current) return;
+    lastPersistedVersionRef.current = packet.stateVersion;
+    const { error } = await supabase
+      .from('kred_game_states')
+      .upsert({
+        lobby_id: lobbyId,
+        phase: packet.gameState,
+        state_json: packet,
+        version: packet.stateVersion,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) {
+      console.error('Failed to persist game state:', error);
+      incrementCounter('persist.errors');
+    } else {
+      incrementCounter('persist.writes');
+    }
+  }, [lobbyId]);
+
+  // Trailing-throttle persist with forced flush on phase change.
+  const schedulePersist = useCallback((packet: GameStatePacket) => {
+    const lastPhase = lastPersistedPhaseRef.current;
+    pendingPersistPacketRef.current = packet;
+
+    if (lastPhase !== null && lastPhase !== packet.gameState) {
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = null;
+      }
+      lastPersistedPhaseRef.current = packet.gameState;
+      pendingPersistPacketRef.current = null;
+      flushPersist(packet);
+      return;
+    }
+    lastPersistedPhaseRef.current = packet.gameState;
+
+    if (persistTimerRef.current) return;
+    persistTimerRef.current = setTimeout(() => {
+      persistTimerRef.current = null;
+      const p = pendingPersistPacketRef.current;
+      pendingPersistPacketRef.current = null;
+      if (!p) return;
+      flushPersist(p);
+    }, PERSIST_THROTTLE_MS);
+  }, [flushPersist]);
 
   const pushState = useCallback(() => {
     if (!lobbyId || !isHost) return;
@@ -126,20 +180,9 @@ export default function GameStateSynchronizer({
       });
     }
 
-    // Channel 2: DB upsert (persistent, for rejoin)
-    supabase
-      .from('kred_game_states')
-      .upsert({
-        lobby_id: lobbyId,
-        phase: packet.gameState,
-        state_json: packet,
-        version: hostVersionRef.current,
-        updated_at: new Date().toISOString(),
-      })
-      .then(({ error }) => {
-        if (error) console.error('Failed to persist game state:', error);
-      });
-  }, [lobbyId, isHost, getStatePacket]);
+    // Channel 2: DB persist — throttled separately from broadcast
+    schedulePersist(packet);
+  }, [lobbyId, isHost, getStatePacket, schedulePersist]);
 
   // Debounced push — call this whenever state changes
   const debouncedPush = useCallback(() => {
@@ -349,6 +392,22 @@ export default function GameStateSynchronizer({
 
     hydrate();
   }, [lobbyId, isRejoining, applyStatePacket, onRejoinComplete]);
+
+  // ==========================================================================
+  // HOST: Force-flush any pending persist on unmount so rejoin sees fresh data.
+  // ==========================================================================
+
+  useEffect(() => {
+    return () => {
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = null;
+      }
+      const p = pendingPersistPacketRef.current;
+      pendingPersistPacketRef.current = null;
+      if (p) flushPersist(p);
+    };
+  }, [flushPersist]);
 
   // ==========================================================================
   // Expose debouncedPush for host to call on state changes
