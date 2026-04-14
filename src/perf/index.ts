@@ -1,51 +1,34 @@
-// Dev-only observability layer for Kred multiplayer performance analysis
-// All calls are tree-shaken away in production (PERF_ENABLED = false)
-
+// Dev-only performance observability layer
+// Gate all perf code behind PERF_ENABLED; must be literal for Vite tree-shaking
 export const PERF_ENABLED = import.meta.env.DEV;
 
 // ============================================================================
-// Type Definitions
+// Types
 // ============================================================================
 
-/** Single time-series data point */
-export interface MetricSample {
+export interface SeriesSample {
   value: number;
   timestamp: number;
-  tags?: Record<string, string | number>;
 }
 
-/** Time series metric: ring buffer of samples + metadata */
-export interface TimeSeries {
+export interface Series {
   name: string;
-  samples: MetricSample[];
-  average: number;
-  lastValue: number;
+  samples: SeriesSample[];
+  tags?: Record<string, string>;
 }
 
-/** Counter metric: monotonic integer */
 export interface Counter {
   name: string;
-  value: number;
+  count: number;
 }
 
-/** Subscription callback for metric updates */
-export type MetricSubscriber = (series: TimeSeries | Counter) => void;
-
-/** Perf store interface for pub/sub + metrics */
-export interface IPerfStore {
-  recordMetric(name: string, value: number, tags?: Record<string, string | number>): void;
-  incrementCounter(name: string, by?: number): void;
-  getSeries(name: string): TimeSeries | null;
-  getCounter(name: string): Counter | null;
-  listSeriesNames(): string[];
-  listCounterNames(): string[];
-  subscribe(callback: MetricSubscriber): () => void;
-  dump(): { series: Record<string, TimeSeries>; counters: Record<string, Counter> };
-  clear(): void;
-}
+export type PerfMetricListener = (metric: {
+  name: string;
+  type: "series" | "counter";
+}) => void;
 
 // ============================================================================
-// Re-exports (uncommented as modules come online)
+// Exports (uncomment as modules come online)
 // ============================================================================
 
 // export { PerfStore } from "./PerfStore";
