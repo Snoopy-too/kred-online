@@ -262,28 +262,11 @@ export default function GameStateSynchronizer({
   }, [lobbyId, isHost, applyStatePacket]);
 
   // ==========================================================================
-  // GUEST: Postgres changes subscription (secondary channel)
+  // GUEST: postgres_changes on kred_game_states is INTENTIONALLY NOT
+  // subscribed. The broadcast channel above and the poll below are
+  // sufficient and avoid the WAL-decoding cost of postgres_changes.
+  // (Spec 2026-04-09 §2a)
   // ==========================================================================
-
-  useEffect(() => {
-    if (!lobbyId || isHost) return;
-
-    const channel = supabase
-      .channel(`kred_state_changes:${lobbyId}`)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'kred_game_states', filter: `lobby_id=eq.${lobbyId}` },
-        (payload) => {
-          const row = payload.new as any;
-          const packet = row.state_json as GameStatePacket;
-          if (packet.stateVersion <= lastProcessedVersionRef.current) return;
-          lastProcessedVersionRef.current = packet.stateVersion;
-          applyStatePacket(packet);
-        }
-      )
-      .subscribe();
-
-    return () => { channel.unsubscribe(); };
-  }, [lobbyId, isHost, applyStatePacket]);
 
   // ==========================================================================
   // GUEST: Polling fallback (3s)
