@@ -5,6 +5,33 @@ import { useLobby } from '../contexts/LobbyContext';
 import { recordMetric, incrementCounter } from '../perf';
 
 const PERSIST_THROTTLE_MS = 500;
+const PROCESSED_ACTION_ID_CAP = 500;
+
+/**
+ * Bounded set of recently-processed action ids.
+ * Last N ids retained — older ids fall off the back.
+ * Used to dedupe broadcast/poll race conditions without unbounded growth.
+ */
+class BoundedActionIdSet {
+  private ring: string[] = [];
+  private setView: Set<string> = new Set();
+  constructor(private cap: number) {}
+  has(id: string): boolean {
+    return this.setView.has(id);
+  }
+  add(id: string): void {
+    if (this.setView.has(id)) return;
+    this.ring.push(id);
+    this.setView.add(id);
+    while (this.ring.length > this.cap) {
+      const removed = this.ring.shift()!;
+      this.setView.delete(removed);
+    }
+  }
+  size(): number {
+    return this.setView.size;
+  }
+}
 
 // ============================================================================
 // Types
@@ -195,8 +222,8 @@ export default function GameStateSynchronizer({
   // HOST: Listen for guest actions (realtime + polling fallback)
   // ==========================================================================
 
-  // Persistent set of ALL processed action IDs — survives effect re-runs
-  const processedActionIdsRef = useRef<Set<string>>(new Set());
+  // Bounded dedupe set — survives effect re-runs; caps at 500 ids.
+  const processedActionIdsRef = useRef<BoundedActionIdSet>(new BoundedActionIdSet(PROCESSED_ACTION_ID_CAP));
   // Queue for sequential processing — ensures React state commits between actions
   const actionQueueRef = useRef<any[]>([]);
   const isProcessingQueueRef = useRef(false);
@@ -225,6 +252,7 @@ export default function GameStateSynchronizer({
   const enqueueAction = useCallback((action: any) => {
     if (processedActionIdsRef.current.has(action.id)) return;
     processedActionIdsRef.current.add(action.id);
+    recordMetric('actions.processedSet.size', processedActionIdsRef.current.size());
     actionQueueRef.current.push(action);
     drainQueue();
   }, [drainQueue]);

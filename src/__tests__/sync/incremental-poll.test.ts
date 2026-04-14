@@ -65,3 +65,37 @@ describe("sync: incremental action poll (2d)", () => {
     expect(second.data).toHaveLength(0);
   });
 });
+
+describe("BoundedActionIdSet", () => {
+  // Inline copy — production class is private to GameStateSynchronizer.tsx.
+  class BoundedActionIdSet {
+    private ring: string[] = [];
+    private setView: Set<string> = new Set();
+    constructor(private cap: number) {}
+    has(id: string) { return this.setView.has(id); }
+    add(id: string) {
+      if (this.setView.has(id)) return;
+      this.ring.push(id);
+      this.setView.add(id);
+      while (this.ring.length > this.cap) {
+        const removed = this.ring.shift()!;
+        this.setView.delete(removed);
+      }
+    }
+    size() { return this.setView.size; }
+  }
+
+  it("retains the last N ids and evicts older ones", () => {
+    const s = new BoundedActionIdSet(3);
+    s.add("a");
+    s.add("b");
+    s.add("c");
+    expect(s.size()).toBe(3);
+    s.add("d");
+    expect(s.size()).toBe(3);
+    expect(s.has("a")).toBe(false);
+    expect(s.has("d")).toBe(true);
+    s.add("d");
+    expect(s.size()).toBe(3);
+  });
+});
