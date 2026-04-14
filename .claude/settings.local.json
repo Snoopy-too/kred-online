@@ -56,7 +56,10 @@
       "Bash(node --import tsx/esm src/scripts/playtest.ts --games 5 --players 3 --verbose)",
       "Bash(npx vite:*)",
       "Read(//c/xampp/htdocs/kred/**)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git worktree:*)",
+      "Bash(grep -r \"recordMetric\\\\|incrementCounter\\\\|usePerfSeries\" /c/xampp/htdocs/kred/.worktrees/perf-hardening/dist/assets/*.js)"
     ],
     "deny": [],
     "ask": []
