@@ -1280,13 +1280,11 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               // Scale down pieces in community for 3 and 4 player modes to avoid overlap
               const isInCommunity = piece.locationId?.startsWith("community") || false;
               const communityScale = (playerCount === 3 || playerCount === 4) && isInCommunity ? 0.8 : 1;
-              
+
               const finalScale = baseScale * scaleMultiplier * communityScale;
 
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
               // Check both position AND locationId to avoid false positives for seats near the community
-              const isInCommunity =
-                piece.locationId?.startsWith("community") || false;
               
               // Prevent moving Heels until Marks are gone, and Pawns until Heels/Marks are gone
               let isRestrictedCommunityPiece = false;
