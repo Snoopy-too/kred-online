@@ -31,6 +31,6 @@ export type PerfMetricListener = (metric: {
 // Exports (uncomment as modules come online)
 // ============================================================================
 
-// export { PerfStore } from "./PerfStore";
+export { PerfStore } from "./PerfStore";
 // export { recordMetric, incrementCounter, useRenderCount, usePerfSeries, usePerfCounter } from "./hooks";
 // export { PerfOverlay } from "./PerfOverlay";
