@@ -5,6 +5,7 @@ import WaitingRoom from './components/screens/WaitingRoom';
 import GameStateSynchronizer, { GameStatePacket } from './components/GameStateSynchronizer';
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
+import { PerfOverlay } from './perf';
 
 type ActionPayload = { type: string; playerId: string; payload: any };
 
@@ -89,6 +90,7 @@ export default function KredApp() {
         applyStatePacketRef={applyStatePacketRef}
         setActionDispatch={isHost ? setActionDispatch : undefined}
       />
+      <PerfOverlay />
     </>
   );
 }
