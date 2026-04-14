@@ -100,6 +100,7 @@ export default function GameStateSynchronizer({
   const lastProcessedVersionRef = useRef(0);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastBroadcastReceiptRef = useRef<number>(Date.now());
 
   // ==========================================================================
   // HOST: Push state to guests
@@ -246,6 +247,7 @@ export default function GameStateSynchronizer({
     if (!isHost) {
       // GUEST: listen for host broadcasts
       channel.on('broadcast', { event: 'state' }, ({ payload }: { payload: GameStatePacket }) => {
+        lastBroadcastReceiptRef.current = Date.now();
         if (payload.stateVersion <= lastProcessedVersionRef.current) return;
         lastProcessedVersionRef.current = payload.stateVersion;
         applyStatePacket(payload);
@@ -275,6 +277,9 @@ export default function GameStateSynchronizer({
   useEffect(() => {
     if (!lobbyId || isHost) return;
 
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     const poll = async () => {
       const { data } = await supabase
         .from('kred_game_states')
@@ -288,6 +293,15 @@ export default function GameStateSynchronizer({
       }
     };
 
+    const tick = async () => {
+      if (cancelled) return;
+      await poll();
+      if (cancelled) return;
+      const sinceBroadcast = Date.now() - lastBroadcastReceiptRef.current;
+      const next = sinceBroadcast > 5000 ? 1000 : 3000;
+      timer = setTimeout(tick, next);
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') poll();
     };
@@ -298,9 +312,11 @@ export default function GameStateSynchronizer({
     window.addEventListener('online', handleOnline);
     window.addEventListener('focus', handleFocus);
 
-    const interval = setInterval(poll, 3000);
+    timer = setTimeout(tick, 3000);
+
     return () => {
-      clearInterval(interval);
+      cancelled = true;
+      if (timer) clearTimeout(timer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('focus', handleFocus);
