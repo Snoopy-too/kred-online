@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLobby } from '../contexts/LobbyContext';
+import { recordMetric } from '../perf';
 
 // ============================================================================
 // Types
@@ -111,6 +112,9 @@ export default function GameStateSynchronizer({
     hostVersionRef.current += 1;
     packet.stateVersion = hostVersionRef.current;
     packet.lastUpdated = Date.now();
+
+    recordMetric("packet.bytes", JSON.stringify(packet).length);
+    recordMetric("packet.version", packet.stateVersion);
 
     // Channel 1: Broadcast (fast, ephemeral)
     if (broadcastChannelRef.current) {
