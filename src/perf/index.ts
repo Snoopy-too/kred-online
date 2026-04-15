@@ -37,12 +37,12 @@ export interface MetricSeries {
 }
 
 // Re-exports — populated as we build out the module
-export { PerfStore, perfStore } from "./PerfStore";
-export {
-  recordMetric,
-  incrementCounter,
-  useRenderCount,
-  usePerfSeries,
-  usePerfCounter,
-} from "./hooks";
-export { PerfOverlay } from "./PerfOverlay";
+// export { PerfStore, perfStore } from "./PerfStore";
+// export {
+//   recordMetric,
+//   incrementCounter,
+//   useRenderCount,
+//   usePerfSeries,
+//   usePerfCounter,
+// } from "./hooks";
+// export { PerfOverlay } from "./PerfOverlay";
