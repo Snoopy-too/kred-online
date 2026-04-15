@@ -1,4 +1,4 @@
-import { MAX_SERIES_SAMPLES, type MetricSample, type MetricSeries } from "./index";
+import { MAX_SERIES_SAMPLES, type MetricSample, type MetricSeries } from "./constants";
 
 type Subscriber = () => void;
 

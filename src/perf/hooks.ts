@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
-import { PERF_ENABLED } from "./index";
+import { PERF_ENABLED } from "./constants";
 import { perfStore } from "./PerfStore";
 
 /**
