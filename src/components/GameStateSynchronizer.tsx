@@ -246,6 +246,10 @@ export default function GameStateSynchronizer({
     isProcessingQueueRef.current = true;
 
     const action = actionQueueRef.current.shift()!;
+    if (action.created_at) {
+      const ageMs = Date.now() - new Date(action.created_at).getTime();
+      recordMetric('actions.latency', ageMs);
+    }
     onActionReceived?.current?.({
       type: action.action_type,
       playerId: action.player_id,
@@ -264,6 +268,7 @@ export default function GameStateSynchronizer({
     processedActionIdsRef.current.add(action.id);
     recordMetric('actions.processedSet.size', processedActionIdsRef.current.size());
     actionQueueRef.current.push(action);
+    recordMetric('actions.queueDepth', actionQueueRef.current.length);
     drainQueue();
   }, [drainQueue]);
 
@@ -280,6 +285,7 @@ export default function GameStateSynchronizer({
           if (a.created_at > lastSeenActionAtRef.current) {
             lastSeenActionAtRef.current = a.created_at;
           }
+          incrementCounter('actions.realtime.received');
           enqueueAction(a);
         }
       )
@@ -295,6 +301,7 @@ export default function GameStateSynchronizer({
         .order('created_at', { ascending: true });
 
       if (data && data.length > 0) {
+        incrementCounter('actions.poll.received', data.length);
         lastSeenActionAtRef.current = data[data.length - 1].created_at;
         for (const action of data) {
           enqueueAction(action);
@@ -340,6 +347,8 @@ export default function GameStateSynchronizer({
         lastBroadcastReceiptRef.current = Date.now();
         if (payload.stateVersion <= lastProcessedVersionRef.current) return;
         lastProcessedVersionRef.current = payload.stateVersion;
+        const tApply = Date.now() - (payload.lastUpdated ?? Date.now());
+        recordMetric('apply.latency', tApply, { channel: 'broadcast' });
         applyStatePacket(payload);
       });
     }
@@ -378,6 +387,8 @@ export default function GameStateSynchronizer({
 
       if (data && data.version > lastProcessedVersionRef.current) {
         lastProcessedVersionRef.current = data.version;
+        const tApply = Date.now() - ((data.state_json as any).lastUpdated ?? Date.now());
+        recordMetric('apply.latency', tApply, { channel: 'poll' });
         applyStatePacket(data.state_json as GameStatePacket);
       }
     };
