@@ -23,6 +23,23 @@ export function incrementCounter(name: string, by = 1): void {
   perfStore.increment(name, by);
 }
 
+// Sparse gauge map — used for scalar state-of-the-world values like
+// subscriptions.openCount. Distinct from PerfStore series/counters because
+// gauges don't need history or pub/sub for the overlay.
+const gauges: Record<string, number> = Object.create(null);
+
+export function setGauge(
+  name: string,
+  updater: number | ((current: number) => number)
+): void {
+  const current = gauges[name] ?? 0;
+  gauges[name] = typeof updater === "function" ? updater(current) : updater;
+}
+
+export function readGauge(name: string): number {
+  return gauges[name] ?? 0;
+}
+
 /**
  * Increment `render.<name>` once per render.
  * Use only on top-level components/providers — leaf usage creates noise.

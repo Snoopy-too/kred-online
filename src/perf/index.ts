@@ -41,6 +41,8 @@ export { PerfStore, perfStore } from "./PerfStore";
 export {
   recordMetric,
   incrementCounter,
+  setGauge,
+  readGauge,
   useRenderCount,
   usePerfSeries,
   usePerfCounter,

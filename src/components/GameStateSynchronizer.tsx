@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLobby } from '../contexts/LobbyContext';
-import { recordMetric, incrementCounter } from '../perf';
+import { recordMetric, incrementCounter, setGauge } from '../perf';
 
 const PERSIST_THROTTLE_MS = 500;
 const PROCESSED_ACTION_ID_CAP = 500;
@@ -133,6 +133,17 @@ export default function GameStateSynchronizer({
 }: SyncProps) {
   const { lobbyId, isHost, isRejoining } = useLobby();
 
+  // Stable refs for props that change identity every render (KredApp passes
+  // inline arrows that forward to its own refs). Storing them here keeps the
+  // subscribe/poll effects out of re-subscribe loops driven by parent renders.
+  // (Spec 2026-04-09 §4f — subscription stability audit.)
+  const applyStatePacketRef = useRef(applyStatePacket);
+  const getStatePacketRef = useRef(getStatePacket);
+  const onRejoinCompleteRef = useRef(onRejoinComplete);
+  useEffect(() => { applyStatePacketRef.current = applyStatePacket; }, [applyStatePacket]);
+  useEffect(() => { getStatePacketRef.current = getStatePacket; }, [getStatePacket]);
+  useEffect(() => { onRejoinCompleteRef.current = onRejoinComplete; }, [onRejoinComplete]);
+
   const hostVersionRef = useRef(0);
   const lastProcessedVersionRef = useRef(0);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,7 +211,7 @@ export default function GameStateSynchronizer({
   const pushState = useCallback(() => {
     if (!lobbyId || !isHost) return;
 
-    const packet = getStatePacket();
+    const packet = getStatePacketRef.current();
     hostVersionRef.current += 1;
     packet.stateVersion = hostVersionRef.current;
     packet.lastUpdated = Date.now();
@@ -220,7 +231,7 @@ export default function GameStateSynchronizer({
 
     // Channel 2: DB persist — throttled separately from broadcast
     schedulePersist(packet);
-  }, [lobbyId, isHost, getStatePacket, schedulePersist]);
+  }, [lobbyId, isHost, schedulePersist]);
 
   // Debounced push — call this whenever state changes
   const debouncedPush = useCallback(() => {
@@ -290,6 +301,7 @@ export default function GameStateSynchronizer({
         }
       )
       .subscribe();
+    setGauge('subscriptions.openCount', (c) => c + 1);
 
     // Polling fallback — pick up any actions missed by realtime
     const pollActions = async () => {
@@ -324,6 +336,7 @@ export default function GameStateSynchronizer({
     return () => {
       clearInterval(interval);
       channel.unsubscribe();
+      setGauge('subscriptions.openCount', (c) => Math.max(0, c - 1));
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('focus', handleFocus);
@@ -349,18 +362,20 @@ export default function GameStateSynchronizer({
         lastProcessedVersionRef.current = payload.stateVersion;
         const tApply = Date.now() - (payload.lastUpdated ?? Date.now());
         recordMetric('apply.latency', tApply, { channel: 'broadcast' });
-        applyStatePacket(payload);
+        applyStatePacketRef.current(payload);
       });
     }
 
     channel.subscribe();
     broadcastChannelRef.current = channel;
+    setGauge('subscriptions.openCount', (c) => c + 1);
 
     return () => {
       channel.unsubscribe();
+      setGauge('subscriptions.openCount', (c) => Math.max(0, c - 1));
       broadcastChannelRef.current = null;
     };
-  }, [lobbyId, isHost, applyStatePacket]);
+  }, [lobbyId, isHost]);
 
   // ==========================================================================
   // GUEST: postgres_changes on kred_game_states is INTENTIONALLY NOT
@@ -389,7 +404,7 @@ export default function GameStateSynchronizer({
         lastProcessedVersionRef.current = data.version;
         const tApply = Date.now() - ((data.state_json as any).lastUpdated ?? Date.now());
         recordMetric('apply.latency', tApply, { channel: 'poll' });
-        applyStatePacket(data.state_json as GameStatePacket);
+        applyStatePacketRef.current(data.state_json as GameStatePacket);
       }
     };
 
@@ -407,7 +422,7 @@ export default function GameStateSynchronizer({
     return () => {
       cancelled = true;
     };
-  }, [lobbyId, isHost, applyStatePacket]);
+  }, [lobbyId, isHost]);
 
   // ==========================================================================
   // REJOIN: Hydrate from DB snapshot
@@ -427,14 +442,14 @@ export default function GameStateSynchronizer({
         const packet = data.state_json as GameStatePacket;
         lastProcessedVersionRef.current = data.version;
         hostVersionRef.current = data.version;
-        applyStatePacket(packet);
+        applyStatePacketRef.current(packet);
       }
 
-      onRejoinComplete?.();
+      onRejoinCompleteRef.current?.();
     };
 
     hydrate();
-  }, [lobbyId, isRejoining, applyStatePacket, onRejoinComplete]);
+  }, [lobbyId, isRejoining]);
 
   // Force-flush any pending persist on unmount so rejoin always sees fresh data.
   useEffect(() => {
