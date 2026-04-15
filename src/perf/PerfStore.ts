@@ -15,6 +15,7 @@ export class PerfStore {
   private series = new Map<string, MetricSample[]>();
   private counters = new Map<string, number>();
   private subscribers = new Map<string, Set<Subscriber>>();
+  private seriesCache = new Map<string, MetricSeries>();
 
   /** Append a numeric sample to a series. */
   record(name: string, v: number, tags?: Record<string, string | number>): void {
@@ -39,11 +40,19 @@ export class PerfStore {
 
   /** Read a series. Returns an empty series for unknown names. */
   getSeries(name: string): MetricSeries {
-    return {
+    const samples = this.series.get(name) ?? [];
+    const cached = this.seriesCache.get(name);
+    // Return cached if samples array reference hasn't changed
+    if (cached && cached.samples === samples) {
+      return cached;
+    }
+    const result = {
       name,
-      kind: "histogram",
-      samples: this.series.get(name) ?? [],
+      kind: "histogram" as const,
+      samples,
     };
+    this.seriesCache.set(name, result);
+    return result;
   }
 
   /** Read a counter. Returns 0 for unknown names. */
@@ -78,6 +87,7 @@ export class PerfStore {
   clear(): void {
     this.series.clear();
     this.counters.clear();
+    this.seriesCache.clear();
     // Notify everyone so listeners can refresh
     for (const set of this.subscribers.values()) for (const cb of set) cb();
   }

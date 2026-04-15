@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { PERF_ENABLED } from "./index";
 import { perfStore } from "./PerfStore";
 
@@ -28,9 +28,6 @@ export function incrementCounter(name: string, by = 1): void {
  * Use only on top-level components/providers — leaf usage creates noise.
  */
 export function useRenderCount(name: string): void {
-  const ref = useRef<string>(name);
-  ref.current = name;
-  // Run on every render — intentional. Cheap.
   if (PERF_ENABLED) {
     perfStore.increment(`render.${name}`);
   }
@@ -41,19 +38,14 @@ export function useRenderCount(name: string): void {
  * Returns the current series snapshot.
  */
 export function usePerfSeries(name: string) {
-  const cacheRef = useRef<any>(null);
-
-  const subscribe = useCallback((cb: () => void) => perfStore.subscribe(name, cb), [name]);
-  const getSnapshot = useCallback(() => {
-    const series = perfStore.getSeries(name);
-    // Return same object reference if contents haven't changed
-    if (cacheRef.current && cacheRef.current.samples === series.samples) {
-      return cacheRef.current;
-    }
-    cacheRef.current = series;
-    return series;
-  }, [name]);
-
+  const subscribe = useCallback(
+    (cb: () => void) => perfStore.subscribe(name, cb),
+    [name]
+  );
+  const getSnapshot = useCallback(
+    () => perfStore.getSeries(name),
+    [name]
+  );
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
@@ -62,7 +54,13 @@ export function usePerfSeries(name: string) {
  * Returns the current count.
  */
 export function usePerfCounter(name: string): number {
-  const subscribe = useCallback((cb: () => void) => perfStore.subscribe(name, cb), [name]);
-  const getSnapshot = useCallback(() => perfStore.getCounter(name), [name]);
+  const subscribe = useCallback(
+    (cb: () => void) => perfStore.subscribe(name, cb),
+    [name]
+  );
+  const getSnapshot = useCallback(
+    () => perfStore.getCounter(name),
+    [name]
+  );
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
