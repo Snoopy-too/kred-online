@@ -15,9 +15,6 @@ import type {
   // Piece types - game pieces
   Piece,
 
-  // Rostrum types - support rules
-  PlayerRostrum,
-  RostrumSupport,
 } from "../types";
 
 // ============================================================================
@@ -29,6 +26,8 @@ import {
 
   // Rostrum adjacency - connected rostrums by player count
   ROSTRUM_ADJACENCY_BY_PLAYER_COUNT,
+  PlayerRostrum,
+  RostrumSupport,
 } from "../config";
 
 // ============================================================================

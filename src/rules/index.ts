@@ -8,16 +8,16 @@ export { checkPlayerWinCondition } from "./win-conditions";
 // Game rules enforcement and validation logic
 
 // Credibility system - credibility loss and deduction
-export { deductCredibility, handleCredibilityLoss } from "./credibility";
+export { deductCredibility, handleCredibilityLoss, restoreReceiverCredibility } from "./credibility";
 
 // Win conditions - game victory checking
-export { checkWinCondition, checkBureaucracyWinCondition } from "./win-conditions";
+export { checkBureaucracyWinCondition } from "./win-conditions";
 
 // Adjacency rules - seat and player positioning logic
 export { getNextPlayerClockwise, areSeatsAdjacent } from "./adjacency";
 
 // Rostrum rules - support requirements and adjacency
-export { getRostrumSupportRule, countPiecesInSeats, areSupportingSeatsFullForRostrum, areBothRostrumsFilledForPlayer, ROSTRUM_SUPPORT_RULES, ROSTRUM_ADJACENCY_BY_PLAYER_COUNT } from "./rostrum";
+export { getRostrumSupportRule, countPiecesInSeats, areSupportingSeatsFullForRostrum, areBothRostrumsFilledForPlayer } from "./rostrum";
 
 // Movement validation - piece movement rules and move type determination
 export { validatePieceMovement, validateMoveType } from "./movement";
