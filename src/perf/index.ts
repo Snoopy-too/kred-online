@@ -37,7 +37,7 @@ export interface MetricSeries {
 }
 
 // Re-exports — populated as we build out the module
-// export { PerfStore, perfStore } from "./PerfStore";
+export { PerfStore, perfStore } from "./PerfStore";
 // export {
 //   recordMetric,
 //   incrementCounter,
