@@ -1285,9 +1285,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
 
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
               // Check both position AND locationId to avoid false positives for seats near the community
-              const isInCommunity =
-                piece.locationId?.startsWith("community") || false;
-              
+
               // Prevent moving Heels until Marks are gone, and Pawns until Heels/Marks are gone
               let isRestrictedCommunityPiece = false;
               if (isInCommunity) {

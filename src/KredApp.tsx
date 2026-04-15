@@ -5,6 +5,7 @@ import WaitingRoom from './components/screens/WaitingRoom';
 import GameStateSynchronizer, { GameStatePacket } from './components/GameStateSynchronizer';
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
+import { PerfOverlay } from './perf';
 
 type ActionPayload = { type: string; playerId: string; payload: any };
 
@@ -38,57 +39,59 @@ export default function KredApp() {
     }
   }, [isHost, actions.setActionHandler]);
 
-  // No lobby yet — show lobby screen
-  if (!lobbyId) {
-    return <LobbyScreen />;
-  }
-
-  // Lobby exists but game hasn't started — show waiting room
-  if (lobbyStatus === 'WAITING') {
-    return <WaitingRoom />;
-  }
-
-  // Game is active
   return (
     <>
-      <GameStateSynchronizer
-        getStatePacket={() => getStatePacketRef.current()}
-        applyStatePacket={(packet) => applyStatePacketRef.current(packet)}
-        onActionReceived={isHost ? actionDispatchRef : undefined}
-        onRejoinComplete={handleRejoinComplete}
-      />
-      <App
-        isMultiplayer={true}
-        isHost={isHost}
-        playerIndex={playerIndex ?? 0}
-        playerCount={playerCount ?? 3}
-        playerNames={lobbyPlayers.map(p => p.name)}
-        skipDraft={isHost ? skipDraft : false}
-        multiplayerActions={{
-          createGame: async () => {},
-          joinGame: async () => {},
-          startGame: async () => {},
-          selectDraftTile: actions.selectDraftTile,
-          playTile: actions.playTile,
-          movePiece: actions.movePiece,
-          endTurn: actions.endTurn,
-          acceptTile: actions.acceptTile,
-          rejectTile: actions.rejectTile,
-          viewTilePrivate: actions.viewTilePrivate,
-          initiateChallenge: actions.initiateChallenge,
-          passChallenge: actions.passChallenge,
-          completeBonusMove: actions.completeBonusMove,
-          completeCorrection: actions.completeCorrection,
-          selectAdvantageTiles: actions.selectAdvantageTiles,
-          purchaseAdvantage: actions.purchaseAdvantage,
-          receiverRewardChoice: actions.receiverRewardChoice,
-          purchaseBureaucracy: actions.purchaseBureaucracy,
-          joinAsSpectator: async () => {},
-        }}
-        getStatePacketRef={getStatePacketRef}
-        applyStatePacketRef={applyStatePacketRef}
-        setActionDispatch={isHost ? setActionDispatch : undefined}
-      />
+      {/* No lobby yet — show lobby screen */}
+      {!lobbyId && <LobbyScreen />}
+
+      {/* Lobby exists but game hasn't started — show waiting room */}
+      {lobbyStatus === 'WAITING' && <WaitingRoom />}
+
+      {/* Game is active */}
+      {lobbyId && lobbyStatus !== 'WAITING' && (
+        <>
+          <GameStateSynchronizer
+            getStatePacket={() => getStatePacketRef.current()}
+            applyStatePacket={(packet) => applyStatePacketRef.current(packet)}
+            onActionReceived={isHost ? actionDispatchRef : undefined}
+            onRejoinComplete={handleRejoinComplete}
+          />
+          <App
+            isMultiplayer={true}
+            isHost={isHost}
+            playerIndex={playerIndex ?? 0}
+            playerCount={playerCount ?? 3}
+            playerNames={lobbyPlayers.map(p => p.name)}
+            skipDraft={isHost ? skipDraft : false}
+            multiplayerActions={{
+              createGame: async () => {},
+              joinGame: async () => {},
+              startGame: async () => {},
+              selectDraftTile: actions.selectDraftTile,
+              playTile: actions.playTile,
+              movePiece: actions.movePiece,
+              endTurn: actions.endTurn,
+              acceptTile: actions.acceptTile,
+              rejectTile: actions.rejectTile,
+              viewTilePrivate: actions.viewTilePrivate,
+              initiateChallenge: actions.initiateChallenge,
+              passChallenge: actions.passChallenge,
+              completeBonusMove: actions.completeBonusMove,
+              completeCorrection: actions.completeCorrection,
+              selectAdvantageTiles: actions.selectAdvantageTiles,
+              purchaseAdvantage: actions.purchaseAdvantage,
+              receiverRewardChoice: actions.receiverRewardChoice,
+              purchaseBureaucracy: actions.purchaseBureaucracy,
+              joinAsSpectator: async () => {},
+            }}
+            getStatePacketRef={getStatePacketRef}
+            applyStatePacketRef={applyStatePacketRef}
+            setActionDispatch={isHost ? setActionDispatch : undefined}
+          />
+        </>
+      )}
+
+      <PerfOverlay />
     </>
   );
 }
