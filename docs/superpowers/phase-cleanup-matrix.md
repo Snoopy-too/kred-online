@@ -43,4 +43,43 @@ Every inventoried entry is either **naturally bounded** (small constant or `O(pl
 **Conclusion:** No code-level memory-bounds fix is required by the 4a audit. Task 3 still introduces `BoundedMap` as a reusable utility in case future providers need it, but no existing collection is rewritten to use it.
 
 ## Phase cleanup matrix
-(filled in Task 4)
+
+Game phases (from `src/types/game.ts`):
+
+- `PLAYER_SELECTION` — pre-game lobby
+- `DRAFTING` — each player picks tiles into their hand
+- `CAMPAIGN` — main turn loop; also the "return state" for every sub-flow below
+- `SELECTING_TILE` — current player is choosing which tile to play
+- `TILE_PLAYED` — tile dropped on board; awaiting receiver acceptance
+- `PENDING_ACCEPTANCE` — receiver has not yet accepted/rejected
+- `PENDING_CHALLENGE` — receiver rejected; bystanders may challenge
+- `TAKE_ADVANTAGE` — challenger chose to "take advantage"
+- `BONUS_MOVE` — bonus-move modal open for a piece move
+- `CORRECTION_REQUIRED` — mover must withdraw an illegal move
+- `BUREAUCRACY` — end-of-round spending phase
+
+Reachable transitions in a normal game (non-exhaustive — focused on transitions that own meaningful state):
+
+| From → To | State that must be reset | Timers/intervals to clear | DB rows to sweep | Status | Notes |
+|---|---|---|---|---|---|
+| `PLAYER_SELECTION` → `DRAFTING` | `players` seeded; no cleanup (fresh game) | none | N/A (lobby table managed by LobbyContext) | ✅ | `handleNewGame` in `gameFlowHandlers.ts:328` clears everything; transition is a cold start. |
+| `DRAFTING` → `CAMPAIGN` | `currentPlayerIndex` reset to player with starting tile; `pieces` seeded | none | N/A | ✅ | `gameFlowHandlers.ts:315` seeds campaign pieces and sets starting player. |
+| `CAMPAIGN` → `SELECTING_TILE` | none — selection is additive | none | none | ✅ | No stale state to reset; just toggles UI. |
+| `SELECTING_TILE` → `TILE_PLAYED` | `selectedTileForPlay` consumed into `playedTile` | none | none | ✅ | `tilePlayHandlers.ts` clears selection when committing play. |
+| `TILE_PLAYED` → `PENDING_ACCEPTANCE` | none | none | none | ✅ | Additive state transition. |
+| `PENDING_ACCEPTANCE` → `PENDING_CHALLENGE` | `receiverAcceptance` reflects rejection | none | none | ✅ | `challengeFlowHandlers.ts:168` drives the transition. |
+| `PENDING_CHALLENGE` → `TAKE_ADVANTAGE` | `currentChallengerIndex` advances | none | none | ✅ | `useTilePlayWorkflow.ts` advances challenger index. |
+| `PENDING_CHALLENGE` → `CAMPAIGN` (return to placer) | `playedTile`, `challengeOrder`, `currentChallengerIndex`, `tileRejected`, `tileTransaction`, `bystanderIndex`, `bystanders`, `movedPiecesThisTurn`, `pendingCommunityPieces` | none | none | ✅ | `advanceTurnNormally` (turnHandlers.ts:173) clears bystander/transaction/moved/pending state; play-end branches in App.tsx (1192, 2138, 2530, 3238, 3328, 3815) clear `playedTile`, `challengeOrder`, `currentChallengerIndex`, `tileRejected`. |
+| `TAKE_ADVANTAGE` → `CAMPAIGN` | `takeAdvantageChallengerId`, `takeAdvantageChallengerCredibility`, `showTakeAdvantageModal`, `playedTile`, `bystanderIndex`, `challengeOrder`, `currentChallengerIndex`, `tileRejected` | none | none | ✅ | Reset through the shared "return to campaign" code path. |
+| `BONUS_MOVE` → `CAMPAIGN` | `bonusMovePlayerId`, `showBonusMoveModal`, `piecesBeforeBonusMove` | none | none | ✅ | `pieceMovementHandlers.ts:318` + play-end branches. |
+| `CORRECTION_REQUIRED` → `CAMPAIGN` | `tilePlayerMustWithdraw` | none | none | ✅ | `pieceMovementHandlers.ts` branches clear the flag. |
+| `CAMPAIGN` → `BUREAUCRACY` (round end) | `playedTile`, `hasPlayedTileThisTurn`, `tileTransaction`, `movedPiecesThisTurn`, `pendingCommunityPieces`, `movesThisTurn`, `challengeOrder`, `currentChallengerIndex`, `tileRejected` | none | none | ✅ | `gameFlowHandlers.ts:259` enters bureaucracy after the last player's turn; prior turn-end resets already cleared state. |
+| `BUREAUCRACY` → `CAMPAIGN` (next round) | `currentBureaucracyPlayerIndex` back to 0; `bureaucracyStates`, `bureaucracyTurnOrder`, `bureaucracyMoves`, `bureaucracySnapshot`, `currentBureaucracyPurchase`, `pendingCommunityPieces` | none | none | ✅ | `useBureaucracy.ts:startBureaucracyPhase` re-initializes on next entry; `gameFlowHandlers.ts:315` seeds next round. |
+| `BUREAUCRACY` → `DRAFTING` (new draft round) | Same as BUREAUCRACY → CAMPAIGN plus reset of per-round campaign state | none | none | ✅ | `gameFlowHandlers.ts:319` routes to DRAFTING when a new draft is scheduled. |
+| Any → `PLAYER_SELECTION` (new game) | Full reset (every game collection) | All timers in `GameStateSynchronizer` cleared on unmount | `kred_game_states` / `kred_game_actions` rows sweep deferred to lobby teardown | ✅ | `handleNewGame` in `gameFlowHandlers.ts:328` is the master reset. |
+
+**Audit result:** The existing handlers already reset all phase-scoped state at every reachable transition. No 🔧 code fix is required by the 4b audit before tests run.
+
+**Follow-up:** Task 6 builds tests that actually *exercise* these transitions and assert the invariants. If any test fails, that row will be flipped to 🔧 and fixed in the same commit as the test.
+
+**Deferred rows:** none in Step 4. Every transition has a clear owner in App.tsx or a handler module. Provider migration (Step 5/7) will move these into a `PhaseProvider`, but the rules themselves do not change.
