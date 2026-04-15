@@ -2,7 +2,7 @@
 // Re-exports all utility modules for convenient importing
 
 // Positioning utilities - coordinate and rotation calculations
-export { getPiecePosition, setPiecePosition } from "./positioning";
+export { BOARD_CENTERS, isPositionInCommunityCircle, calculatePieceRotation } from "./positioning";
 
 // Formatting utilities - display string formatting
 export { formatLocationId, formatWinnerNames } from "./formatting";
