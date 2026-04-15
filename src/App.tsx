@@ -331,6 +331,12 @@ const App: React.FC<MultiplayerProps> = ({
     setGiveReceiverViewingTileId,
   } = useAlerts();
 
+  // In multiplayer, viewingPlayerId is the player's 1-indexed ID based on their lobby seat.
+  // Must be declared before any hook that references it in its deps array (TDZ).
+  const viewingPlayerId = isMultiplayer && playerIndex !== undefined
+    ? playerIndex + 1
+    : (players[currentPlayerIndex]?.id || 1);
+
   const [serverAlert, setServerAlert] = useState<{
     id: number;
     title: string;
@@ -543,11 +549,6 @@ const App: React.FC<MultiplayerProps> = ({
   const [pendingReceiverReward, setPendingReceiverReward] = useState<boolean>(false);
   const [receiverAdvanceInProgress, setReceiverAdvanceInProgress] = useState<boolean>(false);
   const [moverPlayerIndex, setMoverPlayerIndex] = useState<number | null>(null);
-
-  // In multiplayer, viewingPlayerId is the player's 1-indexed ID based on their lobby seat
-  const viewingPlayerId = isMultiplayer && playerIndex !== undefined
-    ? playerIndex + 1
-    : (players[currentPlayerIndex]?.id || 1);
 
   // Wire up GameStateSynchronizer refs for host state push
   useEffect(() => {
