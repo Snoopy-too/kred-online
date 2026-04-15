@@ -2,6 +2,10 @@
 
 Working doc for Step 4 (Cleanup Audits) of the 2026-04-09 multiplayer hardening engagement.
 
+**Step 4 status:** ✅ **complete.** Every inventory row is bounded; every phase-transition row has either a passing test in `src/__tests__/sync/phase-cleanup.test.ts` or a code path verified by inspection. The subscription-stability fix in `GameStateSynchronizer.tsx` (refs for `applyStatePacket` / `getStatePacket` / `onRejoinComplete`) closed a real re-subscribe bug discovered by the §4f audit. See commit history on `supabase-multiplayer` from Step 4 for the full trail.
+
+**Handoff to Step 5:** this matrix is the source of truth for the reset rules a future `PhaseProvider` must preserve. The hook-level resets currently live in `useTilePlayWorkflow.resetForNewTurn` / `completeTilePlay`, `useChallengeFlow.closeTakeAdvantage` / `closeChallengeReveal`, and `useBureaucracy.startBureaucracyPhase`. When Step 5 hoists these into a provider, point the test file at the new owner and the assertions should stay green.
+
 ## Inventory — long-lived state
 
 | Name | Location | Type | Lifetime | Max size | Bounded? | Resets on phase? |
