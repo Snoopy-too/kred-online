@@ -45,4 +45,4 @@ export {
   usePerfSeries,
   usePerfCounter,
 } from "./hooks";
-// export { PerfOverlay } from "./PerfOverlay";
+export { PerfOverlay } from "./PerfOverlay";
