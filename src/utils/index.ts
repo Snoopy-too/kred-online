@@ -8,7 +8,7 @@ export { BOARD_CENTERS, isPositionInCommunityCircle, calculatePieceRotation } fr
 export { formatLocationId, formatWinnerNames } from "./formatting";
 
 // Array utilities - array manipulation helpers
-export { shuffle, uniqueBy, groupBy } from "./array";
+export { shuffle } from "./array";
 
 // Lookup utilities - finding entities by ID and checking locations
 export { 
