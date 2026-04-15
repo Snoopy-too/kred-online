@@ -107,6 +107,7 @@ export default function GameStateSynchronizer({
   const pendingPersistPacketRef = useRef<GameStatePacket | null>(null);
   const lastPersistedVersionRef = useRef<number>(0);
   const lastPersistedPhaseRef = useRef<string | null>(null);
+  const lastSeenActionAtRef = useRef<string>(new Date(0).toISOString());
 
   // ==========================================================================
   // HOST: Push state to guests
@@ -238,7 +239,13 @@ export default function GameStateSynchronizer({
       .channel(`kred_actions:${lobbyId}`)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'kred_game_actions', filter: `lobby_id=eq.${lobbyId}` },
-        (payload) => { enqueueAction(payload.new); }
+        (payload) => {
+          const a = payload.new as any;
+          if (a.created_at > lastSeenActionAtRef.current) {
+            lastSeenActionAtRef.current = a.created_at;
+          }
+          enqueueAction(a);
+        }
       )
       .subscribe();
 
@@ -248,9 +255,11 @@ export default function GameStateSynchronizer({
         .from('kred_game_actions')
         .select('*')
         .eq('lobby_id', lobbyId)
+        .gt('created_at', lastSeenActionAtRef.current)
         .order('created_at', { ascending: true });
 
-      if (data) {
+      if (data && data.length > 0) {
+        lastSeenActionAtRef.current = data[data.length - 1].created_at;
         for (const action of data) {
           enqueueAction(action);
         }
