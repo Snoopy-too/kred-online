@@ -100,6 +100,7 @@ export default function GameStateSynchronizer({
   const lastProcessedVersionRef = useRef(0);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastBroadcastReceiptRef = useRef<number>(Date.now());
 
   // ==========================================================================
   // HOST: Push state to guests
@@ -246,6 +247,7 @@ export default function GameStateSynchronizer({
     if (!isHost) {
       // GUEST: listen for host broadcasts
       channel.on('broadcast', { event: 'state' }, ({ payload }: { payload: GameStatePacket }) => {
+        lastBroadcastReceiptRef.current = Date.now();
         if (payload.stateVersion <= lastProcessedVersionRef.current) return;
         lastProcessedVersionRef.current = payload.stateVersion;
         applyStatePacket(payload);
@@ -275,6 +277,8 @@ export default function GameStateSynchronizer({
   useEffect(() => {
     if (!lobbyId || isHost) return;
 
+    let cancelled = false;
+
     const poll = async () => {
       const { data } = await supabase
         .from('kred_game_states')
@@ -288,22 +292,19 @@ export default function GameStateSynchronizer({
       }
     };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') poll();
+    const tick = async () => {
+      if (cancelled) return;
+      await poll();
+      if (cancelled) return;
+      const sinceBroadcast = Date.now() - lastBroadcastReceiptRef.current;
+      const next = sinceBroadcast > 5000 ? 1000 : 3000;
+      setTimeout(tick, next);
     };
-    const handleOnline = () => poll();
-    const handleFocus = () => poll();
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('focus', handleFocus);
+    setTimeout(tick, 3000);
 
-    const interval = setInterval(poll, 3000);
     return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('focus', handleFocus);
+      cancelled = true;
     };
   }, [lobbyId, isHost, applyStatePacket]);
 
