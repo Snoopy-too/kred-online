@@ -111,6 +111,13 @@ export interface SyncProps {
 
   /** Called when rejoin hydration is complete */
   onRejoinComplete?: () => void;
+
+  /**
+   * Host: ref the synchronizer assigns its debounced pushState function to,
+   * so the parent can call it imperatively without going through `window`.
+   * Caller passes a ref it will keep stable across renders.
+   */
+  pushStateRef?: MutableRefObject<(() => void) | null>;
 }
 
 // ============================================================================
@@ -122,6 +129,7 @@ export default function GameStateSynchronizer({
   applyStatePacket,
   onActionReceived,
   onRejoinComplete,
+  pushStateRef,
 }: SyncProps) {
   const { lobbyId, isHost, isRejoining } = useLobby();
 
@@ -431,17 +439,16 @@ export default function GameStateSynchronizer({
   }, [flushPersist]);
 
   // ==========================================================================
-  // Expose debouncedPush for host to call on state changes
+  // Expose debouncedPush via the parent-provided ref (no global escape hatch).
   // ==========================================================================
 
   useEffect(() => {
-    if (isHost) {
-      (window as any).__kred_pushState = debouncedPush;
-    }
+    if (!isHost || !pushStateRef) return;
+    pushStateRef.current = debouncedPush;
     return () => {
-      if (isHost) delete (window as any).__kred_pushState;
+      if (pushStateRef) pushStateRef.current = null;
     };
-  }, [isHost, debouncedPush]);
+  }, [isHost, debouncedPush, pushStateRef]);
 
   return null;
 }
