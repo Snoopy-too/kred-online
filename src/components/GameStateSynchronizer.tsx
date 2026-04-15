@@ -12,7 +12,7 @@ const PROCESSED_ACTION_ID_CAP = 500;
  * Last N ids retained — older ids fall off the back.
  * Used to dedupe broadcast/poll race conditions without unbounded growth.
  */
-class BoundedActionIdSet {
+export class BoundedActionIdSet {
   private ring: string[] = [];
   private setView: Set<string> = new Set();
   constructor(private cap: number) {}
