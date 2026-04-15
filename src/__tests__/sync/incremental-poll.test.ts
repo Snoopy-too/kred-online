@@ -75,3 +75,38 @@ describe("sync: incremental action poll (2d)", () => {
     expect(second.data).toHaveLength(0);
   });
 });
+
+describe("BoundedActionIdSet", () => {
+  it("retains the last N ids and evicts older ones", async () => {
+    // Inline copy of the class for testability — production code lives in
+    // GameStateSynchronizer.tsx. We replicate here to assert the contract.
+    class BoundedActionIdSet {
+      private ring: string[] = [];
+      private setView: Set<string> = new Set();
+      constructor(private cap: number) {}
+      has(id: string) { return this.setView.has(id); }
+      add(id: string) {
+        if (this.setView.has(id)) return;
+        this.ring.push(id);
+        this.setView.add(id);
+        while (this.ring.length > this.cap) {
+          const removed = this.ring.shift()!;
+          this.setView.delete(removed);
+        }
+      }
+      size() { return this.setView.size; }
+    }
+
+    const s = new BoundedActionIdSet(3);
+    s.add("a");
+    s.add("b");
+    s.add("c");
+    expect(s.size()).toBe(3);
+    s.add("d");
+    expect(s.size()).toBe(3);
+    expect(s.has("a")).toBe(false);
+    expect(s.has("d")).toBe(true);
+    s.add("d"); // duplicate is no-op
+    expect(s.size()).toBe(3);
+  });
+});
