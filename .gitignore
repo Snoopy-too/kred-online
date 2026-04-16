@@ -28,3 +28,6 @@ dev_images
 *.njsproj
 *.sln
 *.sw?
+
+# Local diagnostics tool (PHP, contains service-role key)
+/diagnostics/
