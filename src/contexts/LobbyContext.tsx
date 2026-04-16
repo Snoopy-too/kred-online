@@ -28,9 +28,10 @@ interface LobbyContextType {
 
   // State
   skipDraft: boolean;
+  diagnosticEnabled: boolean;
 
   // Actions
-  createLobby: (hostName: string, playerCount: number, skipDraft?: boolean) => Promise<void>;
+  createLobby: (hostName: string, playerCount: number, skipDraft?: boolean, diagnosticEnabled?: boolean) => Promise<void>;
   joinLobby: (pin: string, playerName: string) => Promise<void>;
   startGame: () => Promise<void>;
   rejoinGame: () => Promise<void>;
@@ -70,6 +71,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
   const [isRejoining, setIsRejoining] = useState(false);
   const [rejoinAvailable, setRejoinAvailable] = useState<{ pin: string; name: string; lobbyId: string } | null>(null);
   const [skipDraft, setSkipDraft] = useState(false);
+  const [diagnosticEnabled, setDiagnosticEnabled] = useState(false);
 
   const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -206,8 +208,9 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
   // --------------------------------------------------------------------------
   // Create lobby
   // --------------------------------------------------------------------------
-  const createLobby = useCallback(async (hostName: string, playerCount: number, skipDraftOption = false) => {
+  const createLobby = useCallback(async (hostName: string, playerCount: number, skipDraftOption = false, diagEnabled = false) => {
     setSkipDraft(skipDraftOption);
+    setDiagnosticEnabled(diagEnabled);
     const uid = await ensureAuth();
     const pin = generatePin();
 
@@ -219,7 +222,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
 
     const { data: lobby, error: lobbyError } = await supabase
       .from('kred_lobbies')
-      .insert({ pin, host_id: uid, player_count: playerCount, status: 'WAITING' })
+      .insert({ pin, host_id: uid, player_count: playerCount, status: 'WAITING', diagnostic_enabled: diagEnabled })
       .select('id')
       .single();
 
@@ -255,7 +258,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
 
     const { data: lobby, error: lobbyError } = await supabase
       .from('kred_lobbies')
-      .select('id, status, player_count')
+      .select('id, status, player_count, diagnostic_enabled')
       .eq('pin', pin.toUpperCase())
       .single();
 
@@ -299,6 +302,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
     setPlayerIndex(nextIndex);
     setPlayerCount(lobby.player_count);
     setLobbyStatus('WAITING');
+    setDiagnosticEnabled(!!lobby.diagnostic_enabled);
     setRejoinAvailable(null);
   }, [ensureAuth]);
 
@@ -328,7 +332,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
 
     const { data: lobby } = await supabase
       .from('kred_lobbies')
-      .select('id, pin, status, player_count')
+      .select('id, pin, status, player_count, diagnostic_enabled')
       .eq('id', rejoinAvailable.lobbyId)
       .single();
 
@@ -364,6 +368,7 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
     setPlayerIndex(playerRow.player_index);
     setPlayerCount(lobby.player_count);
     setLobbyStatus(lobby.status);
+    setDiagnosticEnabled(!!(lobby as any).diagnostic_enabled);
     setRejoinAvailable(null);
   }, [rejoinAvailable, userId]);
 
@@ -391,11 +396,12 @@ export function LobbyProvider({ children }: { children: React.ReactNode }) {
     setLobbyStatus(null);
     setLobbyPlayers([]);
     setIsRejoining(false);
+    setDiagnosticEnabled(false);
   }, [lobbyId, userId]);
 
   const value: LobbyContextType = {
     lobbyId, lobbyPin, isHost, userId, playerIndex, playerCount,
-    lobbyStatus, lobbyPlayers, isRejoining, rejoinAvailable, skipDraft,
+    lobbyStatus, lobbyPlayers, isRejoining, rejoinAvailable, skipDraft, diagnosticEnabled,
     createLobby, joinLobby, startGame, rejoinGame, dismissRejoin, leaveLobby,
   };
 
