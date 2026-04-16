@@ -51,7 +51,16 @@ export function DiagnosticsProvider(props: DiagnosticsProviderProps) {
         hostName: props.hostName ?? '',
         playerNames: props.playerNames,
       });
-      if (cancelled || !sessionId) return;
+      if (cancelled) return;
+      if (!sessionId) {
+        console.warn('[diagnostics] createOrAttachSession returned null — client will not be enabled', {
+          isHost: props.isHost, lobbyId: props.lobbyId,
+        });
+        return;
+      }
+      console.info('[diagnostics] client enabled', {
+        sessionId, isHost: props.isHost, playerIndex: props.playerIndex, playerName: props.playerName,
+      });
       client.enable({
         sessionId,
         playerIndex: props.playerIndex!,
@@ -68,7 +77,16 @@ export function DiagnosticsProvider(props: DiagnosticsProviderProps) {
       void client.flush();
       client.disable();
     };
-  }, [props.diagnosticEnabled, props.lobbyId, props.isHost, props.playerIndex]);
+  }, [
+    props.diagnosticEnabled,
+    props.lobbyId,
+    props.isHost,
+    props.playerIndex,
+    props.playerName,
+    props.pin,
+    props.playerCount,
+    props.hostName,
+  ]);
 
   useEffect(() => {
     const client = clientRef.current!;
