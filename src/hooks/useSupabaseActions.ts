@@ -1,12 +1,14 @@
 import { useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLobby } from '../contexts/LobbyContext';
+import { useDiagnostics } from '../diagnostics';
 
 type ActionHandler = (action: { type: string; playerId: string; payload: any }) => void;
 
 export function useSupabaseActions() {
   const { lobbyId, userId, isHost, playerIndex: myPlayerIndex } = useLobby();
   const onActionReceivedRef = useRef<ActionHandler | null>(null);
+  const logDiag = useDiagnostics();
 
   /**
    * Register a handler for incoming actions (host only).
@@ -23,6 +25,12 @@ export function useSupabaseActions() {
    */
   const emitAction = useCallback(async (actionType: string, payload: any = {}) => {
     if (!lobbyId || !userId) return;
+
+    logDiag({
+      category: 'move',
+      event_type: actionType,
+      payload: { ...payload, via: isHost ? 'host-local' : 'db-insert' },
+    });
 
     if (isHost) {
       // Host processes locally — no DB round-trip
@@ -42,8 +50,9 @@ export function useSupabaseActions() {
 
     if (error) {
       console.error(`Failed to emit action ${actionType}:`, error);
+      logDiag({ category: 'error', event_type: 'EMIT_ACTION_FAILED', payload: { actionType, message: error.message } });
     }
-  }, [lobbyId, userId, isHost]);
+  }, [lobbyId, userId, isHost, logDiag]);
 
   // -------------------------------------------------------------------------
   // Typed action methods matching the MultiplayerProps interface in App.tsx
