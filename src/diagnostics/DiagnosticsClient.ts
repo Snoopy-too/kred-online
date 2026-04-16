@@ -87,29 +87,41 @@ export class DiagnosticsClient {
 
   async createOrAttachSession(input: CreateOrAttachInput): Promise<string | null> {
     if (input.isHost) {
-      const insertResult: any = await this.supabase.from('kred_diagnostic_sessions').insert({
+      const builder: any = this.supabase.from('kred_diagnostic_sessions').insert({
         lobby_id: input.lobbyId,
         pin: input.pin,
         player_count: input.playerCount,
         host_name: input.hostName,
         player_names: input.playerNames,
       });
-      if (insertResult?.error) {
-        console.warn('[diagnostics] createSession failed', insertResult.error);
+      let data: any = null;
+      let error: any = null;
+      if (builder && typeof builder.select === 'function') {
+        const sel = builder.select('id');
+        if (sel && typeof sel.single === 'function') {
+          ({ data, error } = await sel.single());
+        } else {
+          ({ data, error } = await sel);
+          if (Array.isArray(data)) data = data[0] ?? null;
+        }
+      } else {
+        const awaited: any = await builder;
+        error = awaited?.error ?? null;
+        data = Array.isArray(awaited?.data) ? awaited.data[0] : awaited?.data ?? null;
+      }
+      if (error) {
+        console.warn('[diagnostics] createSession failed', error);
+        if (error.code === '23505') {
+          const { data: existing } = await this.supabase
+            .from('kred_diagnostic_sessions')
+            .select('id')
+            .eq('lobby_id', input.lobbyId)
+            .maybeSingle();
+          return existing?.id ?? null;
+        }
         return null;
       }
-      const row = Array.isArray(insertResult?.data)
-        ? insertResult.data[0]
-        : insertResult?.data ?? null;
-      if (row?.id) return row.id;
-      if (typeof insertResult?.select === 'function') {
-        const sel = insertResult.select('id');
-        if (sel?.single) {
-          const { data } = await sel.single();
-          return data?.id ?? null;
-        }
-      }
-      return null;
+      return data?.id ?? null;
     }
     const { data } = await this.supabase
       .from('kred_diagnostic_sessions')
