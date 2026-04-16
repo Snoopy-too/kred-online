@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLobby } from '../../contexts/LobbyContext';
 
 export default function WaitingRoom() {
-  const { lobbyPin, isHost, playerCount, lobbyPlayers, startGame, leaveLobby } = useLobby();
+  const { lobbyPin, isHost, playerCount, lobbyPlayers, startGame, leaveLobby, diagnosticEnabled } = useLobby();
   const [startError, setStartError] = useState<string | null>(null);
 
   const allPlayersJoined = lobbyPlayers.length === playerCount;
@@ -41,6 +41,12 @@ export default function WaitingRoom() {
 
         <div className="bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-sky-200 p-6 sm:p-8">
           <h2 className="text-2xl font-bold text-slate-800 text-center mb-4">Waiting Room</h2>
+
+          {diagnosticEnabled && (
+            <div className="text-xs text-violet-700 bg-violet-50 border border-violet-200 rounded px-2 py-1 mb-3 text-center">
+              ⚙ Diagnostics on
+            </div>
+          )}
 
           {/* PIN display */}
           <button

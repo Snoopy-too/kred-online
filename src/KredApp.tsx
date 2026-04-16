@@ -6,12 +6,15 @@ import GameStateSynchronizer, { GameStatePacket } from './components/GameStateSy
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
 import { PerfOverlay } from './perf';
+import { DiagnosticsProvider } from './diagnostics';
 
 type ActionPayload = { type: string; playerId: string; payload: any };
 
 export default function KredApp() {
-  const { lobbyId, lobbyStatus, isHost, playerIndex, playerCount, lobbyPlayers, skipDraft } = useLobby();
+  const lobby = useLobby();
+  const { lobbyId, lobbyStatus, isHost, playerIndex, playerCount, lobbyPlayers, skipDraft } = lobby;
   const actions = useSupabaseActions();
+  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
 
   const [gameReady, setGameReady] = useState(false);
 
@@ -40,8 +43,22 @@ export default function KredApp() {
     }
   }, [isHost, actions.setActionHandler]);
 
+  const selfPlayer = lobbyPlayers.find(p => p.playerIndex === playerIndex) ?? null;
+  const hostPlayer = lobbyPlayers.find(p => p.isHost) ?? null;
+
   return (
-    <>
+    <DiagnosticsProvider
+      lobbyId={lobbyId}
+      isHost={isHost}
+      playerIndex={playerIndex}
+      playerName={selfPlayer?.name ?? null}
+      pin={lobby.lobbyPin}
+      playerCount={playerCount}
+      playerNames={lobbyPlayers.map(p => p.name)}
+      hostName={hostPlayer?.name ?? null}
+      diagnosticEnabled={lobby.diagnosticEnabled}
+      currentPhase={currentPhase}
+    >
       {/* No lobby yet — show lobby screen */}
       {!lobbyId && <LobbyScreen />}
 
@@ -95,6 +112,6 @@ export default function KredApp() {
       )}
 
       <PerfOverlay />
-    </>
+    </DiagnosticsProvider>
   );
 }
