@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import { reportDiagnosticError } from "../../diagnostics";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -33,6 +34,11 @@ class ErrorBoundary extends React.Component<
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error("ErrorBoundary caught:", error);
     console.error("Error info:", errorInfo);
+    reportDiagnosticError({
+      message: error.message,
+      stack: error.stack,
+      source: 'ErrorBoundary',
+    });
   }
 
   render(): React.ReactNode {

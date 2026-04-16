@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef } from 're
 import { supabase } from '../lib/supabase';
 import { DiagnosticsClient, SupabaseLike } from './DiagnosticsClient';
 import { DiagnosticEventInput } from './events';
+import { setErrorHandler } from './errorSink';
 
 interface DiagnosticsContextValue {
   log: (ev: DiagnosticEventInput) => void;
@@ -75,6 +76,17 @@ export function DiagnosticsProvider(props: DiagnosticsProviderProps) {
     const client = clientRef.current!;
     void client.flush();
   }, [props.currentPhase]);
+
+  useEffect(() => {
+    setErrorHandler(({ message, stack, source }) => {
+      clientRef.current?.log({
+        category: 'error',
+        event_type: 'CLIENT_ERROR',
+        payload: { message, stack, source },
+      });
+    });
+    return () => setErrorHandler(() => {});
+  }, []);
 
   const value = useMemo<DiagnosticsContextValue>(() => ({
     log: (ev) => clientRef.current?.log(ev),

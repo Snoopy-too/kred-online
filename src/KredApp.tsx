@@ -6,7 +6,7 @@ import GameStateSynchronizer, { GameStatePacket } from './components/GameStateSy
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
 import { PerfOverlay } from './perf';
-import { DiagnosticsProvider, useDiagnostics } from './diagnostics';
+import { DiagnosticsProvider, useDiagnostics, reportDiagnosticError } from './diagnostics';
 
 function PhaseLogger({ currentPhase }: { currentPhase: string | null }) {
   const logDiag = useDiagnostics();
@@ -58,6 +58,33 @@ export default function KredApp() {
       });
     }
   }, [isHost, actions.setActionHandler]);
+
+  useEffect(() => {
+    const onErr = (ev: ErrorEvent) => {
+      reportDiagnosticError({
+        message: ev.message ?? 'unknown error',
+        stack: ev.error?.stack,
+        source: ev.filename,
+      });
+    };
+    const onRej = (ev: PromiseRejectionEvent) => {
+      const reason = ev.reason as { message?: string; stack?: string } | string | undefined;
+      const message = typeof reason === 'string'
+        ? reason
+        : reason?.message ?? String(reason);
+      reportDiagnosticError({
+        message,
+        stack: typeof reason === 'object' ? reason?.stack : undefined,
+        source: 'unhandledrejection',
+      });
+    };
+    window.addEventListener('error', onErr);
+    window.addEventListener('unhandledrejection', onRej);
+    return () => {
+      window.removeEventListener('error', onErr);
+      window.removeEventListener('unhandledrejection', onRej);
+    };
+  }, []);
 
   const selfPlayer = lobbyPlayers.find(p => p.playerIndex === playerIndex) ?? null;
   const hostPlayer = lobbyPlayers.find(p => p.isHost) ?? null;
