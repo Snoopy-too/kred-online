@@ -6,14 +6,35 @@ import GameStateSynchronizer, { GameStatePacket } from './components/GameStateSy
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
 import { PerfOverlay } from './perf';
+import { DiagnosticsProvider, useDiagnostics } from './diagnostics';
 
 type ActionPayload = { type: string; playerId: string; payload: any };
 
-export default function KredApp() {
-  const { lobbyId, lobbyStatus, isHost, playerIndex, playerCount, lobbyPlayers, skipDraft } = useLobby();
+function PhaseLogger({ currentPhase }: { currentPhase: string | null }) {
+  const logDiag = useDiagnostics();
+  const prevRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentPhase !== prevRef.current) {
+      logDiag({
+        category: 'phase',
+        event_type: 'PHASE_CHANGE',
+        payload: { from: prevRef.current, to: currentPhase },
+      });
+      prevRef.current = currentPhase;
+    }
+  }, [currentPhase, logDiag]);
+  return null;
+}
+
+function KredAppInner() {
+  const {
+    lobbyId, lobbyPin, lobbyStatus, isHost, playerIndex, playerCount,
+    lobbyPlayers, skipDraft, diagnosticEnabled,
+  } = useLobby();
   const actions = useSupabaseActions();
 
   const [gameReady, setGameReady] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
 
   // Refs for GameStateSynchronizer ↔ App.tsx wiring
   const getStatePacketRef = useRef<() => GameStatePacket>(() => ({} as GameStatePacket));
@@ -31,6 +52,10 @@ export default function KredApp() {
     setGameReady(true);
   }, []);
 
+  const handlePhaseChange = useCallback((phase: string) => {
+    setCurrentPhase(phase);
+  }, []);
+
   // Wire host's local emitAction to the App.tsx action dispatch
   useEffect(() => {
     if (isHost) {
@@ -40,8 +65,24 @@ export default function KredApp() {
     }
   }, [isHost, actions.setActionHandler]);
 
+  const self = lobbyPlayers.find(p => p.playerIndex === playerIndex) ?? null;
+  const host = lobbyPlayers.find(p => p.isHost) ?? null;
+
   return (
-    <>
+    <DiagnosticsProvider
+      lobbyId={lobbyId}
+      isHost={isHost}
+      playerIndex={playerIndex}
+      playerName={self?.name ?? null}
+      pin={lobbyPin}
+      playerCount={playerCount}
+      playerNames={lobbyPlayers.map(p => p.name)}
+      hostName={host?.name ?? null}
+      diagnosticEnabled={diagnosticEnabled}
+      currentPhase={currentPhase}
+    >
+      <PhaseLogger currentPhase={currentPhase} />
+
       {/* No lobby yet — show lobby screen */}
       {!lobbyId && <LobbyScreen />}
 
@@ -90,11 +131,16 @@ export default function KredApp() {
             applyStatePacketRef={applyStatePacketRef}
             pushStateRef={pushStateRef}
             setActionDispatch={isHost ? setActionDispatch : undefined}
+            onPhaseChange={handlePhaseChange}
           />
         </>
       )}
 
       <PerfOverlay />
-    </>
+    </DiagnosticsProvider>
   );
+}
+
+export default function KredApp() {
+  return <KredAppInner />;
 }

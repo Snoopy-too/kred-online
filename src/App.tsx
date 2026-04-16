@@ -82,6 +82,9 @@ export interface MultiplayerProps {
 
   // Host: register a dispatch function that processes guest actions
   setActionDispatch?: (dispatch: (action: { type: string; playerId: string; payload: any }) => void) => void;
+
+  // Diagnostics: notify parent whenever the high-level game phase changes
+  onPhaseChange?: (phase: string) => void;
 }
 
 import type {
@@ -282,6 +285,7 @@ const App: React.FC<MultiplayerProps> = ({
   applyStatePacketRef,
   pushStateRef,
   setActionDispatch,
+  onPhaseChange,
 }) => {
   
   // ============================================================================
@@ -310,6 +314,10 @@ const App: React.FC<MultiplayerProps> = ({
     setDraftRound,
     setIsTestMode,
   } = useGameState();
+
+  useEffect(() => {
+    if (onPhaseChange) onPhaseChange(gameState);
+  }, [gameState, onPhaseChange]);
 
   const {
     alertModal,

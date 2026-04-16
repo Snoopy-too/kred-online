@@ -8,6 +8,7 @@ export default function LobbyScreen() {
   const [hostName, setHostName] = useState('');
   const [selectedPlayerCount, setSelectedPlayerCount] = useState(3);
   const [skipDraftOption, setSkipDraftOption] = useState(false);
+  const [diagnosticEnabled, setDiagnosticEnabled] = useState(false);
   const [joinPin, setJoinPin] = useState('');
   const [guestName, setGuestName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export default function LobbyScreen() {
     setError(null);
     setLoading(true);
     try {
-      await createLobby(hostName.trim(), selectedPlayerCount, skipDraftOption);
+      await createLobby(hostName.trim(), selectedPlayerCount, skipDraftOption, diagnosticEnabled);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create lobby');
     } finally {
@@ -154,6 +155,18 @@ export default function LobbyScreen() {
                 <span className="text-sm text-slate-600">
                   <span className="font-semibold text-amber-700">Skip Draft</span>
                   <span className="text-slate-400 ml-1">(testing — tiles distributed randomly)</span>
+                </span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-lg border border-dashed border-slate-300 hover:border-violet-400 hover:bg-violet-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={diagnosticEnabled}
+                  onChange={(e) => setDiagnosticEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded accent-violet-500 cursor-pointer"
+                />
+                <span className="text-sm text-slate-600">
+                  <span className="font-semibold text-violet-700">Enable Diagnostic Logging</span>
+                  <span className="text-slate-400 ml-1">(records detailed UI events for this session — for debugging)</span>
                 </span>
               </label>
               <button
