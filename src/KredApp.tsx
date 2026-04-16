@@ -6,7 +6,23 @@ import GameStateSynchronizer, { GameStatePacket } from './components/GameStateSy
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
 import { PerfOverlay } from './perf';
-import { DiagnosticsProvider } from './diagnostics';
+import { DiagnosticsProvider, useDiagnostics } from './diagnostics';
+
+function PhaseLogger({ currentPhase }: { currentPhase: string | null }) {
+  const logDiag = useDiagnostics();
+  const prevRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentPhase !== prevRef.current) {
+      logDiag({
+        category: 'phase',
+        event_type: 'PHASE_CHANGE',
+        payload: { from: prevRef.current, to: currentPhase },
+      });
+      prevRef.current = currentPhase;
+    }
+  }, [currentPhase, logDiag]);
+  return null;
+}
 
 type ActionPayload = { type: string; playerId: string; payload: any };
 
@@ -107,7 +123,9 @@ export default function KredApp() {
             applyStatePacketRef={applyStatePacketRef}
             pushStateRef={pushStateRef}
             setActionDispatch={isHost ? setActionDispatch : undefined}
+            onPhaseChange={setCurrentPhase}
           />
+          <PhaseLogger currentPhase={currentPhase} />
         </>
       )}
 

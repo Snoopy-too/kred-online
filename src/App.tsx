@@ -82,6 +82,9 @@ export interface MultiplayerProps {
 
   // Host: register a dispatch function that processes guest actions
   setActionDispatch?: (dispatch: (action: { type: string; playerId: string; payload: any }) => void) => void;
+
+  // Notify parent when the game phase changes (used by DiagnosticsProvider)
+  onPhaseChange?: (phase: string | null) => void;
 }
 
 import type {
@@ -282,6 +285,7 @@ const App: React.FC<MultiplayerProps> = ({
   applyStatePacketRef,
   pushStateRef,
   setActionDispatch,
+  onPhaseChange,
 }) => {
   
   // ============================================================================
@@ -658,6 +662,11 @@ const App: React.FC<MultiplayerProps> = ({
       setPiecesAtTurnStart(campaignPieces);
     }
   }, [isMultiplayer, gameState, pieces.length, players.length, setPieces, setPiecesAtTurnStart]);
+
+  // Notify parent of phase changes (for DiagnosticsProvider's currentPhase prop)
+  React.useEffect(() => {
+    onPhaseChange?.(gameState ?? null);
+  }, [gameState, onPhaseChange]);
 
   // ============================================================================
   // HANDLER FACTORIES - Created via factory pattern for testability
