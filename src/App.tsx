@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useDiagnostics } from "./diagnostics";
 
 // ============================================================================
 // App.tsx - Main Application Component
@@ -292,6 +293,8 @@ const App: React.FC<MultiplayerProps> = ({
   // CUSTOM HOOKS - State management extracted to dedicated hooks
   // See src/hooks/ for implementations
   // ============================================================================
+
+  const logDiag = useDiagnostics();
 
   // Core game state (useGameState hook)
   const {
@@ -861,6 +864,9 @@ const App: React.FC<MultiplayerProps> = ({
 
         // Alert messages
         ALERTS,
+
+        // Diagnostics
+        logDiag,
       }),
     [
       pieces,
@@ -884,6 +890,7 @@ const App: React.FC<MultiplayerProps> = ({
       setPlayedTile,
       setHasPlayedTileThisTurn,
       showAlert,
+      logDiag,
     ]
   );
 

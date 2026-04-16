@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useDiagnostics } from "../../diagnostics";
 import type {
   Player,
   Piece,
@@ -88,6 +89,17 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
     ? getAvailablePurchases(menu, playerState.remainingKredcoin)
     : [];
   const isPromotionPurchase = currentPurchase?.item.type === "PROMOTION";
+
+  const logDiag = useDiagnostics();
+  useEffect(() => {
+    if (showPurchaseMenu) {
+      logDiag({
+        category: 'bureau',
+        event_type: 'BUREAU_MENU_OPENED',
+        payload: { currentPlayerId, remainingKredcoin: playerState?.remainingKredcoin ?? null },
+      });
+    }
+  }, [showPurchaseMenu, currentPlayerId, playerState?.remainingKredcoin, logDiag]);
   const boardRotation = boardRotationEnabled
     ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0
     : 0;
@@ -584,7 +596,15 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
                     return (
                       <button
                         key={item.id}
-                        onClick={() => isEnabled && onSelectMenuItem(item)}
+                        onClick={() => {
+                          if (!isEnabled) return;
+                          logDiag({
+                            category: 'bureau',
+                            event_type: 'BUREAU_MENU_SELECT',
+                            payload: { itemType: item.type, price: item.price, id: item.id },
+                          });
+                          onSelectMenuItem(item);
+                        }}
                         disabled={!isEnabled}
                         className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isEnabled
                             ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"

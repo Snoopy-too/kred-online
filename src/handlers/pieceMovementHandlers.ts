@@ -89,6 +89,9 @@ export interface PieceMovementDependencies {
     PIECE_ALREADY_MOVED: { title: string; message: string };
     CANNOT_MOVE_PIECE: { title: string; message: string };
   };
+
+  // --- Diagnostics (optional) ---
+  logDiag?: (ev: { category: string; event_type: string; payload?: unknown }) => void;
 }
 
 // ============================================================================
@@ -227,6 +230,16 @@ export function createPieceMovementHandlers(
         );
 
         if (moveType === "UNKNOWN") {
+          deps.logDiag?.({
+            category: 'move',
+            event_type: 'ILLEGAL_MOVE_REJECTED',
+            payload: {
+              pieceId: movingPiece.id,
+              attemptedFrom: movingPiece.locationId,
+              attemptedTo: locationId,
+              reason: 'UNKNOWN move type',
+            },
+          });
           deps.showAlert(
             "Illegal Move",
             `Cannot move from ${deps.formatLocationId(

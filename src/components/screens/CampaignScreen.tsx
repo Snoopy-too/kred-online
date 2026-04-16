@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useRef, useEffect } from "react";
+import { useDiagnostics } from "../../diagnostics";
 
 // ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
@@ -374,6 +375,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     isValid?: boolean;
   } | null>(null);
 
+  const logDiag = useDiagnostics();
+  const lastDropSucceededRef = useRef(false);
+
   // ============================================================================
   // DERIVED STATE & CALCULATIONS
   // ============================================================================
@@ -604,6 +608,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     );
 
     if (snappedLocation && pieceId) {
+      logDiag({
+        category: 'drag',
+        event_type: 'DRAG_DROP',
+        payload: { pieceId, to: snappedLocation.id, kind: 'piece' },
+      });
+      lastDropSucceededRef.current = true;
       onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
     }
   };
@@ -641,6 +651,11 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         pieceId: piece.id,
         locationId: piece.locationId,
       });
+      logDiag({
+        category: 'drag',
+        event_type: 'DRAG_START',
+        payload: { pieceId, from: piece.locationId ?? null, kind: 'piece' },
+      });
     }
   };
 
@@ -648,6 +663,14 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
    * Handle ending piece drag
    */
   const handleDragEndPiece = () => {
+    if (draggedPieceInfo && !lastDropSucceededRef.current) {
+      logDiag({
+        category: 'drag',
+        event_type: 'DRAG_CANCELLED',
+        payload: { pieceId: draggedPieceInfo.pieceId },
+      });
+    }
+    lastDropSucceededRef.current = false;
     setDraggedPieceInfo(null);
     setDropIndicator(null);
   };
