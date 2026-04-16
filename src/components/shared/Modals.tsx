@@ -5,7 +5,8 @@
  * and maintainability.
  */
 
-import React from "react";
+import React, { useEffect } from "react";
+import { useDiagnostics } from "../../diagnostics";
 
 // ============================================================================
 // ALERT MODAL
@@ -26,6 +27,13 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   type,
   onClose,
 }) => {
+  const logDiag = useDiagnostics();
+  useEffect(() => {
+    if (isOpen) {
+      logDiag({ category: 'dialog', event_type: 'DIALOG_OPENED', payload: { dialog_type: 'Alert', title, modal_type: type } });
+    }
+  }, [isOpen, title, type, logDiag]);
+
   if (!isOpen) return null;
 
   const colors = {
@@ -59,7 +67,10 @@ export const AlertModal: React.FC<AlertModalProps> = ({
         </h2>
         <p className="text-slate-300 mb-6 text-lg">{message}</p>
         <button
-          onClick={onClose}
+          onClick={() => {
+            logDiag({ category: 'dialog', event_type: 'DIALOG_OK', payload: { dialog_type: 'Alert', title } });
+            onClose();
+          }}
           className="px-8 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition-colors shadow-md"
         >
           OK
@@ -82,6 +93,13 @@ export const PerfectTileModal: React.FC<PerfectTileModalProps> = ({
   isOpen,
   onContinue,
 }) => {
+  const logDiag = useDiagnostics();
+  useEffect(() => {
+    if (isOpen) {
+      logDiag({ category: 'dialog', event_type: 'DIALOG_OPENED', payload: { dialog_type: 'PerfectTile' } });
+    }
+  }, [isOpen, logDiag]);
+
   if (!isOpen) return null;
 
   return (
@@ -102,7 +120,10 @@ export const PerfectTileModal: React.FC<PerfectTileModalProps> = ({
           this tile. Other players may now challenge the play.
         </p>
         <button
-          onClick={onContinue}
+          onClick={() => {
+            logDiag({ category: 'dialog', event_type: 'DIALOG_OK', payload: { dialog_type: 'PerfectTile' } });
+            onContinue();
+          }}
           className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md"
         >
           Continue
@@ -185,6 +206,13 @@ export const FinishTurnConfirmModal: React.FC<FinishTurnConfirmModalProps> = ({
   onCancel,
   onConfirm,
 }) => {
+  const logDiag = useDiagnostics();
+  useEffect(() => {
+    if (isOpen) {
+      logDiag({ category: 'dialog', event_type: 'DIALOG_OPENED', payload: { dialog_type: 'FinishTurnConfirm', remainingKredcoin } });
+    }
+  }, [isOpen, remainingKredcoin, logDiag]);
+
   if (!isOpen) return null;
 
   return (
@@ -209,13 +237,19 @@ export const FinishTurnConfirmModal: React.FC<FinishTurnConfirmModalProps> = ({
         </p>
         <div className="flex gap-4 justify-center">
           <button
-            onClick={onCancel}
+            onClick={() => {
+              logDiag({ category: 'dialog', event_type: 'DIALOG_CANCEL', payload: { dialog_type: 'FinishTurnConfirm' } });
+              onCancel();
+            }}
             className="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md"
           >
             Cancel
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => {
+              logDiag({ category: 'dialog', event_type: 'DIALOG_OK', payload: { dialog_type: 'FinishTurnConfirm' } });
+              onConfirm();
+            }}
             className="px-6 py-3 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors shadow-md"
           >
             Yes, Finish
