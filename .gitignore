@@ -17,6 +17,7 @@ dev_images
 
 # Git worktrees
 .worktrees
+.claude/worktrees/
 
 # Editor directories and files
 .vscode/*
