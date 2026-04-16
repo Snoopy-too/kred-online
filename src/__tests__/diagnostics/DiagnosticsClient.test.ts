@@ -109,3 +109,90 @@ describe('DiagnosticsClient (error isolation)', () => {
     expect(c._debugBuffer()).toHaveLength(0);
   });
 });
+
+function makeRichMockSupabase() {
+  const sessions: any[] = [];
+  const rpcCalls: any[] = [];
+  const eventInserts: any[] = [];
+  return {
+    sessions,
+    rpcCalls,
+    eventInserts,
+    from(table: string) {
+      return {
+        insert: (rows: any) => {
+          if (table === 'kred_diagnostic_sessions') {
+            const row = { id: 'generated-id-' + (sessions.length + 1), ...rows };
+            sessions.push(row);
+            const p: any = Promise.resolve({ data: row, error: null });
+            p.select = (_cols: string) => ({ single: async () => ({ data: row, error: null }) });
+            return p;
+          }
+          if (table === 'kred_diagnostic_events') {
+            eventInserts.push(rows);
+            return Promise.resolve({ data: null, error: null });
+          }
+          return Promise.resolve({ data: null, error: null });
+        },
+        select: (_cols: string) => ({
+          eq: (_col: string, val: any) => ({
+            maybeSingle: async () => {
+              const row = sessions.find(s => s.lobby_id === val);
+              return { data: row ?? null, error: null };
+            },
+          }),
+        }),
+        update: () => ({ eq: async () => ({ data: null, error: null }) }),
+      };
+    },
+    rpc: async (name: string, args: any) => {
+      rpcCalls.push({ name, args });
+      return { data: null, error: null };
+    },
+  } as any;
+}
+
+describe('DiagnosticsClient (session lifecycle)', () => {
+  it('host creates a session row on createOrAttachSession', async () => {
+    const sb = makeRichMockSupabase();
+    const c = new DiagnosticsClient({ supabase: sb });
+    const sessionId = await c.createOrAttachSession({
+      isHost: true,
+      lobbyId: 'lobby-1',
+      pin: '4827',
+      playerCount: 4,
+      hostName: 'Fred',
+      playerNames: ['Fred', 'Alice', 'Bob', 'Carol'],
+    });
+    expect(sessionId).toBeTruthy();
+    expect(sb.sessions).toHaveLength(1);
+    expect(sb.sessions[0].lobby_id).toBe('lobby-1');
+    expect(sb.sessions[0].host_name).toBe('Fred');
+  });
+
+  it('non-host attaches to existing session by lobby_id', async () => {
+    const sb = makeRichMockSupabase();
+    sb.sessions.push({ id: 'existing-id', lobby_id: 'lobby-2' });
+    const c = new DiagnosticsClient({ supabase: sb });
+    const sessionId = await c.createOrAttachSession({
+      isHost: false,
+      lobbyId: 'lobby-2',
+      pin: '1234',
+      playerCount: 3,
+      hostName: 'X',
+      playerNames: ['X', 'Y', 'Z'],
+    });
+    expect(sessionId).toBe('existing-id');
+    expect(sb.sessions).toHaveLength(1);
+  });
+
+  it('host flushes call rpc increment_diag_event_count', async () => {
+    const sb = makeRichMockSupabase();
+    const c = new DiagnosticsClient({ supabase: sb });
+    c.enable({ sessionId: 's-1', playerIndex: 0, playerName: 'H', isHost: true, getPhase: () => null });
+    c.log({ category: 'click', event_type: 'X' });
+    c.log({ category: 'click', event_type: 'Y' });
+    await c.flush();
+    expect(sb.rpcCalls).toEqual([{ name: 'increment_diag_event_count', args: { p_session_id: 's-1', p_delta: 2 } }]);
+  });
+});

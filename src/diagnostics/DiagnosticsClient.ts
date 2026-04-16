@@ -1,14 +1,27 @@
 import { buildEvent, DiagnosticEventInput, DiagnosticEventRow } from './events';
 
+interface InsertResult extends Promise<{ data: any; error: any }> {
+  select?: (cols: string) => { single: () => Promise<{ data: any; error: any }> };
+}
+
 export interface SupabaseLike {
   from(table: string): {
-    insert: (rows: any) => Promise<{ data: any; error: any }>;
+    insert: (rows: any) => InsertResult | Promise<{ data: any; error: any }>;
     update: (patch: any) => { eq: (col: string, val: any) => Promise<{ data: any; error: any }> };
     select: (cols: string) => {
       eq: (col: string, val: any) => { maybeSingle: () => Promise<{ data: any; error: any }> };
     };
   };
   rpc(name: string, args: Record<string, unknown>): Promise<{ data: any; error: any }>;
+}
+
+export interface CreateOrAttachInput {
+  isHost: boolean;
+  lobbyId: string;
+  pin: string;
+  playerCount: number;
+  hostName: string;
+  playerNames: string[];
 }
 
 export interface EnableConfig {
@@ -55,6 +68,30 @@ export class DiagnosticsClient {
     this.enabled = false;
     this.config = null;
     if (this.timer !== null) { clearInterval(this.timer); this.timer = null; }
+  }
+
+  async createOrAttachSession(input: CreateOrAttachInput): Promise<string | null> {
+    if (input.isHost) {
+      const insertResult: any = await this.supabase.from('kred_diagnostic_sessions').insert({
+        lobby_id: input.lobbyId,
+        pin: input.pin,
+        player_count: input.playerCount,
+        host_name: input.hostName,
+        player_names: input.playerNames,
+      });
+      if (insertResult?.data?.id) return insertResult.data.id;
+      if (typeof insertResult?.select === 'function') {
+        const { data } = await insertResult.select('id').single();
+        return data?.id ?? null;
+      }
+      return null;
+    }
+    const { data } = await this.supabase
+      .from('kred_diagnostic_sessions')
+      .select('id')
+      .eq('lobby_id', input.lobbyId)
+      .maybeSingle();
+    return data?.id ?? null;
   }
 
   log(input: DiagnosticEventInput): void {

@@ -73,3 +73,14 @@ CREATE POLICY "Players insert diagnostic events"
                       JOIN kred_players p ON p.lobby_id = s.lobby_id
                       WHERE s.id = kred_diagnostic_events.session_id
                       AND p.user_id = auth.uid()));
+
+-- Atomic event_count increment RPC for host clients after flush.
+CREATE OR REPLACE FUNCTION increment_diag_event_count(p_session_id UUID, p_delta INT)
+RETURNS VOID
+LANGUAGE SQL SECURITY DEFINER AS $$
+  UPDATE kred_diagnostic_sessions
+  SET event_count = event_count + p_delta
+  WHERE id = p_session_id;
+$$;
+
+GRANT EXECUTE ON FUNCTION increment_diag_event_count(UUID, INT) TO authenticated;
