@@ -62,7 +62,10 @@
       "Bash(grep -r \"recordMetric\\\\|incrementCounter\\\\|usePerfSeries\" /c/xampp/htdocs/kred/.worktrees/perf-hardening/dist/assets/*.js)",
       "Bash(grep -r \"PerfOverlay\" /c/xampp/htdocs/kred/dist/assets/*.js)",
       "Bash(grep \"PerfOverlay\\\\|recordMetric\\\\|usePerfSeries\" /c/xampp/htdocs/kred/dist/assets/index-*.js)",
-      "Bash(node --input-type=module /tmp/test-export.mjs)"
+      "Bash(node --input-type=module /tmp/test-export.mjs)",
+      "Bash(node --experimental-vm-modules -e ' *)",
+      "Bash(node test-bundle.mjs)",
+      "Bash(git branch *)"
     ],
     "deny": [],
     "ask": []
