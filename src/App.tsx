@@ -1226,6 +1226,18 @@ const App: React.FC<MultiplayerProps> = ({
   };
 
   const handleEndTurn = () => {
+    // Guard: End-turn is only valid from CAMPAIGN (done moving), TILE_PLAYED, or CORRECTION_REQUIRED.
+    // Prevents spammed "Done Moving" clicks from advancing the turn while in SELECTING_TILE
+    // (or other intermediate states) without a tile being played.
+    if (
+      gameState !== "CAMPAIGN" &&
+      gameState !== "TILE_PLAYED" &&
+      gameState !== "CORRECTION_REQUIRED"
+    ) {
+      console.warn('[handleEndTurn] Ignored — invalid gameState:', gameState);
+      return;
+    }
+
     // NEW WORKFLOW: Handle correction of rejected/challenged tile
     if (gameState === "CORRECTION_REQUIRED" && playedTile) {
       // Use handleCorrectionComplete which calculates moves from actual piece positions
