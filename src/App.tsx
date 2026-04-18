@@ -588,8 +588,10 @@ const App: React.FC<MultiplayerProps> = ({
       showTakeAdvantageModal,
       takeAdvantageChallengerId,
       takeAdvantageChallengerCredibility,
+      bureaucracyStates,
       bureaucracyTurnOrder,
       currentBureaucracyPlayerIndex,
+      challengeResultMessage,
       challengeResultMessagePlayerId,
       pendingChallengerReward,
       bonusMovePlayerId,
@@ -625,10 +627,10 @@ const App: React.FC<MultiplayerProps> = ({
       setShowTakeAdvantageModal(packet.showTakeAdvantageModal);
       setTakeAdvantageChallengerId(packet.takeAdvantageChallengerId);
       setTakeAdvantageChallengerCredibility(packet.takeAdvantageChallengerCredibility);
-      setBureaucracyStates(packet.bureaucracyStates);
-      setBureaucracyTurnOrder(packet.bureaucracyTurnOrder);
-      setCurrentBureaucracyPlayerIndex(packet.currentBureaucracyPlayerIndex);
-      setChallengeResultMessage(packet.challengeResultMessage);
+      setBureaucracyStates(packet.bureaucracyStates ?? []);
+      setBureaucracyTurnOrder(packet.bureaucracyTurnOrder ?? []);
+      setCurrentBureaucracyPlayerIndex(packet.currentBureaucracyPlayerIndex ?? 0);
+      setChallengeResultMessage(packet.challengeResultMessage ?? "");
       setChallengeResultMessagePlayerId(packet.challengeResultMessagePlayerId);
       setPendingChallengerReward(packet.pendingChallengerReward);
       setBonusMovePlayerId(packet.bonusMovePlayerId);
@@ -4158,7 +4160,7 @@ const App: React.FC<MultiplayerProps> = ({
             onFinishTurn={handleFinishBureaucracyTurn}
             onPieceMove={handleBureaucracyPieceMove}
             onPiecePromote={handleBureaucracyPiecePromote}
-            onClearValidationError={handleClearValidationError}
+            onClearValidationError={() => setBureaucracyValidationError(null)}
             onResetAction={handleResetBureaucracyAction}
             onCheckMove={handleCheckBureaucracyMove}
             showMoveCheckResult={showBureaucracyMoveCheckResult}
