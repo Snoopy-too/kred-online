@@ -154,6 +154,9 @@ export default function GameStateSynchronizer({
   const lastPersistedVersionRef = useRef<number>(0);
   const lastPersistedPhaseRef = useRef<string | null>(null);
   const lastSeenActionAtRef = useRef<string>(new Date(0).toISOString());
+  // Host-only: blocks pushes until DB has been checked for existing saved state,
+  // so a host reload doesn't overwrite mid-flow state with fresh-mount defaults.
+  const hostHydratedRef = useRef<boolean>(false);
 
   // ==========================================================================
   // HOST: Push state to guests
@@ -210,6 +213,9 @@ export default function GameStateSynchronizer({
 
   const pushState = useCallback(() => {
     if (!lobbyId || !isHost) return;
+    // Don't push until we've checked DB for existing state, otherwise a host
+    // reload overwrites saved mid-flow state with the fresh-mount defaults.
+    if (!hostHydratedRef.current) return;
 
     const packet = getStatePacketRef.current();
     hostVersionRef.current += 1;
@@ -429,27 +435,35 @@ export default function GameStateSynchronizer({
   // ==========================================================================
 
   useEffect(() => {
-    if (!lobbyId || !isRejoining) return;
+    if (!lobbyId) return;
+    // Guests only hydrate on explicit rejoin. Hosts ALWAYS hydrate on mount so
+    // a host reload mid-flow restores saved state instead of clobbering it with
+    // fresh-mount defaults. hostHydratedRef gates all host pushes until this
+    // check completes.
+    if (!isHost && !isRejoining) return;
 
     const hydrate = async () => {
       const { data } = await supabase
         .from('kred_game_states')
         .select('state_json, version')
         .eq('lobby_id', lobbyId)
-        .single();
+        .maybeSingle();
 
       if (data) {
         const packet = data.state_json as GameStatePacket;
         lastProcessedVersionRef.current = data.version;
         hostVersionRef.current = data.version;
+        lastPersistedVersionRef.current = data.version;
+        lastPersistedPhaseRef.current = packet.gameState ?? null;
         applyStatePacketRef.current(packet);
       }
 
+      if (isHost) hostHydratedRef.current = true;
       onRejoinCompleteRef.current?.();
     };
 
     hydrate();
-  }, [lobbyId, isRejoining]);
+  }, [lobbyId, isHost, isRejoining]);
 
   // Force-flush any pending persist on unmount so rejoin always sees fresh data.
   useEffect(() => {

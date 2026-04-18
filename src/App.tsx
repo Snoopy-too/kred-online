@@ -1494,6 +1494,19 @@ const App: React.FC<MultiplayerProps> = ({
         setPiecesBeforeBonusMove(revertedPieces);
       }
 
+      // Announce the expose result to all players (mirrors the challenge-success banner)
+      const exposedPlayerName = getPlayerNameSimple(
+        getPlayerById(players, playedTile.playerId)
+      );
+      setChallengeResultMessage(
+        `Tile Exposed: ${exposedPlayerName} must now move as per the tile requirements.`
+      );
+      setChallengeResultMessagePlayerId(null);
+      setTimeout(() => {
+        setChallengeResultMessage("");
+        setChallengeResultMessagePlayerId(null);
+      }, 5000);
+
       // Switch to tile player for correction immediately (don't stall in PENDING_ACCEPTANCE)
       const playerIndex = players.findIndex(
         (p) => p.id === playedTile.playerId
