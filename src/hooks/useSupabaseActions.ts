@@ -100,6 +100,8 @@ export function useSupabaseActions() {
     [emitAction]
   );
 
+  const declineAdvantage = useCallback(() => emitAction('ADVANTAGE_DECLINE'), [emitAction]);
+
   const receiverRewardChoice = useCallback(
     (choice: 'credibility' | 'advance') => emitAction('RECEIVER_REWARD', { choice }),
     [emitAction]
@@ -131,6 +133,7 @@ export function useSupabaseActions() {
     completeCorrection,
     selectAdvantageTiles,
     purchaseAdvantage,
+    declineAdvantage,
     receiverRewardChoice,
     purchaseBureaucracy,
     bureaucracyComplete,

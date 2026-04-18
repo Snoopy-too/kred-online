@@ -70,6 +70,7 @@ export interface MultiplayerProps {
     completeCorrection: () => Promise<void>;
     selectAdvantageTiles: (tileIds: string[]) => Promise<void>;
     purchaseAdvantage: (purchase: any) => Promise<void>;
+    declineAdvantage: () => Promise<void>;
     receiverRewardChoice: (choice: 'credibility' | 'advance') => Promise<void>;
     purchaseBureaucracy: (purchase: any) => Promise<void>;
     joinAsSpectator: (roomId: string, name: string) => Promise<void>;
@@ -1474,29 +1475,33 @@ const App: React.FC<MultiplayerProps> = ({
         2
       );
 
+      // Apply credibility gain (receiver gets up to +2 for correct expose)
+      setPlayers(credibilityResult.newPlayers);
+
       if (credibilityResult.hadMaxCredibility) {
-        // Player had 3 credibility, show bonus move modal
-        setBonusMovePlayerId(playedTile.receivingPlayerId);
-        setShowBonusMoveModal(true);
-
-        // Capture the reverted piece state for bonus move reset
-        // Use playedTile.originalPieces because setPieces is async and pieces hasn't updated yet
+        // Receiver already at max credibility — queue a BONUS_MOVE reward to fire
+        // AFTER the tile player finishes correction. handleCorrectionComplete reads
+        // pendingChallengerRewardRef and triggers the modal + BONUS_MOVE state.
+        // (Field is named "challenger" but is reused for the post-correction reward queue.)
+        const reward = {
+          challengerId: playedTile.receivingPlayerId,
+          rewardType: 'BONUS_MOVE' as const,
+          credibility: credibilityResult.newPlayers.find(p => p.id === playedTile.receivingPlayerId)?.credibility ?? 3,
+          receiverId: playedTile.receivingPlayerId,
+        };
+        setPendingChallengerReward(reward);
+        pendingChallengerRewardRef.current = reward;
         setPiecesBeforeBonusMove(revertedPieces);
+      }
 
-        // Don't switch to tile player yet - wait for bonus move to complete
-      } else {
-        // Update players with credibility gain
-        setPlayers(credibilityResult.newPlayers);
-
-        // Switch back to tile player for correction
-        const playerIndex = players.findIndex(
-          (p) => p.id === playedTile.playerId
-        );
-        if (playerIndex !== -1) {
-          setCurrentPlayerIndex(playerIndex);
-          setGameState("CORRECTION_REQUIRED");
-          setMovesThisTurn([]);
-        }
+      // Switch to tile player for correction immediately (don't stall in PENDING_ACCEPTANCE)
+      const playerIndex = players.findIndex(
+        (p) => p.id === playedTile.playerId
+      );
+      if (playerIndex !== -1) {
+        setCurrentPlayerIndex(playerIndex);
+        setGameState("CORRECTION_REQUIRED");
+        setMovesThisTurn([]);
       }
     } else {
       // ACCEPTANCE: Move to challenge phase
@@ -4022,6 +4027,9 @@ const App: React.FC<MultiplayerProps> = ({
         case 'ADVANTAGE_PURCHASE':
           // Guest confirmed a take advantage purchase
           break;
+        case 'ADVANTAGE_DECLINE':
+          handleTakeAdvantageDecline();
+          break;
         case 'RECEIVER_REWARD':
           // Process on host side directly
           break;
@@ -4323,7 +4331,15 @@ const App: React.FC<MultiplayerProps> = ({
             takeAdvantagePurchase={takeAdvantagePurchase}
             takeAdvantageValidationError={takeAdvantageValidationError}
             challengeResultMessagePlayerId={challengeResultMessagePlayerId}
-            onTakeAdvantageDecline={handleTakeAdvantageDecline}
+            onTakeAdvantageDecline={() => {
+              if (isMultiplayer && multiplayerActions) {
+                multiplayerActions.declineAdvantage().catch((err) => {
+                  console.error('[MULTIPLAYER] declineAdvantage failed:', err);
+                });
+              } else {
+                handleTakeAdvantageDecline();
+              }
+            }}
             onTakeAdvantageYes={handleTakeAdvantageYes}
             onRecoverCredibility={handleRecoverCredibility}
             onPurchaseMove={handlePurchaseMove}

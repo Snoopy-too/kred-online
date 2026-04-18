@@ -123,6 +123,7 @@ function KredAppInner() {
               completeCorrection: actions.completeCorrection,
               selectAdvantageTiles: actions.selectAdvantageTiles,
               purchaseAdvantage: actions.purchaseAdvantage,
+              declineAdvantage: actions.declineAdvantage,
               receiverRewardChoice: actions.receiverRewardChoice,
               purchaseBureaucracy: actions.purchaseBureaucracy,
               joinAsSpectator: async () => {},
