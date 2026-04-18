@@ -1548,6 +1548,72 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               )}
             </div>
 
+            {/* Receiver Decision (Accept / Expose) — inline under "Your Turn" box */}
+            {isMyTurnForDecision &&
+              gameState === "PENDING_ACCEPTANCE" &&
+              !isPrivatelyViewing &&
+              !showBonusMoveModal &&
+              receiverAcceptance === null && (() => {
+                const currentPlayer = players.find((p) => p.id === currentPlayerId);
+                const hasZeroCredibility = (currentPlayer?.credibility ?? 3) === 0;
+                const tileUrl = playedTile?.tile?.url || tileTransaction?.tile?.url;
+                const canReject = !hasZeroCredibility && !movesMatchTile;
+                return (
+                  <div className="w-full bg-gray-800/80 backdrop-blur-sm border-2 border-cyan-500/50 rounded-xl p-4 text-center shadow-lg">
+                    <h2 className="text-xl font-bold text-cyan-300 mb-2">Your Decision</h2>
+                    {hasZeroCredibility ? (
+                      <p className="text-red-400 text-sm font-semibold mb-3">
+                        ⚠️ You have 0 Credibility - You must accept this tile!
+                      </p>
+                    ) : (
+                      <p className="text-slate-300 text-sm mb-3">
+                        {`${nameById(playedTile?.playerId || tileTransaction?.placerId)} has played a tile to you.`}
+                      </p>
+                    )}
+                    {hasZeroCredibility ? (
+                      <div className="mb-3">
+                        <div className="w-20 h-20 mx-auto bg-gray-700 rounded-lg flex items-center justify-center border-2 border-gray-500">
+                          <span className="text-gray-400 text-xs text-center">Hidden<br/>(0 Credibility)</span>
+                        </div>
+                        <p className="text-red-400 text-xs mt-1 font-semibold">You may not view tiles</p>
+                      </div>
+                    ) : tileUrl ? (
+                      <div className="mb-3">
+                        <img
+                          src={tileUrl}
+                          alt="Played tile"
+                          className="w-24 h-24 mx-auto rounded-lg border-2 border-cyan-400 shadow-lg"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="flex flex-col gap-2">
+                      {canReject && (
+                        <button
+                          onClick={() =>
+                            playedTile
+                              ? onReceiverAcceptanceDecision(false)
+                              : onReceiverDecision("reject")
+                          }
+                          className="w-full px-4 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md"
+                        >
+                          Expose
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          playedTile
+                            ? onReceiverAcceptanceDecision(true)
+                            : onReceiverDecision("accept")
+                        }
+                        className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md"
+                      >
+                        Accept Tile
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
             {/* Action Buttons (only for mover / correcting player / free advance receiver) */}
             {(isMover || isCorrecting || isFreeAdvancer) && (
             <div id="campaign-action-buttons" className="flex flex-col gap-2">
@@ -1691,105 +1757,6 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
           </div>
         </div>
       )}
-
-      {/* Receiver Decision Modal (when not privately viewing) */}
-      {isMyTurnForDecision &&
-        gameState === "PENDING_ACCEPTANCE" &&
-        !isPrivatelyViewing &&
-        !showBonusMoveModal &&
-        receiverAcceptance === null && (
-          <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 p-4">
-            <div className="bg-gray-800/80 backdrop-blur-md border-2 border-cyan-500/50 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full pointer-events-auto">
-              <h2 className="text-3xl font-bold text-cyan-300 mb-2">
-                Your Decision
-              </h2>
-              {(() => {
-                const currentPlayer = players.find(
-                  (p) => p.id === currentPlayerId
-                );
-                const hasZeroCredibility =
-                  (currentPlayer?.credibility ?? 3) === 0;
-                if (hasZeroCredibility) {
-                  return (
-                    <p className="text-red-400 font-semibold mb-4">
-                      ⚠️ You have 0 Credibility - You must accept this tile!
-                    </p>
-                  );
-                }
-                return (
-                  <p className="text-slate-300 mb-4">{`${nameById(playedTile?.playerId || tileTransaction?.placerId)
-                    } has played a tile to you.`}</p>
-                );
-              })()}
-              {/* Show the played tile image to receiver */}
-              {(() => {
-                const currentPlayer = players.find(
-                  (p) => p.id === currentPlayerId
-                );
-                const hasZeroCredibility =
-                  (currentPlayer?.credibility ?? 3) === 0;
-                const tileUrl = playedTile?.tile?.url || tileTransaction?.tile?.url;
-                if (hasZeroCredibility) {
-                  return (
-                    <div className="mb-4">
-                      <div className="w-24 h-24 mx-auto bg-gray-700 rounded-lg flex items-center justify-center border-2 border-gray-500">
-                        <span className="text-gray-400 text-xs text-center">Hidden<br/>(0 Credibility)</span>
-                      </div>
-                      <p className="text-red-400 text-sm mt-2 font-semibold">
-                        You may not view tiles
-                      </p>
-                    </div>
-                  );
-                }
-                if (tileUrl) {
-                  return (
-                    <div className="mb-4">
-                      <img
-                        src={tileUrl}
-                        alt="Played tile"
-                        className="w-28 h-28 mx-auto rounded-lg border-2 border-cyan-400 shadow-lg"
-                      />
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-                {(() => {
-                  const currentPlayer = players.find(
-                    (p) => p.id === currentPlayerId
-                  );
-                  const hasZeroCredibility =
-                    (currentPlayer?.credibility ?? 3) === 0;
-                  const canReject = !hasZeroCredibility && !movesMatchTile;
-                  if (!canReject) return null;
-                  return (
-                    <button
-                      onClick={() =>
-                        playedTile
-                          ? onReceiverAcceptanceDecision(false)
-                          : onReceiverDecision("reject")
-                      }
-                      className="px-6 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md w-full sm:w-auto"
-                    >
-                      Expose
-                    </button>
-                  );
-                })()}
-                <button
-                  onClick={() =>
-                    playedTile
-                      ? onReceiverAcceptanceDecision(true)
-                      : onReceiverDecision("accept")
-                  }
-                  className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md w-full sm:w-auto"
-                >
-                  Accept Tile
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       {/* Receiver Reward Choice Modal (after exposing a dishonest play) */}
       {pendingReceiverReward && onReceiverRewardChoice && 
