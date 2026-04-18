@@ -18,6 +18,7 @@
  */
 
 import React from "react";
+import { flushSync } from "react-dom";
 import type { Player, Tile } from "../../types";
 
 interface DraftingScreenProps {
@@ -48,6 +49,42 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
     myPlayer = players[currentPlayerIndex];
   }
 
+  // availableTiles = tiles that can be selected right now (current hand)
+  // hand = tiles that have been selected (keptTiles)
+  const availableTiles = Array.isArray(myPlayer?.hand) ? myPlayer.hand : [];
+  const hand = Array.isArray(myPlayer?.keptTiles) ? myPlayer.keptTiles : [];
+
+  // Optimistic pending state: tile the user just clicked, awaiting server sync.
+  // Gives instant visual feedback and prevents spam-clicks while the host is
+  // processing the pick and broadcasting the updated hand.
+  const [pendingTileId, setPendingTileId] = React.useState<Tile['id'] | null>(null);
+
+  // Clear pending once the selected tile is no longer in the hand (server confirmed).
+  React.useEffect(() => {
+    if (pendingTileId == null) return;
+    if (!availableTiles.some((t) => t.id === pendingTileId)) {
+      setPendingTileId(null);
+    }
+  }, [availableTiles, pendingTileId]);
+
+  // Safety timeout: never leave the UI locked forever if a network hiccup
+  // eats the confirming broadcast. 5s is well past normal sync (~100ms host, ~500ms guest).
+  React.useEffect(() => {
+    if (pendingTileId == null) return;
+    const timer = setTimeout(() => setPendingTileId(null), 5000);
+    return () => clearTimeout(timer);
+  }, [pendingTileId]);
+
+  const handleTileClick = (tile: Tile) => {
+    if (pendingTileId != null) return; // click-lock: another pick already in flight
+    // flushSync forces React to commit + paint the pending state before running
+    // onSelectTile. Without it, React batches this update with the expensive
+    // setPlayers that onSelectTile ultimately triggers, and the user sees no
+    // feedback until the slow render finishes — the "screen freeze" symptom.
+    flushSync(() => setPendingTileId(tile.id));
+    onSelectTile(tile);
+  };
+
   if (!myPlayer || typeof myPlayer !== 'object') {
     console.error('[DRAFTING] myPlayer is undefined or invalid:', { players, playerIndex, currentPlayerIndex });
     return (
@@ -61,11 +98,6 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
       </main>
     );
   }
-
-  // availableTiles = tiles that can be selected right now (current hand)
-  // hand = tiles that have been selected (keptTiles)
-  const availableTiles = Array.isArray(myPlayer.hand) ? myPlayer.hand : [];
-  const hand = Array.isArray(myPlayer.keptTiles) ? myPlayer.keptTiles : [];
 
   // In multiplayer, detect if this player already picked this round
   const maxHandSize = isMultiplayer ? Math.max(...players.map(p => (p.hand?.length || 0))) : 0;
@@ -197,25 +229,39 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
           Available Tiles ({availableTiles.length} tiles)
         </h3>
         <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
-          {availableTiles.map((tile) => (
-            <button
-              key={tile.id}
-              onClick={() => {
-                console.log('[DRAFTING] Tile clicked:', tile.id);
-                onSelectTile(tile);
-              }}
-              className="transition-transform duration-200 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 rounded-lg group"
-              aria-label={`Select tile ${tile.id}`}
-            >
-              <div className="bg-stone-100 w-16 h-32 sm:w-20 sm:h-40 p-1 rounded-lg shadow-lg border-2 border-gray-300 group-hover:border-cyan-400 transition-colors flex items-center justify-center">
-                <img
-                  src={tile.url}
-                  alt={`Tile ${tile.id}`}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </button>
-          ))}
+          {availableTiles.map((tile) => {
+            const isPending = pendingTileId === tile.id;
+            const isLocked = pendingTileId != null && !isPending;
+            const buttonClasses = [
+              'relative transition-all duration-200 rounded-lg group focus:outline-none focus:ring-4 focus:ring-cyan-500/50',
+              !pendingTileId && 'hover:scale-105',
+              isPending && 'scale-110 ring-4 ring-cyan-400 cursor-wait',
+              isLocked && 'opacity-40 cursor-not-allowed',
+            ].filter(Boolean).join(' ');
+            return (
+              <button
+                key={tile.id}
+                onClick={() => handleTileClick(tile)}
+                disabled={pendingTileId != null}
+                aria-busy={isPending}
+                className={buttonClasses}
+                aria-label={`Select tile ${tile.id}`}
+              >
+                <div className="bg-stone-100 w-16 h-32 sm:w-20 sm:h-40 p-1 rounded-lg shadow-lg border-2 border-gray-300 group-hover:border-cyan-400 transition-colors flex items-center justify-center">
+                  <img
+                    src={tile.url}
+                    alt={`Tile ${tile.id}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                {isPending && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-cyan-500/30 backdrop-blur-[1px] pointer-events-none">
+                    <div className="w-8 h-8 border-4 border-cyan-300 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

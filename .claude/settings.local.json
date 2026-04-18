@@ -66,7 +66,8 @@
       "Bash(node --experimental-vm-modules -e ' *)",
       "Bash(node test-bundle.mjs)",
       "Bash(git branch *)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(git rm *)"
     ],
     "deny": [],
     "ask": []
