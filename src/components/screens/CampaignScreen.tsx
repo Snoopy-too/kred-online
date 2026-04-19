@@ -1619,6 +1619,56 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 );
               })()}
 
+            {/* Challenger Decision (Challenge / Pass) — inline under "Your Turn" box */}
+            {isMyTurnForDecision &&
+              gameState === "PENDING_CHALLENGE" &&
+              !showTakeAdvantageModal &&
+              !showBonusMoveModal && (() => {
+                const currentPlayer = players.find((p) => p.id === currentPlayerId);
+                const hasZeroCredibility = (currentPlayer?.credibility ?? 3) === 0;
+                return (
+                  <div className="w-full bg-gray-800/80 backdrop-blur-sm border-2 border-cyan-500/50 rounded-xl p-4 text-center shadow-lg">
+                    <h2 className="text-xl font-bold text-cyan-300 mb-2">Challenge or Pass?</h2>
+                    {hasZeroCredibility ? (
+                      <p className="text-red-400 text-sm font-semibold mb-3">
+                        ⚠️ You have 0 Credibility - You can only Pass!
+                      </p>
+                    ) : (
+                      <p className="text-slate-300 text-sm mb-3">
+                        {`${nameById(playedTile?.receivingPlayerId || tileTransaction?.receiverId)} accepted the tile from ${nameById(playedTile?.playerId || tileTransaction?.placerId)}.`}
+                      </p>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() =>
+                          playedTile
+                            ? onChallengerDecision(true)
+                            : onBystanderDecision("challenge")
+                        }
+                        disabled={hasZeroCredibility}
+                        className={`w-full px-4 py-2 font-semibold rounded-lg transition-colors shadow-md ${
+                          hasZeroCredibility
+                            ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
+                            : "bg-red-700 text-white hover:bg-red-600"
+                        }`}
+                      >
+                        Challenge
+                      </button>
+                      <button
+                        onClick={() =>
+                          playedTile
+                            ? onChallengerDecision(false)
+                            : onBystanderDecision("pass")
+                        }
+                        className="w-full px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md"
+                      >
+                        Pass
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
             {/* Action Buttons (only for mover / correcting player / free advance receiver) */}
             {(isMover || isCorrecting || isFreeAdvancer) && (
             <div id="campaign-action-buttons" className="flex flex-col gap-2">
@@ -1860,75 +1910,6 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
               >
                 Free Advance
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bystander Challenge Modal */}
-      {isMyTurnForDecision && gameState === "PENDING_CHALLENGE" && !showTakeAdvantageModal && !showBonusMoveModal && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4"
-          aria-modal="true"
-          role="dialog"
-        >
-          <div className="bg-gray-800 border-2 border-cyan-500 p-6 sm:p-8 rounded-xl text-center shadow-2xl max-w-md w-full">
-            <h2 className="text-3xl font-bold text-cyan-300 mb-2">
-              Challenge or Pass?
-            </h2>
-            {(() => {
-              const currentPlayer = players.find(
-                (p) => p.id === currentPlayerId
-              );
-              const hasZeroCredibility =
-                (currentPlayer?.credibility ?? 3) === 0;
-              if (hasZeroCredibility) {
-                return (
-                  <p className="text-red-400 font-semibold mb-4">
-                    ⚠️ You have 0 Credibility - You can only Pass!
-                  </p>
-                );
-              }
-              return (
-                <p className="text-slate-300 mb-6">{`${nameById(playedTile?.receivingPlayerId || tileTransaction?.receiverId)
-                  } accepted the tile from ${nameById(playedTile?.playerId || tileTransaction?.placerId)
-                  }.`}</p>
-              );
-            })()}
-            <div className="flex justify-center items-center gap-4">
-              {(() => {
-                const currentPlayer = players.find(
-                  (p) => p.id === currentPlayerId
-                );
-                const hasZeroCredibility =
-                  (currentPlayer?.credibility ?? 3) === 0;
-                return (
-                  <button
-                    onClick={() =>
-                      playedTile
-                        ? onChallengerDecision(true)
-                        : onBystanderDecision("challenge")
-                    }
-                    disabled={hasZeroCredibility}
-                    className={`px-6 py-2 font-semibold rounded-lg transition-colors shadow-md ${hasZeroCredibility
-                        ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
-                        : "bg-red-600 text-white hover:bg-red-500"
-                      }`}
-                  >
-                    Challenge
-                  </button>
-                );
-              })()}
-              <button
-                onClick={() =>
-                  playedTile
-                    ? onChallengerDecision(false)
-                    : onBystanderDecision("pass")
-                }
-                className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md"
-              >
-                Pass
               </button>
             </div>
           </div>
