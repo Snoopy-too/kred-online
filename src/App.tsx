@@ -66,6 +66,7 @@ export interface MultiplayerProps {
     viewTilePrivate: () => Promise<void>;
     initiateChallenge: () => Promise<void>;
     passChallenge: () => Promise<void>;
+    continueAfterChallengeReveal: () => Promise<void>;
     completeBonusMove: () => Promise<void>;
     completeCorrection: () => Promise<void>;
     selectAdvantageTiles: (tileIds: string[]) => Promise<void>;
@@ -330,7 +331,6 @@ const App: React.FC<MultiplayerProps> = ({
     showAlert: originalShowAlert,
     closeAlert,
     showChallengeResult,
-    showTargetedChallengeResult,
     clearChallengeResult,
     setAlertModal,
     setChallengeResultMessage,
@@ -585,6 +585,8 @@ const App: React.FC<MultiplayerProps> = ({
       challengeOrder,
       currentChallengerIndex,
       tileRejected,
+      showChallengeRevealModal,
+      challengedTile,
       showTakeAdvantageModal,
       takeAdvantageChallengerId,
       takeAdvantageChallengerCredibility,
@@ -624,6 +626,8 @@ const App: React.FC<MultiplayerProps> = ({
       setChallengeOrder(packet.challengeOrder);
       setCurrentChallengerIndex(packet.currentChallengerIndex);
       setTileRejected(packet.tileRejected);
+      setShowChallengeRevealModal(!!packet.showChallengeRevealModal);
+      setChallengedTile(packet.challengedTile ?? null);
       setShowTakeAdvantageModal(packet.showTakeAdvantageModal);
       setTakeAdvantageChallengerId(packet.takeAdvantageChallengerId);
       setTakeAdvantageChallengerCredibility(packet.takeAdvantageChallengerCredibility);
@@ -653,7 +657,8 @@ const App: React.FC<MultiplayerProps> = ({
     currentPlayerIndex, playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn,
     tileTransaction, moverPlayerIndex, campaignRole, tileRevealed,
     pendingReceiverReward, receiverAdvanceInProgress, bystanders, bystanderIndex,
-    challengeOrder, currentChallengerIndex, tileRejected, showTakeAdvantageModal,
+    challengeOrder, currentChallengerIndex, tileRejected,
+    showChallengeRevealModal, challengedTile, showTakeAdvantageModal,
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
@@ -1496,12 +1501,12 @@ const App: React.FC<MultiplayerProps> = ({
         setPiecesBeforeBonusMove(revertedPieces);
       }
 
-      // Announce the expose result to all players (mirrors the challenge-success banner)
+      // Announce the whistle-blown result to all players (mirrors the challenge-success banner)
       const exposedPlayerName = getPlayerNameSimple(
         getPlayerById(players, playedTile.playerId)
       );
       setChallengeResultMessage(
-        `Tile Exposed: ${exposedPlayerName} must now move as per the tile requirements.`
+        `Whistle Blown: ${exposedPlayerName} must now move as per the tile requirements.`
       );
       setChallengeResultMessagePlayerId(null);
       setTimeout(() => {
@@ -1686,11 +1691,57 @@ const App: React.FC<MultiplayerProps> = ({
 
   /**
    * Handle challenger's decision (challenge or pass)
+   *
+   * For "challenge", we DON'T resolve immediately. Instead we reveal the tile
+   * face-up to all players via the challenge-reveal modal. Resolution runs
+   * when the challenger clicks Continue (handleContinueAfterChallengeReveal).
    */
   const handleChallengerDecision = (challenge: boolean) => {
     if (!playedTile) return;
 
     if (challenge) {
+      // Reveal the played tile to all players, then defer resolution until the
+      // challenger clicks Continue. Tile object reconstructed from the tileId
+      // (matches the pattern used in pieceMovementHandlers).
+      const tileId = parseInt(playedTile.tileId);
+      setChallengedTile({
+        id: tileId,
+        url: `./images/${playedTile.tileId}.svg`,
+      });
+      setShowChallengeRevealModal(true);
+      return;
+    }
+
+    // PASS path falls through to original logic below.
+    // (Resolution-on-challenge logic moved to resolveChallengeAfterReveal.)
+    handleChallengerPass();
+  };
+
+  /**
+   * Handle the "pass" branch of challenger decision (extracted so the
+   * challenge branch can defer until the reveal modal is dismissed).
+   */
+  const handleChallengerPass = () => {
+    if (!playedTile) return;
+    const nextChallengerIndex = currentChallengerIndex + 1;
+    if (nextChallengerIndex >= challengeOrder.length) {
+      finalizeTilePlay(false, null);
+    } else {
+      const nextChallengerId = challengeOrder[nextChallengerIndex];
+      const nextPlayerIndex = players.findIndex((p) => p.id === nextChallengerId);
+      setCurrentChallengerIndex(nextChallengerIndex);
+      setCurrentPlayerIndex(nextPlayerIndex);
+    }
+  };
+
+  /**
+   * Resolve a challenge after the reveal modal is dismissed.
+   * Computes outcome, applies credibility, queues Take Advantage if applicable,
+   * and transitions to the correction phase or finalizes the tile play.
+   */
+  const resolveChallengeAfterReveal = () => {
+    if (!playedTile) return;
+    {
       // CHALLENGED: Use exact same logic as Check Move to verify if tile player met requirements perfectly
       const calculatedMoves = calculateMoves(
         playedTile.originalPieces,
@@ -1733,10 +1784,12 @@ const App: React.FC<MultiplayerProps> = ({
         const challengedPlayerName = getPlayerNameSimple(
           getPlayerById(players, playedTile.playerId)
         );
-        showTargetedChallengeResult(
-          `Challenge Failed: ${challengedPlayerName} played the tile perfectly.`,
-          challengerId
+        // Broadcast to all players (not just the challenger) so everyone
+        // sees the outcome of the challenge.
+        setChallengeResultMessage(
+          `Challenge Failed: ${challengerName} challenged, but ${challengedPlayerName} played the tile perfectly.`
         );
+        setChallengeResultMessagePlayerId(null);
 
         // Challenger loses 1 credibility for unsuccessful challenge (applied in finalizeTilePlay)
         addCredibilityLossLog(
@@ -1770,10 +1823,10 @@ const App: React.FC<MultiplayerProps> = ({
         // React batches setState calls, so we must calculate all changes BEFORE calling setPlayers
         // Otherwise, later calls would read stale state and overwrite earlier changes
         //
-        // Credibility Changes on Successful Challenge:
+        // Credibility Changes on Successful Challenge (MANUAL.md §5.3 "Smoking Gun"):
         //   1. Tile player loses 1 credibility (failed challenge)
         //   2. Receiver loses 1 credibility (if they accepted a bad tile)
-        //   3. Challenger gains up to 2 credibility (successful challenge)
+        //   3. Challenger restores 1 credibility (OR may use Take Advantage)
         //
         // By chaining: players → updatedPlayers → finalPlayers
         // We ensure each change builds on the previous one
@@ -1796,52 +1849,14 @@ const App: React.FC<MultiplayerProps> = ({
 
         const credibilityResult = handleCredibilityGain(
           challengerId,
-          2,
+          1,
           updatedPlayers
         );
         finalPlayers = credibilityResult.newPlayers;
 
-        // Check if challenger had max credibility (same as receiver bonus move)
-        if (credibilityResult.hadMaxCredibility) {
-          // Challenger already had 3 credibility, queue bonus move for AFTER correction
-          const reward = {
-            challengerId,
-            rewardType: 'BONUS_MOVE' as const,
-            credibility: credibilityResult.newPlayers.find(p => p.id === challengerId)?.credibility ?? 3,
-            receiverId: playedTile.receivingPlayerId
-          };
-          setPendingChallengerReward(reward);
-          pendingChallengerRewardRef.current = reward;
-          
-          setPlayers(finalPlayers);
-          
-          addCredibilityLossLog(
-            playedTile.playerId,
-            "Challenge succeeded - tile did not meet requirements"
-          );
-
-          if (receiverAcceptance === true) {
-            addCredibilityLossLog(
-              playedTile.receivingPlayerId,
-              "Accepted a tile that was successfully challenged"
-            );
-          }
-
-          const challenger = getPlayerById(finalPlayers, challengerId);
-          const challengerName = challenger
-            ? getPlayerName(challenger, challengerId)
-            : "Player";
-          addGameLog(
-            `${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0})`
-          );
-
-          // Proceed to correction phase (reward is queued)
-        transitionToCorrectionPhase();
-        return;
-        }
-
-        // No bonus move - proceed with normal successful challenge flow
-        // Step 2: Apply the final result in one setState call
+        // Bonus advance is reserved for the Receiver who blows the whistle
+        // (per MANUAL.md §5.3 "Whistle Blown"). A successful challenger gets
+        // +1 credibility (or may opt into Take Advantage instead).
         setPlayers(finalPlayers);
 
         // Add logs after state update
@@ -1919,23 +1934,17 @@ const App: React.FC<MultiplayerProps> = ({
           setChallengeResultMessagePlayerId(null);
         }, 5000);
       }
-    } else {
-      // PASS: Move to next challenger or finalize
-      const nextChallengerIndex = currentChallengerIndex + 1;
-
-      if (nextChallengerIndex >= challengeOrder.length) {
-        // No more challengers, finalize
-        finalizeTilePlay(false, null);
-      } else {
-        // Move to next challenger
-        const nextChallengerId = challengeOrder[nextChallengerIndex];
-        const nextChallengerIndex_PlayerIndex = players.findIndex(
-          (p) => p.id === nextChallengerId
-        );
-        setCurrentChallengerIndex(nextChallengerIndex);
-        setCurrentPlayerIndex(nextChallengerIndex_PlayerIndex);
-      }
     }
+  };
+
+  /**
+   * Handle the Continue button click on the challenge-reveal modal.
+   * Hides the modal and runs the deferred challenge resolution.
+   */
+  const handleContinueAfterChallengeReveal = () => {
+    setShowChallengeRevealModal(false);
+    setChallengedTile(null);
+    resolveChallengeAfterReveal();
   };
 
   // Wrap challenger decision for multiplayer
@@ -1952,6 +1961,19 @@ const App: React.FC<MultiplayerProps> = ({
       handleChallengerDecision(challenge);
     }
   }, [isMultiplayer, multiplayerActions, playedTile, handleChallengerDecision]);
+
+  // Wrap continue-after-challenge-reveal for multiplayer
+  const wrappedContinueAfterChallengeReveal = React.useCallback(async () => {
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.continueAfterChallengeReveal();
+      } catch (error: any) {
+        console.error('[MULTIPLAYER] Continue-after-challenge-reveal failed:', error);
+      }
+    } else {
+      handleContinueAfterChallengeReveal();
+    }
+  }, [isMultiplayer, multiplayerActions, handleContinueAfterChallengeReveal]);
 
   /**
    * Finalize tile play - determine who keeps the tile and next player
@@ -4029,6 +4051,9 @@ const App: React.FC<MultiplayerProps> = ({
         case 'CHALLENGER_DECISION':
           handleChallengerDecision(action.payload.challenge);
           break;
+        case 'CONTINUE_AFTER_CHALLENGE_REVEAL':
+          handleContinueAfterChallengeReveal();
+          break;
         case 'COMPLETE_BONUS_MOVE':
           handleBonusMoveComplete();
           break;
@@ -4296,7 +4321,18 @@ const App: React.FC<MultiplayerProps> = ({
             onReceiverDecision={handleReceiverDecision}
             onBystanderDecision={handleBystanderDecision}
             onTogglePrivateView={handleTogglePrivateView}
-            onContinueAfterChallenge={handleContinueAfterChallenge}
+            onContinueAfterChallenge={
+              // New flow uses playedTile; legacy bystander flow uses tileTransaction.
+              // Route to the right resolver so the same modal works for both.
+              playedTile
+                ? wrappedContinueAfterChallengeReveal
+                : handleContinueAfterChallenge
+            }
+            challengeRevealCanContinue={
+              !isMultiplayer ||
+              (playedTile != null &&
+                challengeOrder[currentChallengerIndex] === playerIndex + 1)
+            }
             onPlacerViewTile={handlePlacerViewTile}
             onSetGiveReceiverViewingTileId={setGiveReceiverViewingTileId}
             tileRevealed={tileRevealed}

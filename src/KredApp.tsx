@@ -119,6 +119,7 @@ function KredAppInner() {
               viewTilePrivate: actions.viewTilePrivate,
               initiateChallenge: actions.initiateChallenge,
               passChallenge: actions.passChallenge,
+              continueAfterChallengeReveal: actions.continueAfterChallengeReveal,
               completeBonusMove: actions.completeBonusMove,
               completeCorrection: actions.completeCorrection,
               selectAdvantageTiles: actions.selectAdvantageTiles,

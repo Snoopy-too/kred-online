@@ -169,6 +169,10 @@ interface CampaignScreenProps {
   onBystanderDecision: (decision: "challenge" | "pass") => void;
   onTogglePrivateView: () => void;
   onContinueAfterChallenge: () => void;
+  /** True when the local player is allowed to dismiss the challenge-reveal modal.
+   *  Single-player → always true. Multiplayer → only the challenger.
+   */
+  challengeRevealCanContinue?: boolean;
   onPlacerViewTile: (tileId: string) => void;
   onSetGiveReceiverViewingTileId: (tileId: string | null) => void;
   playedTile?: {
@@ -292,6 +296,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   onBystanderDecision,
   onTogglePrivateView,
   onContinueAfterChallenge,
+  challengeRevealCanContinue = true,
   onPlacerViewTile,
   onSetGiveReceiverViewingTileId,
   playedTile,
@@ -836,7 +841,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
           : { text: 'Move pieces and pass a tile.', color: 'bg-green-700' };
       }
       case 'receiver':
-        return { text: 'You received a tile — Accept or Expose?', color: 'bg-blue-700' };
+        return { text: 'You received a tile — Accept or Blow Whistle?', color: 'bg-blue-700' };
       case 'challenger':
         return { text: 'Your turn to Challenge or Pass', color: 'bg-orange-700' };
       case 'correcting':
@@ -1548,7 +1553,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               )}
             </div>
 
-            {/* Receiver Decision (Accept / Expose) — inline under "Your Turn" box */}
+            {/* Receiver Decision (Accept / Blow Whistle) — inline under "Your Turn" box */}
             {isMyTurnForDecision &&
               gameState === "PENDING_ACCEPTANCE" &&
               !isPrivatelyViewing &&
@@ -1596,7 +1601,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                           }
                           className="w-full px-4 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md"
                         >
-                          Expose
+                          Blow Whistle
                         </button>
                       )}
                       <button
@@ -1660,7 +1665,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 </div>
               )}
               <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
-                {(viewingPlayer?.keptTiles?.length > 0 ? viewingPlayer.keptTiles : viewingPlayer?.hand)?.map((tile) => {
+                {(viewingPlayer?.keptTiles ?? []).map((tile) => {
                   const tileKey = tile.id === 0 ? "BLANK" : tile.id.toString().padStart(2, "0");
                   const isHonestMatch = matchingTileIds.includes(tileKey);
                   const canDragTile = gameState === "SELECTING_TILE" && isMyTurn;
@@ -1687,6 +1692,44 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               </div>
             </div>
 
+            {/* Other Players' Tile Counts — face-down tile icons show how many tiles each opponent holds */}
+            {(() => {
+              const others = players.filter(p => p.id !== viewingPlayer?.id);
+              if (others.length === 0) return null;
+              return (
+                <div id="campaign-other-players-tiles" className="w-full bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl px-4 py-3 shadow-md">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 text-center">
+                    Other Players' Tiles
+                  </h3>
+                  <div className="flex flex-col gap-2">
+                    {others.map(p => {
+                      const count = p.keptTiles?.length ?? 0;
+                      const colors = PLAYER_COLORS[p.id] || PLAYER_COLORS[1];
+                      return (
+                        <div key={p.id} className="flex items-center justify-between gap-2">
+                          <span className={`text-sm font-semibold ${colors.indicator} truncate flex-shrink min-w-0`}>
+                            {p.name || `Player ${p.id}`}
+                          </span>
+                          <div className="flex flex-row gap-0.5 flex-wrap justify-end">
+                            {count === 0 ? (
+                              <span className="text-xs text-slate-500 italic">none</span>
+                            ) : (
+                              Array.from({ length: count }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="w-3 h-6 bg-white rounded-sm border border-gray-400 shadow-sm"
+                                  title={`Tile ${i + 1}`}
+                                />
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Bonus Move Notification */}
             {(gameState === "BONUS_MOVE" || (showBonusMoveModal && bonusMovePlayerId !== null)) && (!isMultiplayer || bonusMovePlayerId === currentPlayerId) && (
@@ -1739,7 +1782,7 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
               CHALLENGED!
             </h2>
             <p className="text-slate-300 mb-4">
-              The placed tile has been revealed to all players.
+              The placed tile is revealed to all players as evidence.
             </p>
             <div className="bg-stone-100 w-20 h-40 p-1 rounded-lg shadow-lg border-2 border-gray-300 mx-auto mb-6">
               <img
@@ -1748,12 +1791,18 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                 className="w-full h-full object-contain"
               />
             </div>
-            <button
-              onClick={onContinueAfterChallenge}
-              className="px-8 py-3 bg-indigo-600 text-white font-bold text-lg rounded-lg hover:bg-indigo-500 transition-colors shadow-md hover:shadow-lg"
-            >
-              Continue
-            </button>
+            {challengeRevealCanContinue ? (
+              <button
+                onClick={onContinueAfterChallenge}
+                className="px-8 py-3 bg-indigo-600 text-white font-bold text-lg rounded-lg hover:bg-indigo-500 transition-colors shadow-md hover:shadow-lg"
+              >
+                Continue
+              </button>
+            ) : (
+              <p className="text-sm text-slate-400 italic">
+                Waiting for challenger to continue…
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -1768,10 +1817,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
         >
           <div className="bg-gray-800 border-2 border-green-500 rounded-lg p-8 max-w-md w-full shadow-2xl">
             <h2 className="text-3xl font-bold text-green-400 mb-4 text-center">
-              Expose Successful!
+              Whistle Blown!
             </h2>
             <p className="text-slate-200 text-lg mb-2 text-center leading-relaxed">
-              You exposed a dishonest play. Choose your reward:
+              You blew the whistle on a dishonest play. Choose your reward:
             </p>
             {(() => {
               const receiver = players.find(p => p.id === currentPlayerId);

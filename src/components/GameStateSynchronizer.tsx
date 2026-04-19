@@ -64,6 +64,8 @@ export interface GameStatePacket {
   challengeOrder: number[];
   currentChallengerIndex: number;
   tileRejected: boolean;
+  showChallengeRevealModal: boolean;
+  challengedTile: { id: number; url: string } | null;
 
   // Take advantage
   showTakeAdvantageModal: boolean;

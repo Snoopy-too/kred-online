@@ -184,6 +184,12 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
   if (!visible) return null;
 
   const isFailed = !!message && message.includes("Failed");
+  const isWhistle = !!message && message.includes("Whistle Blown");
+  const heading = isFailed
+    ? "✓ Challenge Failed"
+    : isWhistle
+      ? "⚠️ Whistle Blown"
+      : "⚠️ Challenge Successful";
 
   return (
     <div
@@ -198,9 +204,7 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
             : "bg-orange-900 border-orange-500 text-orange-300"
         }`}
       >
-        <h2 className="text-2xl font-bold mb-2">
-          {isFailed ? "✓ Challenge Failed" : "⚠️ Challenge Successful"}
-        </h2>
+        <h2 className="text-2xl font-bold mb-2">{heading}</h2>
         <p className="text-lg mb-4">{message}</p>
         {onClose && (
           <button

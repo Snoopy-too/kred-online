@@ -86,6 +86,10 @@ export function useSupabaseActions() {
 
   const initiateChallenge = useCallback(() => emitAction('CHALLENGER_DECISION', { challenge: true }), [emitAction]);
   const passChallenge = useCallback(() => emitAction('CHALLENGER_DECISION', { challenge: false }), [emitAction]);
+  const continueAfterChallengeReveal = useCallback(
+    () => emitAction('CONTINUE_AFTER_CHALLENGE_REVEAL'),
+    [emitAction]
+  );
 
   const completeBonusMove = useCallback(() => emitAction('COMPLETE_BONUS_MOVE'), [emitAction]);
   const completeCorrection = useCallback(() => emitAction('COMPLETE_CORRECTION'), [emitAction]);
@@ -129,6 +133,7 @@ export function useSupabaseActions() {
     viewTilePrivate,
     initiateChallenge,
     passChallenge,
+    continueAfterChallengeReveal,
     completeBonusMove,
     completeCorrection,
     selectAdvantageTiles,
