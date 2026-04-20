@@ -8,6 +8,8 @@ import App from './App';
 import { PerfOverlay } from './perf';
 import { DiagnosticsProvider, useDiagnostics } from './diagnostics';
 
+import { GameProviders } from './providers/GameProviders';
+
 type ActionPayload = { type: string; playerId: string; payload: any };
 
 function PhaseLogger({ currentPhase }: { currentPhase: string | null }) {
@@ -91,7 +93,7 @@ function KredAppInner() {
 
       {/* Game is active */}
       {lobbyId && lobbyStatus !== 'WAITING' && (
-        <>
+        <GameProviders>
           <GameStateSynchronizer
             getStatePacket={() => getStatePacketRef.current()}
             applyStatePacket={(packet) => applyStatePacketRef.current(packet)}
@@ -135,7 +137,7 @@ function KredAppInner() {
             setActionDispatch={isHost ? setActionDispatch : undefined}
             onPhaseChange={handlePhaseChange}
           />
-        </>
+        </GameProviders>
       )}
 
       <PerfOverlay />
