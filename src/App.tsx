@@ -46,7 +46,7 @@ export interface MultiplayerProps {
 }
 
 const App: React.FC<MultiplayerProps> = (props) => {
-  const { isMultiplayer = false, isHost = false, playerIndex, multiplayerActions, setActionDispatch, playerNames, onPhaseChange, onLegacyStateChange, applyStatePacketRef, pushStateRef } = props;
+  const { isMultiplayer = false, isHost = false, playerIndex, multiplayerActions, setActionDispatch, playerNames, onPhaseChange, onLegacyStateChange, applyStatePacketRef, pushStateRef, playerCount: multiplayerPlayerCount, skipDraft: multiplayerSkipDraft = false } = props;
 
   // ─── Core State ─────────────────────────────────────────────────────────────
   const { gameState, players, pieces, boardTiles, bankedTiles, playerCount, currentPlayerIndex, moverPlayerIndex, campaignRole, draftRound, isTestMode, setGameState, setPlayers, setPieces, setBoardTiles, setBankedTiles, setPlayerCount, setCurrentPlayerIndex, setMoverPlayerIndex, setCampaignRole, setDraftRound, setIsTestMode } = useGameState();
@@ -191,6 +191,16 @@ const App: React.FC<MultiplayerProps> = (props) => {
   }, [gameState, playedTile, hasPlayedTileThisTurn, players, currentPlayerIndex, piecesAtTurnStart, pieces, playerCount, challengeFlowHandlers, showAlert, setGameState, setPlayedTile, setReceiverAcceptance, turnHandlers]);
 
   const wrappers = useAppWrappers({ isMultiplayer, multiplayerActions, pieceMovementHandlers, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, showAlert } as any);
+
+  // ─── Auto-start multiplayer game (host only, lobby already picked count) ────
+  const hasAutoStartedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (isMultiplayer && isHost && !hasAutoStartedRef.current && multiplayerPlayerCount && multiplayerPlayerCount > 0 && players.length === 0) {
+      hasAutoStartedRef.current = true;
+      console.log('[APP] Auto-starting multiplayer game with', multiplayerPlayerCount, 'players', multiplayerSkipDraft ? '(skip draft)' : '');
+      gameFlowHandlers.handleStartGame(multiplayerPlayerCount, false, multiplayerSkipDraft, false);
+    }
+  }, [isMultiplayer, isHost, multiplayerPlayerCount, players.length, gameFlowHandlers, multiplayerSkipDraft]);
 
   useMultiplayerHost({ isHost, setActionDispatch, players, playerCount, currentPlayerIndex, draftRound, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn } as any);
 
