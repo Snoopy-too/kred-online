@@ -28,6 +28,8 @@ import { areSeatsAdjacent } from "./rules";
 import { calculateMoves as calculateMovesCore } from "./game";
 import { validateMovesForTilePlay } from "./game/validation";
 import { isLegalMoveSet, getMatchingTileIds } from "./game/tile-matching";
+import { initializePlayers, initializeCampaignPieces } from "./game/initialization";
+import { getBureaucracyTurnOrder, calculatePlayerKredcoin } from "./game/bureaucracy";
 
 export interface MultiplayerProps {
   isMultiplayer?: boolean;
@@ -166,7 +168,22 @@ const App: React.FC<MultiplayerProps> = (props) => {
     originalShowAlert(title, message, type, targetId !== undefined ? targetId : (players[currentPlayerIndex]?.id || null));
   }, [players, currentPlayerIndex, originalShowAlert]);
 
-  const gameFlowHandlers = React.useMemo(() => createGameFlowHandlers({ setGameState, setPlayerCount, setIsTestMode, setDraftRound, setPlayers, setPieces, setPiecesAtTurnStart, setBoardTiles, setBankedTiles, setMovedPiecesThisTurn, setHasPlayedTileThisTurn, setCampaignRole, setMoverPlayerIndex, setCredibilityAtTurnStart, setCurrentPlayerIndex, players, pieces, boardTiles, bankedTiles, playerCount, currentPlayerIndex, isTestMode, draftRound } as any), [setGameState, setPlayerCount, setIsTestMode, setDraftRound, setPlayers, setPieces, setPiecesAtTurnStart, setBoardTiles, setBankedTiles, setMovedPiecesThisTurn, setHasPlayedTileThisTurn, setCampaignRole, setMoverPlayerIndex, setCredibilityAtTurnStart, setCurrentPlayerIndex, players, pieces, boardTiles, bankedTiles, playerCount, currentPlayerIndex, isTestMode, draftRound]);
+  const gameFlowHandlers = React.useMemo(() => createGameFlowHandlers({
+    playerCount, players, currentPlayerIndex, draftRound,
+    setPlayerCount, setIsTestMode, setPlayers, setPieces, setCurrentPlayerIndex, setDraftRound, setGameState, setGameLog,
+    playerNames,
+    setPiecesAtTurnStart, setMovedPiecesThisTurn, setPendingCommunityPieces,
+    setBoardTiles, setBankedTiles, setLastDroppedPosition, setRevealedTileId,
+    setHasPlayedTileThisTurn, setPlayedTile, setMovesThisTurn, setTileTransaction, setReceiverAcceptance,
+    setChallengedTile, setPlacerViewingTileId, setBystanders, setBystanderIndex, setIsPrivatelyViewing,
+    setShowChallengeRevealModal, setChallengeOrder, setCurrentChallengerIndex, setTileRejected,
+    setShowMoveCheckResult, setMoveCheckResult, setGiveReceiverViewingTileId, setTilePlayerMustWithdraw,
+    setBureaucracyTurnOrder, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu,
+    initializePlayers, initializeCampaignPieces, getBureaucracyTurnOrder, calculatePlayerKredcoin,
+    BANK_SPACES_BY_PLAYER_COUNT,
+    setCampaignRole, setMoverPlayerIndex, setCredibilityAtTurnStart,
+    pieces, boardTiles, bankedTiles, isTestMode,
+  } as any), [playerCount, players, currentPlayerIndex, draftRound, playerNames, pieces, boardTiles, bankedTiles, isTestMode, setPlayerCount, setIsTestMode, setPlayers, setPieces, setCurrentPlayerIndex, setDraftRound, setGameState, setGameLog, setPiecesAtTurnStart, setMovedPiecesThisTurn, setPendingCommunityPieces, setBoardTiles, setBankedTiles, setLastDroppedPosition, setRevealedTileId, setHasPlayedTileThisTurn, setPlayedTile, setMovesThisTurn, setTileTransaction, setReceiverAcceptance, setChallengedTile, setPlacerViewingTileId, setBystanders, setBystanderIndex, setIsPrivatelyViewing, setShowChallengeRevealModal, setChallengeOrder, setCurrentChallengerIndex, setTileRejected, setShowMoveCheckResult, setMoveCheckResult, setGiveReceiverViewingTileId, setTilePlayerMustWithdraw, setBureaucracyTurnOrder, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setCampaignRole, setMoverPlayerIndex, setCredibilityAtTurnStart]);
   const pieceMovementHandlers = React.useMemo(() => createPieceMovementHandlers({ pieces, players, playerCount, currentPlayerIndex, movedPiecesThisTurn, pendingCommunityPieces, piecesAtTurnStart, piecesAtCorrectionStart, piecesBeforeBonusMove, playedTile: playedTile as any, setPieces, setPlayers, setBoardTiles, setGameState, setMovedPiecesThisTurn, setPendingCommunityPieces, setLastDroppedPosition, setLastDroppedPieceId, setPlayedTile, setHasPlayedTileThisTurn, showAlert } as any), [pieces, players, playerCount, currentPlayerIndex, movedPiecesThisTurn, pendingCommunityPieces, piecesAtTurnStart, piecesAtCorrectionStart, piecesBeforeBonusMove, playedTile, setPieces, setPlayers, setBoardTiles, setGameState, setMovedPiecesThisTurn, setPendingCommunityPieces, setLastDroppedPosition, setLastDroppedPieceId, setPlayedTile, setHasPlayedTileThisTurn, showAlert]);
   const turnHandlers = React.useMemo(() => createTurnHandlers({ players, pieces, playerCount, currentPlayerIndex, setCurrentPlayerIndex, setGameState, setGameLog, setPiecesAtTurnStart, setHasPlayedTileThisTurn, setRevealedTileId, setTileTransaction, setBystanders, setBystanderIndex, setIsPrivatelyViewing, setChallengedTile, setPlacerViewingTileId, setMovedPiecesThisTurn, setPendingCommunityPieces } as any), [players, pieces, playerCount, currentPlayerIndex, setCurrentPlayerIndex, setGameState, setGameLog, setPiecesAtTurnStart, setHasPlayedTileThisTurn, setRevealedTileId, setTileTransaction, setBystanders, setBystanderIndex, setIsPrivatelyViewing, setChallengedTile, setPlacerViewingTileId, setMovedPiecesThisTurn, setPendingCommunityPieces]);
   const tilePlayHandlers = React.useMemo(() => createTilePlayHandlers({ gameState, players, playerCount, currentPlayerIndex, hasPlayedTileThisTurn, piecesAtTurnStart, pieces, boardTiles, bankSpacesByPlayerCount: BANK_SPACES_BY_PLAYER_COUNT, setPlayers, setBoardTiles, setPlayedTile, setGameState, setMovesThisTurn, setHasPlayedTileThisTurn, setMovedPiecesThisTurn, setPendingCommunityPieces, setBonusMoveWasCompleted, setPiecesAtCorrectionStart, setPiecesBeforeBonusMove, setRevealedTileId, setIsPrivatelyViewing, setPlacerViewingTileId, setReceiverAcceptance, setCurrentPlayerIndex, showAlert, calculateMoves: calculateMovesCore } as any), [gameState, players, playerCount, currentPlayerIndex, hasPlayedTileThisTurn, piecesAtTurnStart, pieces, boardTiles, setPlayers, setBoardTiles, setPlayedTile, setGameState, setMovesThisTurn, setHasPlayedTileThisTurn, setMovedPiecesThisTurn, setPendingCommunityPieces, setBonusMoveWasCompleted, setPiecesAtCorrectionStart, setPiecesBeforeBonusMove, setRevealedTileId, setIsPrivatelyViewing, setPlacerViewingTileId, setReceiverAcceptance, setCurrentPlayerIndex, showAlert]);
