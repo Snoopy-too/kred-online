@@ -1,6 +1,7 @@
 // src/providers/GameStateAggregator.tsx
 import { useEffect, useMemo, useRef, MutableRefObject } from "react";
 import { usePhase } from "./PhaseProvider";
+import { useRoster } from "./RosterProvider";
 import GameStateSynchronizer from "../components/GameStateSynchronizer";
 import {
   buildPacket,
@@ -16,9 +17,7 @@ import { incrementCounter, recordMetric } from "../perf";
  * Each one will be removed as its provider is introduced in Step 7.
  */
 export interface AggregatorLegacyProps {
-  // Roster / Pieces
-  players: any[];
-  pieces: any[];
+  // Roster / Pieces (migrated)
   playerCount: number;
 
   // Board
@@ -77,10 +76,11 @@ interface GameStateAggregatorProps extends AggregatorLegacyProps {
 
 export function GameStateAggregator(props: GameStateAggregatorProps) {
   const phase = usePhase();
+  const roster = useRoster();
 
   // Re-map props to avoid 'props.' prefix in useMemo dependencies
   const {
-    players, pieces, playerCount,
+    playerCount,
     boardTiles, bankedTiles,
     playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn, tileTransaction, tileRevealed, pendingReceiverReward, receiverAdvanceInProgress,
     bystanders, bystanderIndex, challengeOrder, currentChallengerIndex, tileRejected, showChallengeRevealModal, challengedTile,
@@ -99,9 +99,11 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       moverPlayerIndex: phase.moverPlayerIndex,
       campaignRole: phase.campaignRole,
 
+      // Roster-owned
+      players: roster.players,
+      pieces: roster.pieces,
+
       // Legacy prop-owned
-      players,
-      pieces,
       playerCount,
       boardTiles,
       bankedTiles,
@@ -135,7 +137,8 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
     }),
     [
       phase.gameState, phase.currentPlayerIndex, phase.moverPlayerIndex, phase.campaignRole,
-      players, pieces, playerCount,
+      roster.players, roster.pieces,
+      playerCount,
       boardTiles, bankedTiles,
       playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn, tileTransaction, tileRevealed, pendingReceiverReward, receiverAdvanceInProgress,
       bystanders, bystanderIndex, challengeOrder, currentChallengerIndex, tileRejected, showChallengeRevealModal, challengedTile,

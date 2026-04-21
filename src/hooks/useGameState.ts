@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import type { GameState, Player, Piece, BoardTile, Tile } from "../types";
 import { usePhase, usePhaseDispatch } from "../providers/PhaseProvider";
+import { useRoster, useRosterDispatch } from "../providers/RosterProvider";
 
 /**
  * Custom hook for managing core game state.
@@ -21,21 +22,19 @@ import { usePhase, usePhaseDispatch } from "../providers/PhaseProvider";
 export function useGameState() {
   // Phase state from provider
   const { gameState, currentPlayerIndex, moverPlayerIndex, campaignRole } = usePhase();
-  const { 
-    setGameState, 
-    setCurrentPlayerIndex, 
-    setMoverPlayerIndex, 
+  const {
+    setGameState,
+    setCurrentPlayerIndex,
+    setMoverPlayerIndex,
     setCampaignRole,
-    patch: patchPhase 
+    patch: patchPhase
   } = usePhaseDispatch();
 
-  // Player data
-  const [players, setPlayers] = useState<Player[]>([]);
+  // Roster state from provider
+  const { players, pieces } = useRoster();
+  const { setPlayers, setPieces, patch: patchRoster } = useRosterDispatch();
 
   const [playerCount, setPlayerCount] = useState<number>(0);
-
-  // Game pieces
-  const [pieces, setPieces] = useState<Piece[]>([]);
 
   // Board tiles
   const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
@@ -99,7 +98,7 @@ export function useGameState() {
    * Wraps around to player 0 after the last player.
    */
   const nextPlayer = () => {
-    setCurrentPlayerIndex((prev) => (prev + 1) % players.length);
+    setCurrentPlayerIndex((players.length > 0 ? (currentPlayerIndex + 1) % players.length : 0));
   };
 
   /**
@@ -272,6 +271,7 @@ export function useGameState() {
 
     // Phase patching
     patchPhase,
+    patchRoster,
 
     // Direct setters (for backward compatibility)
     setGameState,

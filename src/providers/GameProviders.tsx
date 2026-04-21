@@ -1,11 +1,13 @@
 // src/providers/GameProviders.tsx
 import { ReactNode } from "react";
 import { PhaseProvider, PhaseState } from "./PhaseProvider";
+import { RosterProvider, RosterState } from "./RosterProvider";
 
 interface GameProvidersProps {
   children: ReactNode;
   initial?: {
     phase?: Partial<PhaseState>;
+    roster?: Partial<RosterState>;
   };
 }
 
@@ -16,5 +18,11 @@ interface GameProvidersProps {
  * Challenge, and Bureaucracy providers here.
  */
 export function GameProviders({ children, initial }: GameProvidersProps) {
-  return <PhaseProvider initial={initial?.phase}>{children}</PhaseProvider>;
+  return (
+    <PhaseProvider initial={initial?.phase}>
+      <RosterProvider initial={initial?.roster}>
+        {children}
+      </RosterProvider>
+    </PhaseProvider>
+  );
 }
