@@ -9,6 +9,10 @@ import type {
   BureaucracyPurchase,
 } from "../types";
 import {
+  useBureaucracyProvider,
+  useBureaucracyDispatch,
+} from "../providers/BureaucracyProvider";
+import {
   calculatePlayerKredcoin,
   getBureaucracyTurnOrder,
 } from "../game/bureaucracy";
@@ -30,15 +34,11 @@ import { createGameStateSnapshot } from "../game/state-snapshots";
  * @returns Bureaucracy phase state and management functions
  */
 export function useBureaucracy() {
-  // Core bureaucracy state
-  const [bureaucracyStates, setBureaucracyStates] = useState<
-    BureaucracyPlayerState[]
-  >([]);
-  const [bureaucracyTurnOrder, setBureaucracyTurnOrder] = useState<number[]>(
-    []
-  );
-  const [currentBureaucracyPlayerIndex, setCurrentBureaucracyPlayerIndex] =
-    useState(0);
+  // Core bureaucracy state — now from BureaucracyProvider
+  const { bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex } =
+    useBureaucracyProvider();
+  const { setBureaucracyStates, setBureaucracyTurnOrder, setCurrentBureaucracyPlayerIndex } =
+    useBureaucracyDispatch();
 
   // Purchase state
   const [currentBureaucracyPurchase, setCurrentBureaucracyPurchase] =

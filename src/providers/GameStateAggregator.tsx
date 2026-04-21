@@ -5,6 +5,7 @@ import { useRoster } from "./RosterProvider";
 import { useBoard } from "./BoardProvider";
 import { useCampaign } from "./CampaignProvider";
 import { useChallenge } from "./ChallengeProvider";
+import { useBureaucracyProvider } from "./BureaucracyProvider";
 import GameStateSynchronizer from "../components/GameStateSynchronizer";
 import {
   buildPacket,
@@ -50,10 +51,7 @@ export interface AggregatorLegacyProps {
   // Server Alerts
   serverAlert: any | null;
 
-  // Bureaucracy
-  bureaucracyStates: any;
-  bureaucracyTurnOrder: number[];
-  currentBureaucracyPlayerIndex: number;
+  // Bureaucracy (migrated)
 }
 
 interface GameStateAggregatorProps extends AggregatorLegacyProps {
@@ -70,6 +68,7 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
   const board = useBoard();
   const campaign = useCampaign();
   const challenge = useChallenge();
+  const bureaucracy = useBureaucracyProvider();
 
   // Re-map props to avoid 'props.' prefix in useMemo dependencies
   const {
@@ -79,7 +78,6 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
     bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
     challengeResultMessage, challengeResultMessagePlayerId, pendingChallengerReward,
     serverAlert,
-    bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex
   } = props;
 
   const fullState: FullState = useMemo(
@@ -128,9 +126,11 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       challengeResultMessagePlayerId,
       pendingChallengerReward,
       serverAlert,
-      bureaucracyStates,
-      bureaucracyTurnOrder,
-      currentBureaucracyPlayerIndex,
+
+      // Bureaucracy-owned
+      bureaucracyStates: bureaucracy.bureaucracyStates,
+      bureaucracyTurnOrder: bureaucracy.bureaucracyTurnOrder,
+      currentBureaucracyPlayerIndex: bureaucracy.currentBureaucracyPlayerIndex,
     }),
     [
       phase.gameState, phase.currentPlayerIndex, phase.moverPlayerIndex, phase.campaignRole,
@@ -144,7 +144,7 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
       challengeResultMessage, challengeResultMessagePlayerId, pendingChallengerReward,
       serverAlert,
-      bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex
+      bureaucracy.bureaucracyStates, bureaucracy.bureaucracyTurnOrder, bureaucracy.currentBureaucracyPlayerIndex,
     ]
   );
 

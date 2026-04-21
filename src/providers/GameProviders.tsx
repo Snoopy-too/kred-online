@@ -5,6 +5,7 @@ import { RosterProvider, RosterState } from "./RosterProvider";
 import { BoardProvider, BoardState } from "./BoardProvider";
 import { CampaignProvider, CampaignState } from "./CampaignProvider";
 import { ChallengeProvider, ChallengeState } from "./ChallengeProvider";
+import { BureaucracyProvider, BureaucracyProviderState } from "./BureaucracyProvider";
 
 interface GameProvidersProps {
   children: ReactNode;
@@ -14,6 +15,7 @@ interface GameProvidersProps {
     board?: Partial<BoardState>;
     campaign?: Partial<CampaignState>;
     challenge?: Partial<ChallengeState>;
+    bureaucracy?: Partial<BureaucracyProviderState>;
   };
 }
 
@@ -30,7 +32,9 @@ export function GameProviders({ children, initial }: GameProvidersProps) {
         <BoardProvider initial={initial?.board}>
           <CampaignProvider initial={initial?.campaign}>
             <ChallengeProvider initial={initial?.challenge}>
-              {children}
+              <BureaucracyProvider initial={initial?.bureaucracy}>
+                {children}
+              </BureaucracyProvider>
             </ChallengeProvider>
           </CampaignProvider>
         </BoardProvider>

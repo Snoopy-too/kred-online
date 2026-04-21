@@ -24,6 +24,10 @@ import type { Player, Piece } from "../../types";
 import { PhaseProvider } from "../../providers/PhaseProvider";
 import { CampaignProvider } from "../../providers/CampaignProvider";
 import { ChallengeProvider } from "../../providers/ChallengeProvider";
+import { BureaucracyProvider } from "../../providers/BureaucracyProvider";
+
+const bureaucracyWrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement(PhaseProvider, null, React.createElement(BureaucracyProvider, null, children));
 
 const tilePlayWrapper = ({ children }: { children: React.ReactNode }) =>
   React.createElement(
@@ -231,7 +235,7 @@ describe("phase cleanup (spec §4b)", () => {
       //   bureaucracyValidationError, bureaucracyMoves, bureaucracySnapshot
       // =======================================================================
       it("startBureaucracyPhase seeds fresh state from prior bureaucracy", () => {
-        const { result } = renderHook(() => useBureaucracy());
+        const { result } = renderHook(() => useBureaucracy(), { wrapper: bureaucracyWrapper });
         const players = makePlayers(playerCount);
         const pieces = makePieces(playerCount);
 
@@ -266,7 +270,7 @@ describe("phase cleanup (spec §4b)", () => {
       // Here we verify pendingCommunityPieces is a Set that gets re-seeded.
       // =======================================================================
       it("pendingCommunityPieces resets to empty Set on startBureaucracyPhase", () => {
-        const { result } = renderHook(() => useBureaucracy());
+        const { result } = renderHook(() => useBureaucracy(), { wrapper: bureaucracyWrapper });
         const players = makePlayers(playerCount);
 
         act(() => {
