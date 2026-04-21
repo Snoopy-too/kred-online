@@ -1,8 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
 import type { MutableRefObject } from 'react';
+import { flushSync } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { useLobby } from '../contexts/LobbyContext';
 import { recordMetric, incrementCounter, setGauge } from '../perf';
+import { SYNC_MICROTASK_YIELD } from '../sync/flags';
+import { StatePacket, FullState, applyDelta } from '../sync/packet';
 
 const PERSIST_THROTTLE_MS = 500;
 const PROCESSED_ACTION_ID_CAP = 500;
@@ -37,74 +40,9 @@ export class BoundedActionIdSet {
 // Types
 // ============================================================================
 
-export interface GameStatePacket {
-  // Core game state
-  gameState: string;
-  players: any[];
-  pieces: any[];
-  boardTiles: any[];
-  bankedTiles: any[];
-  currentPlayerIndex: number;
-  playerCount: number;
-
-  // Campaign state
-  playedTile: any | null;
-  hasPlayedTileThisTurn: boolean;
-  movedPiecesThisTurn: string[];
-  tileTransaction: any | null;
-  moverPlayerIndex: number | null;
-  campaignRole: string | null;
-  tileRevealed: boolean;
-  pendingReceiverReward: boolean;
-  receiverAdvanceInProgress: boolean;
-
-  // Challenge flow
-  bystanders: number[];
-  bystanderIndex: number;
-  challengeOrder: number[];
-  currentChallengerIndex: number;
-  tileRejected: boolean;
-  showChallengeRevealModal: boolean;
-  challengedTile: { id: number; url: string } | null;
-
-  // Take advantage
-  showTakeAdvantageModal: boolean;
-  takeAdvantageChallengerId: number | null;
-  takeAdvantageChallengerCredibility: number;
-
-  // Bonus Move
-  bonusMovePlayerId: number | null;
-  showBonusMoveModal: boolean;
-  piecesBeforeBonusMove: any[];
-
-  // Pending Actions
-  challengeResultMessage: string;
-  challengeResultMessagePlayerId: number | null;
-  pendingChallengerReward: any | null;
-
-  // Server Alerts
-  serverAlert: {
-    id: number;
-    title: string;
-    message: string;
-    type: "error" | "warning" | "info";
-    playerId: number | null;
-  } | null;
-
-  // Bureaucracy
-  bureaucracyStates: any;
-  bureaucracyTurnOrder: number[];
-  currentBureaucracyPlayerIndex: number;
-
-  // Versioning
-  stateVersion: number;
-  lastUpdated: number;
-}
+export type GameStatePacket = FullState;
 
 export interface SyncProps {
-  /** Host: returns current game state as a packet */
-  getStatePacket: () => GameStatePacket;
-
   /** Guest: applies a received state packet */
   applyStatePacket: (packet: GameStatePacket) => void;
 
@@ -120,6 +58,11 @@ export interface SyncProps {
    * Caller passes a ref it will keep stable across renders.
    */
   pushStateRef?: MutableRefObject<(() => void) | null>;
+
+  /**
+   * Host: ref to the imperative send function that the aggregator calls.
+   */
+  synchronizerSendRef?: MutableRefObject<((packet: StatePacket) => void) | null>;
 }
 
 // ============================================================================
@@ -127,32 +70,26 @@ export interface SyncProps {
 // ============================================================================
 
 export default function GameStateSynchronizer({
-  getStatePacket,
   applyStatePacket,
   onActionReceived,
   onRejoinComplete,
   pushStateRef,
+  synchronizerSendRef,
 }: SyncProps) {
-  const { lobbyId, isHost, isRejoining } = useLobby();
+  const { lobbyId, userId, isHost, isRejoining } = useLobby();
 
-  // Stable refs for props that change identity every render (KredApp passes
-  // inline arrows that forward to its own refs). Storing them here keeps the
-  // subscribe/poll effects out of re-subscribe loops driven by parent renders.
-  // (Spec 2026-04-09 §4f — subscription stability audit.)
   const applyStatePacketRef = useRef(applyStatePacket);
-  const getStatePacketRef = useRef(getStatePacket);
   const onRejoinCompleteRef = useRef(onRejoinComplete);
   useEffect(() => { applyStatePacketRef.current = applyStatePacket; }, [applyStatePacket]);
-  useEffect(() => { getStatePacketRef.current = getStatePacket; }, [getStatePacket]);
   useEffect(() => { onRejoinCompleteRef.current = onRejoinComplete; }, [onRejoinComplete]);
 
-  const hostVersionRef = useRef(0);
-  const lastProcessedVersionRef = useRef(0);
-  const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAppliedFullRef = useRef<FullState | null>(null);
+  const lastAppliedVRef = useRef(0);
+  
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastBroadcastReceiptRef = useRef<number>(Date.now());
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingPersistPacketRef = useRef<GameStatePacket | null>(null);
+  const pendingPersistPacketRef = useRef<{ packet: GameStatePacket; version: number; gameState: string } | null>(null);
   const lastPersistedVersionRef = useRef<number>(0);
   const lastPersistedPhaseRef = useRef<string | null>(null);
   const lastSeenActionAtRef = useRef<string>(new Date(0).toISOString());
@@ -160,21 +97,24 @@ export default function GameStateSynchronizer({
   // so a host reload doesn't overwrite mid-flow state with fresh-mount defaults.
   const hostHydratedRef = useRef<boolean>(false);
 
+  // For host REQUEST_FULL handling
+  const forceFullOnNextPushRef = useRef<boolean>(false);
+
   // ==========================================================================
   // HOST: Push state to guests
   // ==========================================================================
 
-  const flushPersist = useCallback(async (packet: GameStatePacket) => {
+  const flushPersist = useCallback(async (packet: GameStatePacket, version: number, gameState: string) => {
     if (!lobbyId) return;
-    if (packet.stateVersion <= lastPersistedVersionRef.current) return;
-    lastPersistedVersionRef.current = packet.stateVersion;
+    if (version <= lastPersistedVersionRef.current) return;
+    lastPersistedVersionRef.current = version;
     const { error } = await supabase
       .from('kred_game_states')
       .upsert({
         lobby_id: lobbyId,
-        phase: packet.gameState,
+        phase: gameState,
         state_json: packet,
-        version: packet.stateVersion,
+        version: version,
         updated_at: new Date().toISOString(),
       });
     if (error) {
@@ -186,22 +126,23 @@ export default function GameStateSynchronizer({
   }, [lobbyId]);
 
   // Trailing-throttle persist with forced flush on phase change.
-  const schedulePersist = useCallback((packet: GameStatePacket) => {
+  const schedulePersist = useCallback((packet: GameStatePacket, version: number) => {
+    const gameState = typeof packet.gameState === 'string' ? packet.gameState : '';
     const lastPhase = lastPersistedPhaseRef.current;
-    pendingPersistPacketRef.current = packet;
+    pendingPersistPacketRef.current = { packet, version, gameState };
 
     // Force-flush on phase change (no throttle)
-    if (lastPhase !== null && lastPhase !== packet.gameState) {
+    if (lastPhase !== null && lastPhase !== gameState) {
       if (persistTimerRef.current) {
         clearTimeout(persistTimerRef.current);
         persistTimerRef.current = null;
       }
-      lastPersistedPhaseRef.current = packet.gameState;
-      flushPersist(packet);
+      lastPersistedPhaseRef.current = gameState;
+      flushPersist(packet, version, gameState);
       pendingPersistPacketRef.current = null;
       return;
     }
-    lastPersistedPhaseRef.current = packet.gameState;
+    lastPersistedPhaseRef.current = gameState;
 
     if (persistTimerRef.current) return;
     persistTimerRef.current = setTimeout(() => {
@@ -209,78 +150,138 @@ export default function GameStateSynchronizer({
       const p = pendingPersistPacketRef.current;
       pendingPersistPacketRef.current = null;
       if (!p) return;
-      flushPersist(p);
+      flushPersist(p.packet, p.version, p.gameState);
     }, PERSIST_THROTTLE_MS);
   }, [flushPersist]);
 
-  const pushState = useCallback(() => {
-    if (!lobbyId || !isHost) return;
-    // Don't push until we've checked DB for existing state, otherwise a host
-    // reload overwrites saved mid-flow state with the fresh-mount defaults.
-    if (!hostHydratedRef.current) return;
+  const pendingPacketRef = useRef<StatePacket | null>(null);
+  const sendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const packet = getStatePacketRef.current();
-    hostVersionRef.current += 1;
-    packet.stateVersion = hostVersionRef.current;
-    packet.lastUpdated = Date.now();
+  useEffect(() => {
+    if (!synchronizerSendRef) return;
+    synchronizerSendRef.current = (packet: StatePacket) => {
+      if (!lobbyId || !isHost || !hostHydratedRef.current) return;
+      
+      pendingPacketRef.current = packet;
+      if (sendTimerRef.current) return;
+      sendTimerRef.current = setTimeout(() => {
+        const p = pendingPacketRef.current;
+        pendingPacketRef.current = null;
+        sendTimerRef.current = null;
+        if (!p) return;
 
-    // Channel 1: Broadcast (fast, ephemeral)
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.send({
-        type: 'broadcast',
-        event: 'state',
-        payload: packet,
-      });
-    }
+        broadcastChannelRef.current?.send({
+          type: "broadcast",
+          event: "state",
+          payload: p,
+        });
 
-    // Perf metric
-    recordMetric('packet.bytes', JSON.stringify(packet).length);
-    recordMetric('packet.version', packet.stateVersion);
+        // DB persistence still takes the FULL state.
+        const fullForPersist =
+          p.kind === "full"
+            ? p.state
+            : applyDelta(lastAppliedFullRef.current ?? {}, p.patch);
+            
+        // Keep host's reference of the latest state for potential full request responses.
+        lastAppliedFullRef.current = fullForPersist;
+        lastAppliedVRef.current = p.v;
+            
+        schedulePersist(fullForPersist, p.v);
+      }, 100);
+    };
+    return () => {
+      if (sendTimerRef.current) {
+        clearTimeout(sendTimerRef.current);
+        sendTimerRef.current = null;
+      }
+    };
+  }, [lobbyId, isHost, schedulePersist, synchronizerSendRef]);
 
-    // Channel 2: DB persist — throttled separately from broadcast
-    schedulePersist(packet);
-  }, [lobbyId, isHost, schedulePersist]);
+  // ==========================================================================
+  // GUEST: Request full state when delta base is unknown
+  // ==========================================================================
 
-  // Debounced push — call this whenever state changes
-  const debouncedPush = useCallback(() => {
-    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
-    pushTimerRef.current = setTimeout(pushState, 100);
-  }, [pushState]);
+  const emitRequestFull = useCallback(async () => {
+    if (!lobbyId || !userId) return;
+    await supabase.from("kred_game_actions").insert({
+      lobby_id: lobbyId,
+      player_id: userId,
+      action_type: "REQUEST_FULL",
+      payload: {},
+    });
+  }, [lobbyId, userId]);
 
   // ==========================================================================
   // HOST: Listen for guest actions (realtime + polling fallback)
   // ==========================================================================
 
-  // Persistent set of ALL processed action IDs — survives effect re-runs
   const processedActionIdsRef = useRef<BoundedActionIdSet>(new BoundedActionIdSet(PROCESSED_ACTION_ID_CAP));
-  // Queue for sequential processing — ensures React state commits between actions
   const actionQueueRef = useRef<any[]>([]);
   const isProcessingQueueRef = useRef(false);
 
-  // Process queued actions one at a time, yielding between each so React can
-  // commit state updates (e.g., setPieces from MOVE_PIECE) before the next
-  // action (e.g., END_TURN) reads that state via the dispatch ref.
-  const drainQueue = useCallback(() => {
-    if (isProcessingQueueRef.current || actionQueueRef.current.length === 0) return;
-    isProcessingQueueRef.current = true;
-
-    const action = actionQueueRef.current.shift()!;
+  const processAction = useCallback((action: any) => {
     if (action.created_at) {
       const ageMs = Date.now() - new Date(action.created_at).getTime();
       recordMetric('actions.latency', ageMs);
     }
+    
+    if (action.action_type === 'REQUEST_FULL') {
+      incrementCounter("sync.requestFull.served");
+      // Direct broadcast a full right now, bypassing the debounce
+      if (lastAppliedFullRef.current) {
+        broadcastChannelRef.current?.send({
+          type: "broadcast",
+          event: "state",
+          payload: {
+            kind: "full",
+            v: lastAppliedVRef.current,
+            ts: Date.now(),
+            state: lastAppliedFullRef.current,
+          },
+        });
+      }
+      return;
+    }
+    
     onActionReceived?.current?.({
       type: action.action_type,
       playerId: action.player_id,
       payload: action.payload,
     });
-
-    // Yield to let React commit state updates, then process next action
-    setTimeout(() => {
-      isProcessingQueueRef.current = false;
-      drainQueue();
-    }, 0);
   }, [onActionReceived]);
+
+  const drainQueue = useCallback(() => {
+    if (isProcessingQueueRef.current) return;
+    if (actionQueueRef.current.length === 0) return;
+    isProcessingQueueRef.current = true;
+
+    const burstStart = performance.now();
+
+    const next = () => {
+      const action = actionQueueRef.current.shift();
+      if (!action) {
+        isProcessingQueueRef.current = false;
+        recordMetric("actions.burstYieldMs", performance.now() - burstStart);
+        return;
+      }
+      
+      // flushSync ensures the setState inside processAction commits before the
+      // next action runs. React 19 + flushSync is legal inside a microtask.
+      flushSync(() => { processAction(action); });
+
+      if (SYNC_MICROTASK_YIELD) {
+        queueMicrotask(next);
+      } else {
+        setTimeout(next, 0);
+      }
+    };
+
+    if (SYNC_MICROTASK_YIELD) {
+      queueMicrotask(next);
+    } else {
+      setTimeout(next, 0);
+    }
+  }, [processAction]);
 
   const enqueueAction = useCallback((action: any) => {
     if (processedActionIdsRef.current.has(action.id)) return;
@@ -292,7 +293,7 @@ export default function GameStateSynchronizer({
   }, [drainQueue]);
 
   useEffect(() => {
-    if (!lobbyId || !isHost || !onActionReceived) return;
+    if (!lobbyId || !isHost) return;
 
     // Realtime channel
     const channel = supabase
@@ -349,7 +350,46 @@ export default function GameStateSynchronizer({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [lobbyId, isHost, onActionReceived, enqueueAction]);
+  }, [lobbyId, isHost, enqueueAction]);
+
+  // ==========================================================================
+  // GUEST: Apply Packet logic
+  // ==========================================================================
+
+  const applyStatePacketHandler = useCallback((raw: unknown) => {
+    const packet = raw as StatePacket;
+    if (!packet || typeof packet !== "object" || !("kind" in packet)) return;
+
+    // Version gate
+    if (packet.v <= lastAppliedVRef.current) {
+      incrementCounter("sync.staleSkipped");
+      return;
+    }
+
+    if (packet.kind === "full") {
+      lastAppliedFullRef.current = packet.state;
+      lastAppliedVRef.current = packet.v;
+      recordMetric("sync.apply.fullBytes", JSON.stringify(packet.state).length);
+      applyStatePacketRef.current(packet.state);
+      return;
+    }
+
+    // kind === 'delta'
+    if (packet.baseV !== lastAppliedVRef.current) {
+      // Missed a frame. Request a full snapshot.
+      incrementCounter("sync.requestFull.sent");
+      emitRequestFull();
+      return;
+    }
+
+    const base = lastAppliedFullRef.current ?? {};
+    const next = applyDelta(base, packet.patch);
+    lastAppliedFullRef.current = next;
+    lastAppliedVRef.current = packet.v;
+    recordMetric("sync.apply.deltaBytes", JSON.stringify(packet.patch).length);
+    applyStatePacketRef.current(next);
+  }, [emitRequestFull]);
+
 
   // ==========================================================================
   // BOTH: Set up broadcast channel
@@ -364,13 +404,11 @@ export default function GameStateSynchronizer({
 
     if (!isHost) {
       // GUEST: listen for host broadcasts
-      channel.on('broadcast', { event: 'state' }, ({ payload }: { payload: GameStatePacket }) => {
+      channel.on('broadcast', { event: 'state' }, ({ payload }: { payload: any }) => {
         lastBroadcastReceiptRef.current = Date.now();
-        if (payload.stateVersion <= lastProcessedVersionRef.current) return;
-        lastProcessedVersionRef.current = payload.stateVersion;
-        const tApply = Date.now() - (payload.lastUpdated ?? Date.now());
+        const tApply = Date.now() - (payload.ts ?? Date.now());
         recordMetric('apply.latency', tApply, { channel: 'broadcast' });
-        applyStatePacketRef.current(payload);
+        applyStatePacketHandler(payload);
       });
     }
 
@@ -383,14 +421,7 @@ export default function GameStateSynchronizer({
       setGauge('subscriptions.openCount', (c) => Math.max(0, c - 1));
       broadcastChannelRef.current = null;
     };
-  }, [lobbyId, isHost]);
-
-  // ==========================================================================
-  // GUEST: postgres_changes on kred_game_states is INTENTIONALLY NOT
-  // subscribed. The broadcast channel above and the 3s poll below are
-  // sufficient and avoid the WAL-decoding cost of postgres_changes.
-  // (Spec 2026-04-09 §2a)
-  // ==========================================================================
+  }, [lobbyId, isHost, applyStatePacketHandler]);
 
   // ==========================================================================
   // GUEST: Polling fallback (3s)
@@ -408,11 +439,17 @@ export default function GameStateSynchronizer({
         .eq('lobby_id', lobbyId)
         .single();
 
-      if (data && data.version > lastProcessedVersionRef.current) {
-        lastProcessedVersionRef.current = data.version;
+      if (data && data.version > lastAppliedVRef.current) {
+        // synthesize a full packet since the db only has state_json
+        const packet: StatePacket = {
+          kind: "full",
+          v: data.version,
+          ts: Date.now(),
+          state: data.state_json as any,
+        };
         const tApply = Date.now() - ((data.state_json as any).lastUpdated ?? Date.now());
         recordMetric('apply.latency', tApply, { channel: 'poll' });
-        applyStatePacketRef.current(data.state_json as GameStatePacket);
+        applyStatePacketHandler(packet);
       }
     };
 
@@ -430,7 +467,7 @@ export default function GameStateSynchronizer({
     return () => {
       cancelled = true;
     };
-  }, [lobbyId, isHost]);
+  }, [lobbyId, isHost, applyStatePacketHandler]);
 
   // ==========================================================================
   // REJOIN: Hydrate from DB snapshot
@@ -452,12 +489,24 @@ export default function GameStateSynchronizer({
         .maybeSingle();
 
       if (data) {
-        const packet = data.state_json as GameStatePacket;
-        lastProcessedVersionRef.current = data.version;
-        hostVersionRef.current = data.version;
+        const fullState = data.state_json as GameStatePacket;
+        const gameStateStr = typeof fullState.gameState === 'string' ? fullState.gameState : '';
         lastPersistedVersionRef.current = data.version;
-        lastPersistedPhaseRef.current = packet.gameState ?? null;
-        applyStatePacketRef.current(packet);
+        lastPersistedPhaseRef.current = gameStateStr;
+        
+        const packet: StatePacket = {
+          kind: "full",
+          v: data.version,
+          ts: Date.now(),
+          state: fullState,
+        };
+
+        if (isHost) {
+          lastAppliedFullRef.current = fullState;
+          lastAppliedVRef.current = data.version;
+        }
+
+        applyStatePacketHandler(packet);
       }
 
       if (isHost) hostHydratedRef.current = true;
@@ -465,7 +514,7 @@ export default function GameStateSynchronizer({
     };
 
     hydrate();
-  }, [lobbyId, isHost, isRejoining]);
+  }, [lobbyId, isHost, isRejoining, applyStatePacketHandler]);
 
   // Force-flush any pending persist on unmount so rejoin always sees fresh data.
   useEffect(() => {
@@ -476,21 +525,12 @@ export default function GameStateSynchronizer({
       }
       const p = pendingPersistPacketRef.current;
       pendingPersistPacketRef.current = null;
-      if (p) flushPersist(p);
+      if (p) flushPersist(p.packet, p.version, p.gameState);
     };
   }, [flushPersist]);
 
-  // ==========================================================================
-  // Expose debouncedPush via the parent-provided ref (no global escape hatch).
-  // ==========================================================================
-
-  useEffect(() => {
-    if (!isHost || !pushStateRef) return;
-    pushStateRef.current = debouncedPush;
-    return () => {
-      if (pushStateRef) pushStateRef.current = null;
-    };
-  }, [isHost, debouncedPush, pushStateRef]);
+  // We are not exposing a pushState via pushStateRef anymore, because we are using synchronizerSendRef
+  // But we still keep the ref if the parent passed it to satisfy types without modifying KredApp unnecessarily.
 
   return null;
 }

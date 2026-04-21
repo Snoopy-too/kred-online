@@ -1,5 +1,6 @@
-import { useState, useCallback, SetStateAction } from "react";
+import { useState, useCallback } from "react";
 import type { GameState, Player, Piece, BoardTile, Tile } from "../types";
+import { usePhase, usePhaseDispatch } from "../providers/PhaseProvider";
 
 /**
  * Custom hook for managing core game state.
@@ -18,14 +19,20 @@ import type { GameState, Player, Piece, BoardTile, Tile } from "../types";
  * @returns Core game state and management functions
  */
 export function useGameState() {
-  // Primary game state
-  const [gameState, setGameState] = useState<GameState>("DRAFTING");
+  // Phase state from provider
+  const { gameState, currentPlayerIndex, moverPlayerIndex, campaignRole } = usePhase();
+  const { 
+    setGameState, 
+    setCurrentPlayerIndex, 
+    setMoverPlayerIndex, 
+    setCampaignRole,
+    patch: patchPhase 
+  } = usePhaseDispatch();
 
   // Player data
   const [players, setPlayers] = useState<Player[]>([]);
 
   const [playerCount, setPlayerCount] = useState<number>(0);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
 
   // Game pieces
   const [pieces, setPieces] = useState<Piece[]>([]);
@@ -208,6 +215,8 @@ export function useGameState() {
     setBoardTiles([]);
     setBankedTiles([]);
     setCurrentPlayerIndex(0);
+    setMoverPlayerIndex(0);
+    setCampaignRole(null);
     setDraftRound(1);
     setIsTestMode(false);
   };
@@ -226,6 +235,8 @@ export function useGameState() {
     players,
     playerCount,
     currentPlayerIndex,
+    moverPlayerIndex,
+    campaignRole,
     pieces,
     boardTiles,
     bankedTiles,
@@ -259,11 +270,16 @@ export function useGameState() {
     resetGame,
     transitionToPhase,
 
+    // Phase patching
+    patchPhase,
+
     // Direct setters (for backward compatibility)
     setGameState,
     setPlayers,
     setPlayerCount,
     setCurrentPlayerIndex,
+    setMoverPlayerIndex,
+    setCampaignRole,
     setPieces,
     setBoardTiles,
     setBankedTiles,

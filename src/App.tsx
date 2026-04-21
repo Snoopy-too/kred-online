@@ -187,6 +187,7 @@ import { useTilePlayWorkflow } from "./hooks/useTilePlayWorkflow";
 import { useChallengeFlow } from "./hooks/useChallengeFlow";
 import { useBureaucracy } from "./hooks/useBureaucracy";
 import { useGameState } from "./hooks/useGameState";
+import { usePhase, usePhaseDispatch } from "./providers/PhaseProvider";
 
 // ============================================================================
 // HANDLERS IMPORTS - Extracted handler factories
@@ -283,7 +284,7 @@ const App: React.FC<MultiplayerProps> = ({
   playerNames,
   skipDraft: multiplayerSkipDraft = false,
   multiplayerActions,
-  getStatePacketRef,
+  onLegacyStateChange,
   applyStatePacketRef,
   pushStateRef,
   setActionDispatch,
@@ -304,6 +305,8 @@ const App: React.FC<MultiplayerProps> = ({
     bankedTiles,
     playerCount,
     currentPlayerIndex,
+    moverPlayerIndex,
+    campaignRole,
     draftRound,
     isTestMode,
     setGameState,
@@ -313,8 +316,11 @@ const App: React.FC<MultiplayerProps> = ({
     setBankedTiles,
     setPlayerCount,
     setCurrentPlayerIndex,
+    setMoverPlayerIndex,
+    setCampaignRole,
     setDraftRound,
     setIsTestMode,
+    patchPhase,
   } = useGameState();
 
   useEffect(() => {
@@ -553,17 +559,15 @@ const App: React.FC<MultiplayerProps> = ({
   // ============================================================================
   // MULTIPLAYER STATE
   // ============================================================================
-  const [campaignRole, setCampaignRole] = useState<string | null>(null);
   const [tileRevealed, setTileRevealed] = useState<boolean>(false);
   const [pendingReceiverReward, setPendingReceiverReward] = useState<boolean>(false);
   const [receiverAdvanceInProgress, setReceiverAdvanceInProgress] = useState<boolean>(false);
-  const [moverPlayerIndex, setMoverPlayerIndex] = useState<number | null>(null);
 
-  // Wire up GameStateSynchronizer refs for host state push
+  // Wire up legacy state changes to the new Aggregator
   useEffect(() => {
-    if (!getStatePacketRef || !applyStatePacketRef) return;
+    if (!onLegacyStateChange) return;
 
-    getStatePacketRef.current = () => ({
+    onLegacyStateChange({
       gameState,
       players,
       pieces,
@@ -604,49 +608,63 @@ const App: React.FC<MultiplayerProps> = ({
       lastUpdated: Date.now(),
     });
 
-    applyStatePacketRef.current = (packet: any) => {
-      setGameState(packet.gameState);
-      setPlayers(packet.players);
-      setPieces(packet.pieces);
-      setBoardTiles(packet.boardTiles);
-      setBankedTiles(packet.bankedTiles);
-      setCurrentPlayerIndex(packet.currentPlayerIndex);
-      setPlayerCount(packet.playerCount);
-      setPlayedTile(packet.playedTile);
-      setHasPlayedTileThisTurn(packet.hasPlayedTileThisTurn);
-      setMovedPiecesThisTurn(new Set(packet.movedPiecesThisTurn));
-      setTileTransaction(packet.tileTransaction);
-      setMoverPlayerIndex(packet.moverPlayerIndex);
-      setCampaignRole(packet.campaignRole);
-      setTileRevealed(packet.tileRevealed);
-      setPendingReceiverReward(packet.pendingReceiverReward);
-      setReceiverAdvanceInProgress(packet.receiverAdvanceInProgress);
-      setBystanders(packet.bystanders);
-      setBystanderIndex(packet.bystanderIndex);
-      setChallengeOrder(packet.challengeOrder);
-      setCurrentChallengerIndex(packet.currentChallengerIndex);
-      setTileRejected(packet.tileRejected);
-      setShowChallengeRevealModal(!!packet.showChallengeRevealModal);
-      setChallengedTile(packet.challengedTile ?? null);
-      setShowTakeAdvantageModal(packet.showTakeAdvantageModal);
-      setTakeAdvantageChallengerId(packet.takeAdvantageChallengerId);
-      setTakeAdvantageChallengerCredibility(packet.takeAdvantageChallengerCredibility);
-      setBureaucracyStates(packet.bureaucracyStates ?? []);
-      setBureaucracyTurnOrder(packet.bureaucracyTurnOrder ?? []);
-      setCurrentBureaucracyPlayerIndex(packet.currentBureaucracyPlayerIndex ?? 0);
-      setChallengeResultMessage(packet.challengeResultMessage ?? "");
-      setChallengeResultMessagePlayerId(packet.challengeResultMessagePlayerId);
-      setPendingChallengerReward(packet.pendingChallengerReward);
-      setBonusMovePlayerId(packet.bonusMovePlayerId);
-      setShowBonusMoveModal(packet.showBonusMoveModal);
-      if (packet.piecesBeforeBonusMove) {
-        setPiecesBeforeBonusMove(packet.piecesBeforeBonusMove);
-      }
-      if (packet.serverAlert) {
-        setServerAlert(packet.serverAlert);
-      }
-    };
-  });
+    if (applyStatePacketRef) {
+      applyStatePacketRef.current = (packet: any) => {
+        setGameState(packet.gameState);
+        setPlayers(packet.players);
+        setPieces(packet.pieces);
+        setBoardTiles(packet.boardTiles);
+        setBankedTiles(packet.bankedTiles);
+        setCurrentPlayerIndex(packet.currentPlayerIndex);
+        setPlayerCount(packet.playerCount);
+        setPlayedTile(packet.playedTile);
+        setHasPlayedTileThisTurn(packet.hasPlayedTileThisTurn);
+        setMovedPiecesThisTurn(new Set(packet.movedPiecesThisTurn));
+        setTileTransaction(packet.tileTransaction);
+        setMoverPlayerIndex(packet.moverPlayerIndex);
+        setCampaignRole(packet.campaignRole);
+        setTileRevealed(packet.tileRevealed);
+        setPendingReceiverReward(packet.pendingReceiverReward);
+        setReceiverAdvanceInProgress(packet.receiverAdvanceInProgress);
+        setBystanders(packet.bystanders);
+        setBystanderIndex(packet.bystanderIndex);
+        setChallengeOrder(packet.challengeOrder);
+        setCurrentChallengerIndex(packet.currentChallengerIndex);
+        setTileRejected(packet.tileRejected);
+        setShowChallengeRevealModal(!!packet.showChallengeRevealModal);
+        setChallengedTile(packet.challengedTile ?? null);
+        setShowTakeAdvantageModal(packet.showTakeAdvantageModal);
+        setTakeAdvantageChallengerId(packet.takeAdvantageChallengerId);
+        setTakeAdvantageChallengerCredibility(packet.takeAdvantageChallengerCredibility);
+        setBureaucracyStates(packet.bureaucracyStates ?? []);
+        setBureaucracyTurnOrder(packet.bureaucracyTurnOrder ?? []);
+        setCurrentBureaucracyPlayerIndex(packet.currentBureaucracyPlayerIndex ?? 0);
+        setChallengeResultMessage(packet.challengeResultMessage ?? "");
+        setChallengeResultMessagePlayerId(packet.challengeResultMessagePlayerId);
+        setPendingChallengerReward(packet.pendingChallengerReward);
+        setBonusMovePlayerId(packet.bonusMovePlayerId);
+        setShowBonusMoveModal(packet.showBonusMoveModal);
+        if (packet.piecesBeforeBonusMove) {
+          setPiecesBeforeBonusMove(packet.piecesBeforeBonusMove);
+        }
+        if (packet.serverAlert) {
+          setServerAlert(packet.serverAlert);
+        }
+      };
+    }
+  }, [
+    onLegacyStateChange, applyStatePacketRef, gameState, players, pieces, boardTiles, bankedTiles,
+    currentPlayerIndex, playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn,
+    tileTransaction, moverPlayerIndex, campaignRole, tileRevealed,
+    pendingReceiverReward, receiverAdvanceInProgress, bystanders, bystanderIndex,
+    challengeOrder, currentChallengerIndex, tileRejected,
+    showChallengeRevealModal, challengedTile, showTakeAdvantageModal,
+    takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
+    bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
+    challengeResultMessage, challengeResultMessagePlayerId,
+    pendingChallengerReward, bonusMovePlayerId, showBonusMoveModal,
+    piecesBeforeBonusMove, serverAlert
+  ]);
 
   // Trigger state push whenever game state changes (host only)
   useEffect(() => {

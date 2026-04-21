@@ -67,7 +67,11 @@
       "Bash(node test-bundle.mjs)",
       "Bash(git branch *)",
       "Bash(git ls-tree *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(python *)",
+      "Bash(tail *)",
+      "Bash(rm -f /tmp/baseline.log)",
+      "Bash(npm test *)"
     ],
     "deny": [],
     "ask": []

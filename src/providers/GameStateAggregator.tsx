@@ -1,7 +1,15 @@
 // src/providers/GameStateAggregator.tsx
-import { useMemo, useRef, useEffect, MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, MutableRefObject } from "react";
 import { usePhase } from "./PhaseProvider";
-import GameStateSynchronizer, { GameStatePacket } from "../components/GameStateSynchronizer";
+import GameStateSynchronizer from "../components/GameStateSynchronizer";
+import {
+  buildPacket,
+  shouldSendFull,
+  FullState,
+  StatePacket,
+} from "../sync/packet";
+import { SYNC_DELTAS, FULL_SNAPSHOT_HEARTBEAT_N } from "../sync/flags";
+import { incrementCounter, recordMetric } from "../perf";
 
 /**
  * Props that come from state slices NOT YET migrated to providers.
@@ -60,10 +68,11 @@ export interface AggregatorLegacyProps {
 }
 
 interface GameStateAggregatorProps extends AggregatorLegacyProps {
-  applyStatePacket: (packet: GameStatePacket) => void;
+  applyStatePacket: (packet: FullState) => void;
   onActionReceived?: MutableRefObject<((action: { type: string; playerId: string; payload: any }) => void) | undefined>;
   onRejoinComplete?: () => void;
   pushStateRef?: MutableRefObject<(() => void) | null>;
+  synchronizerSendRef?: MutableRefObject<((packet: StatePacket) => void) | null>;
 }
 
 export function GameStateAggregator(props: GameStateAggregatorProps) {
@@ -82,7 +91,7 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex
   } = props;
 
-  const packet = useMemo<GameStatePacket>(
+  const fullState: FullState = useMemo(
     () => ({
       // Phase-owned
       gameState: phase.gameState,
@@ -123,10 +132,6 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       bureaucracyStates,
       bureaucracyTurnOrder,
       currentBureaucracyPlayerIndex,
-
-      // Versioning (handled by Synchronizer, but typed in Packet)
-      stateVersion: 0,
-      lastUpdated: 0,
     }),
     [
       phase.gameState, phase.currentPlayerIndex, phase.moverPlayerIndex, phase.campaignRole,
@@ -142,21 +147,74 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
     ]
   );
 
-  // Sync expects a STABLE function that returns the LATEST packet.
-  const packetRef = useRef(packet);
-  useEffect(() => {
-    packetRef.current = packet;
-  }, [packet]);
+  const prevFullRef = useRef<FullState | null>(null);
+  const versionRef = useRef(0);
+  const pushCountRef = useRef(0);
+  const lastPhaseRef = useRef<string | null>(null);
 
-  const getStatePacket = useRef(() => packetRef.current);
+  // Imperative packet producer exposed to the synchronizer.
+  // Called on a debounce from inside the synchronizer (same 100ms as today).
+  useEffect(() => {
+    if (!props.pushStateRef) return;
+    props.pushStateRef.current = () => {
+      const prev = prevFullRef.current;
+      const phaseChanged = lastPhaseRef.current !== phase.gameState;
+      const rejoin = false; // rejoin hydration uses a dedicated path, not this function
+      const nextV = versionRef.current + 1;
+
+      let packet: StatePacket;
+      if (SYNC_DELTAS) {
+        const forceFull = shouldSendFull(
+          pushCountRef.current,
+          FULL_SNAPSHOT_HEARTBEAT_N,
+          phaseChanged,
+          rejoin,
+        );
+        packet = buildPacket({
+          prev,
+          next: fullState,
+          prevVersion: versionRef.current,
+          nextVersion: nextV,
+          ts: Date.now(),
+          forceFull,
+        });
+      } else {
+        packet = { kind: "full", v: nextV, ts: Date.now(), state: fullState };
+      }
+
+      // Perf accounting
+      if (packet.kind === "full") {
+        incrementCounter("sync.full.sent");
+      } else {
+        incrementCounter("sync.delta.sent");
+        recordMetric("sync.delta.patchKeys", Object.keys(packet.patch).length);
+      }
+
+      // Hand to the synchronizer's internal send function
+      props.synchronizerSendRef?.current?.(packet);
+
+      // Record for next diff
+      prevFullRef.current = fullState;
+      versionRef.current = nextV;
+      pushCountRef.current += 1;
+      lastPhaseRef.current = phase.gameState;
+    };
+  }, [fullState, phase.gameState, props.pushStateRef, props.synchronizerSendRef]);
+
+  useEffect(() => {
+    // Delegate to synchronizer's debounced pushState via pushStateRef.
+    if (props.pushStateRef?.current) {
+      props.pushStateRef.current();
+    }
+  }, [fullState, props.pushStateRef]);
 
   return (
     <GameStateSynchronizer
-      getStatePacket={getStatePacket.current}
       applyStatePacket={props.applyStatePacket}
       onActionReceived={props.onActionReceived}
       onRejoinComplete={props.onRejoinComplete}
       pushStateRef={props.pushStateRef}
+      synchronizerSendRef={props.synchronizerSendRef}
     />
   );
 }

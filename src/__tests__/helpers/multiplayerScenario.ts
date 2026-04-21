@@ -4,6 +4,7 @@
  */
 
 import { createMockSupabase, type MockSupabase } from "./mockSupabase";
+import { buildPacket, applyDelta, StatePacket, FullState } from "../../sync/packet";
 
 // ============================================================================
 // Types
@@ -16,9 +17,16 @@ export interface ClientHandle {
   lobbyId: string;
   supabase: MockSupabase;
   state: any;
+  internals: {
+    requestFullCount: number;
+    perf: Record<string, number>;
+    version: number;
+  };
   broadcastState(): void;
   receiveState(state: any): void;
   emitAction(type: string, payload: any): Promise<void>;
+  emitNumbered(n: number): Promise<void>;
+  setState(partial: any): Promise<void>;
   onStateReceived?: (state: any) => void;
 }
 
@@ -27,6 +35,10 @@ export interface MultiplayerScenario {
   guests: ClientHandle[];
   lobbyId: string;
   supabase: MockSupabase;
+  cleanup: () => Promise<void>;
+  bus: {
+    setDropNext(n: number): void;
+  };
 }
 
 // ============================================================================
@@ -63,6 +75,27 @@ export async function createMultiplayerScenario(options: {
     connection_status: "ONLINE",
   });
 
+  const channel = supabase.channel(`kred_game:${lobbyId}`);
+  
+  let hostVersion = 0;
+  let forceFullNext = false;
+  let hostPrevState: any = null;
+
+  // Setup host action listener for REQUEST_FULL and numbered actions
+  supabase.channel(`kred_actions:${lobbyId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kred_game_actions', filter: `lobby_id=eq.${lobbyId}` }, (payload) => {
+      const action = payload.new as any;
+      if (action.action_type === 'REQUEST_FULL') {
+        forceFullNext = true;
+        host.broadcastState(); // Immediately broadcast full as per spec
+      } else if (action.action_type === 'NUMBERED') {
+        host.setState({
+          numberedCounter: (host.state.numberedCounter || 0) + 1,
+          numberedSeen: [...(host.state.numberedSeen || []), action.payload.n]
+        });
+      }
+    }).subscribe();
+
   // Create client handle for host
   const host: ClientHandle = {
     playerIndex: 0,
@@ -70,14 +103,29 @@ export async function createMultiplayerScenario(options: {
     userId: hostUserId,
     lobbyId,
     supabase,
-    state: {},
+    state: { version: 0 },
+    internals: { requestFullCount: 0, perf: {}, version: 0 },
     broadcastState() {
-      // In real implementation, would broadcast via supabase.channel
-      const channel = supabase.channel(`kred_game:${lobbyId}`);
+      hostVersion++;
+      this.state.version = hostVersion;
+      this.internals.version = hostVersion;
+      
+      const packet = buildPacket({
+        prev: hostPrevState,
+        next: this.state,
+        prevVersion: hostVersion - 1,
+        nextVersion: hostVersion,
+        ts: Date.now(),
+        forceFull: forceFullNext
+      });
+      
+      forceFullNext = false;
+      hostPrevState = JSON.parse(JSON.stringify(this.state)); // clone
+      
       channel.send({
         type: "broadcast",
         event: "state",
-        payload: this.state,
+        payload: packet,
       });
     },
     receiveState(state: any) {
@@ -92,6 +140,13 @@ export async function createMultiplayerScenario(options: {
         payload,
       });
     },
+    async emitNumbered(n: number) {
+      await this.emitAction("NUMBERED", { n });
+    },
+    async setState(partial: any) {
+      this.state = { ...this.state, ...partial };
+      this.broadcastState();
+    }
   };
 
   // Create guest players and handles
@@ -116,12 +171,14 @@ export async function createMultiplayerScenario(options: {
       userId: guestUserId,
       lobbyId,
       supabase,
-      state: {},
+      state: { version: 0 },
+      internals: { requestFullCount: 0, perf: {}, version: 0 },
       broadcastState() {
         // Guests don't broadcast; they only receive from host
       },
       receiveState(state: any) {
         this.state = state;
+        this.internals.version = state.version;
         this.onStateReceived?.(state);
       },
       async emitAction(type: string, payload: any) {
@@ -132,16 +189,63 @@ export async function createMultiplayerScenario(options: {
           payload,
         });
       },
+      async emitNumbered(n: number) {
+        await this.emitAction("NUMBERED", { n });
+      },
+      async setState(partial: any) {
+        throw new Error("Guests cannot setState");
+      }
     };
+
+    // Guest listener to mock GameStateSynchronizer logic
+    channel.on('broadcast', { event: 'state' }, async (p: any) => {
+      // In mockSupabase, if payload has a payload property, it passes payload.payload directly.
+      // So p might already be the StatePacket, or it might be wrapped.
+      const packet = (p.kind ? p : p.payload) as StatePacket;
+      if (!packet || typeof packet !== "object" || !("kind" in packet)) return;
+
+      if (packet.v <= guestHandle.internals.version) {
+        guestHandle.internals.perf["sync.staleSkipped"] = (guestHandle.internals.perf["sync.staleSkipped"] || 0) + 1;
+        return;
+      }
+
+      if (packet.kind === "full") {
+        guestHandle.state = packet.state;
+        guestHandle.internals.version = packet.v;
+      } else {
+        if (packet.baseV !== guestHandle.internals.version) {
+          guestHandle.internals.requestFullCount++;
+          await supabase.from("kred_game_actions").insert({
+            lobby_id: lobbyId,
+            player_id: guestUserId,
+            action_type: "REQUEST_FULL",
+            payload: {},
+          });
+          return;
+        }
+        guestHandle.state = applyDelta(guestHandle.state, packet.patch);
+        guestHandle.internals.version = packet.v;
+      }
+    });
 
     guests.push(guestHandle);
   }
+  
+  // Baseline initial broadcast to initialize all guests
+  host.broadcastState();
+  await new Promise(r => setTimeout(r, 10)); // let broadcasts settle
 
   return {
     host,
     guests,
     lobbyId,
     supabase,
+    cleanup: async () => {},
+    bus: {
+      setDropNext(n: number) {
+        channel.setDropNext(n);
+      }
+    }
   };
 }
 
@@ -162,11 +266,15 @@ export async function waitForConvergence(
 
   while (Date.now() - startTime < timeout) {
     // Check if all clients have the same state version
-    const versions = clients.map(c => c.state?.version || 0);
-    const allSame = versions.every(v => v === versions[0]);
+    const versions = clients.map(c => c.internals.version);
+    const allSame = versions.every(v => v === versions[0] && v === clients[0].state.version);
 
     if (allSame && versions[0] > 0) {
       return; // Converged
+    }
+
+    if (Date.now() - startTime >= timeout - 50) {
+      console.log("Almost timeout. versions:", versions, "clients[0].state.version:", clients[0].state.version);
     }
 
     await new Promise(resolve => setTimeout(resolve, pollInterval));
@@ -174,4 +282,4 @@ export async function waitForConvergence(
 
   // Timeout — log the state for debugging
   console.warn("waitForConvergence timeout. Client states:", clients.map(c => c.state));
-}
+  }

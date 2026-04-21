@@ -34,3 +34,14 @@ export {
   usePerfCounter,
 } from "./hooks";
 export { PerfOverlay } from "./PerfOverlay";
+
+export const PERF_METRICS = {
+  "sync.full.sent": { kind: "counter" },
+  "sync.delta.sent": { kind: "counter" },
+  "sync.delta.patchKeys": { kind: "histogram", cap: 128 },
+  "sync.requestFull.sent": { kind: "counter" },
+  "sync.requestFull.served": { kind: "counter" },
+  "sync.apply.fullBytes": { kind: "histogram", cap: 128 },
+  "sync.apply.deltaBytes": { kind: "histogram", cap: 128 },
+  "actions.burstYieldMs": { kind: "histogram", cap: 128 }
+} as const;

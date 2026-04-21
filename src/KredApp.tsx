@@ -2,7 +2,8 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLobby } from './contexts/LobbyContext';
 import LobbyScreen from './components/screens/LobbyScreen';
 import WaitingRoom from './components/screens/WaitingRoom';
-import GameStateSynchronizer, { GameStatePacket } from './components/GameStateSynchronizer';
+import { GameStatePacket } from './components/GameStateSynchronizer';
+import { GameStateAggregator } from './providers/GameStateAggregator';
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
 import { PerfOverlay } from './perf';
@@ -37,9 +38,9 @@ function KredAppInner() {
 
   const [gameReady, setGameReady] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<string | null>(null);
+  const [legacyState, setLegacyState] = useState<any>(null);
 
   // Refs for GameStateSynchronizer ↔ App.tsx wiring
-  const getStatePacketRef = useRef<() => GameStatePacket>(() => ({} as GameStatePacket));
   const applyStatePacketRef = useRef<(packet: GameStatePacket) => void>(() => {});
   const pushStateRef = useRef<(() => void) | null>(null);
 
@@ -94,13 +95,15 @@ function KredAppInner() {
       {/* Game is active */}
       {lobbyId && lobbyStatus !== 'WAITING' && (
         <GameProviders>
-          <GameStateSynchronizer
-            getStatePacket={() => getStatePacketRef.current()}
-            applyStatePacket={(packet) => applyStatePacketRef.current(packet)}
-            onActionReceived={isHost ? actionDispatchRef : undefined}
-            onRejoinComplete={handleRejoinComplete}
-            pushStateRef={pushStateRef}
-          />
+          {legacyState && (
+            <GameStateAggregator
+              {...legacyState}
+              applyStatePacket={applyStatePacketRef.current}
+              onActionReceived={isHost ? actionDispatchRef : undefined}
+              onRejoinComplete={handleRejoinComplete}
+              pushStateRef={pushStateRef}
+            />
+          )}
           <App
             isMultiplayer={true}
             isHost={isHost}
@@ -131,7 +134,7 @@ function KredAppInner() {
               purchaseBureaucracy: actions.purchaseBureaucracy,
               joinAsSpectator: async () => {},
             }}
-            getStatePacketRef={getStatePacketRef}
+            onLegacyStateChange={setLegacyState}
             applyStatePacketRef={applyStatePacketRef}
             pushStateRef={pushStateRef}
             setActionDispatch={isHost ? setActionDispatch : undefined}

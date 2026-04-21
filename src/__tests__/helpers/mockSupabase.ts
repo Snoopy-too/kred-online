@@ -34,6 +34,7 @@ interface MockChannel {
   subscribers: ChannelSubscriber[];
   on(event: string, filter: Record<string, any> | null, callback: (payload: any) => void): MockChannel;
   send(payload: any): void;
+  setDropNext(n: number): void;
   subscribe(): void;
   unsubscribe(): void;
 }
@@ -99,6 +100,7 @@ export function createMockSupabase(): MockSupabase {
 
   const channelImpl = (name: string): MockChannel => {
     if (!channels[name]) channels[name] = [];
+    let dropNextCount = 0;
 
     return {
       name,
@@ -108,11 +110,18 @@ export function createMockSupabase(): MockSupabase {
         return this;
       },
       send(payload: any) {
+        if (dropNextCount > 0) {
+          dropNextCount--;
+          return;
+        }
         channels[name].forEach(subscriber => {
           if (subscriber.event === payload.event || payload.type === subscriber.event) {
             subscriber.callback(payload.payload || payload);
           }
         });
+      },
+      setDropNext(n: number) {
+        dropNextCount = n;
       },
       subscribe() {
         // Mark as subscribed (noop for mock)
@@ -249,14 +258,16 @@ export function createMockSupabase(): MockSupabase {
   };
 
   const notifyPostgresChanges = (table: string, event: string, row: any) => {
-    // Notify subscribers listening on postgres_changes
-    Object.values(channels).forEach(subs => {
-      subs.forEach(sub => {
-        if (sub.event === "postgres_changes" || sub.event === "*") {
-          sub.callback({ eventType: event, new: row, old: null });
-        }
+    // Notify subscribers listening on postgres_changes asynchronously to simulate network delay
+    setTimeout(() => {
+      Object.values(channels).forEach(subs => {
+        subs.forEach(sub => {
+          if (sub.event === "postgres_changes" || sub.event === "*") {
+            sub.callback({ eventType: event, new: row, old: null });
+          }
+        });
       });
-    });
+    }, 10);
   };
 
   // =========================================================================
