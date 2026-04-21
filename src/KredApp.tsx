@@ -3,6 +3,7 @@ import { useLobby } from './contexts/LobbyContext';
 import LobbyScreen from './components/screens/LobbyScreen';
 import WaitingRoom from './components/screens/WaitingRoom';
 import { GameStatePacket } from './components/GameStateSynchronizer';
+import type { StatePacket } from './sync/packet';
 import { GameStateAggregator } from './providers/GameStateAggregator';
 import { useSupabaseActions } from './hooks/useSupabaseActions';
 import App from './App';
@@ -43,6 +44,7 @@ function KredAppInner() {
   // Refs for GameStateSynchronizer ↔ App.tsx wiring
   const applyStatePacketRef = useRef<(packet: GameStatePacket) => void>(() => {});
   const pushStateRef = useRef<(() => void) | null>(null);
+  const synchronizerSendRef = useRef<((packet: StatePacket) => void) | null>(null);
 
   // Host action dispatcher — App.tsx registers its dispatch function here
   const actionDispatchRef = useRef<(action: ActionPayload) => void>();
@@ -102,6 +104,7 @@ function KredAppInner() {
               onActionReceived={isHost ? actionDispatchRef : undefined}
               onRejoinComplete={handleRejoinComplete}
               pushStateRef={pushStateRef}
+              synchronizerSendRef={synchronizerSendRef}
             />
           )}
           <App
