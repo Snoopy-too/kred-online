@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, ReactNode, useEffect } from "react";
 import type { PlayedTileState, TileTransaction } from "../hooks/useTilePlayWorkflow";
+import type { TrackedMove } from "../types/move";
 import { usePhase } from "./PhaseProvider";
 import { useRenderCount } from "../perf";
 
@@ -12,6 +13,13 @@ export interface CampaignState {
   tileRevealed: boolean;
   pendingReceiverReward: boolean;
   receiverAdvanceInProgress: boolean;
+  revealedTileId: string | null;
+  giveReceiverViewingTileId: string | null;
+  receiverAcceptance: boolean | null;
+  showPerfectTileModal: boolean;
+  showBonusMoveModal: boolean;
+  bonusMovePlayerId: number | null;
+  movesThisTurn: TrackedMove[];
 }
 
 export interface CampaignDispatch {
@@ -22,6 +30,13 @@ export interface CampaignDispatch {
   setTileRevealed: (v: boolean | ((prev: boolean) => boolean)) => void;
   setPendingReceiverReward: (v: boolean | ((prev: boolean) => boolean)) => void;
   setReceiverAdvanceInProgress: (v: boolean | ((prev: boolean) => boolean)) => void;
+  setRevealedTileId: (v: string | null | ((prev: string | null) => string | null)) => void;
+  setGiveReceiverViewingTileId: (v: string | null | ((prev: string | null) => string | null)) => void;
+  setReceiverAcceptance: (v: boolean | null | ((prev: boolean | null) => boolean | null)) => void;
+  setShowPerfectTileModal: (v: boolean | ((prev: boolean) => boolean)) => void;
+  setShowBonusMoveModal: (v: boolean | ((prev: boolean) => boolean)) => void;
+  setBonusMovePlayerId: (v: number | null | ((prev: number | null) => number | null)) => void;
+  setMovesThisTurn: (v: TrackedMove[] | ((prev: TrackedMove[]) => TrackedMove[])) => void;
   /** Atomically update multiple campaign keys. Prefer this over multiple setters. */
   patch: (p: Partial<CampaignState>) => void;
 }
@@ -44,6 +59,13 @@ const DEFAULT_CAMPAIGN_STATE: CampaignState = {
   tileRevealed: false,
   pendingReceiverReward: false,
   receiverAdvanceInProgress: false,
+  revealedTileId: null,
+  giveReceiverViewingTileId: null,
+  receiverAcceptance: null,
+  showPerfectTileModal: false,
+  showBonusMoveModal: false,
+  bonusMovePlayerId: null,
+  movesThisTurn: [],
 };
 
 export function CampaignProvider({ children, initial }: CampaignProviderProps) {
@@ -68,6 +90,13 @@ export function CampaignProvider({ children, initial }: CampaignProviderProps) {
         tileRevealed: false,
         pendingReceiverReward: false,
         receiverAdvanceInProgress: false,
+        revealedTileId: null,
+        giveReceiverViewingTileId: null,
+        receiverAcceptance: null,
+        showPerfectTileModal: false,
+        showBonusMoveModal: false,
+        bonusMovePlayerId: null,
+        movesThisTurn: [],
       }));
     }
   }, [phase.gameState]);
@@ -108,6 +137,36 @@ export function CampaignProvider({ children, initial }: CampaignProviderProps) {
         setState((s) => ({
           ...s,
           receiverAdvanceInProgress: typeof updater === "function" ? updater(s.receiverAdvanceInProgress) : updater,
+        })),
+      setRevealedTileId: (updater) =>
+        setState((s) => ({
+          ...s,
+          revealedTileId: typeof updater === "function" ? updater(s.revealedTileId) : updater,
+        })),
+      setGiveReceiverViewingTileId: (updater) =>
+        setState((s) => ({
+          ...s,
+          giveReceiverViewingTileId: typeof updater === "function" ? updater(s.giveReceiverViewingTileId) : updater,
+        })),
+      setReceiverAcceptance: (updater) =>
+        setState((s) => ({
+          ...s,
+          receiverAcceptance: typeof updater === "function" ? updater(s.receiverAcceptance) : updater,
+        })),
+      setShowPerfectTileModal: (updater) =>
+        setState((s) => ({
+          ...s,
+          showPerfectTileModal: typeof updater === "function" ? updater(s.showPerfectTileModal) : updater,
+        })),
+      setShowBonusMoveModal: (updater) =>
+        setState((s) => ({
+          ...s,
+          showBonusMoveModal: typeof updater === "function" ? updater(s.showBonusMoveModal) : updater,
+        })),
+      setBonusMovePlayerId: (updater) =>
+        setState((s) => ({
+          ...s,
+          bonusMovePlayerId: typeof updater === "function" ? updater(s.bonusMovePlayerId) : updater,
         })),
       patch: (p) => setState((s) => ({ ...s, ...p })),
     }),

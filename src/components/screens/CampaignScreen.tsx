@@ -137,12 +137,6 @@ interface CampaignScreenProps {
   showGridOverlay: boolean;
   setShowGridOverlay: (show: boolean) => void;
   matchingTileIds?: string[];
-  revealedTileId: string | null;
-  isPrivatelyViewing: boolean;
-  showChallengeRevealModal: boolean;
-  challengedTile: Tile | null;
-  placerViewingTileId: string | null;
-  giveReceiverViewingTileId: string | null;
   gameLog: string[];
   onNewGame: () => void;
   onPieceMove: (
@@ -167,25 +161,10 @@ interface CampaignScreenProps {
   challengeRevealCanContinue?: boolean;
   onPlacerViewTile: (tileId: string) => void;
   onSetGiveReceiverViewingTileId: (tileId: string | null) => void;
-  receiverAcceptance?: boolean | null;
   onReceiverAcceptanceDecision?: (accepted: boolean) => void;
   onChallengerDecision?: (challenge: boolean) => void;
   onCorrectionComplete?: () => void;
   onReceiverRewardChoice?: (choice: 'credibility' | 'advance') => void;
-  showMoveCheckResult?: boolean;
-  moveCheckResult?: {
-    isMet: boolean;
-    requiredMoves: TrackedMove[];
-    performedMoves: TrackedMove[];
-    missingMoves: TrackedMove[];
-    moveValidations?: Array<{
-      moveType: string;
-      isValid: boolean;
-      reason: string;
-      fromLocationId?: string;
-      toLocationId?: string;
-    }>;
-  } | null;
   onCloseMoveCheckResult?: () => void;
   onCheckMove?: () => void;
   credibilityRotationAdjustments: { [playerId: number]: number };
@@ -200,24 +179,10 @@ interface CampaignScreenProps {
   setIsCredibilityRulesExpanded: (expanded: boolean) => void;
   isPieceTrackerExpanded: boolean;
   setIsPieceTrackerExpanded: (expanded: boolean) => void;
-  showPerfectTileModal: boolean;
-  setShowPerfectTileModal: (show: boolean) => void;
-  showBonusMoveModal: boolean;
-  bonusMovePlayerId: number | null;
   onBonusMoveComplete: () => void;
   onResetTurn: () => void;
   onResetPiecesCorrection: () => void;
   onResetBonusMove: () => void;
-  showTakeAdvantageModal: boolean;
-  takeAdvantageChallengerId: number | null;
-  takeAdvantageChallengerCredibility: number;
-  showTakeAdvantageTileSelection: boolean;
-  selectedTilesForAdvantage: Tile[];
-  totalKredcoinForAdvantage: number;
-  showTakeAdvantageMenu: boolean;
-  takeAdvantagePurchase: BureaucracyPurchase | null;
-  takeAdvantageValidationError: string | null;
-  challengeResultMessagePlayerId?: number | null;
   onTakeAdvantageDecline: () => void;
   onTakeAdvantageYes: () => void;
   onRecoverCredibility: () => void;
@@ -246,12 +211,6 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   showGridOverlay,
   setShowGridOverlay,
   matchingTileIds = [],
-  revealedTileId,
-  isPrivatelyViewing,
-  showChallengeRevealModal,
-  challengedTile,
-  placerViewingTileId,
-  giveReceiverViewingTileId,
   gameLog,
   onNewGame,
   onPieceMove,
@@ -266,13 +225,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   challengeRevealCanContinue = true,
   onPlacerViewTile,
   onSetGiveReceiverViewingTileId,
-  receiverAcceptance,
   onReceiverAcceptanceDecision,
   onChallengerDecision,
   onCorrectionComplete,
   onReceiverRewardChoice,
-  showMoveCheckResult,
-  moveCheckResult,
   onCloseMoveCheckResult,
   onCheckMove,
   credibilityRotationAdjustments,
@@ -285,24 +241,10 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   setIsCredibilityRulesExpanded,
   isPieceTrackerExpanded,
   setIsPieceTrackerExpanded,
-  showPerfectTileModal,
-  setShowPerfectTileModal,
-  showBonusMoveModal,
-  bonusMovePlayerId,
   onBonusMoveComplete,
   onResetTurn,
   onResetPiecesCorrection,
   onResetBonusMove,
-  showTakeAdvantageModal,
-  takeAdvantageChallengerId,
-  takeAdvantageChallengerCredibility,
-  showTakeAdvantageTileSelection,
-  selectedTilesForAdvantage,
-  totalKredcoinForAdvantage,
-  showTakeAdvantageMenu,
-  takeAdvantagePurchase,
-  takeAdvantageValidationError,
-  challengeResultMessagePlayerId,
   onTakeAdvantageDecline,
   onTakeAdvantageYes,
   onRecoverCredibility,
@@ -329,11 +271,38 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
     tileRevealed,
     pendingReceiverReward,
     receiverAdvanceInProgress,
+    revealedTileId,
+    giveReceiverViewingTileId,
+    receiverAcceptance,
+    showPerfectTileModal,
+    showBonusMoveModal,
+    bonusMovePlayerId,
   } = campaign;
   // Cast: runtime value carries extra fields (piecesAfterMoves, tile) not declared
   // on the canonical PlayedTileState. Flagged in HANDOFF_2026-04-21 for Step 8 cleanup.
   const playedTile = campaign.playedTile as any;
-  const { bystanders, bystanderIndex, tileRejected } = useChallenge();
+  const challenge = useChallenge();
+  const {
+    bystanders,
+    bystanderIndex,
+    tileRejected,
+    isPrivatelyViewing,
+    showChallengeRevealModal,
+    challengedTile,
+    placerViewingTileId,
+    showMoveCheckResult,
+    moveCheckResult,
+    showTakeAdvantageModal,
+    takeAdvantageChallengerId,
+    takeAdvantageChallengerCredibility,
+    showTakeAdvantageTileSelection,
+    selectedTilesForAdvantage,
+    totalKredcoinForAdvantage,
+    showTakeAdvantageMenu,
+    takeAdvantagePurchase,
+    takeAdvantageValidationError,
+  } = challenge;
+
 
   // ============================================================================
   // STATE HOOKS
@@ -2234,12 +2203,12 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
                         
                         let isDraggable = false;
                         if (gameState === "TAKE_ADVANTAGE") {
-                          isDraggable = !isPromotionPurchase && takeAdvantagePurchase?.item.type === "MOVE" && 
-                            (!isMultiplayer || takeAdvantageChallengerId === viewingPlayerId);
+                          isDraggable = !isPromotionPurchase && takeAdvantagePurchase?.item.type === "MOVE" &&
+                            (!isMultiplayer || takeAdvantageChallengerId === viewingPlayer?.id);
                         } else if (gameState === "BONUS_MOVE") {
-                          isDraggable = (!isMultiplayer || bonusMovePlayerId === viewingPlayerId);
+                          isDraggable = (!isMultiplayer || bonusMovePlayerId === viewingPlayer?.id);
                         } else if (gameState === "CORRECTION_REQUIRED") {
-                          isDraggable = (!isMultiplayer || playedTile?.playerId === viewingPlayerId);
+                          isDraggable = (!isMultiplayer || playedTile?.playerId === viewingPlayer?.id);
                         } else if (gameState === "CAMPAIGN") {
                           isDraggable = (!isMultiplayer || playerIndex === currentPlayerIndex);
                         }
