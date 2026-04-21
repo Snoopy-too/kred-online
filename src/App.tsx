@@ -4291,30 +4291,18 @@ const App: React.FC<MultiplayerProps> = ({
 
         return (
           <CampaignScreen
-            gameState={gameState}
             playerCount={playerCount}
-            players={players}
-            pieces={pieces}
-            boardTiles={boardTiles}
-            bankedTiles={bankedTiles}
             currentPlayerId={viewingPlayerId}
-            currentPlayerIndex={currentPlayerIndex}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
-            campaignRole={computedCampaignRole}
-            moverPlayerIndex={moverPlayerIndex}
             lastDroppedPosition={lastDroppedPosition}
             lastDroppedPieceId={lastDroppedPieceId}
             isTestMode={isTestMode}
             dummyTile={dummyTile}
             setDummyTile={setDummyTile}
-            hasPlayedTileThisTurn={hasPlayedTileThisTurn}
             matchingTileIds={matchingTileIds}
             revealedTileId={revealedTileId}
-            tileTransaction={tileTransaction}
             isPrivatelyViewing={isPrivatelyViewing}
-            bystanders={bystanders}
-            bystanderIndex={bystanderIndex}
             showChallengeRevealModal={showChallengeRevealModal}
             challengedTile={challengedTile}
             placerViewingTileId={placerViewingTileId}
@@ -4347,16 +4335,11 @@ const App: React.FC<MultiplayerProps> = ({
             }
             onPlacerViewTile={handlePlacerViewTile}
             onSetGiveReceiverViewingTileId={setGiveReceiverViewingTileId}
-            tileRevealed={tileRevealed}
-            pendingReceiverReward={pendingReceiverReward}
-            receiverAdvanceInProgress={receiverAdvanceInProgress}
             onReceiverRewardChoice={handleReceiverRewardChoice}
-            playedTile={playedTile}
             receiverAcceptance={receiverAcceptance}
             onReceiverAcceptanceDecision={wrappedReceiverDecision}
             onChallengerDecision={wrappedChallengerDecision}
             onCorrectionComplete={wrappedCorrectionComplete}
-            tileRejected={tileRejected}
             showMoveCheckResult={showMoveCheckResult}
             moveCheckResult={moveCheckResult}
             onCloseMoveCheckResult={() => setShowMoveCheckResult(false)}
@@ -4378,7 +4361,6 @@ const App: React.FC<MultiplayerProps> = ({
             showBonusMoveModal={showBonusMoveModal}
             bonusMovePlayerId={bonusMovePlayerId}
             onBonusMoveComplete={wrappedBonusMoveComplete}
-            movedPiecesThisTurn={movedPiecesThisTurn}
             onResetTurn={handleResetTurn}
             onResetPiecesCorrection={wrappedResetPiecesCorrection}
             onResetBonusMove={handleResetBonusMove}

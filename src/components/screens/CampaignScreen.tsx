@@ -53,6 +53,15 @@ import { getPlayerById, getPieceById } from "../../utils";
 import LanguageModal from "../shared/LanguageModal";
 
 // ============================================================================
+// PROVIDER IMPORTS - State now lives in the provider tree
+// ============================================================================
+import { usePhase } from "../../providers/PhaseProvider";
+import { useRoster } from "../../providers/RosterProvider";
+import { useBoard } from "../../providers/BoardProvider";
+import { useCampaign } from "../../providers/CampaignProvider";
+import { useChallenge } from "../../providers/ChallengeProvider";
+
+// ============================================================================
 // CONSTANTS & THEMES
 // ============================================================================
 
@@ -109,18 +118,10 @@ const PLAYER_COLORS: Record<number, { border: string; bg: string; text: string; 
 // ============================================================================
 
 interface CampaignScreenProps {
-  gameState: GameState;
   playerCount: number;
-  players: Player[];
-  pieces: Piece[];
-  boardTiles: BoardTile[];
-  bankedTiles: (BoardTile & { faceUp: boolean })[];
   currentPlayerId: number;
-  currentPlayerIndex: number; // Index of whose turn it is (for turn validation)
   playerIndex?: number; // Index of the player viewing this screen (multiplayer)
   isMultiplayer?: boolean; // Whether this is a multiplayer game
-  campaignRole?: string | null; // Server-assigned role: mover, receiver, challenger, bystander, correcting, waiting
-  moverPlayerIndex?: number | null; // Index of the current mover
   lastDroppedPosition: { top: number; left: number } | null;
   lastDroppedPieceId: string | null;
   isTestMode: boolean;
@@ -135,18 +136,9 @@ interface CampaignScreenProps {
   setBoardRotationEnabled: (enabled: boolean) => void;
   showGridOverlay: boolean;
   setShowGridOverlay: (show: boolean) => void;
-  hasPlayedTileThisTurn: boolean;
   matchingTileIds?: string[];
   revealedTileId: string | null;
-  tileTransaction: {
-    placerId: number;
-    receiverId: number;
-    boardTileId: string;
-    tile: Tile;
-  } | null;
   isPrivatelyViewing: boolean;
-  bystanders: Player[];
-  bystanderIndex: number;
   showChallengeRevealModal: boolean;
   challengedTile: Tile | null;
   placerViewingTileId: string | null;
@@ -175,23 +167,11 @@ interface CampaignScreenProps {
   challengeRevealCanContinue?: boolean;
   onPlacerViewTile: (tileId: string) => void;
   onSetGiveReceiverViewingTileId: (tileId: string | null) => void;
-  playedTile?: {
-    tileId: string;
-    playerId: number;
-    receivingPlayerId: number;
-    movesPerformed: TrackedMove[];
-    originalPieces: Piece[];
-    originalBoardTiles: BoardTile[];
-  } | null;
   receiverAcceptance?: boolean | null;
   onReceiverAcceptanceDecision?: (accepted: boolean) => void;
   onChallengerDecision?: (challenge: boolean) => void;
   onCorrectionComplete?: () => void;
-  tileRevealed?: boolean;
-  pendingReceiverReward?: boolean;
-  receiverAdvanceInProgress?: boolean;
   onReceiverRewardChoice?: (choice: 'credibility' | 'advance') => void;
-  tileRejected?: boolean;
   showMoveCheckResult?: boolean;
   moveCheckResult?: {
     isMet: boolean;
@@ -225,7 +205,6 @@ interface CampaignScreenProps {
   showBonusMoveModal: boolean;
   bonusMovePlayerId: number | null;
   onBonusMoveComplete: () => void;
-  movedPiecesThisTurn: Set<string>;
   onResetTurn: () => void;
   onResetPiecesCorrection: () => void;
   onResetBonusMove: () => void;
@@ -253,18 +232,10 @@ interface CampaignScreenProps {
 }
 
 const CampaignScreen: React.FC<CampaignScreenProps> = ({
-  gameState,
   playerCount,
-  players,
-  pieces,
-  boardTiles,
-  bankedTiles,
   currentPlayerId,
-  currentPlayerIndex,
   playerIndex,
   isMultiplayer = false,
-  campaignRole,
-  moverPlayerIndex,
   lastDroppedPosition,
   lastDroppedPieceId,
   isTestMode,
@@ -274,13 +245,9 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   setBoardRotationEnabled,
   showGridOverlay,
   setShowGridOverlay,
-  hasPlayedTileThisTurn,
   matchingTileIds = [],
   revealedTileId,
-  tileTransaction,
   isPrivatelyViewing,
-  bystanders,
-  bystanderIndex,
   showChallengeRevealModal,
   challengedTile,
   placerViewingTileId,
@@ -299,16 +266,11 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   challengeRevealCanContinue = true,
   onPlacerViewTile,
   onSetGiveReceiverViewingTileId,
-  playedTile,
   receiverAcceptance,
   onReceiverAcceptanceDecision,
   onChallengerDecision,
   onCorrectionComplete,
-  tileRevealed,
-  pendingReceiverReward,
-  receiverAdvanceInProgress,
   onReceiverRewardChoice,
-  tileRejected,
   showMoveCheckResult,
   moveCheckResult,
   onCloseMoveCheckResult,
@@ -328,7 +290,6 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   showBonusMoveModal,
   bonusMovePlayerId,
   onBonusMoveComplete,
-  movedPiecesThisTurn,
   onResetTurn,
   onResetPiecesCorrection,
   onResetBonusMove,
@@ -355,9 +316,29 @@ const CampaignScreen: React.FC<CampaignScreenProps> = ({
   onTakeAdvantagePiecePromote,
 }) => {
   // ============================================================================
+  // PROVIDER HOOKS — migrated state now lives in the provider tree
+  // ============================================================================
+  const { gameState, currentPlayerIndex, moverPlayerIndex, campaignRole } = usePhase();
+  const { players, pieces } = useRoster();
+  const { boardTiles, bankedTiles } = useBoard();
+  const campaign = useCampaign();
+  const {
+    hasPlayedTileThisTurn,
+    movedPiecesThisTurn,
+    tileTransaction,
+    tileRevealed,
+    pendingReceiverReward,
+    receiverAdvanceInProgress,
+  } = campaign;
+  // Cast: runtime value carries extra fields (piecesAfterMoves, tile) not declared
+  // on the canonical PlayedTileState. Flagged in HANDOFF_2026-04-21 for Step 8 cleanup.
+  const playedTile = campaign.playedTile as any;
+  const { bystanders, bystanderIndex, tileRejected } = useChallenge();
+
+  // ============================================================================
   // STATE HOOKS
   // ============================================================================
-  
+
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [isDraggingTile, setIsDraggingTile] = useState(false);

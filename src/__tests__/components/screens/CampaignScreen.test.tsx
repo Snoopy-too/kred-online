@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import CampaignScreen from "../../../components/screens/CampaignScreen";
@@ -6,11 +7,13 @@ import type {
   Piece,
   BoardTile,
   Tile,
-  TileReceivingSpace,
-  TrackedMove,
   GameState,
-  BureaucracyMenuItem,
 } from "../../../types";
+import { PhaseProvider } from "../../../providers/PhaseProvider";
+import { RosterProvider } from "../../../providers/RosterProvider";
+import { BoardProvider } from "../../../providers/BoardProvider";
+import { CampaignProvider } from "../../../providers/CampaignProvider";
+import { ChallengeProvider } from "../../../providers/ChallengeProvider";
 
 describe("CampaignScreen", () => {
   const mockOnNewGame = vi.fn();
@@ -106,13 +109,9 @@ describe("CampaignScreen", () => {
     2: 0,
   };
 
+  // Props-only (UI wiring). Migrated state fields go through providers via renderCampaign().
   const defaultProps = {
-    gameState: "CAMPAIGN" as GameState,
     playerCount: 3,
-    players: mockPlayers,
-    pieces: mockPieces,
-    boardTiles: mockBoardTiles,
-    bankedTiles: mockBankedTiles,
     currentPlayerId: 1,
     lastDroppedPosition: null,
     lastDroppedPieceId: null,
@@ -123,13 +122,8 @@ describe("CampaignScreen", () => {
     setBoardRotationEnabled: mockSetBoardRotationEnabled,
     showGridOverlay: false,
     setShowGridOverlay: mockSetShowGridOverlay,
-    hasPlayedTileThisTurn: false,
     revealedTileId: null,
-    tileTransaction: null,
-    playedTile: null,
     isPrivatelyViewing: false,
-    bystanders: [],
-    bystanderIndex: 0,
     showChallengeRevealModal: false,
     challengedTile: null,
     placerViewingTileId: null,
@@ -162,7 +156,6 @@ describe("CampaignScreen", () => {
     showBonusMoveModal: false,
     bonusMovePlayerId: null,
     onBonusMoveComplete: mockOnBonusMoveComplete,
-    movedPiecesThisTurn: new Set<string>(),
     onResetTurn: mockOnResetTurn,
     onResetPiecesCorrection: mockOnResetPiecesCorrection,
     onResetBonusMove: mockOnResetBonusMove,
@@ -188,41 +181,103 @@ describe("CampaignScreen", () => {
     onTakeAdvantagePiecePromote: mockOnTakeAdvantagePiecePromote,
   };
 
+  type Overrides = Partial<typeof defaultProps> & {
+    gameState?: GameState;
+    players?: Player[];
+    pieces?: Piece[];
+    boardTiles?: BoardTile[];
+    bankedTiles?: (BoardTile & { faceUp: boolean })[];
+    playedTile?: any;
+    hasPlayedTileThisTurn?: boolean;
+    movedPiecesThisTurn?: Set<string>;
+    tileTransaction?: any;
+    tileRevealed?: boolean;
+    pendingReceiverReward?: boolean;
+    receiverAdvanceInProgress?: boolean;
+    bystanders?: Player[];
+    bystanderIndex?: number;
+    tileRejected?: boolean;
+  };
+
+  function renderCampaign(overrides: Overrides = {}) {
+    const {
+      gameState = "CAMPAIGN" as GameState,
+      players = mockPlayers,
+      pieces = mockPieces,
+      boardTiles = mockBoardTiles,
+      bankedTiles = mockBankedTiles,
+      playedTile = null,
+      hasPlayedTileThisTurn = false,
+      movedPiecesThisTurn = new Set<string>(),
+      tileTransaction = null,
+      tileRevealed = false,
+      pendingReceiverReward = false,
+      receiverAdvanceInProgress = false,
+      bystanders = [],
+      bystanderIndex = 0,
+      tileRejected = false,
+      ...props
+    } = overrides;
+
+    return render(
+      <PhaseProvider initial={{ gameState, currentPlayerIndex: 0 }}>
+        <RosterProvider initial={{ players, pieces }}>
+          <BoardProvider initial={{ boardTiles, bankedTiles }}>
+            <CampaignProvider
+              initial={{
+                playedTile,
+                hasPlayedTileThisTurn,
+                movedPiecesThisTurn,
+                tileTransaction,
+                tileRevealed,
+                pendingReceiverReward,
+                receiverAdvanceInProgress,
+              }}
+            >
+              <ChallengeProvider initial={{ bystanders, bystanderIndex, tileRejected }}>
+                <CampaignScreen {...defaultProps} {...props} />
+              </ChallengeProvider>
+            </CampaignProvider>
+          </BoardProvider>
+        </RosterProvider>
+      </PhaseProvider>,
+    );
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("should display campaign phase title", () => {
-    render(<CampaignScreen {...defaultProps} />);
+    renderCampaign();
     expect(screen.getByText("Player 1's Turn")).toBeInTheDocument();
   });
 
   it("should display current player information", () => {
-    render(<CampaignScreen {...defaultProps} />);
+    renderCampaign();
     expect(screen.getByText("Player 1's Turn")).toBeInTheDocument();
   });
 
   it("should display the game board image", () => {
-    render(<CampaignScreen {...defaultProps} />);
+    renderCampaign();
     const boardImage = screen.getByAltText("A 3-player game board");
     expect(boardImage).toBeInTheDocument();
   });
 
   it("should render pieces on the board", () => {
-    render(<CampaignScreen {...defaultProps} />);
+    renderCampaign();
     const pieceImage = screen.getByAltText("Mark");
     expect(pieceImage).toBeInTheDocument();
     expect(pieceImage).toHaveAttribute("src", "./images/pieces/mark_1.svg");
   });
 
   it("should display player hand with tiles", () => {
-    render(<CampaignScreen {...defaultProps} />);
-    // Player hand renders for current player (Player 1 with 1 tile)
+    renderCampaign();
     expect(screen.getByText(/Player 1's Hand/)).toBeInTheDocument();
   });
 
   it("should display end turn button", () => {
-    render(<CampaignScreen {...defaultProps} hasPlayedTileThisTurn={true} />);
+    renderCampaign({ hasPlayedTileThisTurn: true });
     const endTurnButton = screen.getByText("End Turn");
     expect(endTurnButton).toBeInTheDocument();
     expect(endTurnButton).not.toBeDisabled();
@@ -231,49 +286,40 @@ describe("CampaignScreen", () => {
   });
 
   it("should display board rotation toggle", () => {
-    render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+    renderCampaign({ isTestMode: true });
     expect(screen.getByText(/Board Rotation/)).toBeInTheDocument();
   });
 
   it("should display grid overlay toggle", () => {
-    render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+    renderCampaign({ isTestMode: true });
     expect(screen.getByText(/Grid Overlay/)).toBeInTheDocument();
   });
 
   it("should show undo button when tile has been played", () => {
-    render(<CampaignScreen {...defaultProps} gameState="TILE_PLAYED" />);
+    renderCampaign({ gameState: "TILE_PLAYED" as GameState });
     expect(screen.getByText(/Reset Turn/)).toBeInTheDocument();
   });
 
   it("should display tile receiving spaces when player has tiles", () => {
-    const { container } = render(<CampaignScreen {...defaultProps} />);
-    // Tile receiving spaces are rendered on the board
+    const { container } = renderCampaign();
     expect(container.querySelector('img[alt*="board"]')).toBeInTheDocument();
   });
 
   it("should show perfect tile modal when showPerfectTileModal is true", () => {
-    const { container } = render(
-      <CampaignScreen {...defaultProps} showPerfectTileModal={true} />
-    );
-    // Modal content may not be fully implemented yet
+    const { container } = renderCampaign({ showPerfectTileModal: true });
     expect(container).toBeTruthy();
   });
 
   it("should show bonus move modal when showBonusMoveModal is true", () => {
-    const { container } = render(
-      <CampaignScreen
-        {...defaultProps}
-        showBonusMoveModal={true}
-        bonusMovePlayerId={1}
-      />
-    );
-    // Bonus move modal should render
+    const { container } = renderCampaign({
+      showBonusMoveModal: true,
+      bonusMovePlayerId: 1,
+    });
     expect(container).toBeTruthy();
   });
 
   it("should display credibility for all players", () => {
-    render(<CampaignScreen {...defaultProps} />);
-    // Credibility indicators should be rendered on the board
+    renderCampaign();
     const credibilityImages = screen.getAllByAltText(/Credibility for Player/);
     expect(credibilityImages.length).toBeGreaterThan(0);
   });
@@ -287,20 +333,17 @@ describe("CampaignScreen", () => {
       placerId: 1,
       ownerId: 2,
     };
-    render(
-      <CampaignScreen
-        {...defaultProps}
-        isTestMode={true}
-        gameState="TILE_PLAYED"
-        playedTile={mockPlayedTile}
-        hasPlayedTileThisTurn={true}
-      />
-    );
+    renderCampaign({
+      isTestMode: true,
+      gameState: "TILE_PLAYED" as GameState,
+      playedTile: mockPlayedTile,
+      hasPlayedTileThisTurn: true,
+    });
     expect(screen.getByText(/Check Move/)).toBeInTheDocument();
   });
 
   it("should display game log toggle button", () => {
-    render(<CampaignScreen {...defaultProps} />);
+    renderCampaign();
     expect(screen.getByText(/Game Log/)).toBeInTheDocument();
   });
 
@@ -311,42 +354,35 @@ describe("CampaignScreen", () => {
       boardTileId: "board_tile_1",
       tile: mockTile,
     };
-    const { container } = render(
-      <CampaignScreen {...defaultProps} tileTransaction={transaction} />
-    );
-    // Transaction modal should render
+    const { container } = renderCampaign({ tileTransaction: transaction });
     expect(container).toBeTruthy();
   });
 
   it("should display take advantage modal when showTakeAdvantageModal is true", () => {
-    const { container } = render(
-      <CampaignScreen
-        {...defaultProps}
-        showTakeAdvantageModal={true}
-        takeAdvantageChallengerId={2}
-        takeAdvantageChallengerCredibility={1}
-      />
-    );
-    // Take advantage modal should render
+    const { container } = renderCampaign({
+      showTakeAdvantageModal: true,
+      takeAdvantageChallengerId: 2,
+      takeAdvantageChallengerCredibility: 1,
+    });
     expect(container).toBeTruthy();
   });
 
   it("should call onResetTurn when reset turn button is clicked", () => {
-    render(<CampaignScreen {...defaultProps} gameState="TILE_PLAYED" />);
+    renderCampaign({ gameState: "TILE_PLAYED" as GameState });
     const resetButton = screen.getByText(/Reset Turn/);
     fireEvent.click(resetButton);
     expect(mockOnResetTurn).toHaveBeenCalledTimes(1);
   });
 
   it("should toggle board rotation when checkbox is clicked", () => {
-    render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+    renderCampaign({ isTestMode: true });
     const checkbox = screen.getByRole("checkbox", { name: /Board Rotation/ });
     fireEvent.click(checkbox);
     expect(mockSetBoardRotationEnabled).toHaveBeenCalledWith(true);
   });
 
   it("should toggle grid overlay when checkbox is clicked", () => {
-    render(<CampaignScreen {...defaultProps} isTestMode={true} />);
+    renderCampaign({ isTestMode: true });
     const checkbox = screen.getByRole("checkbox", { name: /Grid Overlay/ });
     fireEvent.click(checkbox);
     expect(mockSetShowGridOverlay).toHaveBeenCalledWith(true);
