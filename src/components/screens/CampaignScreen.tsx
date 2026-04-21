@@ -60,6 +60,7 @@ import { useRoster } from "../../providers/RosterProvider";
 import { useBoard } from "../../providers/BoardProvider";
 import { useCampaign } from "../../providers/CampaignProvider";
 import { useChallenge } from "../../providers/ChallengeProvider";
+import { useCampaignHandlers } from "../../providers/HandlersProvider";
 
 // ============================================================================
 // CONSTANTS & THEMES
@@ -117,7 +118,7 @@ const PLAYER_COLORS: Record<number, { border: string; bg: string; text: string; 
 // COMPONENT
 // ============================================================================
 
-interface CampaignScreenProps {
+interface CampaignScreenHandlers {
   playerCount: number;
   currentPlayerId: number;
   playerIndex?: number; // Index of the player viewing this screen (multiplayer)
@@ -196,67 +197,68 @@ interface CampaignScreenProps {
   onTakeAdvantagePiecePromote: (pieceId: string) => void;
 }
 
-const CampaignScreen: React.FC<CampaignScreenProps> = ({
-  playerCount,
-  currentPlayerId,
-  playerIndex,
-  isMultiplayer = false,
-  lastDroppedPosition,
-  lastDroppedPieceId,
-  isTestMode,
-  dummyTile,
-  setDummyTile,
-  boardRotationEnabled,
-  setBoardRotationEnabled,
-  showGridOverlay,
-  setShowGridOverlay,
-  matchingTileIds = [],
-  gameLog,
-  onNewGame,
-  onPieceMove,
-  onBoardTileMove,
-  onEndTurn,
-  onPlaceTile,
-  onRevealTile,
-  onReceiverDecision,
-  onBystanderDecision,
-  onTogglePrivateView,
-  onContinueAfterChallenge,
-  challengeRevealCanContinue = true,
-  onPlacerViewTile,
-  onSetGiveReceiverViewingTileId,
-  onReceiverAcceptanceDecision,
-  onChallengerDecision,
-  onCorrectionComplete,
-  onReceiverRewardChoice,
-  onCloseMoveCheckResult,
-  onCheckMove,
-  credibilityRotationAdjustments,
-  setCredibilityRotationAdjustments,
-  isGameLogExpanded,
-  setIsGameLogExpanded,
-  isCredibilityAdjusterExpanded,
-  setIsCredibilityAdjusterExpanded,
-  isCredibilityRulesExpanded,
-  setIsCredibilityRulesExpanded,
-  isPieceTrackerExpanded,
-  setIsPieceTrackerExpanded,
-  onBonusMoveComplete,
-  onResetTurn,
-  onResetPiecesCorrection,
-  onResetBonusMove,
-  onTakeAdvantageDecline,
-  onTakeAdvantageYes,
-  onRecoverCredibility,
-  onPurchaseMove,
-  onToggleTileSelection,
-  onConfirmTileSelection,
-  onCancelTileSelection,
-  onSelectTakeAdvantageAction,
-  onResetTakeAdvantageAction,
-  onDoneTakeAdvantageAction,
-  onTakeAdvantagePiecePromote,
-}) => {
+const CampaignScreen: React.FC = () => {
+  const {
+    playerCount,
+    currentPlayerId,
+    playerIndex,
+    isMultiplayer = false,
+    lastDroppedPosition,
+    lastDroppedPieceId,
+    isTestMode,
+    dummyTile,
+    setDummyTile,
+    boardRotationEnabled,
+    setBoardRotationEnabled,
+    showGridOverlay,
+    setShowGridOverlay,
+    matchingTileIds = [],
+    gameLog,
+    onNewGame,
+    onPieceMove,
+    onBoardTileMove,
+    onEndTurn,
+    onPlaceTile,
+    onRevealTile,
+    onReceiverDecision,
+    onBystanderDecision,
+    onTogglePrivateView,
+    onContinueAfterChallenge,
+    challengeRevealCanContinue = true,
+    onPlacerViewTile,
+    onSetGiveReceiverViewingTileId,
+    onReceiverAcceptanceDecision,
+    onChallengerDecision,
+    onCorrectionComplete,
+    onReceiverRewardChoice,
+    onCloseMoveCheckResult,
+    onCheckMove,
+    credibilityRotationAdjustments,
+    setCredibilityRotationAdjustments,
+    isGameLogExpanded,
+    setIsGameLogExpanded,
+    isCredibilityAdjusterExpanded,
+    setIsCredibilityAdjusterExpanded,
+    isCredibilityRulesExpanded,
+    setIsCredibilityRulesExpanded,
+    isPieceTrackerExpanded,
+    setIsPieceTrackerExpanded,
+    onBonusMoveComplete,
+    onResetTurn,
+    onResetPiecesCorrection,
+    onResetBonusMove,
+    onTakeAdvantageDecline,
+    onTakeAdvantageYes,
+    onRecoverCredibility,
+    onPurchaseMove,
+    onToggleTileSelection,
+    onConfirmTileSelection,
+    onCancelTileSelection,
+    onSelectTakeAdvantageAction,
+    onResetTakeAdvantageAction,
+    onDoneTakeAdvantageAction,
+    onTakeAdvantagePiecePromote,
+  } = useCampaignHandlers<CampaignScreenHandlers>();
   // ============================================================================
   // PROVIDER HOOKS — migrated state now lives in the provider tree
   // ============================================================================

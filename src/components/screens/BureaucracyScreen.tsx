@@ -11,13 +11,14 @@ import { getBureaucracyMenu, getAvailablePurchases } from "../../game";
 import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
+  BOARD_IMAGE_URLS,
 } from "../../config";
 import { useRoster } from "../../providers/RosterProvider";
 import { useBoard } from "../../providers/BoardProvider";
 import { useBureaucracyProvider } from "../../providers/BureaucracyProvider";
+import { useBureaucracyScreenHandlers } from "../../providers/HandlersProvider";
 
-interface BureaucracyScreenProps {
-  playerCount: number;
+interface BureaucracyScreenHandlers {
   currentPurchase: BureaucracyPurchase | null;
   showPurchaseMenu: boolean;
   validationError: string | null;
@@ -39,32 +40,30 @@ interface BureaucracyScreenProps {
   moveCheckResult: { isValid: boolean; reason: string } | null;
   onCloseMoveCheckResult: () => void;
   isTestMode: boolean;
-  BOARD_IMAGE_URLS: { [key: number]: string };
   credibilityRotationAdjustments: { [playerId: number]: number };
 }
 
-const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
-  playerCount,
-  currentPurchase,
-  showPurchaseMenu,
-  validationError,
-  boardRotationEnabled,
-  setBoardRotationEnabled,
-  onSelectMenuItem,
-  onDoneWithAction,
-  onFinishTurn,
-  onPieceMove,
-  onPiecePromote,
-  onClearValidationError,
-  onResetAction,
-  onCheckMove,
-  showMoveCheckResult,
-  moveCheckResult,
-  onCloseMoveCheckResult,
-  isTestMode,
-  BOARD_IMAGE_URLS,
-  credibilityRotationAdjustments,
-}) => {
+const BureaucracyScreen: React.FC = () => {
+  const {
+    currentPurchase,
+    showPurchaseMenu,
+    validationError,
+    boardRotationEnabled,
+    setBoardRotationEnabled,
+    onSelectMenuItem,
+    onDoneWithAction,
+    onFinishTurn,
+    onPieceMove,
+    onPiecePromote,
+    onClearValidationError,
+    onResetAction,
+    onCheckMove,
+    showMoveCheckResult,
+    moveCheckResult,
+    onCloseMoveCheckResult,
+    isTestMode,
+    credibilityRotationAdjustments,
+  } = useBureaucracyScreenHandlers<BureaucracyScreenHandlers>();
   const { players, pieces } = useRoster();
   const { boardTiles } = useBoard();
   const {
@@ -73,6 +72,7 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
     currentBureaucracyPlayerIndex,
   } = useBureaucracyProvider();
 
+  const playerCount = players.length;
   const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
   const currentPlayer = getPlayerById(players, currentPlayerId);
   const playerState = bureaucracyStates.find(

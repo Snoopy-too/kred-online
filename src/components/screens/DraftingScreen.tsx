@@ -11,30 +11,22 @@ import { flushSync } from "react-dom";
 import type { Player, Tile } from "../../types";
 import { useRoster } from "../../providers/RosterProvider";
 import { usePhase } from "../../providers/PhaseProvider";
+import { useDraftingHandlers } from "../../providers/HandlersProvider";
 
-interface DraftingScreenProps {
-  onSelectTile: (tile: Tile) => void;
-  playerIndex?: number; // The current player's index in multiplayer
-  isMultiplayer?: boolean;
-  playerNames?: string[];
-}
-
-const DraftingScreen: React.FC<DraftingScreenProps> = ({
-  onSelectTile,
-  playerIndex,
-  isMultiplayer = false,
-  playerNames,
-}) => {
+const DraftingScreen: React.FC = () => {
+  const { onSelectTile, playerIndex, isMultiplayer = false, playerNames } = useDraftingHandlers<{
+    onSelectTile: (tile: any) => void;
+    playerIndex?: number;
+    isMultiplayer?: boolean;
+    playerNames?: string[];
+  }>();
   const { players } = useRoster();
   const { currentPlayerIndex } = usePhase();
 
-  // Defensive: Check player array and indices
-  let myPlayer: Player | undefined = undefined;
-  if (isMultiplayer && typeof playerIndex === 'number' && players[playerIndex]) {
-    myPlayer = players[playerIndex];
-  } else if (typeof currentPlayerIndex === 'number' && players[currentPlayerIndex]) {
-    myPlayer = players[currentPlayerIndex];
-  }
+  // In multiplayer, the local player's identity is determined by the URL/session,
+  // but for the UI we usually want to show the current mover's perspective 
+  // unless we're viewing a specific player's hand.
+  const myPlayer = players[currentPlayerIndex];
 
   // availableTiles = tiles that can be selected right now (current hand)
   // hand = tiles that have been selected (keptTiles)
@@ -251,31 +243,6 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({
           })}
         </div>
       </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     </main>
   );
 };
