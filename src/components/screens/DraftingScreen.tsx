@@ -4,27 +4,15 @@
  * Screen for the drafting phase where players select tiles from their hand.
  * Each player takes turns selecting one tile to keep from their current hand,
  * then passes the remaining tiles to the next player.
- *
- * @component
- * @example
- * ```tsx
- * <DraftingScreen
- *   players={players}
- *   currentPlayerIndex={0}
- *   draftRound={1}
- *   onSelectTile={(tile) => console.log('Selected:', tile)}
- * />
- * ```
  */
 
 import React from "react";
 import { flushSync } from "react-dom";
 import type { Player, Tile } from "../../types";
+import { useRoster } from "../../providers/RosterProvider";
+import { usePhase } from "../../providers/PhaseProvider";
 
 interface DraftingScreenProps {
-  players: Player[];
-  currentPlayerIndex: number;
-  draftRound: number;
   onSelectTile: (tile: Tile) => void;
   playerIndex?: number; // The current player's index in multiplayer
   isMultiplayer?: boolean;
@@ -32,14 +20,13 @@ interface DraftingScreenProps {
 }
 
 const DraftingScreen: React.FC<DraftingScreenProps> = ({
-  players,
-  currentPlayerIndex,
-  draftRound,
   onSelectTile,
   playerIndex,
   isMultiplayer = false,
   playerNames,
 }) => {
+  const { players } = useRoster();
+  const { currentPlayerIndex } = usePhase();
 
   // Defensive: Check player array and indices
   let myPlayer: Player | undefined = undefined;

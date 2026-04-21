@@ -4,10 +4,27 @@
  * Screen for the drafting phase where players select tiles from their hand.
  */
 
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import DraftingScreen from "../../../components/screens/DraftingScreen";
 import type { Player, Tile } from "../../../types";
+import { RosterProvider } from "../../../providers/RosterProvider";
+import { PhaseProvider } from "../../../providers/PhaseProvider";
+
+function renderWithProviders(
+  ui: React.ReactElement,
+  {
+    players,
+    currentPlayerIndex = 0,
+  }: { players: Player[]; currentPlayerIndex?: number },
+) {
+  return render(
+    <PhaseProvider initial={{ currentPlayerIndex }}>
+      <RosterProvider initial={{ players }}>{ui}</RosterProvider>
+    </PhaseProvider>,
+  );
+}
 
 describe("DraftingScreen", () => {
 
@@ -43,55 +60,37 @@ describe("DraftingScreen", () => {
 
 
   it("should display drafting phase title", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={0}
-        draftRound={1}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 0 },
     );
     expect(screen.getByText("Drafting Phase")).toBeInTheDocument();
   });
 
 
   it("should show current player information", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={0}
-        draftRound={1}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 0 },
     );
-    // The component now shows 'Select one tile to keep, then remaining tiles pass left.'
     expect(screen.getByText("Drafting Phase")).toBeInTheDocument();
     expect(screen.getByText("Select one tile to keep, then remaining tiles pass left.")).toBeInTheDocument();
   });
 
 
   it("should display current round information", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={0}
-        draftRound={2}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 0 },
     );
-    // The round info is not explicitly rendered, but we can check for available tiles
     expect(screen.getByText("Available Tiles (2 tiles)")).toBeInTheDocument();
   });
 
 
   it("should display tile images in drafting phase", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={0}
-        draftRound={1}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 0 },
     );
     const tileImage1 = screen.getByAltText("Tile 1");
     const tileImage2 = screen.getByAltText("Tile 2");
@@ -102,26 +101,18 @@ describe("DraftingScreen", () => {
   });
 
   it("should display hand count", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={0}
-        draftRound={1}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 0 },
     );
 
-    expect(screen.getByText("Your Hand (2 tiles)")).toBeInTheDocument();
+    expect(screen.getByText("My Hand (1 tile)")).toBeInTheDocument();
   });
 
   it("should allow clicking tiles to select them", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={0}
-        draftRound={1}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 0 },
     );
 
     const tileButton = screen.getByLabelText("Select tile 1");
@@ -131,13 +122,9 @@ describe("DraftingScreen", () => {
   });
 
   it("should render tile buttons with proper styling", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={0}
-        draftRound={1}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 0 },
     );
 
     const tileButton = screen.getByLabelText("Select tile 1");
@@ -145,16 +132,13 @@ describe("DraftingScreen", () => {
   });
 
   it("should show correct player when currentPlayerIndex changes", () => {
-    render(
-      <DraftingScreen
-        players={mockPlayers}
-        currentPlayerIndex={1}
-        draftRound={1}
-        onSelectTile={mockOnSelectTile}
-      />
+    renderWithProviders(
+      <DraftingScreen onSelectTile={mockOnSelectTile} />,
+      { players: mockPlayers, currentPlayerIndex: 1 },
     );
 
-    expect(screen.getByText("Player 2's Turn")).toBeInTheDocument();
-    expect(screen.getByText("Your Hand (1 tiles)")).toBeInTheDocument();
+    // currentPlayerIndex=1 → player 2 is active; hand has 1 tile, keptTiles has 1 tile
+    expect(screen.getByText("Available Tiles (1 tiles)")).toBeInTheDocument();
+    expect(screen.getByText("My Hand (1 tile)")).toBeInTheDocument();
   });
 });

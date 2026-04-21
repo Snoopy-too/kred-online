@@ -4134,9 +4134,6 @@ const App: React.FC<MultiplayerProps> = ({
       if (gameState === 'DRAFTING') {
         return (
           <DraftingScreen
-            players={players}
-            currentPlayerIndex={currentPlayerIndex}
-            draftRound={draftRound}
             onSelectTile={handleSelectTile}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
@@ -4174,9 +4171,6 @@ const App: React.FC<MultiplayerProps> = ({
         }
         return (
           <DraftingScreen
-            players={players}
-            currentPlayerIndex={currentPlayerIndex}
-            draftRound={draftRound}
             onSelectTile={handleSelectTile}
             playerIndex={playerIndex}
             isMultiplayer={isMultiplayer}
