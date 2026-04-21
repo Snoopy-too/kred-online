@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, MutableRefObject } from "react";
 import { usePhase } from "./PhaseProvider";
 import { useRoster } from "./RosterProvider";
+import { useBoard } from "./BoardProvider";
+import { useCampaign } from "./CampaignProvider";
 import GameStateSynchronizer from "../components/GameStateSynchronizer";
 import {
   buildPacket,
@@ -20,18 +22,9 @@ export interface AggregatorLegacyProps {
   // Roster / Pieces (migrated)
   playerCount: number;
 
-  // Board
-  boardTiles: any[];
-  bankedTiles: any[];
+  // Board (migrated)
 
-  // Campaign
-  playedTile: any | null;
-  hasPlayedTileThisTurn: boolean;
-  movedPiecesThisTurn: string[];
-  tileTransaction: any | null;
-  tileRevealed: boolean;
-  pendingReceiverReward: boolean;
-  receiverAdvanceInProgress: boolean;
+  // Campaign (migrated)
 
   // Challenge flow
   bystanders: number[];
@@ -77,12 +70,12 @@ interface GameStateAggregatorProps extends AggregatorLegacyProps {
 export function GameStateAggregator(props: GameStateAggregatorProps) {
   const phase = usePhase();
   const roster = useRoster();
+  const board = useBoard();
+  const campaign = useCampaign();
 
   // Re-map props to avoid 'props.' prefix in useMemo dependencies
   const {
     playerCount,
-    boardTiles, bankedTiles,
-    playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn, tileTransaction, tileRevealed, pendingReceiverReward, receiverAdvanceInProgress,
     bystanders, bystanderIndex, challengeOrder, currentChallengerIndex, tileRejected, showChallengeRevealModal, challengedTile,
     showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
@@ -103,17 +96,21 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       players: roster.players,
       pieces: roster.pieces,
 
+      // Board-owned
+      boardTiles: board.boardTiles,
+      bankedTiles: board.bankedTiles,
+
+      // Campaign-owned
+      playedTile: campaign.playedTile,
+      hasPlayedTileThisTurn: campaign.hasPlayedTileThisTurn,
+      movedPiecesThisTurn: Array.from(campaign.movedPiecesThisTurn),
+      tileTransaction: campaign.tileTransaction,
+      tileRevealed: campaign.tileRevealed,
+      pendingReceiverReward: campaign.pendingReceiverReward,
+      receiverAdvanceInProgress: campaign.receiverAdvanceInProgress,
+
       // Legacy prop-owned
       playerCount,
-      boardTiles,
-      bankedTiles,
-      playedTile,
-      hasPlayedTileThisTurn,
-      movedPiecesThisTurn,
-      tileTransaction,
-      tileRevealed,
-      pendingReceiverReward,
-      receiverAdvanceInProgress,
       bystanders,
       bystanderIndex,
       challengeOrder,
@@ -138,9 +135,9 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
     [
       phase.gameState, phase.currentPlayerIndex, phase.moverPlayerIndex, phase.campaignRole,
       roster.players, roster.pieces,
+      board.boardTiles, board.bankedTiles,
+      campaign.playedTile, campaign.hasPlayedTileThisTurn, campaign.movedPiecesThisTurn, campaign.tileTransaction, campaign.tileRevealed, campaign.pendingReceiverReward, campaign.receiverAdvanceInProgress,
       playerCount,
-      boardTiles, bankedTiles,
-      playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn, tileTransaction, tileRevealed, pendingReceiverReward, receiverAdvanceInProgress,
       bystanders, bystanderIndex, challengeOrder, currentChallengerIndex, tileRejected, showChallengeRevealModal, challengedTile,
       showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
       bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,

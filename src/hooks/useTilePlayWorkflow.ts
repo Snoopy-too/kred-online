@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { TrackedMove, Piece, BoardTile, Tile } from "../types";
+import { useCampaign, useCampaignDispatch } from "../providers/CampaignProvider";
 
 /**
  * Played tile state interface.
  */
-interface PlayedTileState {
+export interface PlayedTileState {
   tileId: string;
   playerId: number;
   receivingPlayerId: number;
@@ -16,7 +17,7 @@ interface PlayedTileState {
 /**
  * Tile transaction interface (during acceptance/challenge).
  */
-interface TileTransaction {
+export interface TileTransaction {
   placerId: number;
   receiverId: number;
   boardTileId: string;
@@ -40,19 +41,14 @@ interface TileTransaction {
  * @returns Tile play workflow state and management functions
  */
 export function useTilePlayWorkflow() {
-  // Main played tile state
-  const [playedTile, setPlayedTile] = useState<PlayedTileState | null>(null);
+  const { playedTile, hasPlayedTileThisTurn, tileTransaction } = useCampaign();
+  const { setPlayedTile, setHasPlayedTileThisTurn, setTileTransaction } = useCampaignDispatch();
 
   // Move tracking for this turn
   const [movesThisTurn, setMovesThisTurn] = useState<TrackedMove[]>([]);
 
   // Tile play flags
-  const [hasPlayedTileThisTurn, setHasPlayedTileThisTurn] = useState(false);
   const [revealedTileId, setRevealedTileId] = useState<string | null>(null);
-
-  // Tile transaction during acceptance
-  const [tileTransaction, setTileTransaction] =
-    useState<TileTransaction | null>(null);
 
   // Receiver acceptance state
   const [receiverAcceptance, setReceiverAcceptance] = useState<boolean | null>(
@@ -259,5 +255,3 @@ export function useTilePlayWorkflow() {
   };
 }
 
-// Export types
-export type { PlayedTileState, TileTransaction };

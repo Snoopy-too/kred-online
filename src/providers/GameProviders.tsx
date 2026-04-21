@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { PhaseProvider, PhaseState } from "./PhaseProvider";
 import { RosterProvider, RosterState } from "./RosterProvider";
 import { BoardProvider, BoardState } from "./BoardProvider";
+import { CampaignProvider, CampaignState } from "./CampaignProvider";
 
 interface GameProvidersProps {
   children: ReactNode;
@@ -10,6 +11,7 @@ interface GameProvidersProps {
     phase?: Partial<PhaseState>;
     roster?: Partial<RosterState>;
     board?: Partial<BoardState>;
+    campaign?: Partial<CampaignState>;
   };
 }
 
@@ -24,7 +26,9 @@ export function GameProviders({ children, initial }: GameProvidersProps) {
     <PhaseProvider initial={initial?.phase}>
       <RosterProvider initial={initial?.roster}>
         <BoardProvider initial={initial?.board}>
-          {children}
+          <CampaignProvider initial={initial?.campaign}>
+            {children}
+          </CampaignProvider>
         </BoardProvider>
       </RosterProvider>
     </PhaseProvider>

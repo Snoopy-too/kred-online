@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Piece, TrackedMove } from "../types";
+import { useCampaign, useCampaignDispatch } from "../providers/CampaignProvider";
 
 /**
  * Move check result interface.
@@ -34,6 +35,9 @@ interface MoveCheckResult {
  * @returns Move tracking state and validation functions
  */
 export function useMoveTracking() {
+  const { movedPiecesThisTurn } = useCampaign();
+  const { setMovedPiecesThisTurn } = useCampaignDispatch();
+
   // Piece snapshots at various stages
   const [piecesAtTurnStart, setPiecesAtTurnStart] = useState<Piece[]>([]);
   const [piecesBeforeBonusMove, setPiecesBeforeBonusMove] = useState<Piece[]>(
@@ -42,11 +46,6 @@ export function useMoveTracking() {
   const [piecesAtCorrectionStart, setPiecesAtCorrectionStart] = useState<
     Piece[]
   >([]);
-
-  // Track which pieces have been moved this turn (prevents multi-move)
-  const [movedPiecesThisTurn, setMovedPiecesThisTurn] = useState<Set<string>>(
-    new Set()
-  );
 
   // Last drop tracking for visual feedback
   const [lastDroppedPosition, setLastDroppedPosition] = useState<{

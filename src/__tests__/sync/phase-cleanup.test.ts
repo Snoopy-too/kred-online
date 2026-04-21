@@ -15,11 +15,17 @@
  */
 
 import { describe, it, expect } from "vitest";
+import React from "react";
 import { renderHook, act } from "@testing-library/react";
 import { useTilePlayWorkflow } from "../../hooks/useTilePlayWorkflow";
 import { useChallengeFlow } from "../../hooks/useChallengeFlow";
 import { useBureaucracy } from "../../hooks/useBureaucracy";
 import type { Player, Piece } from "../../types";
+import { PhaseProvider } from "../../providers/PhaseProvider";
+import { CampaignProvider } from "../../providers/CampaignProvider";
+
+const tilePlayWrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement(PhaseProvider, null, React.createElement(CampaignProvider, null, children));
 
 function makePlayers(count: 3 | 4 | 5): Player[] {
   const players: Player[] = [];
@@ -66,7 +72,7 @@ describe("phase cleanup (spec §4b)", () => {
       //   currentChallengerIndex, tileRejected
       // =======================================================================
       it("resetForNewTurn clears every tile-play state key", () => {
-        const { result } = renderHook(() => useTilePlayWorkflow());
+        const { result } = renderHook(() => useTilePlayWorkflow(), { wrapper: tilePlayWrapper });
 
         // Mutate all the per-turn state fields.
         act(() => {
@@ -118,7 +124,7 @@ describe("phase cleanup (spec §4b)", () => {
       });
 
       it("completeTilePlay clears the same state keys as resetForNewTurn", () => {
-        const { result } = renderHook(() => useTilePlayWorkflow());
+        const { result } = renderHook(() => useTilePlayWorkflow(), { wrapper: tilePlayWrapper });
         act(() => {
           result.current.setPlayedTile({ tileId: "t", playerId: 1 } as any);
           result.current.setTileRejected(true);

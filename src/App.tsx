@@ -188,6 +188,7 @@ import { useChallengeFlow } from "./hooks/useChallengeFlow";
 import { useBureaucracy } from "./hooks/useBureaucracy";
 import { useGameState } from "./hooks/useGameState";
 import { usePhase, usePhaseDispatch } from "./providers/PhaseProvider";
+import { useCampaign, useCampaignDispatch } from "./providers/CampaignProvider";
 
 // ============================================================================
 // HANDLERS IMPORTS - Extracted handler factories
@@ -559,9 +560,8 @@ const App: React.FC<MultiplayerProps> = ({
   // ============================================================================
   // MULTIPLAYER STATE
   // ============================================================================
-  const [tileRevealed, setTileRevealed] = useState<boolean>(false);
-  const [pendingReceiverReward, setPendingReceiverReward] = useState<boolean>(false);
-  const [receiverAdvanceInProgress, setReceiverAdvanceInProgress] = useState<boolean>(false);
+  const { tileRevealed, pendingReceiverReward, receiverAdvanceInProgress } = useCampaign();
+  const { setTileRevealed, setPendingReceiverReward, setReceiverAdvanceInProgress } = useCampaignDispatch();
 
   // Wire up legacy state changes to the new Aggregator
   useEffect(() => {
@@ -863,7 +863,7 @@ const App: React.FC<MultiplayerProps> = ({
         piecesAtTurnStart,
         piecesAtCorrectionStart,
         piecesBeforeBonusMove,
-        playedTile,
+        playedTile: playedTile as any,
 
         // State setters
         setPieces,
