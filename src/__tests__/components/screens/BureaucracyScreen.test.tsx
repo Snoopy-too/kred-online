@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import BureaucracyScreen from "../../../components/screens/BureaucracyScreen";
@@ -7,6 +8,10 @@ import type {
   BureaucracyMenuItem,
   BureaucracyPurchase,
 } from "../../../../game";
+import { RosterProvider } from "../../../providers/RosterProvider";
+import { BoardProvider } from "../../../providers/BoardProvider";
+import { PhaseProvider } from "../../../providers/PhaseProvider";
+import { BureaucracyProvider } from "../../../providers/BureaucracyProvider";
 
 describe("BureaucracyScreen", () => {
   const mockOnSelectMenuItem = vi.fn();
@@ -90,218 +95,100 @@ describe("BureaucracyScreen", () => {
     2: 0,
   };
 
+  const defaultProps = {
+    playerCount: 3,
+    currentPurchase: null as BureaucracyPurchase | null,
+    showPurchaseMenu: true,
+    validationError: null as string | null,
+    boardRotationEnabled: false,
+    setBoardRotationEnabled: mockSetBoardRotationEnabled,
+    onSelectMenuItem: mockOnSelectMenuItem,
+    onDoneWithAction: mockOnDoneWithAction,
+    onFinishTurn: mockOnFinishTurn,
+    onPieceMove: mockOnPieceMove,
+    onPiecePromote: mockOnPiecePromote,
+    onClearValidationError: mockOnClearValidationError,
+    onResetAction: mockOnResetAction,
+    onCheckMove: mockOnCheckMove,
+    showMoveCheckResult: false,
+    moveCheckResult: null as { isValid: boolean; reason: string } | null,
+    onCloseMoveCheckResult: mockOnCloseMoveCheckResult,
+    isTestMode: false,
+    BOARD_IMAGE_URLS: mockBoardImages,
+    credibilityRotationAdjustments: mockCredibilityAdjustments,
+  };
+
+  type Overrides = Partial<typeof defaultProps> & {
+    players?: Player[];
+    pieces?: Piece[];
+    boardTiles?: BoardTile[];
+    bureaucracyStates?: BureaucracyPlayerState[];
+    turnOrder?: number[];
+    currentBureaucracyPlayerIndex?: number;
+  };
+
+  function renderBureaucracy(overrides: Overrides = {}) {
+    const {
+      players = mockPlayers,
+      pieces = mockPieces,
+      boardTiles = mockBoardTiles,
+      bureaucracyStates = mockBureaucracyStates,
+      turnOrder = [1, 2],
+      currentBureaucracyPlayerIndex = 0,
+      ...props
+    } = overrides;
+
+    return render(
+      <PhaseProvider initial={{ gameState: "BUREAUCRACY" }}>
+        <RosterProvider initial={{ players, pieces }}>
+          <BoardProvider initial={{ boardTiles }}>
+            <BureaucracyProvider
+              initial={{
+                bureaucracyStates,
+                bureaucracyTurnOrder: turnOrder,
+                currentBureaucracyPlayerIndex,
+              }}
+            >
+              <BureaucracyScreen {...defaultProps} {...props} />
+            </BureaucracyProvider>
+          </BoardProvider>
+        </RosterProvider>
+      </PhaseProvider>,
+    );
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("should display bureaucracy phase title", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     expect(screen.getByText("Bureaucracy Phase")).toBeInTheDocument();
   });
 
   it("should display current player information", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     expect(screen.getByText("Player 1's Turn")).toBeInTheDocument();
   });
 
   it("should display kredcoin balance", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     expect(screen.getByText(/Kredcoin: ₭-10/)).toBeInTheDocument();
   });
 
   it("should display the game board image", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     const boardImage = screen.getByAltText("3-player board");
     expect(boardImage).toHaveAttribute("src", "./images/board_3p.svg");
   });
 
   it("should show purchase menu when showPurchaseMenu is true", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     expect(screen.getByText("Actions")).toBeInTheDocument();
   });
 
   it("should display finish turn button in purchase menu", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     const finishButton = screen.getByText("Finish Turn");
     expect(finishButton).toBeInTheDocument();
     fireEvent.click(finishButton);
@@ -317,111 +204,20 @@ describe("BureaucracyScreen", () => {
         price: 2,
       },
     };
-
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={mockPurchase}
-        showPurchaseMenu={false}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy({ currentPurchase: mockPurchase, showPurchaseMenu: false });
     expect(screen.getByText("Perform Your Action")).toBeInTheDocument();
     expect(screen.getByText(/Perform a ADVANCE move/)).toBeInTheDocument();
   });
 
   it("should display turn order with current player highlighted", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     expect(screen.getByText("Turn Order")).toBeInTheDocument();
     expect(screen.getByText("Player 1")).toBeInTheDocument();
     expect(screen.getByText("Player 2")).toBeInTheDocument();
   });
 
   it("should show validation error modal when validationError is present", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError="Invalid move!"
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy({ validationError: "Invalid move!" });
     expect(screen.getByText("Invalid Action")).toBeInTheDocument();
     const resetButton = screen.getByText("Reset Pieces");
     fireEvent.click(resetButton);
@@ -429,37 +225,7 @@ describe("BureaucracyScreen", () => {
   });
 
   it("should display board rotation toggle", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     expect(screen.getByText("Board Rotation (OFF)")).toBeInTheDocument();
     const checkbox = screen.getByRole("checkbox");
     fireEvent.click(checkbox);
@@ -475,38 +241,11 @@ describe("BureaucracyScreen", () => {
         price: 2,
       },
     };
-
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={mockPurchase}
-        showPurchaseMenu={false}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={true}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy({
+      currentPurchase: mockPurchase,
+      showPurchaseMenu: false,
+      isTestMode: true,
+    });
     const checkButton = screen.getByText("✓ Check Move");
     expect(checkButton).toBeInTheDocument();
     fireEvent.click(checkButton);
@@ -514,37 +253,10 @@ describe("BureaucracyScreen", () => {
   });
 
   it("should show move check result modal when result is available", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={true}
-        moveCheckResult={{ isValid: true, reason: "Move is correct" }}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy({
+      showMoveCheckResult: true,
+      moveCheckResult: { isValid: true, reason: "Move is correct" },
+    });
     expect(screen.getByText("Valid Move!")).toBeInTheDocument();
     const closeButton = screen.getByText("Close");
     fireEvent.click(closeButton);
@@ -560,75 +272,14 @@ describe("BureaucracyScreen", () => {
         price: 2,
       },
     };
-
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={mockPurchase}
-        showPurchaseMenu={false}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy({ currentPurchase: mockPurchase, showPurchaseMenu: false });
     const doneButton = screen.getByText("Done");
     fireEvent.click(doneButton);
     expect(mockOnDoneWithAction).toHaveBeenCalledTimes(1);
   });
 
   it("should render pieces on the board", () => {
-    render(
-      <BureaucracyScreen
-        players={mockPlayers}
-        pieces={mockPieces}
-        boardTiles={mockBoardTiles}
-        playerCount={3}
-        currentBureaucracyPlayerIndex={0}
-        bureaucracyStates={mockBureaucracyStates}
-        currentPurchase={null}
-        showPurchaseMenu={true}
-        validationError={null}
-        turnOrder={[1, 2]}
-        boardRotationEnabled={false}
-        setBoardRotationEnabled={mockSetBoardRotationEnabled}
-        onSelectMenuItem={mockOnSelectMenuItem}
-        onDoneWithAction={mockOnDoneWithAction}
-        onFinishTurn={mockOnFinishTurn}
-        onPieceMove={mockOnPieceMove}
-        onPiecePromote={mockOnPiecePromote}
-        onClearValidationError={mockOnClearValidationError}
-        onResetAction={mockOnResetAction}
-        onCheckMove={mockOnCheckMove}
-        showMoveCheckResult={false}
-        moveCheckResult={null}
-        onCloseMoveCheckResult={mockOnCloseMoveCheckResult}
-        isTestMode={false}
-        BOARD_IMAGE_URLS={mockBoardImages}
-        credibilityRotationAdjustments={mockCredibilityAdjustments}
-      />
-    );
-
+    renderBureaucracy();
     const pieceImage = screen.getByAltText("Mark");
     expect(pieceImage).toBeInTheDocument();
     expect(pieceImage).toHaveAttribute("src", "./images/pieces/mark_1.svg");

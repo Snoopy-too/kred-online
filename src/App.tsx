@@ -4180,16 +4180,10 @@ const App: React.FC<MultiplayerProps> = ({
       case "BUREAUCRACY":
         return (
           <BureaucracyScreen
-            players={players}
-            pieces={pieces}
-            boardTiles={boardTiles}
             playerCount={playerCount}
-            currentBureaucracyPlayerIndex={currentBureaucracyPlayerIndex}
-            bureaucracyStates={bureaucracyStates}
             currentPurchase={currentBureaucracyPurchase}
             showPurchaseMenu={showBureaucracyMenu}
             validationError={bureaucracyValidationError}
-            turnOrder={bureaucracyTurnOrder}
             boardRotationEnabled={boardRotationEnabled}
             setBoardRotationEnabled={setBoardRotationEnabled}
             onSelectMenuItem={handleSelectBureaucracyMenuItem}

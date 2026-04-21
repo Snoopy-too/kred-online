@@ -1,9 +1,5 @@
 import React, { useState } from "react";
 import type {
-  Player,
-  Piece,
-  BoardTile,
-  BureaucracyPlayerState,
   BureaucracyMenuItem,
   BureaucracyPurchase,
 } from "../../types";
@@ -16,18 +12,15 @@ import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
 } from "../../config";
+import { useRoster } from "../../providers/RosterProvider";
+import { useBoard } from "../../providers/BoardProvider";
+import { useBureaucracyProvider } from "../../providers/BureaucracyProvider";
 
 interface BureaucracyScreenProps {
-  players: Player[];
-  pieces: Piece[];
-  boardTiles: BoardTile[];
   playerCount: number;
-  currentBureaucracyPlayerIndex: number;
-  bureaucracyStates: BureaucracyPlayerState[];
   currentPurchase: BureaucracyPurchase | null;
   showPurchaseMenu: boolean;
   validationError: string | null;
-  turnOrder: number[];
   boardRotationEnabled: boolean;
   setBoardRotationEnabled: (enabled: boolean) => void;
   onSelectMenuItem: (item: BureaucracyMenuItem) => void;
@@ -51,16 +44,10 @@ interface BureaucracyScreenProps {
 }
 
 const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
-  players,
-  pieces,
-  boardTiles,
   playerCount,
-  currentBureaucracyPlayerIndex,
-  bureaucracyStates,
   currentPurchase,
   showPurchaseMenu,
   validationError,
-  turnOrder,
   boardRotationEnabled,
   setBoardRotationEnabled,
   onSelectMenuItem,
@@ -78,6 +65,14 @@ const BureaucracyScreen: React.FC<BureaucracyScreenProps> = ({
   BOARD_IMAGE_URLS,
   credibilityRotationAdjustments,
 }) => {
+  const { players, pieces } = useRoster();
+  const { boardTiles } = useBoard();
+  const {
+    bureaucracyStates,
+    bureaucracyTurnOrder: turnOrder,
+    currentBureaucracyPlayerIndex,
+  } = useBureaucracyProvider();
+
   const currentPlayerId = turnOrder[currentBureaucracyPlayerIndex];
   const currentPlayer = getPlayerById(players, currentPlayerId);
   const playerState = bureaucracyStates.find(
