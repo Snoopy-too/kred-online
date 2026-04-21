@@ -509,7 +509,15 @@ export default function GameStateSynchronizer({
         applyStatePacketHandler(packet);
       }
 
-      if (isHost) hostHydratedRef.current = true;
+      if (isHost) {
+        hostHydratedRef.current = true;
+        // No saved state means the in-memory state that was built up before
+        // hydrate completed never got broadcast (pushes were gate-dropped while
+        // hostHydratedRef was false). Flush it now so guests can sync.
+        if (!data) {
+          pushStateRef?.current?.();
+        }
+      }
       onRejoinCompleteRef.current?.();
     };
 
