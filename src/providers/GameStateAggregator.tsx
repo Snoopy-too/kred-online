@@ -4,6 +4,7 @@ import { usePhase } from "./PhaseProvider";
 import { useRoster } from "./RosterProvider";
 import { useBoard } from "./BoardProvider";
 import { useCampaign } from "./CampaignProvider";
+import { useChallenge } from "./ChallengeProvider";
 import GameStateSynchronizer from "../components/GameStateSynchronizer";
 import {
   buildPacket,
@@ -26,12 +27,8 @@ export interface AggregatorLegacyProps {
 
   // Campaign (migrated)
 
-  // Challenge flow
-  bystanders: number[];
-  bystanderIndex: number;
-  challengeOrder: number[];
-  currentChallengerIndex: number;
-  tileRejected: boolean;
+  // Challenge (migrated: bystanders, bystanderIndex, challengeOrder,
+  // currentChallengerIndex, tileRejected)
   showChallengeRevealModal: boolean;
   challengedTile: { id: number; url: string } | null;
 
@@ -72,11 +69,12 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
   const roster = useRoster();
   const board = useBoard();
   const campaign = useCampaign();
+  const challenge = useChallenge();
 
   // Re-map props to avoid 'props.' prefix in useMemo dependencies
   const {
     playerCount,
-    bystanders, bystanderIndex, challengeOrder, currentChallengerIndex, tileRejected, showChallengeRevealModal, challengedTile,
+    showChallengeRevealModal, challengedTile,
     showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
     challengeResultMessage, challengeResultMessagePlayerId, pendingChallengerReward,
@@ -109,13 +107,15 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       pendingReceiverReward: campaign.pendingReceiverReward,
       receiverAdvanceInProgress: campaign.receiverAdvanceInProgress,
 
+      // Challenge-owned
+      bystanders: challenge.bystanders,
+      bystanderIndex: challenge.bystanderIndex,
+      challengeOrder: challenge.challengeOrder,
+      currentChallengerIndex: challenge.currentChallengerIndex,
+      tileRejected: challenge.tileRejected,
+
       // Legacy prop-owned
       playerCount,
-      bystanders,
-      bystanderIndex,
-      challengeOrder,
-      currentChallengerIndex,
-      tileRejected,
       showChallengeRevealModal,
       challengedTile,
       showTakeAdvantageModal,
@@ -137,8 +137,9 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       roster.players, roster.pieces,
       board.boardTiles, board.bankedTiles,
       campaign.playedTile, campaign.hasPlayedTileThisTurn, campaign.movedPiecesThisTurn, campaign.tileTransaction, campaign.tileRevealed, campaign.pendingReceiverReward, campaign.receiverAdvanceInProgress,
+      challenge.bystanders, challenge.bystanderIndex, challenge.challengeOrder, challenge.currentChallengerIndex, challenge.tileRejected,
       playerCount,
-      bystanders, bystanderIndex, challengeOrder, currentChallengerIndex, tileRejected, showChallengeRevealModal, challengedTile,
+      showChallengeRevealModal, challengedTile,
       showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
       bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
       challengeResultMessage, challengeResultMessagePlayerId, pendingChallengerReward,

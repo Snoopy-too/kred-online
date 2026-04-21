@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { TrackedMove, Piece, BoardTile, Tile } from "../types";
 import { useCampaign, useCampaignDispatch } from "../providers/CampaignProvider";
+import { useChallenge, useChallengeDispatch } from "../providers/ChallengeProvider";
 
 /**
  * Played tile state interface.
@@ -55,12 +56,9 @@ export function useTilePlayWorkflow() {
     null
   );
 
-  // Challenge flow
-  const [challengeOrder, setChallengeOrder] = useState<number[]>([]);
-  const [currentChallengerIndex, setCurrentChallengerIndex] = useState(0);
-
-  // Rejection flag
-  const [tileRejected, setTileRejected] = useState(false);
+  // Challenge flow — now sourced from ChallengeProvider
+  const { challengeOrder, currentChallengerIndex, tileRejected } = useChallenge();
+  const { setChallengeOrder, setCurrentChallengerIndex, setTileRejected } = useChallengeDispatch();
 
   /**
    * Start a tile play action.

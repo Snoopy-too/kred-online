@@ -23,9 +23,21 @@ import { useBureaucracy } from "../../hooks/useBureaucracy";
 import type { Player, Piece } from "../../types";
 import { PhaseProvider } from "../../providers/PhaseProvider";
 import { CampaignProvider } from "../../providers/CampaignProvider";
+import { ChallengeProvider } from "../../providers/ChallengeProvider";
 
 const tilePlayWrapper = ({ children }: { children: React.ReactNode }) =>
-  React.createElement(PhaseProvider, null, React.createElement(CampaignProvider, null, children));
+  React.createElement(
+    PhaseProvider,
+    null,
+    React.createElement(
+      CampaignProvider,
+      null,
+      React.createElement(ChallengeProvider, null, children),
+    ),
+  );
+
+const challengeFlowWrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement(PhaseProvider, null, React.createElement(ChallengeProvider, null, children));
 
 function makePlayers(count: 3 | 4 | 5): Player[] {
   const players: Player[] = [];
@@ -147,7 +159,7 @@ describe("phase cleanup (spec §4b)", () => {
       //   selectedTilesForAdvantage, totalKredcoinForAdvantage
       // =======================================================================
       it("closeTakeAdvantage clears every take-advantage state key", () => {
-        const { result } = renderHook(() => useChallengeFlow());
+        const { result } = renderHook(() => useChallengeFlow(), { wrapper: challengeFlowWrapper });
 
         act(() => {
           result.current.initiateTakeAdvantage(2, 5);
@@ -187,7 +199,7 @@ describe("phase cleanup (spec §4b)", () => {
       //   isPrivatelyViewing, showChallengeRevealModal
       // =======================================================================
       it("closeChallengeReveal clears bystander/reveal state", () => {
-        const { result } = renderHook(() => useChallengeFlow());
+        const { result } = renderHook(() => useChallengeFlow(), { wrapper: challengeFlowWrapper });
         const bystanders = makePlayers(playerCount).slice(1);
 
         act(() => {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Player, Tile, Piece } from "../types";
 import type { BureaucracyPurchase } from "../../game";
+import { useChallenge, useChallengeDispatch } from "../providers/ChallengeProvider";
 
 /**
  * Custom hook for managing challenge flow and take advantage mechanics.
@@ -19,9 +20,9 @@ import type { BureaucracyPurchase } from "../../game";
  * @returns Challenge flow state and management functions
  */
 export function useChallengeFlow() {
-  // Challenge reveal state
-  const [bystanders, setBystanders] = useState<Player[]>([]);
-  const [bystanderIndex, setBystanderIndex] = useState(0);
+  // Challenge reveal state — bystanders, bystanderIndex now from ChallengeProvider
+  const { bystanders, bystanderIndex } = useChallenge();
+  const { setBystanders, setBystanderIndex } = useChallengeDispatch();
   const [isPrivatelyViewing, setIsPrivatelyViewing] = useState(false);
   const [showChallengeRevealModal, setShowChallengeRevealModal] =
     useState(false);

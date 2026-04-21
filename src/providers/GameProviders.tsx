@@ -4,6 +4,7 @@ import { PhaseProvider, PhaseState } from "./PhaseProvider";
 import { RosterProvider, RosterState } from "./RosterProvider";
 import { BoardProvider, BoardState } from "./BoardProvider";
 import { CampaignProvider, CampaignState } from "./CampaignProvider";
+import { ChallengeProvider, ChallengeState } from "./ChallengeProvider";
 
 interface GameProvidersProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ interface GameProvidersProps {
     roster?: Partial<RosterState>;
     board?: Partial<BoardState>;
     campaign?: Partial<CampaignState>;
+    challenge?: Partial<ChallengeState>;
   };
 }
 
@@ -27,7 +29,9 @@ export function GameProviders({ children, initial }: GameProvidersProps) {
       <RosterProvider initial={initial?.roster}>
         <BoardProvider initial={initial?.board}>
           <CampaignProvider initial={initial?.campaign}>
-            {children}
+            <ChallengeProvider initial={initial?.challenge}>
+              {children}
+            </ChallengeProvider>
           </CampaignProvider>
         </BoardProvider>
       </RosterProvider>
