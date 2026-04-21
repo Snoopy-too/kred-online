@@ -26,7 +26,9 @@ const DraftingScreen: React.FC = () => {
   // In multiplayer, the local player's identity is determined by the URL/session,
   // but for the UI we usually want to show the current mover's perspective 
   // unless we're viewing a specific player's hand.
-  const myPlayer = players[currentPlayerIndex];
+  const myPlayer = isMultiplayer && typeof playerIndex === 'number'
+    ? players[playerIndex]
+    : players[currentPlayerIndex];
 
   // availableTiles = tiles that can be selected right now (current hand)
   // hand = tiles that have been selected (keptTiles)

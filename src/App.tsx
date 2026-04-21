@@ -209,6 +209,23 @@ const App: React.FC<MultiplayerProps> = (props) => {
 
   const wrappers = useAppWrappers({ isMultiplayer, multiplayerActions, pieceMovementHandlers, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, showAlert } as any);
 
+  // ─── Draft pick wrapper: dispatch via multiplayerActions in MP mode ─────────
+  const draftPickPendingRef = React.useRef(false);
+  const wrappedSelectTile = React.useCallback(async (tile: any) => {
+    if (isMultiplayer && multiplayerActions) {
+      if (draftPickPendingRef.current) return;
+      draftPickPendingRef.current = true;
+      try {
+        await multiplayerActions.selectDraftTile(tile.id);
+      } catch (error) {
+        console.error('[MULTIPLAYER] Tile selection failed:', error);
+      }
+      setTimeout(() => { draftPickPendingRef.current = false; }, 500);
+    } else {
+      gameFlowHandlers.handleSelectTile(tile);
+    }
+  }, [isMultiplayer, multiplayerActions, gameFlowHandlers]);
+
   // ─── Auto-start multiplayer game (host only, lobby already picked count) ────
   const hasAutoStartedRef = React.useRef(false);
   React.useEffect(() => {
@@ -239,7 +256,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
   };
 
   const draftingValue = {
-    onSelectTile: gameFlowHandlers.handleSelectTile,
+    onSelectTile: wrappedSelectTile,
     playerIndex,
     isMultiplayer,
     playerNames,
