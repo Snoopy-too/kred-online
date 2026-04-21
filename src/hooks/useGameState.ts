@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import type { GameState, Player, Piece, BoardTile, Tile } from "../types";
 import { usePhase, usePhaseDispatch } from "../providers/PhaseProvider";
 import { useRoster, useRosterDispatch } from "../providers/RosterProvider";
+import { useBoard, useBoardDispatch } from "../providers/BoardProvider";
 
 /**
  * Custom hook for managing core game state.
@@ -34,13 +35,11 @@ export function useGameState() {
   const { players, pieces } = useRoster();
   const { setPlayers, setPieces, patch: patchRoster } = useRosterDispatch();
 
-  const [playerCount, setPlayerCount] = useState<number>(0);
+  // Board state from provider
+  const { boardTiles, bankedTiles } = useBoard();
+  const { setBoardTiles, setBankedTiles, patch: patchBoard } = useBoardDispatch();
 
-  // Board tiles
-  const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
-  const [bankedTiles, setBankedTiles] = useState<
-    (BoardTile & { faceUp: boolean })[]
-  >([]);
+  const [playerCount, setPlayerCount] = useState<number>(0);
 
   // Draft phase state
   const [draftRound, setDraftRound] = useState(1);
