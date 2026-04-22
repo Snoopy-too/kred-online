@@ -55,7 +55,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
 
   // ─── Core State ─────────────────────────────────────────────────────────────
   const { gameState, players, pieces, boardTiles, bankedTiles, playerCount, currentPlayerIndex, moverPlayerIndex, campaignRole, draftRound, isTestMode, setGameState, setPlayers, setPieces, setBoardTiles, setBankedTiles, setPlayerCount, setCurrentPlayerIndex, setMoverPlayerIndex, setCampaignRole, setDraftRound, setIsTestMode } = useGameState();
-  const { alertModal, challengeResultMessage, tilePlayerMustWithdraw, placerViewingTileId, giveReceiverViewingTileId, challengeResultMessagePlayerId, showAlert: originalShowAlert, closeAlert, clearChallengeResult, setAlertModal, setChallengeResultMessage, setChallengeResultMessagePlayerId, setTilePlayerMustWithdraw, setPlacerViewingTileId, setGiveReceiverViewingTileId } = useAlerts();
+  const { alertModal, challengeResultMessage, tilePlayerMustWithdraw, placerViewingTileId, challengeResultMessagePlayerId, showAlert: originalShowAlert, closeAlert, clearChallengeResult, setAlertModal, setChallengeResultMessage, setChallengeResultMessagePlayerId, setTilePlayerMustWithdraw, setPlacerViewingTileId } = useAlerts();
   const { boardRotationEnabled, showGridOverlay, dummyTile, setBoardRotationEnabled, setShowGridOverlay, setDummyTile } = useBoardDisplay();
   const { gameLog, isGameLogExpanded, isCredibilityAdjusterExpanded, isCredibilityRulesExpanded, isPieceTrackerExpanded, credibilityRotationAdjustments, addGameLog, setGameLog, setIsGameLogExpanded, setIsCredibilityAdjusterExpanded, setIsCredibilityRulesExpanded, setIsPieceTrackerExpanded, setCredibilityRotationAdjustments } = useTestMode();
   const { showBonusMoveModal, bonusMovePlayerId, bonusMoveWasCompleted, showPerfectTileModal, setShowBonusMoveModal, setBonusMovePlayerId, setBonusMoveWasCompleted, setShowPerfectTileModal } = useBonusMoves();
@@ -67,8 +67,8 @@ const App: React.FC<MultiplayerProps> = (props) => {
   const [matchingTileIds, setMatchingTileIds] = useState<string[]>([]);
   const [showFinishTurnConfirm, setShowFinishTurnConfirm] = useState({ isOpen: false, remainingKredcoin: 0 });
   const [credibilityAtTurnStart, setCredibilityAtTurnStart] = useState<Record<number, number>>({});
-  const { tileRevealed, pendingReceiverReward, receiverAdvanceInProgress } = useCampaign();
-  const { setTileRevealed, setPendingReceiverReward, setReceiverAdvanceInProgress } = useCampaignDispatch();
+  const { tileRevealed, pendingReceiverReward, receiverAdvanceInProgress, giveReceiverViewingTileId } = useCampaign();
+  const { setTileRevealed, setPendingReceiverReward, setReceiverAdvanceInProgress, setGiveReceiverViewingTileId } = useCampaignDispatch();
 
   // ─── Multiplayer sync: phase → parent ───────────────────────────────────────
   React.useEffect(() => {
