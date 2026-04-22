@@ -1629,12 +1629,12 @@ const CampaignScreen: React.FC = () => {
             {/* Action Buttons (only for mover / correcting player / free advance receiver) */}
             {(isMover || isCorrecting || isFreeAdvancer) && (
             <div id="campaign-action-buttons" className="flex flex-col gap-2">
-              {(gameState === "TILE_PLAYED" ||
-                movedPiecesThisTurn.size > 0) &&
-                gameState !== "CORRECTION_REQUIRED" &&
-                gameState !== "PENDING_ACCEPTANCE" &&
-                gameState !== "PENDING_CHALLENGE" &&
-                !showBonusMoveModal && (
+              {(gameState === "CAMPAIGN" || gameState === "TILE_PLAYED") &&
+                !hasPlayedTileThisTurn || gameState === "TILE_PLAYED"
+                ? gameState !== "CORRECTION_REQUIRED" &&
+                  gameState !== "PENDING_ACCEPTANCE" &&
+                  gameState !== "PENDING_CHALLENGE" &&
+                  !showBonusMoveModal && (
                   <button
                     onClick={onResetTurn}
                     className="w-full px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md"
