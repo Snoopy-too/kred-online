@@ -29,6 +29,8 @@ interface useMultiplayerHostProps {
   setSelectedTilesForAdvantage: (tileIds: string[]) => void;
   handleTakeAdvantageDecline: () => void;
   handleFinishBureaucracyTurn: () => void;
+  setTakeAdvantagePurchase: (purchase: any) => void;
+  setCurrentBureaucracyPurchase: (purchase: any) => void;
 }
 
 export function useMultiplayerHost({
@@ -57,6 +59,8 @@ export function useMultiplayerHost({
   setSelectedTilesForAdvantage,
   handleTakeAdvantageDecline,
   handleFinishBureaucracyTurn,
+  setTakeAdvantagePurchase,
+  setCurrentBureaucracyPurchase,
 }: useMultiplayerHostProps) {
   React.useLayoutEffect(() => {
     if (!setActionDispatch || !isHost) return;
