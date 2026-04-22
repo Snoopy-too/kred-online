@@ -1,0 +1,734 @@
+[
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase displays campaign phase with player turn"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase player with tile 03 goes first in campaign phase"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase loads board image for 3 players"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase loads board image for 4 players"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase loads board image for 5 players"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase renders multiple images including pieces"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase pieces have correct resource paths"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase renders all piece types (marks, heels, pawns)"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase displays current player information"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase displays player hand with tiles"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase tile images use correct numbering format"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase has end turn button"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase has undo button when moves are made"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase displays credibility tracker"
+  },
+  {
+    "file": "src/__tests__/campaign-phase.test.tsx",
+    "name": "Campaign Phase shows game state indicators"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement displays tiles in hand that can be played"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement displays marks that can be moved"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement has an undo/reset button to revert moves"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement has an end turn button"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement displays drag-and-drop zones for tile placement"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement displays game elements needed for move tracking"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement complete turn sequence: play tile, move mark, reset, then play again and end turn"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement verifies pieces are marked as moved after interaction"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement has board rotation controls"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement has grid overlay toggle"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement clicking board rotation changes view"
+  },
+  {
+    "file": "src/__tests__/campaign-tile-play.test.tsx",
+    "name": "Campaign Phase - Tile Play and Movement grid overlay button toggles grid visibility"
+  },
+  {
+    "file": "src/__tests__/drafting-phase.test.tsx",
+    "name": "Drafting Phase displays drafting phase title"
+  },
+  {
+    "file": "src/__tests__/drafting-phase.test.tsx",
+    "name": "Drafting Phase shows current player information in test mode"
+  },
+  {
+    "file": "src/__tests__/drafting-phase.test.tsx",
+    "name": "Drafting Phase displays tile images in drafting phase"
+  },
+  {
+    "file": "src/__tests__/drafting-phase.test.tsx",
+    "name": "Drafting Phase allows clicking tiles to select them in test mode"
+  },
+  {
+    "file": "src/__tests__/drafting-phase.test.tsx",
+    "name": "Drafting Phase progresses through all players in test mode with 3 players"
+  },
+  {
+    "file": "src/__tests__/drafting-phase.test.tsx",
+    "name": "Drafting Phase shows keep/discard buttons during drafting"
+  },
+  {
+    "file": "src/__tests__/drafting-phase.test.tsx",
+    "name": "Drafting Phase progresses from drafting to campaign phase after all selections"
+  },
+  {
+    "file": "src/__tests__/game-start.test.tsx",
+    "name": "Game Start Test Mode starts game with 3 players in test mode"
+  },
+  {
+    "file": "src/__tests__/game-start.test.tsx",
+    "name": "Game Start Test Mode starts game with 4 players in test mode"
+  },
+  {
+    "file": "src/__tests__/game-start.test.tsx",
+    "name": "Game Start Test Mode starts game with 5 players in test mode"
+  },
+  {
+    "file": "src/__tests__/game-start.test.tsx",
+    "name": "Game Start Normal Mode starts game with 3 players in normal mode"
+  },
+  {
+    "file": "src/__tests__/game-start.test.tsx",
+    "name": "Game Start Normal Mode starts game with 4 players in normal mode"
+  },
+  {
+    "file": "src/__tests__/game-start.test.tsx",
+    "name": "Game Start Normal Mode starts game with 5 players in normal mode"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen renders the logo and tagline"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen renders the title and description"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen renders player count buttons for 3, 4, and 5 players"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen has test mode checkbox checked by default"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen renders skip draft phase checkbox"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen renders skip campaign phase checkbox"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen renders start game button"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen allows selecting different player counts"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen allows toggling test mode"
+  },
+  {
+    "file": "src/__tests__/player-selection.test.tsx",
+    "name": "Player Selection Screen unchecks skip campaign when skip draft is unchecked"
+  },
+  {
+    "file": "src/__tests__/skip-to-bureaucracy.test.tsx",
+    "name": "Skip to Bureaucracy Phase allows starting game with test mode, skip draft, and skip campaign all checked"
+  },
+  {
+    "file": "src/__tests__/skip-to-bureaucracy.test.tsx",
+    "name": "Skip to Bureaucracy Phase skips directly to bureaucracy phase when all skip options are checked"
+  },
+  {
+    "file": "src/__tests__/skip-to-bureaucracy.test.tsx",
+    "name": "Skip to Bureaucracy Phase bureaucracy phase displays after skipping draft and campaign"
+  },
+  {
+    "file": "src/__tests__/skip-to-bureaucracy.test.tsx",
+    "name": "Skip to Bureaucracy Phase works with 5 players and all skip options"
+  },
+  {
+    "file": "src/__tests__/smoke.test.tsx",
+    "name": "App smoke test renders without crashing"
+  },
+  {
+    "file": "src/__tests__/config/pieces.test.ts",
+    "name": "Piece Configuration PIECE_COUNTS_BY_PLAYER_COUNT should have correct piece counts for 4 players"
+  },
+  {
+    "file": "src/__tests__/config/pieces.test.ts",
+    "name": "Piece Configuration PIECE_COUNTS_BY_PLAYER_COUNT should have total pieces equal to 31 for 4 players"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "findNearestVacantLocation finds nearest vacant location in 3-player game"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "findNearestVacantLocation returns null when all locations are occupied"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "findNearestVacantLocation prefers community locations when dropped near them"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "findNearestVacantLocation returns null for invalid player count"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getLocationIdFromPosition returns exact match for known location"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getLocationIdFromPosition returns closest location for nearby position"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getLocationIdFromPosition returns null for position too far from any location"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getLocationIdFromPosition returns null for invalid player count"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getLocationIdFromPosition works for different player counts"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getPlayerIdFromLocationId extracts player ID from seat location"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getPlayerIdFromLocationId extracts player ID from rostrum location"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getPlayerIdFromLocationId extracts player ID from office location"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getPlayerIdFromLocationId returns null for community locations"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getPlayerIdFromLocationId returns null for invalid location IDs"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "getPlayerIdFromLocationId returns null for free_placement"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns true for player's own seat"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns false for another player's seat"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns true for player's own rostrum"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns false for another player's rostrum"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns true for player's own office"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns false for another player's office"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns false for community locations"
+  },
+  {
+    "file": "src/__tests__/game/locations.test.ts",
+    "name": "isLocationOwnedByPlayer returns false for free_placement"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "createGameStateSnapshot creates a deep copy of pieces array"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "createGameStateSnapshot creates a deep copy of boardTiles array"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "createGameStateSnapshot handles empty arrays"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "createGameStateSnapshot creates independent copies of top-level properties"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 3-player games returns correct challenge order when player 1 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 3-player games returns correct challenge order when player 2 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 3-player games returns correct challenge order when player 3 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 3-player games excludes receiving player from challenge order"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 4-player games returns correct challenge order when player 1 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 4-player games returns correct challenge order when player 2 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 4-player games returns correct challenge order when player 3 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 4-player games returns correct challenge order when player 4 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 4-player games excludes receiving player from challenge order"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 5-player games returns correct challenge order when player 1 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 5-player games returns correct challenge order when player 2 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 5-player games returns correct challenge order when player 3 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 5-player games returns correct challenge order when player 4 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 5-player games returns correct challenge order when player 5 plays tile"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder 5-player games excludes receiving player from challenge order"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder edge cases excludes both tile player and receiving player"
+  },
+  {
+    "file": "src/__tests__/game/state-snapshots.test.ts",
+    "name": "getChallengeOrder edge cases returns all other players when no receiving player specified"
+  },
+  {
+    "file": "src/__tests__/game/tile-matching.test.ts",
+    "name": "isLegalMoveSet should return false for REMOVE + REMOVE (no tile has this combo)"
+  },
+  {
+    "file": "src/__tests__/hooks/useGameState.test.ts",
+    "name": "useGameState Initial State should initialize game state to PLAYER_SELECTION"
+  },
+  {
+    "file": "src/__tests__/hooks/useTestMode.test.ts",
+    "name": "useTestMode Initial State should initialize game log as expanded"
+  },
+  {
+    "file": "src/__tests__/hooks/useTestMode.test.ts",
+    "name": "useTestMode UI Expansion Toggles should toggle game log expansion"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent same player seats returns true for consecutive seats on same player"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent same player seats returns false for non-consecutive seats on same player"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent cross-player wrapping - 3 players wraps from p1 seat6 to p3 seat1"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent cross-player wrapping - 3 players wraps from p3 seat6 to p2 seat1"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent cross-player wrapping - 3 players wraps from p2 seat6 to p1 seat1"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent cross-player wrapping - 4 players wraps sequentially for 4 players"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent cross-player wrapping - 5 players wraps sequentially for 5 players"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent edge cases returns false for invalid location IDs"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "areSeatsAdjacent edge cases returns false for non-adjacent cross-player seats"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "getAdjacentSeats 3-player games returns both neighbors for middle seats"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "getAdjacentSeats 3-player games wraps from seat 1 to previous player's seat 6"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "getAdjacentSeats 3-player games wraps from seat 6 to next player's seat 1"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "getAdjacentSeats 3-player games handles player 3 wrapping correctly"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "getAdjacentSeats 4-player games wraps sequentially for 4 players"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "getAdjacentSeats 5-player games wraps sequentially for 5 players"
+  },
+  {
+    "file": "src/__tests__/rules/adjacency.test.ts",
+    "name": "getAdjacentSeats edge cases returns empty array for invalid location ID"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement community locations allows moves to community locations"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement rostrum movements allows move to own rostrum when supporting seats are full"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement rostrum movements blocks move to own rostrum when supporting seats not full"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement rostrum movements blocks move to opponent rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement office movements allows move to own office when both rostrums are filled"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement office movements blocks move to own office when rostrums not both filled"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement office movements blocks move to opponent office"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement hierarchy movement restrictions blocks opponent hierarchy movements (seat to rostrum)"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validatePieceMovement hierarchy movement restrictions blocks own lateral rostrum movements"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ADVANCE moves returns ADVANCE for community to own seat"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ADVANCE moves returns ADVANCE for community to own rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ADVANCE moves returns ADVANCE for seat to rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ADVANCE moves returns ADVANCE for rostrum to office"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ASSIST moves returns ASSIST for community to opponent seat"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ASSIST moves returns ASSIST for community to opponent rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType WITHDRAW moves returns WITHDRAW for seat to community"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType WITHDRAW moves returns WITHDRAW for rostrum to seat"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType WITHDRAW moves returns WITHDRAW for rostrum to community"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType WITHDRAW moves returns WITHDRAW for office to rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType WITHDRAW moves returns WITHDRAW for office to community"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ORGANIZE moves returns ORGANIZE for adjacent own seats"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType ORGANIZE moves returns ORGANIZE for own rostrum to own rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType INFLUENCE moves returns INFLUENCE for adjacent opponent seats"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType INFLUENCE moves returns INFLUENCE for opponent rostrum to opponent rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType UNKNOWN/invalid moves returns UNKNOWN for non-adjacent seat moves"
+  },
+  {
+    "file": "src/__tests__/rules/movement.test.ts",
+    "name": "validateMoveType UNKNOWN/invalid moves returns UNKNOWN for undefined locations"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getPlayerRostrumRules returns rostrum rules for valid player IDs"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getPlayerRostrumRules returns null for invalid player IDs"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getRostrumSupportRule returns support rule for valid rostrum ID"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getRostrumSupportRule returns null for invalid rostrum ID"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "countPiecesInSeats counts pieces in specified seats"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "countPiecesInSeats returns 0 for empty seat list"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areSupportingSeatsFullForRostrum returns true when all 3 supporting seats are full"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areSupportingSeatsFullForRostrum returns false when supporting seats are not full"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areSupportingSeatsFullForRostrum returns false for invalid rostrum ID"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "countPiecesInPlayerRostrums counts pieces in both player rostrums"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "countPiecesInPlayerRostrums returns 0 for player with no pieces in rostrums"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areBothRostrumsFilledForPlayer returns true when both rostrums have at least one piece"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areBothRostrumsFilledForPlayer returns false when only one rostrum is filled"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areBothRostrumsFilledForPlayer returns false when no rostrums are filled"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areBothRostrumsFilledForPlayer returns false for invalid player ID"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areRostrumsAdjacent 3-player games identifies adjacent rostrums correctly"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areRostrumsAdjacent 3-player games returns false for non-adjacent rostrums"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areRostrumsAdjacent 4-player games identifies adjacent rostrums correctly"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "areRostrumsAdjacent invalid inputs returns false for invalid player count"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getAdjacentRostrum 3-player games returns the adjacent rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getAdjacentRostrum 3-player games returns null for rostrums with no adjacency"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getAdjacentRostrum 4-player games returns the adjacent rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "getAdjacentRostrum returns null for invalid player count"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "validateAdjacentRostrumMovement allows movement between adjacent rostrums when conditions are met"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "validateAdjacentRostrumMovement blocks movement to non-adjacent rostrums"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "validateAdjacentRostrumMovement blocks movement when opponent tries to move piece from your rostrum"
+  },
+  {
+    "file": "src/__tests__/rules/rostrum.test.ts",
+    "name": "validateAdjacentRostrumMovement blocks movement when target rostrum supporting seats are not full"
+  },
+  {
+    "file": "src/__tests__/components/screens/CampaignScreen.test.tsx",
+    "name": "CampaignScreen should display campaign phase title"
+  },
+  {
+    "file": "src/__tests__/components/screens/CampaignScreen.test.tsx",
+    "name": "CampaignScreen should display current player information"
+  },
+  {
+    "file": "src/__tests__/components/screens/CampaignScreen.test.tsx",
+    "name": "CampaignScreen should display player hand with tiles"
+  },
+  {
+    "file": "src/__tests__/components/screens/CampaignScreen.test.tsx",
+    "name": "CampaignScreen should display end turn button"
+  },
+  {
+    "file": "src/__tests__/components/screens/CampaignScreen.test.tsx",
+    "name": "CampaignScreen should show undo button when tile has been played"
+  },
+  {
+    "file": "src/__tests__/components/screens/CampaignScreen.test.tsx",
+    "name": "CampaignScreen should display game log toggle button"
+  },
+  {
+    "file": "src/__tests__/components/screens/CampaignScreen.test.tsx",
+    "name": "CampaignScreen should call onResetTurn when reset turn button is clicked"
+  },
+  {
+    "file": "src/__tests__/components/screens/DraftingScreen.test.tsx",
+    "name": "DraftingScreen should display hand count"
+  },
+  {
+    "file": "src/__tests__/components/screens/DraftingScreen.test.tsx",
+    "name": "DraftingScreen should show correct player when currentPlayerIndex changes"
+  }
+]
