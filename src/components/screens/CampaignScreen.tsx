@@ -1246,11 +1246,13 @@ const CampaignScreen: React.FC = () => {
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
               // Check both position AND locationId to avoid false positives for seats near the community
 
-              // Prevent moving Heels until Marks are gone, and Pawns until Heels/Marks are gone
+              // Prevent moving Heels until Marks are gone, and Pawns until Heels/Marks are gone.
+              // Pieces returned to the community during the current turn are "pending" and
+              // don't count until the turn is fully resolved.
               let isRestrictedCommunityPiece = false;
               if (isInCommunity) {
-                const markCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Mark").length;
-                const heelCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Heel").length;
+                const markCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Mark" && !movedPiecesThisTurn.has(p.id)).length;
+                const heelCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Heel" && !movedPiecesThisTurn.has(p.id)).length;
                 if (piece.name === "Heel" && markCount > 0) isRestrictedCommunityPiece = true;
                 if (piece.name === "Pawn" && (markCount > 0 || heelCount > 0)) isRestrictedCommunityPiece = true;
               }
