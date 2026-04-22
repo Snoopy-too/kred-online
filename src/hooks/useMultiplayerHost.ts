@@ -173,7 +173,7 @@ export function useMultiplayerHost({
           setSelectedTilesForAdvantage(action.payload.tileIds);
           break;
         case 'ADVANTAGE_PURCHASE':
-          // Guest confirmed a take advantage purchase
+          setTakeAdvantagePurchase(action.payload.purchase);
           break;
         case 'ADVANTAGE_DECLINE':
           handleTakeAdvantageDecline();
@@ -182,7 +182,7 @@ export function useMultiplayerHost({
           // Process on host side directly
           break;
         case 'BUREAUCRACY_PURCHASE':
-          // Guest made a bureaucracy purchase
+          setCurrentBureaucracyPurchase(action.payload.purchase);
           break;
         case 'BUREAUCRACY_COMPLETE':
           handleFinishBureaucracyTurn();
@@ -216,5 +216,7 @@ export function useMultiplayerHost({
     setSelectedTilesForAdvantage,
     handleTakeAdvantageDecline,
     handleFinishBureaucracyTurn,
+    setTakeAdvantagePurchase,
+    setCurrentBureaucracyPurchase,
   ]);
 }

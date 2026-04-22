@@ -71,7 +71,12 @@
       "Bash(python *)",
       "Bash(tail *)",
       "Bash(rm -f /tmp/baseline.log)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\" //NH)",
+      "Bash(git reset *)",
+      "Bash(git -C /c/xampp/htdocs/kred show a350780:src/App.tsx)",
+      "Bash(git -C /c/xampp/htdocs/kred log --all --oneline --source -S \"setCampaignRole\\('mover'\" -- 'src/**')",
+      "Bash(git -C /c/xampp/htdocs/kred log --all --oneline --source -S \"setCampaignRole\\(\\\\\"mover\\\\\"\" -- 'src/**')"
     ],
     "deny": [],
     "ask": []

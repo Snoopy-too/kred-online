@@ -16,7 +16,7 @@ import {
 import { useRoster } from "../../providers/RosterProvider";
 import { useBoard } from "../../providers/BoardProvider";
 import { useBureaucracyProvider } from "../../providers/BureaucracyProvider";
-import { useBureaucracyScreenHandlers } from "../../providers/HandlersProvider";
+import { useBureaucracyScreenHandlers, useHandlers } from "../../providers/HandlersProvider";
 
 interface BureaucracyScreenHandlers {
   currentPurchase: BureaucracyPurchase | null;
@@ -83,8 +83,13 @@ const BureaucracyScreen: React.FC = () => {
     ? getAvailablePurchases(menu, playerState.remainingKredcoin)
     : [];
   const isPromotionPurchase = currentPurchase?.item.type === "PROMOTION";
+  
+  const isMyTurn = !isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId);
+
   const boardRotation = boardRotationEnabled
-    ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0
+    ? (isMultiplayer && playerIndex !== undefined
+      ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[playerIndex + 1] ?? 0
+      : PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0)
     : 0;
 
   // Drag and drop state

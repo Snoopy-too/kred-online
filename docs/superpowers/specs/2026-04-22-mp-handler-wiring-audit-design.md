@@ -74,14 +74,7 @@ Stop after surface 8. No adjacent refactoring, no typecheck cleanup, no test rep
 
 ## Commits
 
-One commit per fix bundle, direct to `supabase-multiplayer` (no PRs per project workflow):
-
-- `fix(multiplayer): per-viewer campaignRole restores correct turn indicator`
-- `fix(multiplayer): restore missing pieceMovementHandlers deps`
-- One commit per remaining handler surface that needs a fix.
-- One commit per derived-value or dispatcher fix found in surfaces 7-8.
-
-Per-commit Netlify deploy enables incremental smoke testing.
+Single commit at the end of the audit, direct to `supabase-multiplayer` (no PRs per project workflow). All fixes batched into one commit for one Netlify deploy + one smoke-test pass.
 
 ## Risks
 

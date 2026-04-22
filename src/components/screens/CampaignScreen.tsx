@@ -195,6 +195,7 @@ interface CampaignScreenHandlers {
   onResetTakeAdvantageAction: () => void;
   onDoneTakeAdvantageAction: () => void;
   onTakeAdvantagePiecePromote: (pieceId: string) => void;
+  campaignRole?: string | null;
 }
 
 const CampaignScreen: React.FC = () => {
@@ -258,11 +259,13 @@ const CampaignScreen: React.FC = () => {
     onResetTakeAdvantageAction,
     onDoneTakeAdvantageAction,
     onTakeAdvantagePiecePromote,
+    campaignRole: campaignRoleFromHandlers,
   } = useCampaignHandlers<CampaignScreenHandlers>();
   // ============================================================================
   // PROVIDER HOOKS — migrated state now lives in the provider tree
   // ============================================================================
-  const { gameState, currentPlayerIndex, moverPlayerIndex, campaignRole } = usePhase();
+  const { gameState, currentPlayerIndex, moverPlayerIndex, campaignRole: phaseCampaignRole } = usePhase();
+  const campaignRole = campaignRoleFromHandlers ?? phaseCampaignRole;
   const { players, pieces } = useRoster();
   const { boardTiles, bankedTiles } = useBoard();
   const campaign = useCampaign();

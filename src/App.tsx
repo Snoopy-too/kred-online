@@ -26,7 +26,8 @@ import { createGameFlowHandlers, createPieceMovementHandlers, createTurnHandlers
 import { BANK_SPACES_BY_PLAYER_COUNT } from "./config";
 import { areSeatsAdjacent } from "./rules";
 import { calculateMoves as calculateMovesCore } from "./game";
-import { validateMovesForTilePlay } from "./game/validation";
+import { validateMovesForTilePlay, validateSingleMove } from "./game/validation";
+import { calculatePieceRotation } from "./utils/positioning";
 import { isLegalMoveSet, getMatchingTileIds } from "./game/tile-matching";
 import { initializePlayers, initializeCampaignPieces } from "./game/initialization";
 import { getBureaucracyTurnOrder, calculatePlayerKredcoin } from "./game/bureaucracy";
@@ -186,10 +187,10 @@ const App: React.FC<MultiplayerProps> = (props) => {
   } as any), [playerCount, players, currentPlayerIndex, draftRound, playerNames, pieces, boardTiles, bankedTiles, isTestMode, setPlayerCount, setIsTestMode, setPlayers, setPieces, setCurrentPlayerIndex, setDraftRound, setGameState, setGameLog, setPiecesAtTurnStart, setMovedPiecesThisTurn, setPendingCommunityPieces, setBoardTiles, setBankedTiles, setLastDroppedPosition, setRevealedTileId, setHasPlayedTileThisTurn, setPlayedTile, setMovesThisTurn, setTileTransaction, setReceiverAcceptance, setChallengedTile, setPlacerViewingTileId, setBystanders, setBystanderIndex, setIsPrivatelyViewing, setShowChallengeRevealModal, setChallengeOrder, setCurrentChallengerIndex, setTileRejected, setShowMoveCheckResult, setMoveCheckResult, setGiveReceiverViewingTileId, setTilePlayerMustWithdraw, setBureaucracyTurnOrder, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setCampaignRole, setMoverPlayerIndex, setCredibilityAtTurnStart]);
   const pieceMovementHandlers = React.useMemo(() => createPieceMovementHandlers({ pieces, players, playerCount, currentPlayerIndex, movedPiecesThisTurn, pendingCommunityPieces, piecesAtTurnStart, piecesAtCorrectionStart, piecesBeforeBonusMove, playedTile: playedTile as any, setPieces, setPlayers, setBoardTiles, setGameState, setMovedPiecesThisTurn, setPendingCommunityPieces, setLastDroppedPosition, setLastDroppedPieceId, setPlayedTile, setHasPlayedTileThisTurn, showAlert } as any), [pieces, players, playerCount, currentPlayerIndex, movedPiecesThisTurn, pendingCommunityPieces, piecesAtTurnStart, piecesAtCorrectionStart, piecesBeforeBonusMove, playedTile, setPieces, setPlayers, setBoardTiles, setGameState, setMovedPiecesThisTurn, setPendingCommunityPieces, setLastDroppedPosition, setLastDroppedPieceId, setPlayedTile, setHasPlayedTileThisTurn, showAlert]);
   const turnHandlers = React.useMemo(() => createTurnHandlers({ players, pieces, playerCount, currentPlayerIndex, setCurrentPlayerIndex, setGameState, setGameLog, setPiecesAtTurnStart, setHasPlayedTileThisTurn, setRevealedTileId, setTileTransaction, setBystanders, setBystanderIndex, setIsPrivatelyViewing, setChallengedTile, setPlacerViewingTileId, setMovedPiecesThisTurn, setPendingCommunityPieces } as any), [players, pieces, playerCount, currentPlayerIndex, setCurrentPlayerIndex, setGameState, setGameLog, setPiecesAtTurnStart, setHasPlayedTileThisTurn, setRevealedTileId, setTileTransaction, setBystanders, setBystanderIndex, setIsPrivatelyViewing, setChallengedTile, setPlacerViewingTileId, setMovedPiecesThisTurn, setPendingCommunityPieces]);
-  const tilePlayHandlers = React.useMemo(() => createTilePlayHandlers({ gameState, players, playerCount, currentPlayerIndex, hasPlayedTileThisTurn, piecesAtTurnStart, pieces, boardTiles, bankSpacesByPlayerCount: BANK_SPACES_BY_PLAYER_COUNT, setPlayers, setBoardTiles, setPlayedTile, setGameState, setMovesThisTurn, setHasPlayedTileThisTurn, setMovedPiecesThisTurn, setPendingCommunityPieces, setBonusMoveWasCompleted, setPiecesAtCorrectionStart, setPiecesBeforeBonusMove, setRevealedTileId, setIsPrivatelyViewing, setPlacerViewingTileId, setReceiverAcceptance, setCurrentPlayerIndex, showAlert, calculateMoves: calculateMovesCore } as any), [gameState, players, playerCount, currentPlayerIndex, hasPlayedTileThisTurn, piecesAtTurnStart, pieces, boardTiles, setPlayers, setBoardTiles, setPlayedTile, setGameState, setMovesThisTurn, setHasPlayedTileThisTurn, setMovedPiecesThisTurn, setPendingCommunityPieces, setBonusMoveWasCompleted, setPiecesAtCorrectionStart, setPiecesBeforeBonusMove, setRevealedTileId, setIsPrivatelyViewing, setPlacerViewingTileId, setReceiverAcceptance, setCurrentPlayerIndex, showAlert]);
+  const tilePlayHandlers = React.useMemo(() => createTilePlayHandlers({ gameState, players, playerCount, currentPlayerIndex, hasPlayedTileThisTurn, piecesAtTurnStart, pieces, boardTiles, bankSpacesByPlayerCount: BANK_SPACES_BY_PLAYER_COUNT, setPlayers, setBoardTiles, setPlayedTile, setGameState, setMovesThisTurn, setHasPlayedTileThisTurn, setMovedPiecesThisTurn, setPendingCommunityPieces, setBonusMoveWasCompleted, setPiecesAtCorrectionStart, setPiecesBeforeBonusMove, setRevealedTileId, setIsPrivatelyViewing, setPlacerViewingTileId, setReceiverAcceptance, setCurrentPlayerIndex, showAlert, calculateMoves: calculateMovesCore as any } as any), [gameState, players, playerCount, currentPlayerIndex, hasPlayedTileThisTurn, piecesAtTurnStart, pieces, boardTiles, setPlayers, setBoardTiles, setPlayedTile, setGameState, setMovesThisTurn, setHasPlayedTileThisTurn, setMovedPiecesThisTurn, setPendingCommunityPieces, setBonusMoveWasCompleted, setPiecesAtCorrectionStart, setPiecesBeforeBonusMove, setRevealedTileId, setIsPrivatelyViewing, setPlacerViewingTileId, setReceiverAcceptance, setCurrentPlayerIndex, showAlert]);
 
-  const challengeFlowHandlers = useChallengeFlowHandlers({ players, pieces, playerCount, gameState, playedTile, bankedTiles, challengeOrder, currentChallengerIndex, receiverAcceptance, tileRejected, takeAdvantageChallengerId, takeAdvantageChallengerCredibility, selectedTilesForAdvantage, totalKredcoinForAdvantage, takeAdvantagePurchase, takeAdvantagePiecesSnapshot, piecesAtCorrectionStart, bonusMoveWasCompleted, piecesBeforeBonusMove, tilePlayerMustWithdraw, credibilityAtTurnStart, pendingChallengerReward: null, currentPlayerIndex, setPlayers, setPieces, setBankedTiles, setGameState, setPlayedTile, setMovesThisTurn, setHasPlayedTileThisTurn, setReceiverAcceptance, setChallengeOrder, setCurrentChallengerIndex, setTileRejected, setChallengedTile, setShowChallengeRevealModal, setChallengeResultMessage, setChallengeResultMessagePlayerId, setShowPerfectTileModal, setTilePlayerMustWithdraw, setPiecesAtCorrectionStart, setMovedPiecesThisTurn, setPendingCommunityPieces, setPendingChallengerReward: () => {}, setBonusMoveId: setBonusMovePlayerId, setShowBonusMoveModal, setPiecesBeforeBonusMove, setCurrentPlayerIndex, setPiecesAtTurnStart, setCredibilityAtTurnStart, setShowTakeAdvantageModal, setTakeAdvantageChallengerId, setTakeAdvantageChallengerCredibility, setShowTakeAdvantageTileSelection, setSelectedTilesForAdvantage, setTotalKredcoinForAdvantage, setShowTakeAdvantageMenu, setTakeAdvantagePurchase, setTakeAdvantagePiecesSnapshot, setTakeAdvantageValidationError, setMoveCheckResult, setShowMoveCheckResult, setBoardTiles, setBureaucracyTurnOrder, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setShowBureaucracyTransition, setGiveReceiverViewingTileId, showAlert, addGameLog, setGameLog, advanceTurnNormally: turnHandlers.advanceTurnNormally, pendingChallengerRewardRef: { current: null } as any } as any);
-  const bureaucracyHandlers = useBureaucracyHandlers({ players, pieces, playerCount, boardTiles, bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex, currentBureaucracyPurchase, bureaucracySnapshot, bureaucracyMoves: [], setPlayers, setPieces, setBoardTiles, setGameState, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setCurrentBureaucracyPurchase, setShowBureaucracyMenu, setBureaucracyValidationError, setBureaucracyMoves: () => {}, setBureaucracySnapshot, setBureaucracyMoveCheckResult, setShowBureaucracyMoveCheckResult, setShowFinishTurnConfirm, setCurrentPlayerIndex, setBankedTiles, setBureaucracyTurnOrder, calculateMoves: calculateMovesCore as any, validateSingleMove: () => ({ isValid: true }), calculatePieceRotation: () => 0 } as any);
+  const challengeFlowHandlers = useChallengeFlowHandlers({ players, pieces, playerCount, gameState, playedTile, bankedTiles, challengeOrder, currentChallengerIndex, receiverAcceptance, tileRejected, takeAdvantageChallengerId, takeAdvantageChallengerCredibility, selectedTilesForAdvantage, totalKredcoinForAdvantage, takeAdvantagePurchase, takeAdvantagePiecesSnapshot, piecesAtCorrectionStart, bonusMoveWasCompleted, piecesBeforeBonusMove, tilePlayerMustWithdraw, credibilityAtTurnStart, pendingChallengerReward: null, currentPlayerIndex, setPlayers, setPieces, setBankedTiles, setGameState, setPlayedTile, setMovesThisTurn, setHasPlayedTileThisTurn, setReceiverAcceptance, setChallengeOrder, setCurrentChallengerIndex, setTileRejected, setChallengedTile, setShowChallengeRevealModal, setChallengeResultMessage, setChallengeResultMessagePlayerId, setShowPerfectTileModal, setTilePlayerMustWithdraw, setPiecesAtCorrectionStart, setMovedPiecesThisTurn, setPendingCommunityPieces, setPendingChallengerReward: () => {}, setBonusMovePlayerId, setShowBonusMoveModal, setPiecesBeforeBonusMove, setCurrentPlayerIndex, setPiecesAtTurnStart, setCredibilityAtTurnStart, setShowTakeAdvantageModal, setTakeAdvantageChallengerId, setTakeAdvantageChallengerCredibility, setShowTakeAdvantageTileSelection, setSelectedTilesForAdvantage, setTotalKredcoinForAdvantage, setShowTakeAdvantageMenu, setTakeAdvantagePurchase, setTakeAdvantagePiecesSnapshot, setTakeAdvantageValidationError, setMoveCheckResult, setShowMoveCheckResult, setBoardTiles, setBureaucracyTurnOrder, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setShowBureaucracyTransition, setGiveReceiverViewingTileId, showAlert, addGameLog, setGameLog, advanceTurnNormally: turnHandlers.advanceTurnNormally, pendingChallengerRewardRef: { current: null } as any } as any);
+  const bureaucracyHandlers = useBureaucracyHandlers({ players, pieces, playerCount, boardTiles, bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex, currentBureaucracyPurchase, bureaucracySnapshot, bureaucracyMoves: [], setPlayers, setPieces, setBoardTiles, setGameState, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setCurrentBureaucracyPurchase, setShowBureaucracyMenu, setBureaucracyValidationError, setBureaucracyMoves: () => {}, setBureaucracySnapshot, setBureaucracyMoveCheckResult, setShowBureaucracyMoveCheckResult, setShowFinishTurnConfirm, setCurrentPlayerIndex, setBankedTiles, setBureaucracyTurnOrder, calculateMoves: calculateMovesCore as any, validateSingleMove, calculatePieceRotation } as any);
 
   // ─── Turn Advancement ───────────────────────────────────────────────────────
   const handleEndTurn = React.useCallback(() => {
@@ -236,9 +237,49 @@ const App: React.FC<MultiplayerProps> = (props) => {
     }
   }, [isMultiplayer, isHost, multiplayerPlayerCount, players.length, gameFlowHandlers, multiplayerSkipDraft]);
 
-  useMultiplayerHost({ isHost, setActionDispatch, players, playerCount, currentPlayerIndex, draftRound, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn } as any);
+  useMultiplayerHost({ isHost, setActionDispatch, players, playerCount, currentPlayerIndex, draftRound, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn, setTakeAdvantagePurchase, setCurrentBureaucracyPurchase } as any);
 
   // ─── Derived values ─────────────────────────────────────────────────────────
+
+  // ─── Per-viewer campaignRole (multiplayer) ──────────────────────────────────
+  // In single-player, fall back to the global PhaseProvider value (legacy behavior).
+  // In multiplayer, compute from the viewer's playerIndex so each client sees its
+  // own role (mover / receiver / challenger / waiting / bonusMover / etc.).
+  const viewerCampaignRole = React.useMemo<string | null>(() => {
+    if (!isMultiplayer || playerIndex === undefined) return campaignRole;
+    const myIdx = playerIndex;
+    if (gameState === 'CAMPAIGN' || gameState === 'SELECTING_TILE' || gameState === 'TILE_PLAYED') {
+      return myIdx === currentPlayerIndex ? 'mover' : 'waiting';
+    }
+    if (gameState === 'PENDING_ACCEPTANCE') {
+      const receiverPlayerId = (tileTransaction as any)?.receiverId ?? (playedTile as any)?.receivingPlayerId ?? null;
+      const receiverIdx = receiverPlayerId != null ? players.findIndex(p => p.id === receiverPlayerId) : -1;
+      const moverPlayerId = (playedTile as any)?.playerId ?? (tileTransaction as any)?.placerId ?? null;
+      const moverIdx = moverPlayerId != null ? players.findIndex(p => p.id === moverPlayerId) : currentPlayerIndex;
+      if (myIdx === receiverIdx) return 'receiver';
+      if (myIdx === moverIdx) return 'mover';
+      return 'waiting';
+    }
+    if (gameState === 'PENDING_CHALLENGE') {
+      const currentChallengerId = challengeOrder[currentChallengerIndex];
+      const moverPlayerId = (playedTile as any)?.playerId ?? (tileTransaction as any)?.placerId ?? null;
+      const moverIdx = moverPlayerId != null ? players.findIndex(p => p.id === moverPlayerId) : currentPlayerIndex;
+      if (currentChallengerId !== undefined && myIdx + 1 === currentChallengerId) return 'challenger';
+      if (myIdx === moverIdx) return 'mover';
+      return 'waiting';
+    }
+    if (gameState === 'TAKE_ADVANTAGE') {
+      return myIdx + 1 === takeAdvantageChallengerId ? 'takeAdvantageChallenger' : 'waiting';
+    }
+    if (gameState === 'BONUS_MOVE') {
+      return myIdx + 1 === bonusMovePlayerId ? 'bonusMover' : 'waiting';
+    }
+    if (gameState === 'CORRECTION_REQUIRED') {
+      return myIdx === currentPlayerIndex ? 'correcting' : 'waiting';
+    }
+    return campaignRole;
+  }, [isMultiplayer, playerIndex, gameState, currentPlayerIndex, tileTransaction, playedTile, players, challengeOrder, currentChallengerIndex, takeAdvantageChallengerId, bonusMovePlayerId, campaignRole]);
+
   const viewingPlayerId = isMultiplayer && playerIndex !== undefined
     ? playerIndex + 1
     : (players[currentPlayerIndex]?.id || 1);
@@ -263,6 +304,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
   };
 
   const campaignValue = {
+    campaignRole: viewerCampaignRole,
     playerCount,
     currentPlayerId: viewingPlayerId,
     playerIndex,
