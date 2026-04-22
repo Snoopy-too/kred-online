@@ -67,45 +67,45 @@ import { useCampaignHandlers } from "../../providers/HandlersProvider";
 // ============================================================================
 
 const PLAYER_COLORS: Record<number, { border: string; bg: string; text: string; draggingBorder: string; draggingBg: string; indicator: string; ring: string }> = {
-  1: { 
-    border: "border-amber-400/30", 
-    bg: "bg-amber-500/5", 
+  1: {
+    border: "border-amber-400/30",
+    bg: "bg-amber-500/5",
     text: "text-amber-400/60",
     draggingBorder: "border-amber-400",
     draggingBg: "bg-amber-500/20",
     indicator: "text-amber-300",
     ring: "ring-amber-400/40"
   },
-  2: { 
-    border: "border-fuchsia-400/30", 
-    bg: "bg-fuchsia-500/5", 
+  2: {
+    border: "border-fuchsia-400/30",
+    bg: "bg-fuchsia-500/5",
     text: "text-fuchsia-400/60",
     draggingBorder: "border-fuchsia-400",
     draggingBg: "bg-fuchsia-500/20",
     indicator: "text-fuchsia-300",
     ring: "ring-fuchsia-400/40"
   },
-  3: { 
-    border: "border-cyan-400/30", 
-    bg: "bg-cyan-500/5", 
+  3: {
+    border: "border-cyan-400/30",
+    bg: "bg-cyan-500/5",
     text: "text-cyan-400/60",
     draggingBorder: "border-cyan-400",
     draggingBg: "bg-cyan-500/20",
     indicator: "text-cyan-300",
     ring: "ring-cyan-400/40"
   },
-  4: { 
-    border: "border-orange-400/30", 
-    bg: "bg-orange-500/5", 
+  4: {
+    border: "border-orange-400/30",
+    bg: "bg-orange-500/5",
     text: "text-orange-400/60",
     draggingBorder: "border-orange-400",
     draggingBg: "bg-orange-500/20",
     indicator: "text-orange-300",
     ring: "ring-orange-400/40"
   },
-  5: { 
-    border: "border-emerald-400/30", 
-    bg: "bg-emerald-500/5", 
+  5: {
+    border: "border-emerald-400/30",
+    bg: "bg-emerald-500/5",
     text: "text-emerald-400/60",
     draggingBorder: "border-emerald-400",
     draggingBg: "bg-emerald-500/20",
@@ -701,7 +701,7 @@ const CampaignScreen: React.FC = () => {
   // In test mode (single-player), allow controlling all players
   // In multiplayer, use the server-assigned campaignRole for precise control
   const isMyTurn = playerIndex !== undefined && playerIndex === currentPlayerIndex;
-  
+
   // Use campaignRole from server to determine what this player can do
   const isMover = campaignRole === 'mover';
   const isReceiver = campaignRole === 'receiver';
@@ -755,10 +755,10 @@ const CampaignScreen: React.FC = () => {
 
   const showWaitingOverlay =
     isWaiting &&
-    (gameState === "PENDING_ACCEPTANCE" || 
-     gameState === "PENDING_CHALLENGE" || 
-     gameState === "TAKE_ADVANTAGE" ||
-     gameState === "BONUS_MOVE");
+    (gameState === "PENDING_ACCEPTANCE" ||
+      gameState === "PENDING_CHALLENGE" ||
+      gameState === "TAKE_ADVANTAGE" ||
+      gameState === "BONUS_MOVE");
 
   let waitingMessage = "";
   let waitingPlayerId = undefined;
@@ -779,7 +779,7 @@ const CampaignScreen: React.FC = () => {
       waitingMessage = `Waiting for ${nameById(waitingPlayerId)} to complete bonus move...`;
     }
   }
-  
+
   // Role banner
   const getRoleBanner = (): { text: string; color: string } | null => {
     switch (campaignRole) {
@@ -998,7 +998,7 @@ const CampaignScreen: React.FC = () => {
             {unoccupiedSpaces.map((space) => {
               const colors = PLAYER_COLORS[space.ownerId] || PLAYER_COLORS[1];
               const playerName = nameById(space.ownerId);
-              
+
               return (
                 <div
                   key={`space-${space.ownerId}`}
@@ -1019,9 +1019,8 @@ const CampaignScreen: React.FC = () => {
                     style={{
                       transform: `rotate(${-space.rotation - boardRotation}deg)`,
                     }}
-                    className={`font-bold text-[10px] leading-tight transition-colors duration-300 ${
-                      isDraggingTile ? colors.indicator : colors.text
-                    }`}
+                    className={`font-bold text-[10px] leading-tight transition-colors duration-300 ${isDraggingTile ? colors.indicator : colors.text
+                      }`}
                   >
                     <div className="uppercase tracking-tighter opacity-60 leading-none scale-90 mb-0.5">Pass to</div>
                     <div className="text-[13px] font-black uppercase leading-tight truncate px-1" title={playerName}>{playerName}</div>
@@ -1128,9 +1127,8 @@ const CampaignScreen: React.FC = () => {
                       : undefined
                   }
                   onClick={isTileClickable ? handleTileClick : undefined}
-                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${
-                    PLAYER_COLORS[boardTile.ownerId]?.border || "border-gray-200"
-                  } ${isPlayedTile ? "ring-2 " + (PLAYER_COLORS[boardTile.ownerId]?.ring || "") : ""}`}
+                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[boardTile.ownerId]?.border || "border-gray-200"
+                    } ${isPlayedTile ? "ring-2 " + (PLAYER_COLORS[boardTile.ownerId]?.ring || "") : ""}`}
                   style={{
                     top: `${boardTile.position.top}%`,
                     left: `${boardTile.position.left}%`,
@@ -1166,9 +1164,8 @@ const CampaignScreen: React.FC = () => {
             {bankedTiles.map((bankedTile) => (
               <div
                 key={bankedTile.id}
-                className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${
-                  PLAYER_COLORS[bankedTile.ownerId]?.border || "border-gray-200"
-                }`}
+                className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[bankedTile.ownerId]?.border || "border-gray-200"
+                  }`}
                 style={{
                   top: `${bankedTile.position.top}%`,
                   left: `${bankedTile.position.left}%`,
@@ -1236,11 +1233,11 @@ const CampaignScreen: React.FC = () => {
               const scaleMultiplier =
                 playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
               const baseScale = 0.798;
-              
+
               // Scale down pieces in community for 3 and 4 player modes to avoid overlap
               const isInCommunity = piece.locationId?.startsWith("community") || false;
               const communityScale = (playerCount === 3 || playerCount === 4) && isInCommunity ? 0.8 : 1;
-              
+
               const finalScale = baseScale * scaleMultiplier * communityScale;
 
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
@@ -1256,7 +1253,7 @@ const CampaignScreen: React.FC = () => {
                 if (piece.name === "Heel" && markCount > 0) isRestrictedCommunityPiece = true;
                 if (piece.name === "Pawn" && (markCount > 0 || heelCount > 0)) isRestrictedCommunityPiece = true;
               }
-              
+
               const communityCounterRotation = isInCommunity
                 ? -boardRotation
                 : 0;
@@ -1268,13 +1265,13 @@ const CampaignScreen: React.FC = () => {
               // - Mover during CAMPAIGN phase (before tile played)
               // - Correcting player during CORRECTION_REQUIRED
               // - Receiver making their free Advance move
-              const canDragPiece = 
+              const canDragPiece =
                 !isRestrictedCommunityPiece &&
-                ((isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) || 
-                (isCorrecting && gameState === 'CORRECTION_REQUIRED') ||
-                (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED') ||
-                (isBonusMover && gameState === 'BONUS_MOVE') ||
-                (isChallenger && gameState === 'TAKE_ADVANTAGE'));
+                ((isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) ||
+                  (isCorrecting && gameState === 'CORRECTION_REQUIRED') ||
+                  (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED') ||
+                  (isBonusMover && gameState === 'BONUS_MOVE') ||
+                  (isChallenger && gameState === 'TAKE_ADVANTAGE'));
 
               return (
                 <img
@@ -1285,8 +1282,8 @@ const CampaignScreen: React.FC = () => {
                   onDragStart={(e) => handleDragStartPiece(e, piece.id)}
                   onDragEnd={handleDragEndPiece}
                   className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved
-                      ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
-                      : ""
+                    ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
+                    : ""
                     } ${isRestrictedCommunityPiece ? "opacity-40 grayscale" : ""}`}
                   style={{
                     position: "absolute",
@@ -1496,12 +1493,12 @@ const CampaignScreen: React.FC = () => {
               <h2 className="text-xl font-bold text-cyan-300 tracking-wide">
                 {isMover ? "Your Turn"
                   : isReceiver ? "Tile Received"
-                  : isChallenger ? "Challenge?"
-                  : isCorrecting ? "Make Correction"
-                  : isFreeAdvancer ? "Free Advance"
-                  : (gameState === 'PENDING_ACCEPTANCE' || gameState === 'PENDING_CHALLENGE')
-                    ? `${nameById(playedTile?.playerId || tileTransaction?.placerId)}'s Turn`
-                    : `${nameByIndex(currentPlayerIndex)}'s Turn`}
+                    : isChallenger ? "Challenge?"
+                      : isCorrecting ? "Make Correction"
+                        : isFreeAdvancer ? "Free Advance"
+                          : (gameState === 'PENDING_ACCEPTANCE' || gameState === 'PENDING_CHALLENGE')
+                            ? `${nameById(playedTile?.playerId || tileTransaction?.placerId)}'s Turn`
+                            : `${nameByIndex(currentPlayerIndex)}'s Turn`}
               </h2>
               {roleBanner && (
                 <p className={`mt-2 text-sm font-semibold rounded-md py-1 px-3 ${roleBanner.color} text-white`}>
@@ -1535,7 +1532,7 @@ const CampaignScreen: React.FC = () => {
                     {hasZeroCredibility ? (
                       <div className="mb-3">
                         <div className="w-20 h-20 mx-auto bg-gray-700 rounded-lg flex items-center justify-center border-2 border-gray-500">
-                          <span className="text-gray-400 text-xs text-center">Hidden<br/>(0 Credibility)</span>
+                          <span className="text-gray-400 text-xs text-center">Hidden<br />(0 Credibility)</span>
                         </div>
                         <p className="text-red-400 text-xs mt-1 font-semibold">You may not view tiles</p>
                       </div>
@@ -1603,11 +1600,10 @@ const CampaignScreen: React.FC = () => {
                             : onBystanderDecision("challenge")
                         }
                         disabled={hasZeroCredibility}
-                        className={`w-full px-4 py-2 font-semibold rounded-lg transition-colors shadow-md ${
-                          hasZeroCredibility
+                        className={`w-full px-4 py-2 font-semibold rounded-lg transition-colors shadow-md ${hasZeroCredibility
                             ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
                             : "bg-red-700 text-white hover:bg-red-600"
-                        }`}
+                          }`}
                       >
                         Challenge
                       </button>
@@ -1628,13 +1624,8 @@ const CampaignScreen: React.FC = () => {
 
             {/* Action Buttons (only for mover / correcting player / free advance receiver) */}
             {(isMover || isCorrecting || isFreeAdvancer) && (
-            <div id="campaign-action-buttons" className="flex flex-col gap-2">
-              {(gameState === "CAMPAIGN" || gameState === "TILE_PLAYED") &&
-                !hasPlayedTileThisTurn || gameState === "TILE_PLAYED"
-                ? gameState !== "CORRECTION_REQUIRED" &&
-                  gameState !== "PENDING_ACCEPTANCE" &&
-                  gameState !== "PENDING_CHALLENGE" &&
-                  !showBonusMoveModal && (
+              <div id="campaign-action-buttons" className="flex flex-col gap-2">
+                {gameState === "CAMPAIGN" && !hasPlayedTileThisTurn && !showBonusMoveModal && (
                   <button
                     onClick={onResetTurn}
                     className="w-full px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md"
@@ -1642,26 +1633,26 @@ const CampaignScreen: React.FC = () => {
                     Reset Turn
                   </button>
                 )}
-              {gameState === "CORRECTION_REQUIRED" && playedTile && (
+                {gameState === "CORRECTION_REQUIRED" && playedTile && (
+                  <button
+                    onClick={onResetPiecesCorrection}
+                    className="w-full px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md"
+                  >
+                    Reset Pieces
+                  </button>
+                )}
                 <button
-                  onClick={onResetPiecesCorrection}
-                  className="w-full px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md"
+                  onClick={onEndTurn}
+                  disabled={
+                    (gameState !== "CAMPAIGN" &&
+                      gameState !== "TILE_PLAYED" &&
+                      gameState !== "CORRECTION_REQUIRED")
+                  }
+                  className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
                 >
-                  Reset Pieces
+                  {isFreeAdvancer ? 'Complete Advance' : gameState === "CAMPAIGN" && !hasPlayedTileThisTurn ? 'Done Moving' : 'End Turn'}
                 </button>
-              )}
-              <button
-                onClick={onEndTurn}
-                disabled={
-                  (gameState !== "CAMPAIGN" &&
-                    gameState !== "TILE_PLAYED" &&
-                    gameState !== "CORRECTION_REQUIRED")
-                }
-                className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
-              >
-                {isFreeAdvancer ? 'Complete Advance' : gameState === "CAMPAIGN" && !hasPlayedTileThisTurn ? 'Done Moving' : 'End Turn'}
-              </button>
-            </div>
+              </div>
             )}
 
             {/* Player Hand (keptTiles are the playable tiles from drafting) */}
@@ -1682,11 +1673,10 @@ const CampaignScreen: React.FC = () => {
                       draggable={canDragTile}
                       onDragStart={(e) => handleDragStartTile(e, tile.id)}
                       onDragEnd={() => setIsDraggingTile(false)}
-                      className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md transition-transform hover:scale-105 flex-shrink-0 ${
-                        canDragTile
+                      className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md transition-transform hover:scale-105 flex-shrink-0 ${canDragTile
                           ? "cursor-grab"
                           : "cursor-not-allowed opacity-60"
-                      } border border-gray-300`}
+                        } border border-gray-300`}
                     >
                       <img
                         src={tile.url}
@@ -1815,63 +1805,63 @@ const CampaignScreen: React.FC = () => {
       )}
 
       {/* Receiver Reward Choice Modal (after exposing a dishonest play) */}
-      {pendingReceiverReward && onReceiverRewardChoice && 
+      {pendingReceiverReward && onReceiverRewardChoice &&
         currentPlayerId === (playedTile?.receivingPlayerId || tileTransaction?.receiverId) && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-          aria-modal="true"
-          role="dialog"
-        >
-          <div className="bg-gray-800 border-2 border-green-500 rounded-lg p-8 max-w-md w-full shadow-2xl">
-            <h2 className="text-3xl font-bold text-green-400 mb-4 text-center">
-              Whistle Blown!
-            </h2>
-            <p className="text-slate-200 text-lg mb-2 text-center leading-relaxed">
-              You blew the whistle on a dishonest play. Choose your reward:
-            </p>
-            {(() => {
-              const receiver = players.find(p => p.id === currentPlayerId);
-              const currentCred = receiver?.credibility ?? 0;
-              const maxRestore = Math.min(2, 3 - currentCred);
-              return (
-                <>
-                  {currentCred < 3 && (
-                    <p className="text-slate-400 text-sm mb-6 text-center italic">
-                      Credibility restore: {currentCred} → {currentCred + maxRestore} (up to 2 notches, max 3)
-                    </p>
-                  )}
-                  {currentCred >= 3 && (
-                    <p className="text-slate-400 text-sm mb-6 text-center italic">
-                      Your credibility is already full. Choose a free Advance!
-                    </p>
-                  )}
-                </>
-              );
-            })()}
-            <div className="flex gap-4 justify-center">
+          <div
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+            aria-modal="true"
+            role="dialog"
+          >
+            <div className="bg-gray-800 border-2 border-green-500 rounded-lg p-8 max-w-md w-full shadow-2xl">
+              <h2 className="text-3xl font-bold text-green-400 mb-4 text-center">
+                Whistle Blown!
+              </h2>
+              <p className="text-slate-200 text-lg mb-2 text-center leading-relaxed">
+                You blew the whistle on a dishonest play. Choose your reward:
+              </p>
               {(() => {
                 const receiver = players.find(p => p.id === currentPlayerId);
                 const currentCred = receiver?.credibility ?? 0;
-                if (currentCred >= 3) return null;
+                const maxRestore = Math.min(2, 3 - currentCred);
                 return (
-                  <button
-                    onClick={() => onReceiverRewardChoice('credibility')}
-                    className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
-                  >
-                    Restore Credibility
-                  </button>
+                  <>
+                    {currentCred < 3 && (
+                      <p className="text-slate-400 text-sm mb-6 text-center italic">
+                        Credibility restore: {currentCred} → {currentCred + maxRestore} (up to 2 notches, max 3)
+                      </p>
+                    )}
+                    {currentCred >= 3 && (
+                      <p className="text-slate-400 text-sm mb-6 text-center italic">
+                        Your credibility is already full. Choose a free Advance!
+                      </p>
+                    )}
+                  </>
                 );
               })()}
-              <button
-                onClick={() => onReceiverRewardChoice('advance')}
-                className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
-              >
-                Free Advance
-              </button>
+              <div className="flex gap-4 justify-center">
+                {(() => {
+                  const receiver = players.find(p => p.id === currentPlayerId);
+                  const currentCred = receiver?.credibility ?? 0;
+                  if (currentCred >= 3) return null;
+                  return (
+                    <button
+                      onClick={() => onReceiverRewardChoice('credibility')}
+                      className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                    >
+                      Restore Credibility
+                    </button>
+                  );
+                })()}
+                <button
+                  onClick={() => onReceiverRewardChoice('advance')}
+                  className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                >
+                  Free Advance
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Take Advantage Initial Choice Modal */}
       {showTakeAdvantageModal && takeAdvantageChallengerId !== null && (!isMultiplayer || takeAdvantageChallengerId === currentPlayerId) && (
@@ -1994,8 +1984,8 @@ const CampaignScreen: React.FC = () => {
                       key={tile.id}
                       onClick={() => onToggleTileSelection(tile)}
                       className={`relative bg-stone-100 w-full aspect-[1/2] p-2 rounded-md shadow-md border-4 transition-all transform hover:scale-105 ${isSelected
-                          ? "border-yellow-400 ring-4 ring-yellow-400/50 scale-105"
-                          : "border-gray-300 hover:border-yellow-300"
+                        ? "border-yellow-400 ring-4 ring-yellow-400/50 scale-105"
+                        : "border-gray-300 hover:border-yellow-300"
                         }`}
                     >
                       <img
@@ -2006,8 +1996,8 @@ const CampaignScreen: React.FC = () => {
                       {/* Kredcoin Value Badge */}
                       <div
                         className={`absolute top-1 right-1 px-2 py-1 rounded text-xs font-bold ${isSelected
-                            ? "bg-yellow-400 text-gray-900"
-                            : "bg-gray-700 text-yellow-400"
+                          ? "bg-yellow-400 text-gray-900"
+                          : "bg-gray-700 text-yellow-400"
                           }`}
                       >
                         ₭-{tileValue}
@@ -2039,8 +2029,8 @@ const CampaignScreen: React.FC = () => {
                 onClick={onConfirmTileSelection}
                 disabled={selectedTilesForAdvantage.length === 0}
                 className={`px-8 py-3 font-bold rounded-lg transition-all transform shadow-lg ${selectedTilesForAdvantage.length === 0
-                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-500 text-white hover:scale-105"
+                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-500 text-white hover:scale-105"
                   }`}
               >
                 Continue with {selectedTilesForAdvantage.length} tile(s) (₭-
@@ -2194,7 +2184,7 @@ const CampaignScreen: React.FC = () => {
 
                         const isInCommunity = piece.locationId?.startsWith("community") || false;
                         const communityScale = (playerCount === 3 || playerCount === 4) && isInCommunity ? 0.8 : 1;
-                        
+
                         const finalScale = baseScale * scaleMultiplier * communityScale;
 
                         const rotationMap =
@@ -2207,7 +2197,7 @@ const CampaignScreen: React.FC = () => {
 
                         const isPromotionPurchase =
                           takeAdvantagePurchase?.item.type === "PROMOTION";
-                        
+
                         let isDraggable = false;
                         if (gameState === "TAKE_ADVANTAGE") {
                           isDraggable = !isPromotionPurchase && takeAdvantagePurchase?.item.type === "MOVE" &&
@@ -2238,10 +2228,10 @@ const CampaignScreen: React.FC = () => {
                               }
                             }}
                             className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase
-                                ? "cursor-pointer hover:scale-110"
-                                : isDraggable
-                                  ? "cursor-grab active:cursor-grabbing"
-                                  : "cursor-default"
+                              ? "cursor-pointer hover:scale-110"
+                              : isDraggable
+                                ? "cursor-grab active:cursor-grabbing"
+                                : "cursor-default"
                               }`}
                             style={{
                               position: "absolute",
@@ -2307,8 +2297,8 @@ const CampaignScreen: React.FC = () => {
                                             }
                                             disabled={!canAfford}
                                             className={`p-2 rounded-lg border-2 transition-all ${canAfford
-                                                ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
-                                                : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                              ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                              : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                                               }`}
                                           >
                                             <div className="text-center">
@@ -2317,8 +2307,8 @@ const CampaignScreen: React.FC = () => {
                                               </span>
                                               <span
                                                 className={`text-base font-bold ${canAfford
-                                                    ? "text-yellow-400"
-                                                    : "text-gray-600"
+                                                  ? "text-yellow-400"
+                                                  : "text-gray-600"
                                                   }`}
                                               >
                                                 ₭-{item.price}
@@ -2354,8 +2344,8 @@ const CampaignScreen: React.FC = () => {
                                             }
                                             disabled={!canAfford}
                                             className={`p-2 rounded-lg border-2 transition-all ${canAfford
-                                                ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
-                                                : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                              ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                              : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                                               }`}
                                           >
                                             <div className="text-center">
@@ -2364,8 +2354,8 @@ const CampaignScreen: React.FC = () => {
                                               </span>
                                               <span
                                                 className={`text-base font-bold ${canAfford
-                                                    ? "text-yellow-400"
-                                                    : "text-gray-600"
+                                                  ? "text-yellow-400"
+                                                  : "text-gray-600"
                                                   }`}
                                               >
                                                 ₭-{item.price}
@@ -2401,8 +2391,8 @@ const CampaignScreen: React.FC = () => {
                                       }
                                       disabled={!isEnabled}
                                       className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isEnabled
-                                          ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
-                                          : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                        ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                        : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                                         }`}
                                     >
                                       <div className="flex justify-between items-center mb-2">
@@ -2414,8 +2404,8 @@ const CampaignScreen: React.FC = () => {
                                         </span>
                                         <span
                                           className={`text-xl font-bold ${isEnabled
-                                              ? "text-yellow-400"
-                                              : "text-gray-600"
+                                            ? "text-yellow-400"
+                                            : "text-gray-600"
                                             }`}
                                         >
                                           ₭-{item.price}
@@ -2640,23 +2630,23 @@ const CampaignScreen: React.FC = () => {
                           <div
                             key={index}
                             className={`p-3 rounded border-l-4 ${validation.isValid
-                                ? "bg-green-900/30 border-green-500"
-                                : "bg-red-900/30 border-red-500"
+                              ? "bg-green-900/30 border-green-500"
+                              : "bg-red-900/30 border-red-500"
                               }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <span
                                 className={`text-lg font-bold ${validation.isValid
-                                    ? "text-green-400"
-                                    : "text-red-400"
+                                  ? "text-green-400"
+                                  : "text-red-400"
                                   }`}
                               >
                                 {validation.isValid ? "✓" : "✕"}
                               </span>
                               <span
                                 className={`font-semibold ${validation.isValid
-                                    ? "text-green-300"
-                                    : "text-white"
+                                  ? "text-green-300"
+                                  : "text-white"
                                   }`}
                               >
                                 {validation.moveType}
@@ -2697,10 +2687,10 @@ const CampaignScreen: React.FC = () => {
             <button
               onClick={() => onCloseMoveCheckResult?.()}
               className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors text-white ${!moveCheckResult.isMet
-                  ? "bg-red-600 hover:bg-red-500"
-                  : moveCheckResult.hasExtraMoves
-                    ? "bg-yellow-600 hover:bg-yellow-500"
-                    : "bg-green-600 hover:bg-green-500"
+                ? "bg-red-600 hover:bg-red-500"
+                : moveCheckResult.hasExtraMoves
+                  ? "bg-yellow-600 hover:bg-yellow-500"
+                  : "bg-green-600 hover:bg-green-500"
                 }`}
             >
               Close
