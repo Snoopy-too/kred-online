@@ -504,7 +504,7 @@ const CampaignScreen: React.FC = () => {
     e.preventDefault();
     setDropIndicator(null);
     const boardTileId = e.dataTransfer.getData("boardTileId");
-    const pieceId = e.dataTransfer.getData("pieceId");
+    const pieceId = e.dataTransfer.getData("pieceId") || draggedPieceInfo?.pieceId;
     const tileIdStr = e.dataTransfer.getData("tileId");
     const isDummyTile = e.dataTransfer.getData("dummyTile");
 

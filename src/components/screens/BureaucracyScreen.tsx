@@ -200,7 +200,7 @@ const BureaucracyScreen: React.FC = () => {
   const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDropIndicator(null);
-    const pieceId = e.dataTransfer.getData("pieceId");
+    const pieceId = e.dataTransfer.getData("pieceId") || draggedPieceInfo?.pieceId;
 
     const boardRect = e.currentTarget.getBoundingClientRect();
     const rawLeft = ((e.clientX - boardRect.left) / boardRect.width) * 100;
