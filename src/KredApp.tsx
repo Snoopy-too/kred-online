@@ -42,7 +42,7 @@ function KredAppInner() {
   const [legacyState, setLegacyState] = useState<any>(null);
 
   // Refs for GameStateSynchronizer ↔ App.tsx wiring
-  const applyStatePacketRef = useRef<(packet: GameStatePacket) => void>(() => {});
+  const applyStatePacketRef = useRef<(packet: GameStatePacket) => void>(() => { });
   const pushStateRef = useRef<(() => void) | null>(null);
   const synchronizerSendRef = useRef<((packet: StatePacket) => void) | null>(null);
 
@@ -115,9 +115,9 @@ function KredAppInner() {
             playerNames={lobbyPlayers.map(p => p.name)}
             skipDraft={isHost ? skipDraft : false}
             multiplayerActions={{
-              createGame: async () => {},
-              joinGame: async () => {},
-              startGame: async () => {},
+              createGame: async () => { },
+              joinGame: async () => { },
+              startGame: async () => { },
               selectDraftTile: actions.selectDraftTile,
               playTile: actions.playTile,
               movePiece: actions.movePiece,
@@ -135,7 +135,9 @@ function KredAppInner() {
               declineAdvantage: actions.declineAdvantage,
               receiverRewardChoice: actions.receiverRewardChoice,
               purchaseBureaucracy: actions.purchaseBureaucracy,
-              joinAsSpectator: async () => {},
+              bureaucracyComplete: actions.bureaucracyComplete,
+              resetTurn: actions.resetTurn,
+              joinAsSpectator: async () => { },
             }}
             onLegacyStateChange={setLegacyState}
             applyStatePacketRef={applyStatePacketRef}
