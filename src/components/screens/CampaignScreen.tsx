@@ -546,12 +546,27 @@ const CampaignScreen: React.FC = () => {
     if (tileIdStr && !hasPlayedTileThisTurn) {
       const currentPlayer = getPlayerById(players, currentPlayerId);
       if (currentPlayer) {
-        const freeTileSpace: TileReceivingSpace = {
-          ownerId: currentPlayerId,
-          position: { left, top },
-          rotation: 0,
-        };
-        onPlaceTile(parseInt(tileIdStr, 10), freeTileSpace);
+        const spaces = TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+        let nearestSpace = spaces[0];
+        let minDistance = Infinity;
+        for (const space of spaces) {
+          const dx = space.position.left - left;
+          const dy = space.position.top - top;
+          const dist = dx * dx + dy * dy;
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearestSpace = space;
+          }
+        }
+
+        if (nearestSpace) {
+          const freeTileSpace: TileReceivingSpace = {
+            ownerId: nearestSpace.ownerId,
+            position: { left, top },
+            rotation: nearestSpace.rotation,
+          };
+          onPlaceTile(parseInt(tileIdStr, 10), freeTileSpace);
+        }
         return;
       }
     }
@@ -1601,8 +1616,8 @@ const CampaignScreen: React.FC = () => {
                         }
                         disabled={hasZeroCredibility}
                         className={`w-full px-4 py-2 font-semibold rounded-lg transition-colors shadow-md ${hasZeroCredibility
-                            ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
-                            : "bg-red-700 text-white hover:bg-red-600"
+                          ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
+                          : "bg-red-700 text-white hover:bg-red-600"
                           }`}
                       >
                         Challenge
@@ -1674,8 +1689,8 @@ const CampaignScreen: React.FC = () => {
                       onDragStart={(e) => handleDragStartTile(e, tile.id)}
                       onDragEnd={() => setIsDraggingTile(false)}
                       className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md transition-transform hover:scale-105 flex-shrink-0 ${canDragTile
-                          ? "cursor-grab"
-                          : "cursor-not-allowed opacity-60"
+                        ? "cursor-grab"
+                        : "cursor-not-allowed opacity-60"
                         } border border-gray-300`}
                     >
                       <img
