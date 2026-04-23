@@ -18,7 +18,7 @@ const PROCESSED_ACTION_ID_CAP = 500;
 export class BoundedActionIdSet {
   private ring: string[] = [];
   private setView: Set<string> = new Set();
-  constructor(private cap: number) {}
+  constructor(private cap: number) { }
   has(id: string): boolean {
     return this.setView.has(id);
   }
@@ -85,7 +85,7 @@ export default function GameStateSynchronizer({
 
   const lastAppliedFullRef = useRef<FullState | null>(null);
   const lastAppliedVRef = useRef(0);
-  
+
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastBroadcastReceiptRef = useRef<number>(Date.now());
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,7 +161,7 @@ export default function GameStateSynchronizer({
     if (!synchronizerSendRef) return;
     synchronizerSendRef.current = (packet: StatePacket) => {
       if (!lobbyId || !isHost || !hostHydratedRef.current) return;
-      
+
       pendingPacketRef.current = packet;
       if (sendTimerRef.current) return;
       sendTimerRef.current = setTimeout(() => {
@@ -181,11 +181,11 @@ export default function GameStateSynchronizer({
           p.kind === "full"
             ? p.state
             : applyDelta(lastAppliedFullRef.current ?? {}, p.patch);
-            
+
         // Keep host's reference of the latest state for potential full request responses.
         lastAppliedFullRef.current = fullForPersist;
         lastAppliedVRef.current = p.v;
-            
+
         schedulePersist(fullForPersist, p.v);
       }, 100);
     };
@@ -224,7 +224,7 @@ export default function GameStateSynchronizer({
       const ageMs = Date.now() - new Date(action.created_at).getTime();
       recordMetric('actions.latency', ageMs);
     }
-    
+
     if (action.action_type === 'REQUEST_FULL') {
       incrementCounter("sync.requestFull.served");
       // Direct broadcast a full right now, bypassing the debounce
@@ -242,7 +242,7 @@ export default function GameStateSynchronizer({
       }
       return;
     }
-    
+
     onActionReceived?.current?.({
       type: action.action_type,
       playerId: action.player_id,
@@ -264,7 +264,7 @@ export default function GameStateSynchronizer({
         recordMetric("actions.burstYieldMs", performance.now() - burstStart);
         return;
       }
-      
+
       // flushSync ensures the setState inside processAction commits before the
       // next action runs. React 19 + flushSync is legal inside a microtask.
       flushSync(() => { processAction(action); });
@@ -329,7 +329,7 @@ export default function GameStateSynchronizer({
         }
       }
     };
-    
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') pollActions();
     };
@@ -493,7 +493,7 @@ export default function GameStateSynchronizer({
         const gameStateStr = typeof fullState.gameState === 'string' ? fullState.gameState : '';
         lastPersistedVersionRef.current = data.version;
         lastPersistedPhaseRef.current = gameStateStr;
-        
+
         const packet: StatePacket = {
           kind: "full",
           v: data.version,
@@ -501,12 +501,9 @@ export default function GameStateSynchronizer({
           state: fullState,
         };
 
-        if (isHost) {
-          lastAppliedFullRef.current = fullState;
-          lastAppliedVRef.current = data.version;
-        }
-
-        applyStatePacketHandler(packet);
+        lastAppliedFullRef.current = fullState;
+        lastAppliedVRef.current = data.version;
+        applyStatePacketRef.current(fullState);
       }
 
       if (isHost) {
