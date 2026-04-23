@@ -64,6 +64,8 @@ const BureaucracyScreen: React.FC = () => {
     isTestMode,
     credibilityRotationAdjustments,
   } = useBureaucracyScreenHandlers<BureaucracyScreenHandlers>();
+
+  const { isMultiplayer, playerIndex } = useHandlers<{ isMultiplayer?: boolean; playerIndex?: number }>();
   const { players, pieces } = useRoster();
   const { boardTiles } = useBoard();
   const {
@@ -83,7 +85,7 @@ const BureaucracyScreen: React.FC = () => {
     ? getAvailablePurchases(menu, playerState.remainingKredcoin)
     : [];
   const isPromotionPurchase = currentPurchase?.item.type === "PROMOTION";
-  
+
   const isMyTurn = !isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId);
 
   const boardRotation = boardRotationEnabled
@@ -361,10 +363,10 @@ const BureaucracyScreen: React.FC = () => {
               const scaleMultiplier =
                 playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
               const baseScale = 0.798;
-              
+
               const isInCommunity = piece.locationId?.startsWith("community") || false;
               const communityScale = (playerCount === 3 || playerCount === 4) && isInCommunity ? 0.8 : 1;
-              
+
               const finalScale = baseScale * scaleMultiplier * communityScale;
 
               // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
@@ -393,10 +395,10 @@ const BureaucracyScreen: React.FC = () => {
                     }
                   }}
                   className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase
-                      ? "cursor-pointer hover:scale-110"
-                      : isDraggable
-                        ? "cursor-grab"
-                        : "cursor-not-allowed"
+                    ? "cursor-pointer hover:scale-110"
+                    : isDraggable
+                      ? "cursor-grab"
+                      : "cursor-not-allowed"
                     }`}
                   style={{
                     position: "absolute",
@@ -503,8 +505,8 @@ const BureaucracyScreen: React.FC = () => {
                               }
                               disabled={!canAfford}
                               className={`p-2 rounded-lg border-2 transition-all ${canAfford
-                                  ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
-                                  : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                                 }`}
                             >
                               <div className="text-center">
@@ -513,8 +515,8 @@ const BureaucracyScreen: React.FC = () => {
                                 </span>
                                 <span
                                   className={`text-base font-bold ${canAfford
-                                      ? "text-yellow-400"
-                                      : "text-gray-600"
+                                    ? "text-yellow-400"
+                                    : "text-gray-600"
                                     }`}
                                 >
                                   ₭-{item.price}
@@ -546,8 +548,8 @@ const BureaucracyScreen: React.FC = () => {
                               }
                               disabled={!canAfford}
                               className={`p-2 rounded-lg border-2 transition-all ${canAfford
-                                  ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
-                                  : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                                ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                                : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                                 }`}
                             >
                               <div className="text-center">
@@ -556,8 +558,8 @@ const BureaucracyScreen: React.FC = () => {
                                 </span>
                                 <span
                                   className={`text-base font-bold ${canAfford
-                                      ? "text-yellow-400"
-                                      : "text-gray-600"
+                                    ? "text-yellow-400"
+                                    : "text-gray-600"
                                     }`}
                                 >
                                   ₭-{item.price}
@@ -587,8 +589,8 @@ const BureaucracyScreen: React.FC = () => {
                         onClick={() => isEnabled && onSelectMenuItem(item)}
                         disabled={!isEnabled}
                         className={`w-full p-4 rounded-lg border-2 text-left transition-all ${isEnabled
-                            ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
-                            : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                          ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
+                          : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                           }`}
                       >
                         <div className="flex justify-between items-center mb-2">
@@ -683,10 +685,10 @@ const BureaucracyScreen: React.FC = () => {
                   <div
                     key={playerId}
                     className={`px-4 py-2 rounded-lg border-2 ${isCurrentPlayer
-                        ? "bg-yellow-600 border-yellow-400 text-white font-bold"
-                        : isComplete
-                          ? "bg-green-800 border-green-600 text-green-200"
-                          : "bg-gray-700 border-gray-500 text-gray-300"
+                      ? "bg-yellow-600 border-yellow-400 text-white font-bold"
+                      : isComplete
+                        ? "bg-green-800 border-green-600 text-green-200"
+                        : "bg-gray-700 border-gray-500 text-gray-300"
                       }`}
                   >
                     {getPlayerName(getPlayerById(players, playerId), playerId)} {isComplete && "✓"}

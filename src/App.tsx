@@ -85,6 +85,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
       gameState, players, pieces, boardTiles, bankedTiles,
       currentPlayerIndex, playerCount, playedTile, hasPlayedTileThisTurn,
       movedPiecesThisTurn: Array.from(movedPiecesThisTurn),
+      pendingCommunityPieces: Array.from(pendingCommunityPieces),
       tileTransaction, moverPlayerIndex, campaignRole,
       tileRevealed, pendingReceiverReward, receiverAdvanceInProgress,
       bystanders, bystanderIndex, challengeOrder, currentChallengerIndex,
@@ -110,6 +111,9 @@ const App: React.FC<MultiplayerProps> = (props) => {
         setPlayedTile(packet.playedTile);
         setHasPlayedTileThisTurn(packet.hasPlayedTileThisTurn);
         setMovedPiecesThisTurn(new Set(packet.movedPiecesThisTurn));
+        if (Array.isArray(packet.pendingCommunityPieces)) {
+          setPendingCommunityPieces(new Set(packet.pendingCommunityPieces));
+        }
         setTileTransaction(packet.tileTransaction);
         setMoverPlayerIndex(packet.moverPlayerIndex);
         setCampaignRole(packet.campaignRole);
@@ -143,6 +147,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
             gameState: packet.gameState,
             piecesCount: packet.pieces?.length ?? 0,
             movedPiecesThisTurn: packet.movedPiecesThisTurn ?? [],
+            pendingCommunityPieces: packet.pendingCommunityPieces ?? [],
             currentPlayerIndex: packet.currentPlayerIndex,
             hasPlayedTileThisTurn: packet.hasPlayedTileThisTurn,
           },
@@ -151,7 +156,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     }
   }, [
     onLegacyStateChange, applyStatePacketRef, gameState, players, pieces, boardTiles, bankedTiles,
-    currentPlayerIndex, playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn,
+    currentPlayerIndex, playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn, pendingCommunityPieces,
     tileTransaction, moverPlayerIndex, campaignRole, tileRevealed,
     pendingReceiverReward, receiverAdvanceInProgress, bystanders, bystanderIndex,
     challengeOrder, currentChallengerIndex, tileRejected,
@@ -168,7 +173,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     pushStateRef?.current?.();
   }, [
     isHost, isMultiplayer, pushStateRef, gameState, players, pieces, boardTiles, bankedTiles,
-    currentPlayerIndex, playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn,
+    currentPlayerIndex, playedTile, hasPlayedTileThisTurn, movedPiecesThisTurn, pendingCommunityPieces,
     tileTransaction, moverPlayerIndex, campaignRole, tileRevealed,
     pendingReceiverReward, receiverAdvanceInProgress, bystanders, bystanderIndex,
     challengeOrder, currentChallengerIndex, tileRejected,
