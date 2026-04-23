@@ -20,6 +20,7 @@ interface useMultiplayerHostProps {
   handlePlaceTile: (tileId: number, targetSpace: any) => void;
   handlePieceMove: (pieceId: string, position: any, location: string) => void;
   handleResetPiecesCorrection: () => void;
+  handleResetTurn: () => void;
   handleEndTurn: () => void;
   handleReceiverAcceptanceDecision: (accepted: boolean) => void;
   handleChallengerDecision: (challenge: boolean) => void;
@@ -50,6 +51,7 @@ export function useMultiplayerHost({
   handlePlaceTile,
   handlePieceMove,
   handleResetPiecesCorrection,
+  handleResetTurn,
   handleEndTurn,
   handleReceiverAcceptanceDecision,
   handleChallengerDecision,
@@ -160,6 +162,9 @@ export function useMultiplayerHost({
         case 'VIEW_TILE_PRIVATE':
           // Guest viewing tile privately — no host action needed
           break;
+        case 'RESET_TURN':
+          handleResetTurn();
+          break;
         case 'CHALLENGER_DECISION':
           handleChallengerDecision(action.payload.challenge);
           break;
@@ -211,6 +216,7 @@ export function useMultiplayerHost({
     handlePlaceTile,
     handlePieceMove,
     handleResetPiecesCorrection,
+    handleResetTurn,
     handleEndTurn,
     handleReceiverAcceptanceDecision,
     handleChallengerDecision,

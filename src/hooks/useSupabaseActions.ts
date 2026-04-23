@@ -118,6 +118,8 @@ export function useSupabaseActions() {
 
   const bureaucracyComplete = useCallback(() => emitAction('BUREAUCRACY_COMPLETE'), [emitAction]);
 
+  const resetTurn = useCallback(() => emitAction('RESET_TURN'), [emitAction]);
+
   return {
     // Core
     emitAction,
@@ -142,5 +144,6 @@ export function useSupabaseActions() {
     receiverRewardChoice,
     purchaseBureaucracy,
     bureaucracyComplete,
+    resetTurn,
   };
 }

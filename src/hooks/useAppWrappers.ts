@@ -9,6 +9,7 @@ interface AppWrappersProps {
   handleEndTurn: () => void;
   handleReceiverAcceptanceDecision: (accepted: boolean) => void;
   handleResetPiecesCorrection: () => void;
+  handleResetTurn: () => void;
   handleChallengerDecision: (challenge: boolean) => void;
   handleContinueAfterChallengeReveal: () => void;
   handleBonusMoveComplete: () => void;
@@ -25,6 +26,7 @@ export function useAppWrappers({
   handleEndTurn,
   handleReceiverAcceptanceDecision,
   handleResetPiecesCorrection,
+  handleResetTurn,
   handleChallengerDecision,
   handleContinueAfterChallengeReveal,
   handleBonusMoveComplete,
@@ -108,6 +110,19 @@ export function useAppWrappers({
     }
   }, [isMultiplayer, multiplayerActions, handleResetPiecesCorrection]);
 
+  // Wrap reset turn for multiplayer — guest must NOT run locally (piecesAtTurnStart is empty)
+  const wrappedResetTurn = React.useCallback(async () => {
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.resetTurn();
+      } catch (error: any) {
+        console.error('[MULTIPLAYER] Reset turn failed:', error);
+      }
+    } else {
+      handleResetTurn();
+    }
+  }, [isMultiplayer, multiplayerActions, handleResetTurn]);
+
   const handleReceiverRewardChoiceLocal = React.useCallback(async (choice: 'credibility' | 'advance') => {
     if (isMultiplayer && multiplayerActions) {
       try {
@@ -178,5 +193,6 @@ export function useAppWrappers({
     wrappedContinueAfterChallengeReveal,
     wrappedBonusMoveComplete,
     wrappedCorrectionComplete,
+    wrappedResetTurn,
   };
 }
