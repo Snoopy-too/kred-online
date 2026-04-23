@@ -862,14 +862,12 @@ const CampaignScreen: React.FC = () => {
           return { text: `Waiting for ${challengerName} to respond...`, color: 'bg-yellow-600' };
         }
         if (gameState === 'CAMPAIGN') {
-          const moverIdx = moverPlayerIndex ?? currentPlayerIndex;
-          const moverName = nameByIndex(moverIdx);
-          return { text: `${moverName} is moving pieces...`, color: 'bg-gray-800' };
+          return { text: 'Waiting', color: 'bg-gray-800' };
         }
         if (gameState === 'CORRECTION_REQUIRED' && receiverAdvanceInProgress) {
           return { text: `Waiting for ${nameByIndex(currentPlayerIndex)} to make free Advance...`, color: 'bg-gray-800' };
         }
-        return { text: 'Waiting...', color: 'bg-gray-800' };
+        return { text: 'Waiting', color: 'bg-gray-800' };
     }
   };
   const roleBanner = getRoleBanner();

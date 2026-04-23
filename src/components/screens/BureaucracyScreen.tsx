@@ -88,6 +88,9 @@ const BureaucracyScreen: React.FC = () => {
 
   const isMyTurn = !isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId);
 
+  const viewerPlayerId = isMultiplayer && playerIndex !== undefined ? playerIndex + 1 : currentPlayerId;
+  const viewerState = bureaucracyStates.find((s) => s.playerId === viewerPlayerId);
+
   const boardRotation = boardRotationEnabled
     ? (isMultiplayer && playerIndex !== undefined
       ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[playerIndex + 1] ?? 0
@@ -261,7 +264,7 @@ const BureaucracyScreen: React.FC = () => {
         </p>
         <div className="mt-2 text-lg">
           <span className="text-yellow-400 font-bold">
-            Kredcoin: ₭-{playerState?.remainingKredcoin || 0}
+            Your Kredcoin: ₭-{viewerState?.remainingKredcoin || 0}
           </span>
         </div>
       </div>
@@ -375,7 +378,7 @@ const BureaucracyScreen: React.FC = () => {
                 ? -boardRotation
                 : 0;
 
-              const isDraggable = !showPurchaseMenu && !isPromotionPurchase;
+              const isDraggable = !showPurchaseMenu && !isPromotionPurchase && isMyTurn;
 
               return (
                 <img
@@ -390,11 +393,11 @@ const BureaucracyScreen: React.FC = () => {
                   }}
                   onDragEnd={handleDragEndPiece}
                   onClick={() => {
-                    if (isPromotionPurchase) {
+                    if (isPromotionPurchase && isMyTurn) {
                       onPiecePromote(piece.id);
                     }
                   }}
-                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${isPromotionPurchase
+                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${(isPromotionPurchase && isMyTurn)
                     ? "cursor-pointer hover:scale-110"
                     : isDraggable
                       ? "cursor-grab"
@@ -497,14 +500,15 @@ const BureaucracyScreen: React.FC = () => {
                           const canAfford = affordableItems.some(
                             (ai) => ai.id === item.id
                           );
+                          const isEnabled = canAfford && isMyTurn;
                           return (
                             <button
                               key={item.id}
                               onClick={() =>
-                                canAfford && onSelectMenuItem(item)
+                                isEnabled && onSelectMenuItem(item)
                               }
-                              disabled={!canAfford}
-                              className={`p-2 rounded-lg border-2 transition-all ${canAfford
+                              disabled={!isEnabled}
+                              className={`p-2 rounded-lg border-2 transition-all ${isEnabled
                                 ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                                 : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                                 }`}
@@ -514,7 +518,7 @@ const BureaucracyScreen: React.FC = () => {
                                   {item.moveType}
                                 </span>
                                 <span
-                                  className={`text-base font-bold ${canAfford
+                                  className={`text-base font-bold ${isEnabled
                                     ? "text-yellow-400"
                                     : "text-gray-600"
                                     }`}
@@ -540,14 +544,15 @@ const BureaucracyScreen: React.FC = () => {
                           const canAfford = affordableItems.some(
                             (ai) => ai.id === item.id
                           );
+                          const isEnabled = canAfford && isMyTurn;
                           return (
                             <button
                               key={item.id}
                               onClick={() =>
-                                canAfford && onSelectMenuItem(item)
+                                isEnabled && onSelectMenuItem(item)
                               }
-                              disabled={!canAfford}
-                              className={`p-2 rounded-lg border-2 transition-all ${canAfford
+                              disabled={!isEnabled}
+                              className={`p-2 rounded-lg border-2 transition-all ${isEnabled
                                 ? "bg-gray-700 border-yellow-500/50 hover:border-yellow-400 hover:bg-gray-600 cursor-pointer"
                                 : "bg-gray-900/50 border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
                                 }`}
@@ -557,7 +562,7 @@ const BureaucracyScreen: React.FC = () => {
                                   {item.moveType}
                                 </span>
                                 <span
-                                  className={`text-base font-bold ${canAfford
+                                  className={`text-base font-bold ${isEnabled
                                     ? "text-yellow-400"
                                     : "text-gray-600"
                                     }`}
@@ -582,7 +587,7 @@ const BureaucracyScreen: React.FC = () => {
                       item.type === "CREDIBILITY" &&
                       currentPlayer &&
                       currentPlayer.credibility >= 3;
-                    const isEnabled = canAfford && !isCredibilityAtMax;
+                    const isEnabled = canAfford && !isCredibilityAtMax && isMyTurn;
                     return (
                       <button
                         key={item.id}
@@ -618,8 +623,9 @@ const BureaucracyScreen: React.FC = () => {
               </div>
               <div className="mt-6 flex justify-center">
                 <button
-                  onClick={onFinishTurn}
-                  className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                  onClick={() => isMyTurn && onFinishTurn()}
+                  disabled={!isMyTurn}
+                  className={`px-8 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${isMyTurn ? "bg-green-600 hover:bg-green-500" : "bg-gray-600 cursor-not-allowed opacity-50"}`}
                 >
                   Finish Turn
                 </button>
@@ -653,14 +659,16 @@ const BureaucracyScreen: React.FC = () => {
               </p>
               <div className="flex justify-center gap-3">
                 <button
-                  onClick={onResetAction}
-                  className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                  onClick={() => isMyTurn && onResetAction()}
+                  disabled={!isMyTurn}
+                  className={`px-6 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${isMyTurn ? "bg-amber-600 hover:bg-amber-500" : "bg-gray-600 cursor-not-allowed opacity-50"}`}
                 >
                   Reset
                 </button>
                 <button
-                  onClick={onDoneWithAction}
-                  className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                  onClick={() => isMyTurn && onDoneWithAction()}
+                  disabled={!isMyTurn}
+                  className={`px-8 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${isMyTurn ? "bg-blue-600 hover:bg-blue-500" : "bg-gray-600 cursor-not-allowed opacity-50"}`}
                 >
                   Done
                 </button>

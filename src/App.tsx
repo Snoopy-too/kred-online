@@ -110,9 +110,11 @@ const App: React.FC<MultiplayerProps> = (props) => {
         setPlayerCount(packet.playerCount);
         setPlayedTile(packet.playedTile);
         setHasPlayedTileThisTurn(packet.hasPlayedTileThisTurn);
-        setMovedPiecesThisTurn(new Set(packet.movedPiecesThisTurn));
+        setMovedPiecesThisTurn(new Set(packet.movedPiecesThisTurn || []));
         if (Array.isArray(packet.pendingCommunityPieces)) {
           setPendingCommunityPieces(new Set(packet.pendingCommunityPieces));
+        } else {
+          setPendingCommunityPieces(new Set());
         }
         setTileTransaction(packet.tileTransaction);
         setMoverPlayerIndex(packet.moverPlayerIndex);

@@ -138,10 +138,7 @@ export function createPieceMovementHandlers(
     const movingPieceForLog = getPieceById(deps.pieces, pieceId);
 
     // Check if this piece has already been moved this turn
-    if (
-      deps.movedPiecesThisTurn.has(pieceId) ||
-      deps.pendingCommunityPieces.has(pieceId)
-    ) {
+    if (deps.movedPiecesThisTurn.has(pieceId)) {
       deps.logDiag?.({
         category: 'move',
         event_type: 'PIECE_MOVE_ATTEMPTED',
@@ -151,7 +148,7 @@ export function createPieceMovementHandlers(
           fromLocationId: movingPieceForLog?.locationId ?? null,
           toLocationId: locationId ?? null,
           success: false,
-          rejectReason: deps.movedPiecesThisTurn.has(pieceId) ? 'already_moved' : 'pending_community',
+          rejectReason: 'already_moved',
           movedPiecesThisTurn: Array.from(deps.movedPiecesThisTurn),
         },
       });
