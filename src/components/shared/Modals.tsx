@@ -7,6 +7,15 @@
 
 import React, { useEffect } from "react";
 import { useDiagnostics } from "../../diagnostics";
+import { useCampaign } from "../../providers/CampaignProvider";
+
+// ============================================================================
+// Titles that benefit from movedPiecesThisTurn context in diagnostics
+// ============================================================================
+const PIECE_MOVE_ALERT_TITLES = new Set([
+  'Piece Already Moved',
+  'Cannot Move This Piece',
+]);
 
 // ============================================================================
 // ALERT MODAL
@@ -28,15 +37,25 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   onClose,
 }) => {
   const logDiag = useDiagnostics();
+  const { movedPiecesThisTurn } = useCampaign();
   useEffect(() => {
     if (isOpen) {
+      const payload: Record<string, unknown> = {
+        dialog_type: 'AlertModal',
+        title,
+        modal_type: type,
+      };
+      // Enrich piece-movement alerts with tracking context for debugging
+      if (PIECE_MOVE_ALERT_TITLES.has(title)) {
+        payload.movedPiecesThisTurn = Array.from(movedPiecesThisTurn);
+      }
       logDiag({
         category: 'dialog',
         event_type: 'DIALOG_OPENED',
-        payload: { dialog_type: 'AlertModal', title, modal_type: type },
+        payload,
       });
     }
-  }, [isOpen, title, type, logDiag]);
+  }, [isOpen, title, type, logDiag, movedPiecesThisTurn]);
 
   if (!isOpen) return null;
 
@@ -198,11 +217,10 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
       role="status"
     >
       <div
-        className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${
-          isFailed
+        className={`rounded-xl text-center shadow-2xl max-w-md w-full p-6 sm:p-8 border-2 ${isFailed
             ? "bg-red-900 border-red-500 text-red-300"
             : "bg-orange-900 border-orange-500 text-orange-300"
-        }`}
+          }`}
       >
         <h2 className="text-2xl font-bold mb-2">{heading}</h2>
         <p className="text-lg mb-4">{message}</p>

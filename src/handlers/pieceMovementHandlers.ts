@@ -16,6 +16,7 @@ import type {
 } from "../types";
 import type { Dispatch, SetStateAction } from "react";
 import { getPieceById } from "../utils";
+import type { DiagnosticEventInput } from "../diagnostics/events";
 
 // ============================================================================
 // DEPENDENCY INTERFACE
@@ -84,6 +85,9 @@ export interface PieceMovementDependencies {
   ) => string;
   formatLocationId: (locationId: string) => string;
 
+  // --- Diagnostics (optional — no-op when absent) ---
+  logDiag?: (ev: DiagnosticEventInput) => void;
+
   // --- Alert Messages ---
   ALERTS: {
     PIECE_ALREADY_MOVED: { title: string; message: string };
@@ -131,11 +135,26 @@ export function createPieceMovementHandlers(
     newPosition: { top: number; left: number },
     locationId?: string
   ): { success: boolean; pieces?: Piece[]; movedPiecesThisTurn?: string[] } => {
+    const movingPieceForLog = getPieceById(deps.pieces, pieceId);
+
     // Check if this piece has already been moved this turn
     if (
       deps.movedPiecesThisTurn.has(pieceId) ||
       deps.pendingCommunityPieces.has(pieceId)
     ) {
+      deps.logDiag?.({
+        category: 'move',
+        event_type: 'PIECE_MOVE_ATTEMPTED',
+        payload: {
+          pieceId,
+          pieceName: movingPieceForLog?.name ?? null,
+          fromLocationId: movingPieceForLog?.locationId ?? null,
+          toLocationId: locationId ?? null,
+          success: false,
+          rejectReason: deps.movedPiecesThisTurn.has(pieceId) ? 'already_moved' : 'pending_community',
+          movedPiecesThisTurn: Array.from(deps.movedPiecesThisTurn),
+        },
+      });
       deps.showAlert(
         deps.ALERTS.PIECE_ALREADY_MOVED.title,
         deps.ALERTS.PIECE_ALREADY_MOVED.message,
@@ -160,6 +179,20 @@ export function createPieceMovementHandlers(
         deps.pieces
       );
       if (!validation.isAllowed) {
+        deps.logDiag?.({
+          category: 'move',
+          event_type: 'PIECE_MOVE_ATTEMPTED',
+          payload: {
+            pieceId,
+            pieceName: movingPiece.name,
+            fromLocationId: movingPiece.locationId ?? null,
+            toLocationId: locationId,
+            success: false,
+            rejectReason: 'validation_failed',
+            validationReason: validation.reason,
+            movedPiecesThisTurn: Array.from(deps.movedPiecesThisTurn),
+          },
+        });
         deps.showAlert("Invalid Move", validation.reason, "error");
         return { success: false };
       }
@@ -185,6 +218,19 @@ export function createPieceMovementHandlers(
         );
 
         if (marksInCommunity) {
+          deps.logDiag?.({
+            category: 'move',
+            event_type: 'PIECE_MOVE_ATTEMPTED',
+            payload: {
+              pieceId,
+              pieceName: movingPiece.name,
+              fromLocationId: movingPiece.locationId ?? null,
+              toLocationId: locationId,
+              success: false,
+              rejectReason: 'community_restriction_marks_present',
+              movedPiecesThisTurn: Array.from(deps.movedPiecesThisTurn),
+            },
+          });
           deps.showAlert(
             deps.ALERTS.CANNOT_MOVE_PIECE.title,
             deps.ALERTS.CANNOT_MOVE_PIECE.message,
@@ -202,6 +248,19 @@ export function createPieceMovementHandlers(
               !deps.pendingCommunityPieces.has(p.id)
           );
           if (heelsInCommunity) {
+            deps.logDiag?.({
+              category: 'move',
+              event_type: 'PIECE_MOVE_ATTEMPTED',
+              payload: {
+                pieceId,
+                pieceName: movingPiece.name,
+                fromLocationId: movingPiece.locationId ?? null,
+                toLocationId: locationId,
+                success: false,
+                rejectReason: 'community_restriction_heels_present',
+                movedPiecesThisTurn: Array.from(deps.movedPiecesThisTurn),
+              },
+            });
             deps.showAlert(
               deps.ALERTS.CANNOT_MOVE_PIECE.title,
               deps.ALERTS.CANNOT_MOVE_PIECE.message,
@@ -227,6 +286,19 @@ export function createPieceMovementHandlers(
         );
 
         if (moveType === "UNKNOWN") {
+          deps.logDiag?.({
+            category: 'move',
+            event_type: 'PIECE_MOVE_ATTEMPTED',
+            payload: {
+              pieceId,
+              pieceName: movingPiece.name,
+              fromLocationId: movingPiece.locationId,
+              toLocationId: locationId,
+              success: false,
+              rejectReason: 'illegal_move_unknown_type',
+              movedPiecesThisTurn: Array.from(deps.movedPiecesThisTurn),
+            },
+          });
           deps.showAlert(
             "Illegal Move",
             `Cannot move from ${deps.formatLocationId(
@@ -253,11 +325,11 @@ export function createPieceMovementHandlers(
     const updatedPieces = deps.pieces.map((p) =>
       p.id === pieceId
         ? {
-            ...p,
-            position: newPosition,
-            rotation: newRotation,
-            ...(locationId !== undefined && { locationId }),
-          }
+          ...p,
+          position: newPosition,
+          rotation: newRotation,
+          ...(locationId !== undefined && { locationId }),
+        }
         : p
     );
     deps.setPieces(updatedPieces);
@@ -271,6 +343,20 @@ export function createPieceMovementHandlers(
       deps.setPendingCommunityPieces((prev) => new Set(prev).add(pieceId));
     }
 
+    deps.logDiag?.({
+      category: 'move',
+      event_type: 'PIECE_MOVE_ATTEMPTED',
+      payload: {
+        pieceId,
+        pieceName: movingPiece.name,
+        fromLocationId: movingPiece.locationId ?? null,
+        toLocationId: locationId ?? null,
+        toPosition: newPosition,
+        success: true,
+        movedPiecesThisTurn: Array.from(updatedMovedPieces),
+      },
+    });
+
     // Return success with updated state for multiplayer sync
     return {
       success: true,
@@ -283,6 +369,17 @@ export function createPieceMovementHandlers(
   // handleResetTurn - Reset all pieces to turn start state
   // ============================================================================
   const handleResetTurn = (): void => {
+    deps.logDiag?.({
+      category: 'move',
+      event_type: 'TURN_RESET',
+      payload: {
+        piecesAtTurnStartCount: deps.piecesAtTurnStart.length,
+        piecesCurrentCount: deps.pieces.length,
+        movedPiecesThisTurn: Array.from(deps.movedPiecesThisTurn),
+        hadPlayedTile: deps.playedTile !== null,
+      },
+    });
+
     // Restore pieces to turn start state
     deps.setPieces(deps.piecesAtTurnStart.map((p) => ({ ...p })));
 

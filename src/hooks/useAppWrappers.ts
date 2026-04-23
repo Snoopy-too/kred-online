@@ -14,6 +14,7 @@ interface AppWrappersProps {
   handleBonusMoveComplete: () => void;
   handleCorrectionComplete: () => void;
   showAlert: (title: string, message: string, type?: "error" | "warning" | "info") => void;
+  validatePlayTile?: (tileId: number, targetSpace: any) => boolean;
 }
 
 export function useAppWrappers({
@@ -29,8 +30,9 @@ export function useAppWrappers({
   handleBonusMoveComplete,
   handleCorrectionComplete,
   showAlert,
+  validatePlayTile,
 }: AppWrappersProps) {
-  
+
   // Wrap piece movement for multiplayer
   const wrappedPieceMove = React.useCallback(async (pieceId: string, newPosition: any, locationId: string) => {
     const result = pieceMovementHandlers.handlePieceMove(pieceId, newPosition, locationId);
@@ -43,9 +45,13 @@ export function useAppWrappers({
     }
     return result;
   }, [isMultiplayer, multiplayerActions, pieceMovementHandlers]);
-  
+
   // Wrap tile placement for multiplayer
   const wrappedPlaceTile = React.useCallback(async (tileId: number, targetSpace: { ownerId: number; position: any; rotation: number }) => {
+    if (validatePlayTile && !validatePlayTile(tileId, targetSpace)) {
+      return;
+    }
+
     if (isMultiplayer && multiplayerActions) {
       try {
         await multiplayerActions.playTile(tileId.toString(), targetSpace.ownerId);
@@ -56,8 +62,8 @@ export function useAppWrappers({
     } else {
       handlePlaceTile(tileId, targetSpace);
     }
-  }, [isMultiplayer, multiplayerActions, handlePlaceTile]);
-  
+  }, [isMultiplayer, multiplayerActions, handlePlaceTile, validatePlayTile]);
+
   // Wrap turn ending for multiplayer
   const wrappedEndTurn = React.useCallback(async () => {
     if (isMultiplayer && multiplayerActions) {
@@ -71,7 +77,7 @@ export function useAppWrappers({
       handleEndTurn();
     }
   }, [isMultiplayer, multiplayerActions, handleEndTurn, showAlert]);
-  
+
   // Wrap receiver decision for multiplayer
   const wrappedReceiverDecision = React.useCallback(async (accepted: boolean) => {
     if (isMultiplayer && multiplayerActions) {

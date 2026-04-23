@@ -219,44 +219,25 @@ export function createTilePlayHandlers(deps: TilePlayDependencies) {
       )
     );
 
-    // MOVES-FIRST FLOW: If in SELECTING_TILE, moves already happened — go straight to acceptance
-    if (gameState === "SELECTING_TILE") {
-      const calculatedMoves = calculateMoves(
-        piecesAtTurnStart,
-        pieces,
-        currentPlayer.id
-      );
+    // Auto-End Turn: Moves happen before or during tile placement. The turn ends exactly when a tile is played.
+    const calculatedMoves = calculateMoves(
+      piecesAtTurnStart,
+      pieces,
+      currentPlayer.id
+    );
 
-      setPlayedTile({
-        tileId: tileIdStr,
-        playerId: currentPlayer.id,
-        receivingPlayerId: targetSpace.ownerId,
-        movesPerformed: calculatedMoves,
-        originalPieces: piecesAtTurnStart.map((p) => ({ ...p })),
-        originalBoardTiles: boardTiles.map((t) => ({ ...t })),
-      });
-
-      setHasPlayedTileThisTurn(true);
-      setReceiverAcceptance(null);
-      setGameState("PENDING_ACCEPTANCE");
-      // currentPlayerIndex intentionally NOT changed — mover stays active until turn resolves
-      return;
-    }
-
-    // LEGACY FLOW: Tile selected first, then moves
     setPlayedTile({
       tileId: tileIdStr,
       playerId: currentPlayer.id,
       receivingPlayerId: targetSpace.ownerId,
-      movesPerformed: [],
+      movesPerformed: calculatedMoves,
       originalPieces: piecesAtTurnStart.map((p) => ({ ...p })),
       originalBoardTiles: boardTiles.map((t) => ({ ...t })),
     });
 
-    // Set game state to allow moves (tile not yet visible to others)
-    setGameState("TILE_PLAYED");
-    setMovesThisTurn([]);
     setHasPlayedTileThisTurn(true);
+    setReceiverAcceptance(null);
+    setGameState("PENDING_ACCEPTANCE");
 
     // Clear piece movement tracking for this tile play
     setMovedPiecesThisTurn(new Set());

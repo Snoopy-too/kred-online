@@ -61,6 +61,7 @@ import { useBoard } from "../../providers/BoardProvider";
 import { useCampaign } from "../../providers/CampaignProvider";
 import { useChallenge } from "../../providers/ChallengeProvider";
 import { useCampaignHandlers } from "../../providers/HandlersProvider";
+import { useDiagnostics } from "../../diagnostics";
 
 // ============================================================================
 // CONSTANTS & THEMES
@@ -261,6 +262,7 @@ const CampaignScreen: React.FC = () => {
     onTakeAdvantagePiecePromote,
     campaignRole: campaignRoleFromHandlers,
   } = useCampaignHandlers<CampaignScreenHandlers>();
+  const logDiag = useDiagnostics();
   // ============================================================================
   // PROVIDER HOOKS — migrated state now lives in the provider tree
   // ============================================================================
@@ -579,7 +581,28 @@ const CampaignScreen: React.FC = () => {
     );
 
     if (snappedLocation && pieceId) {
+      logDiag({
+        category: 'drag',
+        event_type: 'DROP',
+        payload: {
+          pieceId,
+          targetLocationId: snappedLocation.id ?? null,
+          targetPosition: snappedLocation.position,
+          rawDropPosition: { top, left },
+        },
+      });
       onPieceMove(pieceId, snappedLocation.position, snappedLocation.id);
+    } else if (pieceId) {
+      logDiag({
+        category: 'drag',
+        event_type: 'DROP',
+        payload: {
+          pieceId,
+          targetLocationId: null,
+          rawDropPosition: { top, left },
+          noSnapTarget: true,
+        },
+      });
     }
   };
 
@@ -615,6 +638,15 @@ const CampaignScreen: React.FC = () => {
         imageUrl: piece.imageUrl,
         pieceId: piece.id,
         locationId: piece.locationId,
+      });
+      logDiag({
+        category: 'drag',
+        event_type: 'DRAG_START',
+        payload: {
+          pieceId: piece.id,
+          pieceName: piece.name,
+          locationId: piece.locationId ?? null,
+        },
       });
     }
   };
@@ -1656,32 +1688,29 @@ const CampaignScreen: React.FC = () => {
                     Reset Pieces
                   </button>
                 )}
-                <button
-                  onClick={onEndTurn}
-                  disabled={
-                    (gameState !== "CAMPAIGN" &&
-                      gameState !== "TILE_PLAYED" &&
-                      gameState !== "CORRECTION_REQUIRED")
-                  }
-                  className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md disabled:bg-gray-500 disabled:cursor-not-allowed"
-                >
-                  {isFreeAdvancer ? 'Complete Advance' : gameState === "CAMPAIGN" && !hasPlayedTileThisTurn ? 'Done Moving' : 'End Turn'}
-                </button>
+                {gameState === "CORRECTION_REQUIRED" && (
+                  <button
+                    onClick={onEndTurn}
+                    className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md"
+                  >
+                    {isFreeAdvancer ? 'Complete Advance' : 'Complete Correction'}
+                  </button>
+                )}
               </div>
             )}
 
             {/* Player Hand (keptTiles are the playable tiles from drafting) */}
             <div id="campaign-player-hand">
-              {gameState === "SELECTING_TILE" && isMyTurn && (
-                <div className="text-center text-sm text-green-300 font-semibold mb-1">
-                  Select a tile to play — drag it to a player's space
+              {((gameState === "SELECTING_TILE" || gameState === "CAMPAIGN") && isMyTurn && !hasPlayedTileThisTurn) && (
+                <div className="text-center text-sm text-green-300 font-semibold mb-1 animate-pulse">
+                  Move your pieces, then drag a tile to a player's space to end your turn
                 </div>
               )}
               <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
                 {(viewingPlayer?.keptTiles ?? []).map((tile) => {
                   const tileKey = tile.id === 0 ? "BLANK" : tile.id.toString().padStart(2, "0");
                   const isHonestMatch = matchingTileIds.includes(tileKey);
-                  const canDragTile = gameState === "SELECTING_TILE" && isMyTurn;
+                  const canDragTile = (gameState === "SELECTING_TILE" || gameState === "CAMPAIGN") && isMyTurn && !hasPlayedTileThisTurn;
                   return (
                     <div
                       key={tile.id}
