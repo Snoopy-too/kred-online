@@ -33,6 +33,7 @@ interface useMultiplayerHostProps {
   setSelectedTilesForAdvantage: (tileIds: string[]) => void;
   handleTakeAdvantageDecline: () => void;
   handleFinishBureaucracyTurn: () => void;
+  completeBureaucracyTurn: () => void;
   handleDoneWithBureaucracyAction: () => void;
   handleResetBureaucracyAction: () => void;
   handleBureaucracyPiecePromote: (pieceId: string) => void;
@@ -70,6 +71,7 @@ export function useMultiplayerHost({
   setSelectedTilesForAdvantage,
   handleTakeAdvantageDecline,
   handleFinishBureaucracyTurn,
+  completeBureaucracyTurn,
   handleDoneWithBureaucracyAction,
   handleResetBureaucracyAction,
   handleBureaucracyPiecePromote,
@@ -229,7 +231,11 @@ export function useMultiplayerHost({
           handleBureaucracyPiecePromote(action.payload.pieceId);
           break;
         case 'BUREAUCRACY_COMPLETE':
-          handleFinishBureaucracyTurn();
+          // Guest has already confirmed locally (if needed), so skip the
+          // host-side "still have Kredcoin?" check — calling
+          // handleFinishBureaucracyTurn here would pop a redundant modal on
+          // the host's screen with the host's own view of bureaucracyStates.
+          completeBureaucracyTurn();
           break;
         default:
           console.warn('[HOST] Unknown action type:', action.type);
@@ -264,6 +270,7 @@ export function useMultiplayerHost({
     setSelectedTilesForAdvantage,
     handleTakeAdvantageDecline,
     handleFinishBureaucracyTurn,
+    completeBureaucracyTurn,
     handleDoneWithBureaucracyAction,
     handleResetBureaucracyAction,
     handleBureaucracyPiecePromote,

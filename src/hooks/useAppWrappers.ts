@@ -1,5 +1,6 @@
 import React from "react";
 import type { Piece } from "../types";
+import { getBureaucracyMenu, getAvailablePurchases } from "../game";
 
 interface AppWrappersProps {
   isMultiplayer: boolean;
@@ -17,6 +18,11 @@ interface AppWrappersProps {
   handleCorrectionComplete: () => void;
   showAlert: (title: string, message: string, type?: "error" | "warning" | "info") => void;
   validatePlayTile?: (tileId: number, targetSpace: any) => boolean;
+  bureaucracyStates?: any[];
+  bureaucracyTurnOrder?: number[];
+  currentBureaucracyPlayerIndex?: number;
+  playerCount?: number;
+  setShowFinishTurnConfirm?: (state: { isOpen: boolean; remainingKredcoin: number }) => void;
 }
 
 export function useAppWrappers({
@@ -35,6 +41,11 @@ export function useAppWrappers({
   handleCorrectionComplete,
   showAlert,
   validatePlayTile,
+  bureaucracyStates,
+  bureaucracyTurnOrder,
+  currentBureaucracyPlayerIndex,
+  playerCount,
+  setShowFinishTurnConfirm,
 }: AppWrappersProps) {
 
   // Wrap piece movement for multiplayer
@@ -115,9 +126,25 @@ export function useAppWrappers({
     }
   }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
 
-  // Wrap bureaucracy finish turn
+  // Wrap bureaucracy finish turn.
+  //
+  // In multiplayer, the confirmation modal ("you still have Kredcoin — are you
+  // sure?") must appear on the ACTIVE player's screen, not the host's. If we
+  // just forwarded BUREAUCRACY_COMPLETE to the host, the host would run
+  // handleFinishBureaucracyTurn and pop the modal on its own screen, using its
+  // view of bureaucracyStates. The active guest would see nothing.
+  // So we do the affordability check locally here, show the modal to the
+  // clicker, and only emit BUREAUCRACY_COMPLETE after confirmation.
   const wrappedBureaucracyFinishTurn = React.useCallback(async () => {
     if (isMultiplayer && multiplayerActions) {
+      const currentPlayerId = bureaucracyTurnOrder?.[currentBureaucracyPlayerIndex ?? 0];
+      const playerState = bureaucracyStates?.find((s: any) => s.playerId === currentPlayerId);
+      const menu = getBureaucracyMenu(playerCount ?? 3);
+      const affordable = playerState ? getAvailablePurchases(menu, playerState.remainingKredcoin) : [];
+      if (affordable.length > 0 && setShowFinishTurnConfirm) {
+        setShowFinishTurnConfirm({ isOpen: true, remainingKredcoin: playerState?.remainingKredcoin ?? 0 });
+        return;
+      }
       try {
         await multiplayerActions.bureaucracyComplete();
       } catch (error) {
@@ -126,7 +153,24 @@ export function useAppWrappers({
     } else {
       bureaucracyHandlers.handleFinishBureaucracyTurn();
     }
-  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers, bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex, playerCount, setShowFinishTurnConfirm]);
+
+  // Wrap the "confirm finish turn" click from the modal. In multiplayer, the
+  // guest already saw the modal and clicked confirm, so we just dismiss it and
+  // emit the action — the host's BUREAUCRACY_COMPLETE handler runs
+  // completeBureaucracyTurn unconditionally.
+  const wrappedBureaucracyConfirmFinishTurn = React.useCallback(async () => {
+    if (isMultiplayer && multiplayerActions) {
+      setShowFinishTurnConfirm?.({ isOpen: false, remainingKredcoin: 0 });
+      try {
+        await multiplayerActions.bureaucracyComplete();
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy complete sync failed:', error);
+      }
+    } else {
+      bureaucracyHandlers.handleConfirmFinishTurn();
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers, setShowFinishTurnConfirm]);
 
   // Wrap tile placement for multiplayer
   const wrappedPlaceTile = React.useCallback(async (tileId: number, targetSpace: { ownerId: number; position: any; rotation: number }) => {
@@ -280,5 +324,6 @@ export function useAppWrappers({
     wrappedBureaucracyDoneWithAction,
     wrappedBureaucracyResetAction,
     wrappedBureaucracyFinishTurn,
+    wrappedBureaucracyConfirmFinishTurn,
   };
 }
