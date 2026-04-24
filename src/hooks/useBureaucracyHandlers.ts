@@ -308,6 +308,10 @@ export function useBureaucracyHandlers({
   const completeBureaucracyTurn = React.useCallback(() => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
 
+    // Clear any leftover validation error so it doesn't bleed into the next
+    // player's turn (host can accumulate errors while replaying guest actions).
+    setBureaucracyValidationError(null);
+
     // Mark turn as complete
     const updatedStates = bureaucracyStates.map((s) =>
       s.playerId === currentPlayerId ? { ...s, turnComplete: true } : s
@@ -369,7 +373,7 @@ export function useBureaucracyHandlers({
       setCurrentBureaucracyPlayerIndex(nextIndex);
       setShowBureaucracyMenu(true);
     }
-  }, [bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, players, pieces, setBureaucracyStates, setPlayers, setBankedTiles, setCurrentPlayerIndex, setGameState, setBureaucracyTurnOrder, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu]);
+  }, [bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, players, pieces, setBureaucracyStates, setPlayers, setBankedTiles, setCurrentPlayerIndex, setGameState, setBureaucracyTurnOrder, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setBureaucracyValidationError]);
 
   const handleFinishBureaucracyTurn = React.useCallback(() => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];

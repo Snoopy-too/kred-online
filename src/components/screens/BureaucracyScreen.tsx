@@ -269,8 +269,13 @@ const BureaucracyScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Validation Error Modal */}
-      {validationError && (
+      {/* Validation Error Modal — only show to the active player.
+          In multiplayer, the host re-runs guest actions locally and may set a
+          spurious validationError when its state diverges; that error must not
+          be shown to (or actionable by) anyone other than the player whose turn
+          it is, otherwise a stale "Reset Pieces" click would wipe the active
+          player's in-progress work. */}
+      {validationError && isMyTurn && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-red-900 border-2 border-red-500 rounded-lg p-6 max-w-md">
             <h2 className="text-2xl font-bold text-white mb-6">
