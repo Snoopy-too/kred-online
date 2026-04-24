@@ -10,6 +10,7 @@ interface useMultiplayerHostProps {
   playerCount: number;
   currentPlayerIndex: number;
   draftRound: number;
+  gameState: string;
   setGameState: (state: string) => void;
   setPieces: (pieces: Piece[]) => void;
   setPiecesAtTurnStart: (pieces: Piece[]) => void;
@@ -19,6 +20,8 @@ interface useMultiplayerHostProps {
   setDraftRound: (round: number) => void;
   handlePlaceTile: (tileId: number, targetSpace: any) => void;
   handlePieceMove: (pieceId: string, position: any, location: string) => void;
+  handleBureaucracyPieceMove: (pieceId: string, position: any, location?: string) => void;
+  handleSelectBureaucracyMenuItem: (item: any) => void;
   handleResetPiecesCorrection: () => void;
   handleResetTurn: () => void;
   handleEndTurn: () => void;
@@ -44,6 +47,7 @@ export function useMultiplayerHost({
   playerCount,
   currentPlayerIndex,
   draftRound,
+  gameState,
   setGameState,
   setPieces,
   setPiecesAtTurnStart,
@@ -53,6 +57,8 @@ export function useMultiplayerHost({
   setDraftRound,
   handlePlaceTile,
   handlePieceMove,
+  handleBureaucracyPieceMove,
+  handleSelectBureaucracyMenuItem,
   handleResetPiecesCorrection,
   handleResetTurn,
   handleEndTurn,
@@ -153,7 +159,11 @@ export function useMultiplayerHost({
         }
         case 'MOVE_PIECE': {
           const { pieceId, position, location } = action.payload;
-          handlePieceMove(pieceId, position, location);
+          if (gameState === 'BUREAUCRACY') {
+            handleBureaucracyPieceMove(pieceId, position, location);
+          } else {
+            handlePieceMove(pieceId, position, location);
+          }
           break;
         }
         case 'END_TURN':
@@ -196,9 +206,19 @@ export function useMultiplayerHost({
         case 'RECEIVER_REWARD':
           // Process on host side directly
           break;
-        case 'BUREAUCRACY_PURCHASE':
-          setCurrentBureaucracyPurchase(action.payload.purchase);
+        case 'BUREAUCRACY_PURCHASE': {
+          // Route through the menu-select handler so the host takes the pre-action
+          // snapshot (used by handleDoneWithBureaucracyAction to validate/revert and
+          // to deduct kredcoin). Without this, the host has no snapshot when DONE
+          // arrives and silently reverts — kredcoin never deducts.
+          const item = action.payload?.purchase?.item;
+          if (item) {
+            handleSelectBureaucracyMenuItem(item);
+          } else {
+            setCurrentBureaucracyPurchase(action.payload.purchase);
+          }
           break;
+        }
         case 'BUREAUCRACY_DONE':
           handleDoneWithBureaucracyAction();
           break;
@@ -221,6 +241,7 @@ export function useMultiplayerHost({
     players,
     playerCount,
     draftRound,
+    gameState,
     setGameState,
     setPieces,
     setPiecesAtTurnStart,
@@ -230,6 +251,8 @@ export function useMultiplayerHost({
     setDraftRound,
     handlePlaceTile,
     handlePieceMove,
+    handleBureaucracyPieceMove,
+    handleSelectBureaucracyMenuItem,
     handleResetPiecesCorrection,
     handleResetTurn,
     handleEndTurn,
