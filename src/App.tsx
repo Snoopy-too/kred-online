@@ -213,7 +213,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
 
   const challengeFlowHandlers = useChallengeFlowHandlers({ players, pieces, playerCount, gameState, playedTile, bankedTiles, challengeOrder, currentChallengerIndex, receiverAcceptance, tileRejected, takeAdvantageChallengerId, takeAdvantageChallengerCredibility, selectedTilesForAdvantage, totalKredcoinForAdvantage, takeAdvantagePurchase, takeAdvantagePiecesSnapshot, piecesAtCorrectionStart, bonusMoveWasCompleted, piecesBeforeBonusMove, tilePlayerMustWithdraw, credibilityAtTurnStart, pendingChallengerReward: null, currentPlayerIndex, setPlayers, setPieces, setBankedTiles, setGameState, setPlayedTile, setMovesThisTurn, setHasPlayedTileThisTurn, setReceiverAcceptance, setChallengeOrder, setCurrentChallengerIndex, setTileRejected, setChallengedTile, setShowChallengeRevealModal, setChallengeResultMessage, setChallengeResultMessagePlayerId, setShowPerfectTileModal, setTilePlayerMustWithdraw, setPiecesAtCorrectionStart, setMovedPiecesThisTurn, setPendingCommunityPieces, setPendingChallengerReward: () => { }, setBonusMovePlayerId, setShowBonusMoveModal, setPiecesBeforeBonusMove, setCurrentPlayerIndex, setPiecesAtTurnStart, setCredibilityAtTurnStart, setShowTakeAdvantageModal, setTakeAdvantageChallengerId, setTakeAdvantageChallengerCredibility, setShowTakeAdvantageTileSelection, setSelectedTilesForAdvantage, setTotalKredcoinForAdvantage, setShowTakeAdvantageMenu, setTakeAdvantagePurchase, setTakeAdvantagePiecesSnapshot, setTakeAdvantageValidationError, setMoveCheckResult, setShowMoveCheckResult, setBoardTiles, setBureaucracyTurnOrder, setBureaucracyStates, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setShowBureaucracyTransition, setGiveReceiverViewingTileId, showAlert, addGameLog, setGameLog, advanceTurnNormally: turnHandlers.advanceTurnNormally, pendingChallengerRewardRef: { current: null } as any } as any);
   const bureaucracyHandlers = useBureaucracyHandlers({
-    players, pieces, playerCount, boardTiles,
+    players, pieces, playerCount, boardTiles, bankedTiles,
     bureaucracyStates, bureaucracyTurnOrder,
     currentBureaucracyPlayerIndex, currentBureaucracyPurchase,
     bureaucracySnapshot, bureaucracyMoves,
@@ -224,6 +224,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     setBureaucracySnapshot, setBureaucracyMoveCheckResult,
     setShowBureaucracyMoveCheckResult, setShowFinishTurnConfirm,
     setCurrentPlayerIndex, setBankedTiles, setBureaucracyTurnOrder,
+    setPiecesAtTurnStart, setCredibilityAtTurnStart, setHasPlayedTileThisTurn,
     calculateMoves: (orig: any, curr: any, pid: any) => calculateMovesCore(orig, curr, pid, playerCount, areSeatsAdjacent),
     validateSingleMove, calculatePieceRotation
   } as any);

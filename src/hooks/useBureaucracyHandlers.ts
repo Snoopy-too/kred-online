@@ -28,6 +28,7 @@ interface useBureaucracyHandlersProps {
   pieces: Piece[];
   playerCount: number;
   boardTiles: BoardTile[];
+  bankedTiles: (BoardTile & { faceUp: boolean })[];
   bureaucracyStates: BureaucracyPlayerState[];
   bureaucracyTurnOrder: number[];
   currentBureaucracyPlayerIndex: number;
@@ -49,8 +50,11 @@ interface useBureaucracyHandlersProps {
   setShowBureaucracyMoveCheckResult: (show: boolean) => void;
   setShowFinishTurnConfirm: (state: { isOpen: boolean; remainingKredcoin: number }) => void;
   setCurrentPlayerIndex: (index: number) => void;
-  setBankedTiles: (tiles: any[]) => void;
+  setBankedTiles: React.Dispatch<React.SetStateAction<(BoardTile & { faceUp: boolean })[]>>;
   setBureaucracyTurnOrder: (order: number[]) => void;
+  setPiecesAtTurnStart: (pieces: Piece[]) => void;
+  setCredibilityAtTurnStart: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  setHasPlayedTileThisTurn: (value: boolean) => void;
   calculateMoves: (original: Piece[], current: Piece[], playerId: number) => TrackedMove[];
   validateSingleMove: (move: TrackedMove, playerId: number, pieces: Piece[], playerCount: number) => { isValid: boolean; reason?: string };
   calculatePieceRotation: (position: any, playerCount: number, locationId?: string) => number;
@@ -61,6 +65,7 @@ export function useBureaucracyHandlers({
   pieces,
   playerCount,
   boardTiles,
+  bankedTiles,
   bureaucracyStates,
   bureaucracyTurnOrder,
   currentBureaucracyPlayerIndex,
@@ -84,6 +89,9 @@ export function useBureaucracyHandlers({
   setCurrentPlayerIndex,
   setBankedTiles,
   setBureaucracyTurnOrder,
+  setPiecesAtTurnStart,
+  setCredibilityAtTurnStart,
+  setHasPlayedTileThisTurn,
   calculateMoves,
   validateSingleMove,
   calculatePieceRotation,
@@ -333,20 +341,32 @@ export function useBureaucracyHandlers({
           );
           alert(`${winnerName} has won the game!`);
         } else {
-          alert(`The game is a draw! Winners: ${winners.join(", ")}`);
+          const winnerNames = formatWinnerNames(winners, players);
+          alert(`The game is a draw! Winners: ${winnerNames}`);
         }
-        // Could add a game over state here
+        setGameState("GAME_OVER");
         return;
       }
 
       // No winner - transition back to campaign for next round
-      // Bureaucracy tiles become the hand (keptTiles) for the next campaign phase
-      const updatedPlayers = players.map((p) => ({
-        ...p,
-        hand: [],
-        keptTiles: [...p.bureaucracyTiles],
-        bureaucracyTiles: [],
-      }));
+      // Return ALL tiles (face-up and face-down) from the bank to hands
+      const updatedPlayers = players.map((p) => {
+        // Find all tiles in this player's bank (both face-up in bankedTiles and face-down in bureaucracyTiles)
+        const playerBankedTiles = bankedTiles
+          .filter(bt => bt.ownerId === p.id)
+          .map(bt => bt.tile);
+        
+        // Safety check: p.bureaucracyTiles might already contain the face-down ones, 
+        // but bankedTiles should have the full board state of the bank.
+        // Actually, p.bureaucracyTiles was used for funding, while bankedTiles are the board visuals.
+        // Rule 44: start of new campaign, take all tiles from bank into hand.
+        return {
+          ...p,
+          hand: [],
+          keptTiles: playerBankedTiles,
+          bureaucracyTiles: [],
+        };
+      });
 
       setPlayers(updatedPlayers);
 
@@ -358,11 +378,22 @@ export function useBureaucracyHandlers({
       const startingPlayerIndex = updatedPlayers.findIndex(
         (p) => p.keptTiles && p.keptTiles.some((t) => t.id === startingTileId)
       );
-      if (startingPlayerIndex !== -1) {
-        setCurrentPlayerIndex(startingPlayerIndex);
-      } else {
-        setCurrentPlayerIndex(0);
-      }
+      
+      const actualStartingIndex = startingPlayerIndex !== -1 ? startingPlayerIndex : 0;
+      setCurrentPlayerIndex(actualStartingIndex);
+
+      // Reset piece baseline for move validation in next campaign
+      setPiecesAtTurnStart(pieces.map(p => ({ ...p })));
+      
+      // Reset turn-start state
+      setHasPlayedTileThisTurn(false);
+      
+      // Snapshot credibility at turn start for the new mover
+      const startingPlayerId = updatedPlayers[actualStartingIndex].id;
+      setCredibilityAtTurnStart(prev => ({
+        ...prev,
+        [startingPlayerId]: updatedPlayers[actualStartingIndex].credibility,
+      }));
 
       setGameState("CAMPAIGN");
       setBureaucracyStates([]);
@@ -373,7 +404,7 @@ export function useBureaucracyHandlers({
       setCurrentBureaucracyPlayerIndex(nextIndex);
       setShowBureaucracyMenu(true);
     }
-  }, [bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, players, pieces, setBureaucracyStates, setPlayers, setBankedTiles, setCurrentPlayerIndex, setGameState, setBureaucracyTurnOrder, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setBureaucracyValidationError]);
+  }, [bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, players, pieces, bankedTiles, setBureaucracyStates, setPlayers, setBankedTiles, setCurrentPlayerIndex, setPiecesAtTurnStart, setHasPlayedTileThisTurn, setCredibilityAtTurnStart, setGameState, setBureaucracyTurnOrder, setCurrentBureaucracyPlayerIndex, setShowBureaucracyMenu, setBureaucracyValidationError]);
 
   const handleFinishBureaucracyTurn = React.useCallback(() => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];

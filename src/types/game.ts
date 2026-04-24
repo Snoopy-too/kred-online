@@ -11,7 +11,8 @@ export type GameState =
   | 'TAKE_ADVANTAGE'
   | 'BONUS_MOVE'
   | 'CORRECTION_REQUIRED'
-  | 'BUREAUCRACY';
+  | 'BUREAUCRACY'
+  | 'GAME_OVER';
 
 export interface DropLocation {
   id: string;
