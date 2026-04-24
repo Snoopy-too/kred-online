@@ -116,6 +116,10 @@ export function useSupabaseActions() {
     [emitAction]
   );
 
+  const purchaseBureaucracyDone = useCallback(() => emitAction('BUREAUCRACY_DONE'), [emitAction]);
+  const purchaseBureaucracyReset = useCallback(() => emitAction('BUREAUCRACY_RESET'), [emitAction]);
+  const promoteBureaucracyPiece = useCallback((pieceId: string) => emitAction('BUREAUCRACY_PROMOTE', { pieceId }), [emitAction]);
+
   const bureaucracyComplete = useCallback(() => emitAction('BUREAUCRACY_COMPLETE'), [emitAction]);
 
   const resetTurn = useCallback(() => emitAction('RESET_TURN'), [emitAction]);
@@ -143,6 +147,8 @@ export function useSupabaseActions() {
     declineAdvantage,
     receiverRewardChoice,
     purchaseBureaucracy,
+    purchaseBureaucracyDone,
+    purchaseBureaucracyReset,
     bureaucracyComplete,
     resetTurn,
   };

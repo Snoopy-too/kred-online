@@ -5,6 +5,7 @@ interface AppWrappersProps {
   isMultiplayer: boolean;
   multiplayerActions: any;
   pieceMovementHandlers: any;
+  bureaucracyHandlers: any;
   handlePlaceTile: (tileId: number, targetSpace: any) => void;
   handleEndTurn: () => void;
   handleReceiverAcceptanceDecision: (accepted: boolean) => void;
@@ -22,6 +23,7 @@ export function useAppWrappers({
   isMultiplayer,
   multiplayerActions,
   pieceMovementHandlers,
+  bureaucracyHandlers,
   handlePlaceTile,
   handleEndTurn,
   handleReceiverAcceptanceDecision,
@@ -47,6 +49,84 @@ export function useAppWrappers({
     }
     return result;
   }, [isMultiplayer, multiplayerActions, pieceMovementHandlers]);
+
+  // Wrap bureaucracy piece movement for multiplayer
+  const wrappedBureaucracyPieceMove = React.useCallback(async (pieceId: string, newPosition: any, locationId: string) => {
+    bureaucracyHandlers.handleBureaucracyPieceMove(pieceId, newPosition, locationId);
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.movePiece(pieceId, newPosition, locationId);
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy piece movement sync failed:', error);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+
+  // Wrap bureaucracy piece promotion for multiplayer
+  const wrappedBureaucracyPiecePromote = React.useCallback(async (pieceId: string) => {
+    bureaucracyHandlers.handleBureaucracyPiecePromote(pieceId);
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.promoteBureaucracyPiece?.(pieceId);
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy piece promote sync failed:', error);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+
+  // Wrap bureaucracy menu item selection
+  const wrappedBureaucracySelectMenuItem = React.useCallback(async (item: any) => {
+    bureaucracyHandlers.handleSelectBureaucracyMenuItem(item);
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        // We need to send the purchase object to the host
+        // But handleSelectBureaucracyMenuItem doesn't return it.
+        // We can just send the item and let the host create its own purchase object.
+        // Wait, multiplayerActions.purchaseBureaucracy expects a purchase object.
+        // Let's just send a minimal purchase object.
+        await multiplayerActions.purchaseBureaucracy({ item });
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy purchase sync failed:', error);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+
+  // Wrap bureaucracy done with action
+  const wrappedBureaucracyDoneWithAction = React.useCallback(async () => {
+    bureaucracyHandlers.handleDoneWithBureaucracyAction();
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.purchaseBureaucracyDone?.();
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy done sync failed:', error);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+
+  // Wrap bureaucracy reset action
+  const wrappedBureaucracyResetAction = React.useCallback(async () => {
+    bureaucracyHandlers.handleResetBureaucracyAction();
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.purchaseBureaucracyReset?.();
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy reset sync failed:', error);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+
+  // Wrap bureaucracy finish turn
+  const wrappedBureaucracyFinishTurn = React.useCallback(async () => {
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.bureaucracyComplete();
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy complete sync failed:', error);
+      }
+    } else {
+      bureaucracyHandlers.handleFinishBureaucracyTurn();
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
 
   // Wrap tile placement for multiplayer
   const wrappedPlaceTile = React.useCallback(async (tileId: number, targetSpace: { ownerId: number; position: any; rotation: number }) => {
@@ -194,5 +274,11 @@ export function useAppWrappers({
     wrappedBonusMoveComplete,
     wrappedCorrectionComplete,
     wrappedResetTurn,
+    wrappedBureaucracyPieceMove,
+    wrappedBureaucracyPiecePromote,
+    wrappedBureaucracySelectMenuItem,
+    wrappedBureaucracyDoneWithAction,
+    wrappedBureaucracyResetAction,
+    wrappedBureaucracyFinishTurn,
   };
 }

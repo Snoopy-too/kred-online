@@ -30,6 +30,9 @@ interface useMultiplayerHostProps {
   setSelectedTilesForAdvantage: (tileIds: string[]) => void;
   handleTakeAdvantageDecline: () => void;
   handleFinishBureaucracyTurn: () => void;
+  handleDoneWithBureaucracyAction: () => void;
+  handleResetBureaucracyAction: () => void;
+  handleBureaucracyPiecePromote: (pieceId: string) => void;
   setTakeAdvantagePurchase: (purchase: any) => void;
   setCurrentBureaucracyPurchase: (purchase: any) => void;
 }
@@ -61,6 +64,9 @@ export function useMultiplayerHost({
   setSelectedTilesForAdvantage,
   handleTakeAdvantageDecline,
   handleFinishBureaucracyTurn,
+  handleDoneWithBureaucracyAction,
+  handleResetBureaucracyAction,
+  handleBureaucracyPiecePromote,
   setTakeAdvantagePurchase,
   setCurrentBureaucracyPurchase,
 }: useMultiplayerHostProps) {
@@ -193,6 +199,15 @@ export function useMultiplayerHost({
         case 'BUREAUCRACY_PURCHASE':
           setCurrentBureaucracyPurchase(action.payload.purchase);
           break;
+        case 'BUREAUCRACY_DONE':
+          handleDoneWithBureaucracyAction();
+          break;
+        case 'BUREAUCRACY_RESET':
+          handleResetBureaucracyAction();
+          break;
+        case 'BUREAUCRACY_PROMOTE':
+          handleBureaucracyPiecePromote(action.payload.pieceId);
+          break;
         case 'BUREAUCRACY_COMPLETE':
           handleFinishBureaucracyTurn();
           break;
@@ -226,6 +241,9 @@ export function useMultiplayerHost({
     setSelectedTilesForAdvantage,
     handleTakeAdvantageDecline,
     handleFinishBureaucracyTurn,
+    handleDoneWithBureaucracyAction,
+    handleResetBureaucracyAction,
+    handleBureaucracyPiecePromote,
     setTakeAdvantagePurchase,
     setCurrentBureaucracyPurchase,
   ]);
