@@ -41,6 +41,13 @@ interface BureaucracyScreenHandlers {
   onCloseMoveCheckResult: () => void;
   isTestMode: boolean;
   credibilityRotationAdjustments: { [playerId: number]: number };
+  onUndoLastPromotion: () => void;
+  promotionHistory: Array<{
+    promotedPieceId: string;
+    promotedPieceOriginalLocationId: string;
+    communityPieceId: string;
+    communityPieceOriginalLocationId: string;
+  }>;
 }
 
 const BureaucracyScreen: React.FC = () => {
@@ -63,6 +70,8 @@ const BureaucracyScreen: React.FC = () => {
     onCloseMoveCheckResult,
     isTestMode,
     credibilityRotationAdjustments,
+    onUndoLastPromotion,
+    promotionHistory,
   } = useBureaucracyScreenHandlers<BureaucracyScreenHandlers>();
 
   const { isMultiplayer, playerIndex } = useHandlers<{ isMultiplayer?: boolean; playerIndex?: number }>();
@@ -85,6 +94,15 @@ const BureaucracyScreen: React.FC = () => {
     ? getAvailablePurchases(menu, playerState.remainingKredcoin)
     : [];
   const isPromotionPurchase = currentPurchase?.item.type === "PROMOTION";
+
+  const promotionCount = promotionHistory.length;
+  const maxPromotions = isPromotionPurchase && currentPurchase && playerState
+    ? Math.floor(playerState.remainingKredcoin / currentPurchase.item.price)
+    : 0;
+  const promotionsRemaining = maxPromotions - promotionCount;
+  const promotionCost = isPromotionPurchase && currentPurchase
+    ? currentPurchase.item.price * promotionCount
+    : 0;
 
   const isMyTurn = !isMultiplayer || (playerIndex !== undefined && playerIndex + 1 === currentPlayerId);
 
@@ -644,7 +662,7 @@ const BureaucracyScreen: React.FC = () => {
               <h2 className="text-2xl font-bold text-center mb-4 text-blue-300">
                 Perform Your Action
               </h2>
-              <p className="text-center text-lg mb-6">
+              <p className="text-center text-lg mb-4">
                 {currentPurchase.item.type === "PROMOTION" && (
                   <>
                     Promote a{" "}
@@ -662,18 +680,50 @@ const BureaucracyScreen: React.FC = () => {
                   <>Your credibility has been restored</>
                 )}
               </p>
+
+              {/* Promotion counter — only shown during promotion actions */}
+              {isPromotionPurchase && (
+                <div className="mb-4 text-center space-y-1">
+                  <p className="text-blue-200 font-semibold">
+                    {promotionCount} promoted · {promotionsRemaining} more affordable
+                  </p>
+                  {promotionCount > 0 && (
+                    <p className="text-yellow-300 text-sm">
+                      ₭-{promotionCost} will be deducted
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-center gap-3">
                 <button
                   onClick={() => isMyTurn && onResetAction()}
                   disabled={!isMyTurn}
-                  className={`px-6 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${isMyTurn ? "bg-amber-600 hover:bg-amber-500" : "bg-gray-600 cursor-not-allowed opacity-50"}`}
+                  className={`px-6 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${
+                    isMyTurn ? "bg-amber-600 hover:bg-amber-500" : "bg-gray-600 cursor-not-allowed opacity-50"
+                  }`}
                 >
                   Reset
                 </button>
+                {isPromotionPurchase && promotionCount > 0 && (
+                  <button
+                    onClick={() => isMyTurn && onUndoLastPromotion()}
+                    disabled={!isMyTurn}
+                    className={`px-6 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${
+                      isMyTurn ? "bg-orange-600 hover:bg-orange-500" : "bg-gray-600 cursor-not-allowed opacity-50"
+                    }`}
+                  >
+                    Undo
+                  </button>
+                )}
                 <button
                   onClick={() => isMyTurn && onDoneWithAction()}
-                  disabled={!isMyTurn}
-                  className={`px-8 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${isMyTurn ? "bg-blue-600 hover:bg-blue-500" : "bg-gray-600 cursor-not-allowed opacity-50"}`}
+                  disabled={!isMyTurn || (isPromotionPurchase && promotionCount === 0)}
+                  className={`px-8 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${
+                    isMyTurn && (!isPromotionPurchase || promotionCount > 0)
+                      ? "bg-blue-600 hover:bg-blue-500"
+                      : "bg-gray-600 cursor-not-allowed opacity-50"
+                  }`}
                 >
                   Done
                 </button>
