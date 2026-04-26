@@ -103,6 +103,16 @@ describe("useBureaucracy", () => {
       expect(result.current.showFinishTurnConfirm.isOpen).toBe(false);
       expect(result.current.showFinishTurnConfirm.remainingKredcoin).toBe(0);
     });
+
+    it("should initialize promotionHistory as empty array", () => {
+      const { result } = renderHook(() => useBureaucracy());
+      expect(result.current.promotionHistory).toEqual([]);
+    });
+
+    it("should expose setPromotionHistory", () => {
+      const { result } = renderHook(() => useBureaucracy());
+      expect(typeof result.current.setPromotionHistory).toBe("function");
+    });
   });
 
   describe("startBureaucracyPhase", () => {

@@ -14,6 +14,7 @@ export type {
   BureaucracyMenuItem,
   BureaucracyPurchase,
   BureaucracyPlayerState,
+  PromotionHistoryEntry,
 } from './bureaucracy';
 export type { ChallengeState } from './challenge';
 export type { PlayedTileState } from './played-tile';

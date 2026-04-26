@@ -7,6 +7,7 @@ import type {
   BureaucracyPlayerState,
   BureaucracyMenuItem,
   BureaucracyPurchase,
+  PromotionHistoryEntry,
 } from "../types";
 import {
   useBureaucracyProvider,
@@ -52,6 +53,9 @@ export function useBureaucracy() {
 
   // Move tracking
   const [bureaucracyMoves, setBureaucracyMoves] = useState<TrackedMove[]>([]);
+
+  // Promotion history for multi-promotion tracking
+  const [promotionHistory, setPromotionHistory] = useState<PromotionHistoryEntry[]>([]);
 
   // Snapshot for undo/reset
   const [bureaucracySnapshot, setBureaucracySnapshot] = useState<{
@@ -161,6 +165,7 @@ export function useBureaucracy() {
     setCurrentBureaucracyPurchase(purchase);
     setShowBureaucracyMenu(false);
     setBureaucracyMoves([]);
+    setPromotionHistory([]);
 
     // Take snapshot of game state before action
     setBureaucracySnapshot(createGameStateSnapshot(pieces, boardTiles));
@@ -237,6 +242,7 @@ export function useBureaucracy() {
     setCurrentBureaucracyPurchase(null);
     setBureaucracyMoves([]);
     setBureaucracyValidationError(null);
+    setPromotionHistory([]);
   };
 
   /**
@@ -250,6 +256,7 @@ export function useBureaucracy() {
     setCurrentBureaucracyPurchase(null);
     setBureaucracyMoves([]);
     setBureaucracyValidationError(null);
+    setPromotionHistory([]);
   };
 
   /**
@@ -343,6 +350,7 @@ export function useBureaucracy() {
     showBureaucracyMenu,
     bureaucracyValidationError,
     bureaucracyMoves,
+    promotionHistory,
     bureaucracySnapshot,
     showBureaucracyMoveCheckResult,
     bureaucracyMoveCheckResult,
@@ -358,6 +366,7 @@ export function useBureaucracy() {
     setShowBureaucracyMenu,
     setBureaucracyValidationError,
     setBureaucracyMoves,
+    setPromotionHistory,
     setBureaucracySnapshot,
     setShowBureaucracyMoveCheckResult,
     setBureaucracyMoveCheckResult,

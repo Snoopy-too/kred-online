@@ -123,3 +123,31 @@ export interface BureaucracyPlayerState {
   turnComplete: boolean;
   purchases: BureaucracyPurchase[];
 }
+
+/**
+ * PromotionHistoryEntry - One promotion swap performed during a multi-promotion action.
+ *
+ * Stored in LIFO order so the last entry can be reversed on undo.
+ *
+ * Structure:
+ * - promotedPieceId: ID of the piece being promoted
+ * - promotedPieceOriginalLocationId: Where the promoted piece came from (before swap)
+ * - communityPieceId: ID of the piece in the community being replaced
+ * - communityPieceOriginalLocationId: Where the community piece will go
+ *
+ * @example
+ * ```typescript
+ * const entry: PromotionHistoryEntry = {
+ *   promotedPieceId: "p1_pawn1",
+ *   promotedPieceOriginalLocationId: "community_1",
+ *   communityPieceId: "p2_pawn1",
+ *   communityPieceOriginalLocationId: "seat_p2_1"
+ * };
+ * ```
+ */
+export interface PromotionHistoryEntry {
+  promotedPieceId: string;
+  promotedPieceOriginalLocationId: string;
+  communityPieceId: string;
+  communityPieceOriginalLocationId: string;
+}
