@@ -149,6 +149,7 @@ export function useSupabaseActions() {
     purchaseBureaucracy,
     purchaseBureaucracyDone,
     purchaseBureaucracyReset,
+    promoteBureaucracyPiece,
     bureaucracyComplete,
     resetTurn,
   };

@@ -1,7 +1,7 @@
 import React from "react";
 import type { Player, Piece } from "../types";
 import { TILE_SPACES_BY_PLAYER_COUNT } from "../config";
-import { initializeCampaignPieces } from "../game";
+import { initializeCampaignPieces, performPromotion } from "../game";
 
 interface useMultiplayerHostProps {
   isHost: boolean;
@@ -11,6 +11,7 @@ interface useMultiplayerHostProps {
   currentPlayerIndex: number;
   draftRound: number;
   gameState: string;
+  pieces: Piece[];
   setGameState: (state: string) => void;
   setPieces: (pieces: Piece[]) => void;
   setPiecesAtTurnStart: (pieces: Piece[]) => void;
@@ -49,6 +50,7 @@ export function useMultiplayerHost({
   currentPlayerIndex,
   draftRound,
   gameState,
+  pieces,
   setGameState,
   setPieces,
   setPiecesAtTurnStart,
@@ -227,9 +229,17 @@ export function useMultiplayerHost({
         case 'BUREAUCRACY_RESET':
           handleResetBureaucracyAction();
           break;
-        case 'BUREAUCRACY_PROMOTE':
-          handleBureaucracyPiecePromote(action.payload.pieceId);
+        case 'BUREAUCRACY_PROMOTE': {
+          // Bypass handleBureaucracyPiecePromote on the host for remote actions.
+          // Because BUREAUCRACY_PURCHASE and BUREAUCRACY_PROMOTE might arrive batched,
+          // the React state for currentBureaucracyPurchase might still be null in the closure.
+          // We trust the client has verified the purchase.
+          const result = performPromotion(pieces, action.payload.pieceId);
+          if (result.success) {
+            setPieces(result.pieces);
+          }
           break;
+        }
         case 'BUREAUCRACY_COMPLETE':
           // Guest has already confirmed locally (if needed), so skip the
           // host-side "still have Kredcoin?" check — calling
@@ -248,6 +258,7 @@ export function useMultiplayerHost({
     playerCount,
     draftRound,
     gameState,
+    pieces,
     setGameState,
     setPieces,
     setPiecesAtTurnStart,
