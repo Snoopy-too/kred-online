@@ -85,6 +85,13 @@ export function useAppWrappers({
     }
   }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
 
+  // Wrap bureaucracy undo last promotion
+  const wrappedBureaucracyUndoLastPromotion = React.useCallback(async () => {
+    bureaucracyHandlers.handleUndoLastPromotion();
+    // Undo is a local-only operation; no multiplayer sync needed
+    // (the host tracks its own promotionHistory independently)
+  }, [bureaucracyHandlers]);
+
   // Wrap bureaucracy menu item selection
   const wrappedBureaucracySelectMenuItem = React.useCallback(async (item: any) => {
     bureaucracyHandlers.handleSelectBureaucracyMenuItem(item);
@@ -320,6 +327,7 @@ export function useAppWrappers({
     wrappedResetTurn,
     wrappedBureaucracyPieceMove,
     wrappedBureaucracyPiecePromote,
+    wrappedBureaucracyUndoLastPromotion,
     wrappedBureaucracySelectMenuItem,
     wrappedBureaucracyDoneWithAction,
     wrappedBureaucracyResetAction,

@@ -463,6 +463,8 @@ const App: React.FC<MultiplayerProps> = (props) => {
     onFinishTurn: (wrappers as any).wrappedBureaucracyFinishTurn,
     onPieceMove: (wrappers as any).wrappedBureaucracyPieceMove,
     onPiecePromote: (wrappers as any).wrappedBureaucracyPiecePromote,
+    onUndoLastPromotion: (wrappers as any).wrappedBureaucracyUndoLastPromotion,
+    promotionHistory,
     onClearValidationError: () => setBureaucracyValidationError(null),
     onResetAction: (wrappers as any).wrappedBureaucracyResetAction,
     onCheckMove: bureaucracyHandlers.handleCheckBureaucracyMove,
