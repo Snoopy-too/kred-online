@@ -147,6 +147,7 @@ function KredAppInner() {
             pushStateRef={pushStateRef}
             setActionDispatch={isHost ? setActionDispatch : undefined}
             onPhaseChange={handlePhaseChange}
+            hydrated={gameReady}
           />
         </GameProviders>
       )}
