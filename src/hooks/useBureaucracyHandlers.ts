@@ -603,7 +603,16 @@ export function useBureaucracyHandlers({
       return;
     }
 
-    // Perform the promotion (swap with community)
+    // Cap: don't allow more promotions than the player can afford
+    const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+    const playerState = bureaucracyStates.find(s => s.playerId === currentPlayerId);
+    if (!playerState) return;
+
+    const maxPromotions = Math.floor(
+      playerState.remainingKredcoin / currentBureaucracyPurchase.item.price
+    );
+    if (promotionHistory.length >= maxPromotions) return;
+
     const result = performPromotion(pieces, pieceId);
 
     if (!result.success) {
@@ -611,8 +620,37 @@ export function useBureaucracyHandlers({
       return;
     }
 
+    // Record which two pieces swapped so we can undo if needed
+    const pieceToPromote = pieces.find(p => p.id === pieceId);
+    const communityPieceBefore = pieces.find(
+      p => p.id !== pieceId &&
+        result.pieces.find(rp => rp.id === p.id)?.locationId === pieceToPromote?.locationId
+    );
+
+    if (pieceToPromote && communityPieceBefore) {
+      setPromotionHistory([
+        ...promotionHistory,
+        {
+          promotedPieceId: pieceId,
+          promotedPieceOriginalLocationId: pieceToPromote.locationId!,
+          communityPieceId: communityPieceBefore.id,
+          communityPieceOriginalLocationId: communityPieceBefore.locationId!,
+        },
+      ]);
+    }
+
     setPieces(result.pieces);
-  }, [currentBureaucracyPurchase, pieces, setBureaucracyValidationError, setPieces]);
+  }, [
+    currentBureaucracyPurchase,
+    bureaucracyTurnOrder,
+    currentBureaucracyPlayerIndex,
+    bureaucracyStates,
+    promotionHistory,
+    setPromotionHistory,
+    pieces,
+    setBureaucracyValidationError,
+    setPieces,
+  ]);
 
   return {
     handleSelectBureaucracyMenuItem,

@@ -566,4 +566,25 @@ describe("performPromotion", () => {
     expect(pawn?.locationId).toBe("p1_seat2");
     expect(mark2?.locationId).toBe("community_2");
   });
+
+  it("should handle two sequential promotions correctly", () => {
+    const pieces = [
+      createPiece("mark1", "Mark", "p1_seat1"),
+      createPiece("mark2", "Mark", "p1_seat2"),
+      createPiece("heel1", "Heel", "community_1"),
+      createPiece("heel2", "Heel", "community_2"),
+    ];
+
+    // First promotion
+    const result1 = performPromotion(pieces, "mark1");
+    expect(result1.success).toBe(true);
+    const mark1After = result1.pieces.find(p => p.id === "mark1");
+    expect(mark1After?.locationId).toMatch(/^community/);
+
+    // Second promotion on updated pieces
+    const result2 = performPromotion(result1.pieces, "mark2");
+    expect(result2.success).toBe(true);
+    const mark2After = result2.pieces.find(p => p.id === "mark2");
+    expect(mark2After?.locationId).toMatch(/^community/);
+  });
 });
