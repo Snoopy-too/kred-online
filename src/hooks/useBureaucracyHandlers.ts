@@ -1,13 +1,14 @@
 import React from "react";
-import type { 
-  Player, 
-  Piece, 
-  BoardTile, 
-  BureaucracyMenuItem, 
-  BureaucracyPurchase, 
-  BureaucracyPlayerState, 
-  TrackedMove, 
-  GameState 
+import type {
+  Player,
+  Piece,
+  BoardTile,
+  BureaucracyMenuItem,
+  BureaucracyPurchase,
+  BureaucracyPlayerState,
+  TrackedMove,
+  GameState,
+  PromotionHistoryEntry
 } from "../types";
 import { 
   getAvailablePurchases, 
@@ -35,6 +36,7 @@ interface useBureaucracyHandlersProps {
   currentBureaucracyPurchase: BureaucracyPurchase | null;
   bureaucracySnapshot: any;
   bureaucracyMoves: TrackedMove[];
+  promotionHistory: PromotionHistoryEntry[];
   setPlayers: (players: Player[]) => void;
   setPieces: (pieces: Piece[]) => void;
   setBoardTiles: (tiles: BoardTile[]) => void;
@@ -55,6 +57,7 @@ interface useBureaucracyHandlersProps {
   setPiecesAtTurnStart: (pieces: Piece[]) => void;
   setCredibilityAtTurnStart: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   setHasPlayedTileThisTurn: (value: boolean) => void;
+  setPromotionHistory: (history: PromotionHistoryEntry[]) => void;
   calculateMoves: (original: Piece[], current: Piece[], playerId: number) => TrackedMove[];
   validateSingleMove: (move: TrackedMove, playerId: number, pieces: Piece[], playerCount: number) => { isValid: boolean; reason?: string };
   calculatePieceRotation: (position: any, playerCount: number, locationId?: string) => number;
@@ -72,6 +75,7 @@ export function useBureaucracyHandlers({
   currentBureaucracyPurchase,
   bureaucracySnapshot,
   bureaucracyMoves,
+  promotionHistory,
   setPlayers,
   setPieces,
   setBoardTiles,
@@ -92,6 +96,7 @@ export function useBureaucracyHandlers({
   setPiecesAtTurnStart,
   setCredibilityAtTurnStart,
   setHasPlayedTileThisTurn,
+  setPromotionHistory,
   calculateMoves,
   validateSingleMove,
   calculatePieceRotation,
