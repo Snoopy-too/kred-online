@@ -652,6 +652,41 @@ export function useBureaucracyHandlers({
     setPieces,
   ]);
 
+  const handleUndoLastPromotion = React.useCallback(() => {
+    if (promotionHistory.length === 0) return;
+
+    const last = promotionHistory[promotionHistory.length - 1];
+
+    // Restore both pieces to their pre-swap positions
+    const promotedPiece = pieces.find(p => p.id === last.promotedPieceId);
+    const communityPiece = pieces.find(p => p.id === last.communityPieceId);
+
+    if (!promotedPiece || !communityPiece) return;
+
+    const restoredPieces = pieces.map(p => {
+      if (p.id === last.promotedPieceId) {
+        return {
+          ...p,
+          locationId: last.promotedPieceOriginalLocationId,
+          position: communityPiece.position,
+          rotation: communityPiece.rotation,
+        };
+      }
+      if (p.id === last.communityPieceId) {
+        return {
+          ...p,
+          locationId: last.communityPieceOriginalLocationId,
+          position: promotedPiece.position,
+          rotation: promotedPiece.rotation,
+        };
+      }
+      return p;
+    });
+
+    setPieces(restoredPieces);
+    setPromotionHistory(promotionHistory.slice(0, -1));
+  }, [promotionHistory, setPromotionHistory, pieces, setPieces]);
+
   return {
     handleSelectBureaucracyMenuItem,
     handleDoneWithBureaucracyAction,
@@ -665,5 +700,6 @@ export function useBureaucracyHandlers({
     handleCloseBureaucracyMoveCheckResult,
     handleBureaucracyPieceMove,
     handleBureaucracyPiecePromote,
+    handleUndoLastPromotion,
   };
 }
