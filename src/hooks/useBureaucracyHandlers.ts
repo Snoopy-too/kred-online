@@ -157,47 +157,30 @@ export function useBureaucracyHandlers({
       // Credibility restore is always valid (already applied)
       isValid = true;
     } else if (currentBureaucracyPurchase.item.type === "PROMOTION") {
-      // Find which piece was swapped to community (should now be in community)
       const snapshot = bureaucracySnapshot;
       if (!snapshot) {
         validationMessage = "No snapshot available for validation";
+      } else if (promotionHistory.length === 0) {
+        validationMessage =
+          "No promotion was performed. Please click a piece to promote it.";
       } else {
-        // Find pieces that moved to community
-        const piecesMovedToCommunity = snapshot.pieces.filter(
-          (originalPiece: Piece) => {
-            const currentPiece = getPieceById(pieces, originalPiece.id);
-            return (
-              currentPiece &&
-              originalPiece.locationId &&
-              !originalPiece.locationId.startsWith("community") &&
-              currentPiece.locationId &&
-              currentPiece.locationId.startsWith("community")
-            );
-          }
-        );
-
-        if (piecesMovedToCommunity.length === 0) {
-          validationMessage =
-            "No promotion was performed. Please click a piece to promote it.";
-        } else if (piecesMovedToCommunity.length > 1) {
-          validationMessage =
-            "Only one promotion can be performed per purchase.";
-        } else {
-          const promotedPieceId = piecesMovedToCommunity[0].id;
+        // Validate every promotion in the history
+        let allValid = true;
+        for (const entry of promotionHistory) {
           const validation = validatePromotion(
             pieces,
-            promotedPieceId,
+            entry.promotedPieceId,
             currentBureaucracyPurchase.item.promotionLocation!,
             currentPlayerId,
             snapshot.pieces
           );
-
           if (!validation.isValid) {
+            allValid = false;
             validationMessage = validation.reason;
-          } else {
-            isValid = true;
+            break;
           }
         }
+        if (allValid) isValid = true;
       }
     } else if (currentBureaucracyPurchase.item.type === "MOVE") {
       // Use the same calculateMoves logic as Campaign phase
@@ -275,12 +258,17 @@ export function useBureaucracyHandlers({
     }
 
     // Purchase successful - deduct kredcoin
+    const finalPrice =
+      currentBureaucracyPurchase.item.type === "PROMOTION"
+        ? currentBureaucracyPurchase.item.price * promotionHistory.length
+        : currentBureaucracyPurchase.item.price;
+
     const updatedStates = bureaucracyStates.map((s) => {
       if (s.playerId === currentPlayerId) {
         return {
           ...s,
           remainingKredcoin:
-            s.remainingKredcoin - currentBureaucracyPurchase.item.price,
+            s.remainingKredcoin - finalPrice,
           purchases: [
             ...s.purchases,
             { ...currentBureaucracyPurchase, completed: true },
@@ -298,7 +286,7 @@ export function useBureaucracyHandlers({
     // Deduct tiles from bureaucracyTiles
     const updatedPlayers = players.map((p) => {
       if (p.id === currentPlayerId) {
-        let remainingPrice = currentBureaucracyPurchase.item.price;
+        let remainingPrice = finalPrice;
         const newBureaucracyTiles = [...p.bureaucracyTiles];
 
         // Remove tiles to cover the price
@@ -316,7 +304,7 @@ export function useBureaucracyHandlers({
     });
 
     setPlayers(updatedPlayers);
-  }, [currentBureaucracyPurchase, bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, pieces, bureaucracySnapshot, playerCount, calculateMoves, validateSingleMove, setPieces, setBoardTiles, setBureaucracyValidationError, setShowBureaucracyMenu, setCurrentBureaucracyPurchase, setBureaucracyMoves, setBureaucracyStates, players, setPlayers]);
+  }, [currentBureaucracyPurchase, bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, pieces, bureaucracySnapshot, promotionHistory, playerCount, calculateMoves, validateSingleMove, setPieces, setBoardTiles, setBureaucracyValidationError, setShowBureaucracyMenu, setCurrentBureaucracyPurchase, setBureaucracyMoves, setBureaucracyStates, players, setPlayers]);
 
   const completeBureaucracyTurn = React.useCallback(() => {
     const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
@@ -457,7 +445,8 @@ export function useBureaucracyHandlers({
     setBureaucracyMoves([]);
     // Clear validation error
     setBureaucracyValidationError(null);
-  }, [bureaucracySnapshot, setPieces, setBoardTiles, setBureaucracyMoves, setBureaucracyValidationError]);
+    setPromotionHistory([]);
+  }, [bureaucracySnapshot, setPieces, setBoardTiles, setBureaucracyMoves, setBureaucracyValidationError, setPromotionHistory]);
 
   const handleCheckBureaucracyMove = React.useCallback(() => {
     if (
