@@ -116,6 +116,7 @@ export function useBureaucracy() {
     setCurrentBureaucracyPurchase(null);
     setBureaucracyValidationError(null);
     setBureaucracyMoves([]);
+    setPromotionHistory([]);
     setBureaucracySnapshot(null);
   };
 

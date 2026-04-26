@@ -133,7 +133,7 @@ export interface BureaucracyPlayerState {
  * - promotedPieceId: ID of the piece being promoted
  * - promotedPieceOriginalLocationId: Where the promoted piece came from (before swap)
  * - communityPieceId: ID of the piece in the community being replaced
- * - communityPieceOriginalLocationId: Where the community piece will go
+ * - communityPieceOriginalLocationId: Where the community piece came from (before swap)
  *
  * @example
  * ```typescript
