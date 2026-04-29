@@ -500,7 +500,7 @@ const BureaucracyScreen: React.FC = () => {
         {/* Right Side Panel: Purchase Menu and Controls */}
         <div className="w-full lg:w-1/3 flex flex-col gap-4">
           {/* Actions Menu */}
-          {showPurchaseMenu && (
+          {showPurchaseMenu && isMyTurn && (
             <div className="bg-gray-800/90 rounded-lg shadow-2xl border-2 border-yellow-600/50 p-6">
               <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
                 Actions
@@ -657,7 +657,7 @@ const BureaucracyScreen: React.FC = () => {
           )}
 
           {/* Action in Progress */}
-          {!showPurchaseMenu && currentPurchase && (
+          {!showPurchaseMenu && currentPurchase && isMyTurn && (
             <div className="bg-blue-900/90 rounded-lg shadow-2xl border-2 border-blue-500 p-6">
               <h2 className="text-2xl font-bold text-center mb-4 text-blue-300">
                 Perform Your Action
