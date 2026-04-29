@@ -352,6 +352,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     playerCount,
     isTestMode,
     viewingPlayerId,
+    onStartGame: gameFlowHandlers.handleStartGame,
   };
 
   const draftingValue = {

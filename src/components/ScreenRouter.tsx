@@ -18,7 +18,7 @@ import { useHandlers, useCampaignHandlers } from "../providers/HandlersProvider"
 const ScreenRouter: React.FC = () => {
   const { gameState, currentPlayerIndex } = usePhase();
   const { players } = useRoster();
-  const { isMultiplayer, playerIndex } = useHandlers();
+  const { isMultiplayer, playerIndex, onStartGame } = useHandlers();
 
   // Multiplayer loading guard: wait for player data sync before rendering screens.
   if (isMultiplayer) {
@@ -51,7 +51,7 @@ const ScreenRouter: React.FC = () => {
 
   switch (gameState) {
     case "PLAYER_SELECTION":
-      return <PlayerSelectionScreen />;
+      return <PlayerSelectionScreen onStartGame={onStartGame} />;
     case "DRAFTING":
       return <DraftingScreen />;
     case "BUREAUCRACY":

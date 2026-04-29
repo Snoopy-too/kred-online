@@ -8,7 +8,8 @@ import type {
   BureaucracyPlayerState,
   TrackedMove,
   GameState,
-  PromotionHistoryEntry
+  PromotionHistoryEntry,
+  Tile
 } from "../types";
 import { 
   getAvailablePurchases, 
@@ -20,7 +21,7 @@ import {
   calculatePlayerKredcoin,
   getBureaucracyTurnOrder
 } from "../game";
-import { TILE_KREDCOIN_VALUES } from "../config";
+import { TILE_KREDCOIN_VALUES, BANK_SPACES_BY_PLAYER_COUNT } from "../config";
 import { checkBureaucracyWinCondition } from "../rules";
 import { getPlayerName, formatWinnerNames, getPieceById } from "../utils";
 
@@ -61,6 +62,10 @@ interface useBureaucracyHandlersProps {
   calculateMoves: (original: Piece[], current: Piece[], playerId: number) => TrackedMove[];
   validateSingleMove: (move: TrackedMove, playerId: number, pieces: Piece[], playerCount: number) => { isValid: boolean; reason?: string };
   calculatePieceRotation: (position: any, playerCount: number, locationId?: string) => number;
+  /** When both draft and campaign were skipped, after each bureaucracy round
+   *  redistribute random tile hands and stay in BUREAUCRACY rather than
+   *  returning to CAMPAIGN with empty hands. */
+  skipDraftAndCampaign?: boolean;
 }
 
 export function useBureaucracyHandlers({
@@ -100,6 +105,7 @@ export function useBureaucracyHandlers({
   calculateMoves,
   validateSingleMove,
   calculatePieceRotation,
+  skipDraftAndCampaign = false,
 }: useBureaucracyHandlersProps) {
 
   const handleSelectBureaucracyMenuItem = React.useCallback((item: BureaucracyMenuItem) => {
@@ -341,22 +347,74 @@ export function useBureaucracyHandlers({
         return;
       }
 
+      // No winner — if both draft and campaign were skipped, redistribute
+      // random tile hands and start the next BUREAUCRACY round directly.
+      // Without this branch, the standard "tiles came from the bank" code
+      // below leaves every player with empty hands (no campaign means no
+      // banking happened) and the next bureaucracy round has nothing to spend.
+      if (skipDraftAndCampaign) {
+        const allTiles: Tile[] = [];
+        for (let i = 1; i <= 24; i++) {
+          allTiles.push({
+            id: i,
+            url: `./images/${String(i).padStart(2, "0")}.svg`,
+          });
+        }
+        if (playerCount === 5) {
+          allTiles.push({
+            id: 25,
+            url: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'/%3e`,
+          });
+        }
+        const shuffledTiles = [...allTiles].sort(() => Math.random() - 0.5);
+        const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+        const tilesPerPlayer = bankSpaces.length / playerCount;
+
+        const redistributed = players.map((p, index) => ({
+          ...p,
+          hand: [],
+          keptTiles: [],
+          bureaucracyTiles: shuffledTiles.slice(
+            index * tilesPerPlayer,
+            index * tilesPerPlayer + tilesPerPlayer,
+          ),
+        }));
+
+        setPlayers(redistributed);
+        setBankedTiles([]);
+
+        const nextTurnOrder = getBureaucracyTurnOrder(redistributed, pieces);
+        const nextStates: BureaucracyPlayerState[] = redistributed.map((p) => ({
+          playerId: p.id,
+          initialKredcoin: calculatePlayerKredcoin(p),
+          remainingKredcoin: calculatePlayerKredcoin(p),
+          turnComplete: false,
+          purchases: [],
+        }));
+        setBureaucracyTurnOrder(nextTurnOrder);
+        setBureaucracyStates(nextStates);
+        setCurrentBureaucracyPlayerIndex(0);
+        setCurrentPlayerIndex(0);
+        setShowBureaucracyMenu(true);
+        // gameState stays "BUREAUCRACY"
+        return;
+      }
+
       // No winner - transition back to campaign for next round
-      // Return ALL tiles (face-up and face-down) from the bank to hands
+      // Return ALL tiles (face-up and face-down) from the bank to hands.
+      // Face-up tiles come from bankedTiles, unspent face-down tiles come from player.bureaucracyTiles.
       const updatedPlayers = players.map((p) => {
-        // Find all tiles in this player's bank (both face-up in bankedTiles and face-down in bureaucracyTiles)
-        const playerBankedTiles = bankedTiles
-          .filter(bt => bt.ownerId === p.id)
+        // Find all face-up tiles in this player's bank
+        const faceUpBankedTiles = bankedTiles
+          .filter(bt => bt.ownerId === p.id && bt.faceUp)
           .map(bt => bt.tile);
         
-        // Safety check: p.bureaucracyTiles might already contain the face-down ones, 
-        // but bankedTiles should have the full board state of the bank.
-        // Actually, p.bureaucracyTiles was used for funding, while bankedTiles are the board visuals.
         // Rule 44: start of new campaign, take all tiles from bank into hand.
+        // We combine unspent funding (face-down) and rejected tiles (face-up).
         return {
           ...p,
           hand: [],
-          keptTiles: playerBankedTiles,
+          keptTiles: [...faceUpBankedTiles, ...p.bureaucracyTiles],
           bureaucracyTiles: [],
         };
       });
