@@ -42,6 +42,7 @@ export interface MultiplayerProps {
   playerCount?: number;
   playerNames?: string[];
   skipDraft?: boolean;
+  skipCampaign?: boolean;
   multiplayerActions?: any;
   getStatePacketRef?: React.MutableRefObject<() => any>;
   applyStatePacketRef?: React.MutableRefObject<(packet: any) => void>;
@@ -56,7 +57,7 @@ export interface MultiplayerProps {
 }
 
 const App: React.FC<MultiplayerProps> = (props) => {
-  const { isMultiplayer = false, isHost = false, playerIndex, multiplayerActions, setActionDispatch, playerNames, onPhaseChange, onLegacyStateChange, applyStatePacketRef, pushStateRef, playerCount: multiplayerPlayerCount, skipDraft: multiplayerSkipDraft = false, hydrated = false } = props;
+  const { isMultiplayer = false, isHost = false, playerIndex, multiplayerActions, setActionDispatch, playerNames, onPhaseChange, onLegacyStateChange, applyStatePacketRef, pushStateRef, playerCount: multiplayerPlayerCount, skipDraft: multiplayerSkipDraft = false, skipCampaign: multiplayerSkipCampaign = false, hydrated = false } = props;
 
   // ─── Core State ─────────────────────────────────────────────────────────────
   const { gameState, players, pieces, boardTiles, bankedTiles, playerCount, currentPlayerIndex, moverPlayerIndex, campaignRole, draftRound, isTestMode, setGameState, setPlayers, setPieces, setBoardTiles, setBankedTiles, setPlayerCount, setCurrentPlayerIndex, setMoverPlayerIndex, setCampaignRole, setDraftRound, setIsTestMode } = useGameState();
@@ -289,10 +290,10 @@ const App: React.FC<MultiplayerProps> = (props) => {
   React.useEffect(() => {
     if (isMultiplayer && isHost && hydrated && !hasAutoStartedRef.current && multiplayerPlayerCount && multiplayerPlayerCount > 0 && players.length === 0) {
       hasAutoStartedRef.current = true;
-      console.log('[APP] Auto-starting multiplayer game with', multiplayerPlayerCount, 'players', multiplayerSkipDraft ? '(skip draft)' : '');
-      gameFlowHandlers.handleStartGame(multiplayerPlayerCount, false, multiplayerSkipDraft, false);
+      console.log('[APP] Auto-starting multiplayer game with', multiplayerPlayerCount, 'players', multiplayerSkipDraft ? '(skip draft)' : '', multiplayerSkipCampaign ? '(skip campaign)' : '');
+      gameFlowHandlers.handleStartGame(multiplayerPlayerCount, false, multiplayerSkipDraft, multiplayerSkipCampaign);
     }
-  }, [isMultiplayer, isHost, hydrated, multiplayerPlayerCount, players.length, gameFlowHandlers, multiplayerSkipDraft]);
+  }, [isMultiplayer, isHost, hydrated, multiplayerPlayerCount, players.length, gameFlowHandlers, multiplayerSkipDraft, multiplayerSkipCampaign]);
 
   useMultiplayerHost({ isHost, setActionDispatch, players, playerCount, currentPlayerIndex, draftRound, gameState, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleBureaucracyPieceMove: bureaucracyHandlers.handleBureaucracyPieceMove, handleSelectBureaucracyMenuItem: bureaucracyHandlers.handleSelectBureaucracyMenuItem, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleResetTurn: pieceMovementHandlers.handleResetTurn, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn, completeBureaucracyTurn: bureaucracyHandlers.completeBureaucracyTurn, handleDoneWithBureaucracyAction: bureaucracyHandlers.handleDoneWithBureaucracyAction, handleResetBureaucracyAction: bureaucracyHandlers.handleResetBureaucracyAction, handleBureaucracyPiecePromote: bureaucracyHandlers.handleBureaucracyPiecePromote, setTakeAdvantagePurchase, setCurrentBureaucracyPurchase } as any);
 

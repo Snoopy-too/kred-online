@@ -33,7 +33,7 @@ function PhaseLogger({ currentPhase }: { currentPhase: string | null }) {
 function KredAppInner() {
   const {
     lobbyId, lobbyPin, lobbyStatus, isHost, playerIndex, playerCount,
-    lobbyPlayers, skipDraft, diagnosticEnabled,
+    lobbyPlayers, skipDraft, skipCampaign, diagnosticEnabled,
   } = useLobby();
   const actions = useSupabaseActions();
 
@@ -114,6 +114,7 @@ function KredAppInner() {
             playerCount={playerCount ?? 3}
             playerNames={lobbyPlayers.map(p => p.name)}
             skipDraft={isHost ? skipDraft : false}
+            skipCampaign={isHost ? skipCampaign : false}
             multiplayerActions={{
               createGame: async () => { },
               joinGame: async () => { },

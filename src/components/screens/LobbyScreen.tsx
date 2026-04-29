@@ -8,6 +8,7 @@ export default function LobbyScreen() {
   const [hostName, setHostName] = useState('');
   const [selectedPlayerCount, setSelectedPlayerCount] = useState(3);
   const [skipDraftOption, setSkipDraftOption] = useState(false);
+  const [skipCampaignOption, setSkipCampaignOption] = useState(false);
   const [diagnosticEnabled, setDiagnosticEnabled] = useState(false);
   const [joinPin, setJoinPin] = useState('');
   const [guestName, setGuestName] = useState('');
@@ -19,7 +20,7 @@ export default function LobbyScreen() {
     setError(null);
     setLoading(true);
     try {
-      await createLobby(hostName.trim(), selectedPlayerCount, skipDraftOption, diagnosticEnabled);
+      await createLobby(hostName.trim(), selectedPlayerCount, skipDraftOption, diagnosticEnabled, skipCampaignOption);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create lobby');
     } finally {
@@ -149,12 +150,25 @@ export default function LobbyScreen() {
                 <input
                   type="checkbox"
                   checked={skipDraftOption}
-                  onChange={(e) => setSkipDraftOption(e.target.checked)}
+                  onChange={(e) => { setSkipDraftOption(e.target.checked); if (!e.target.checked) setSkipCampaignOption(false); }}
                   className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
                 />
                 <span className="text-sm text-slate-600">
                   <span className="font-semibold text-amber-700">Skip Draft</span>
                   <span className="text-slate-400 ml-1">(testing — tiles distributed randomly)</span>
+                </span>
+              </label>
+              <label className={`flex items-center gap-3 select-none p-3 rounded-lg border border-dashed transition-colors ${skipDraftOption ? 'cursor-pointer hover:border-orange-400 hover:bg-orange-50 border-slate-300' : 'cursor-not-allowed opacity-50 border-slate-200'}`}>
+                <input
+                  type="checkbox"
+                  checked={skipCampaignOption}
+                  disabled={!skipDraftOption}
+                  onChange={(e) => setSkipCampaignOption(e.target.checked)}
+                  className="w-4 h-4 rounded accent-orange-500 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <span className="text-sm text-slate-600">
+                  <span className="font-semibold text-orange-700">Skip Campaign</span>
+                  <span className="text-slate-400 ml-1">(testing — go directly to Bureaucracy)</span>
                 </span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-lg border border-dashed border-slate-300 hover:border-violet-400 hover:bg-violet-50 transition-colors">
