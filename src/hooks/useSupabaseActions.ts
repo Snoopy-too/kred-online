@@ -24,14 +24,7 @@ export function useSupabaseActions() {
    * - Guest: inserts into kred_game_actions table
    */
   const emitAction = useCallback(async (actionType: string, payload: any = {}) => {
-    if (!lobbyId || !userId) {
-      logDiag({
-        category: 'error',
-        event_type: 'EMIT_ACTION_NO_AUTH',
-        payload: { actionType, hasLobbyId: !!lobbyId, hasUserId: !!userId },
-      });
-      return;
-    }
+    if (!lobbyId || !userId) return;
 
     logDiag({
       category: 'move',

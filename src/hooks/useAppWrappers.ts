@@ -1,7 +1,6 @@
 import React from "react";
 import type { Piece } from "../types";
 import { getBureaucracyMenu, getAvailablePurchases } from "../game";
-import { useDiagnostics } from "../diagnostics";
 
 interface AppWrappersProps {
   isMultiplayer: boolean;
@@ -48,7 +47,6 @@ export function useAppWrappers({
   playerCount,
   setShowFinishTurnConfirm,
 }: AppWrappersProps) {
-  const logDiag = useDiagnostics();
 
   // Wrap piece movement for multiplayer
   const wrappedPieceMove = React.useCallback(async (pieceId: string, newPosition: any, locationId: string) => {
@@ -169,41 +167,17 @@ export function useAppWrappers({
   // emit the action — the host's BUREAUCRACY_COMPLETE handler runs
   // completeBureaucracyTurn unconditionally.
   const wrappedBureaucracyConfirmFinishTurn = React.useCallback(async () => {
-    logDiag({
-      category: 'system',
-      event_type: 'CONFIRM_FINISH_TURN_ENTERED',
-      payload: {
-        isMultiplayer,
-        hasMultiplayerActions: !!multiplayerActions,
-        hasBureaucracyComplete: typeof multiplayerActions?.bureaucracyComplete === 'function',
-      },
-    });
     if (isMultiplayer && multiplayerActions) {
       setShowFinishTurnConfirm?.({ isOpen: false, remainingKredcoin: 0 });
       try {
         await multiplayerActions.bureaucracyComplete();
-        logDiag({
-          category: 'system',
-          event_type: 'CONFIRM_FINISH_TURN_EMITTED',
-          payload: {},
-        });
-      } catch (error: any) {
+      } catch (error) {
         console.error('[MULTIPLAYER] Bureaucracy complete sync failed:', error);
-        logDiag({
-          category: 'error',
-          event_type: 'CONFIRM_FINISH_TURN_THREW',
-          payload: { message: String(error?.message ?? error) },
-        });
       }
     } else {
-      logDiag({
-        category: 'system',
-        event_type: 'CONFIRM_FINISH_TURN_ELSE_BRANCH',
-        payload: { isMultiplayer, hasMultiplayerActions: !!multiplayerActions },
-      });
       bureaucracyHandlers.handleConfirmFinishTurn();
     }
-  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers, setShowFinishTurnConfirm, logDiag]);
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers, setShowFinishTurnConfirm]);
 
   // Wrap tile placement for multiplayer
   const wrappedPlaceTile = React.useCallback(async (tileId: number, targetSpace: { ownerId: number; position: any; rotation: number }) => {

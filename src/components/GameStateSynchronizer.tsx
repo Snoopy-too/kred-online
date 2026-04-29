@@ -267,7 +267,14 @@ export default function GameStateSynchronizer({
 
       // flushSync ensures the setState inside processAction commits before the
       // next action runs. React 19 + flushSync is legal inside a microtask.
-      flushSync(() => { processAction(action); });
+      // Catch throws so a buggy handler can't permanently jam the queue —
+      // without this, isProcessingQueueRef.current stays true and every
+      // subsequent action is silently dropped.
+      try {
+        flushSync(() => { processAction(action); });
+      } catch (err) {
+        console.error('[SYNC] processAction threw, dropping action and continuing queue', { actionType: action?.action_type, err });
+      }
 
       if (SYNC_MICROTASK_YIELD) {
         queueMicrotask(next);
