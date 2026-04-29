@@ -1,5 +1,6 @@
 import React from "react";
 import type { Player, Piece } from "../types";
+import type { PromotionHistoryEntry } from "../types/bureaucracy";
 import { TILE_SPACES_BY_PLAYER_COUNT } from "../config";
 import { initializeCampaignPieces, performPromotion } from "../game";
 
@@ -40,6 +41,7 @@ interface useMultiplayerHostProps {
   handleBureaucracyPiecePromote: (pieceId: string) => void;
   setTakeAdvantagePurchase: (purchase: any) => void;
   setCurrentBureaucracyPurchase: (purchase: any) => void;
+  setPromotionHistory: React.Dispatch<React.SetStateAction<PromotionHistoryEntry[]>>;
 }
 
 export function useMultiplayerHost({
@@ -79,6 +81,7 @@ export function useMultiplayerHost({
   handleBureaucracyPiecePromote,
   setTakeAdvantagePurchase,
   setCurrentBureaucracyPurchase,
+  setPromotionHistory,
 }: useMultiplayerHostProps) {
   React.useLayoutEffect(() => {
     if (!setActionDispatch || !isHost) return;
@@ -234,8 +237,27 @@ export function useMultiplayerHost({
           // Because BUREAUCRACY_PURCHASE and BUREAUCRACY_PROMOTE might arrive batched,
           // the React state for currentBureaucracyPurchase might still be null in the closure.
           // We trust the client has verified the purchase.
-          const result = performPromotion(pieces, action.payload.pieceId);
+          const pieceId = action.payload.pieceId;
+          const result = performPromotion(pieces, pieceId);
           if (result.success) {
+            // Capture the swap so BUREAUCRACY_DONE validation (which requires
+            // promotionHistory.length > 0) and reset/undo can work on the host.
+            const pieceToPromote = pieces.find(p => p.id === pieceId);
+            const communityPieceBefore = pieces.find(
+              p => p.id !== pieceId &&
+                result.pieces.find(rp => rp.id === p.id)?.locationId === pieceToPromote?.locationId
+            );
+            if (pieceToPromote && communityPieceBefore) {
+              setPromotionHistory(prev => [
+                ...prev,
+                {
+                  promotedPieceId: pieceId,
+                  promotedPieceOriginalLocationId: pieceToPromote.locationId!,
+                  communityPieceId: communityPieceBefore.id,
+                  communityPieceOriginalLocationId: communityPieceBefore.locationId!,
+                },
+              ]);
+            }
             setPieces(result.pieces);
           }
           break;
@@ -287,5 +309,6 @@ export function useMultiplayerHost({
     handleBureaucracyPiecePromote,
     setTakeAdvantagePurchase,
     setCurrentBureaucracyPurchase,
+    setPromotionHistory,
   ]);
 }
