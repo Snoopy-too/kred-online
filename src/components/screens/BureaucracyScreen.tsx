@@ -736,17 +736,7 @@ const BureaucracyScreen: React.FC = () => {
                 >
                   Reset
                 </button>
-                {isPromotionPurchase && promotionCount > 0 && (
-                  <button
-                    onClick={() => isMyTurn && onUndoLastPromotion()}
-                    disabled={!isMyTurn}
-                    className={`px-6 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${
-                      isMyTurn ? "bg-orange-600 hover:bg-orange-500" : "bg-gray-600 cursor-not-allowed opacity-50"
-                    }`}
-                  >
-                    Undo
-                  </button>
-                )}
+
                 <button
                   onClick={() => isMyTurn && onDoneWithAction()}
                   disabled={!isMyTurn || (isPromotionPurchase && promotionCount === 0)}
