@@ -109,6 +109,31 @@ const BureaucracyScreen: React.FC = () => {
   const viewerPlayerId = isMultiplayer && playerIndex !== undefined ? playerIndex + 1 : currentPlayerId;
   const viewerState = bureaucracyStates.find((s) => s.playerId === viewerPlayerId);
 
+  /**
+   * Checks whether the current player has at least one piece that can be
+   * promoted at a given location type (OFFICE, ROSTRUM, or SEAT).
+   *
+   * A piece is promotable when:
+   *  - It belongs to the current player (locationId starts with `p{id}_`)
+   *  - It occupies the correct location type
+   *  - It is NOT already a Pawn (cannot promote further)
+   *  - If it is a Heel, the player must not already own a Pawn
+   */
+  const hasPromotablePieces = (locationType: string): boolean => {
+    const locationKey = locationType.toLowerCase(); // "office" | "rostrum" | "seat"
+    const playerPrefix = `p${currentPlayerId}_`;
+    const playerAlreadyHasPawn = pieces.some(
+      (p) => p.name === "Pawn" && p.locationId?.startsWith(playerPrefix)
+    );
+
+    return pieces.some((piece) => {
+      if (piece.name === "Pawn") return false;
+      if (piece.name === "Heel" && playerAlreadyHasPawn) return false;
+      if (!piece.locationId?.startsWith(playerPrefix)) return false;
+      return piece.locationId.includes(`_${locationKey}`);
+    });
+  };
+
   const boardRotation = boardRotationEnabled
     ? (isMultiplayer && playerIndex !== undefined
       ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[playerIndex + 1] ?? 0
@@ -610,7 +635,11 @@ const BureaucracyScreen: React.FC = () => {
                       item.type === "CREDIBILITY" &&
                       currentPlayer &&
                       currentPlayer.credibility >= 3;
-                    const isEnabled = canAfford && !isCredibilityAtMax && isMyTurn;
+                    const hasNoPromotionTargets =
+                      item.type === "PROMOTION" &&
+                      item.promotionLocation &&
+                      !hasPromotablePieces(item.promotionLocation);
+                    const isEnabled = canAfford && !isCredibilityAtMax && !hasNoPromotionTargets && isMyTurn;
                     return (
                       <button
                         key={item.id}
