@@ -130,6 +130,9 @@ export function useBureaucracyHandlers({
     setCurrentBureaucracyPurchase(purchase);
     setShowBureaucracyMenu(false);
     setBureaucracyMoves([]);
+    // Always start each new purchase with a clean promotion history so that a
+    // previous failed or cancelled promotion attempt cannot bleed into this one.
+    setPromotionHistory([]);
 
     // Take snapshot of game state before action
     setBureaucracySnapshot(createGameStateSnapshot(pieces, boardTiles));
@@ -141,10 +144,10 @@ export function useBureaucracyHandlers({
           p.id === currentPlayerId
             ? { ...p, credibility: Math.min(10, p.credibility + 1) }
             : p
-        )
+      )
       );
     }
-  }, [bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, pieces, boardTiles, players, setBureaucracyValidationError, setCurrentBureaucracyPurchase, setShowBureaucracyMenu, setBureaucracyMoves, setBureaucracySnapshot, setPlayers]);
+  }, [bureaucracyTurnOrder, currentBureaucracyPlayerIndex, bureaucracyStates, pieces, boardTiles, players, setBureaucracyValidationError, setCurrentBureaucracyPurchase, setShowBureaucracyMenu, setBureaucracyMoves, setBureaucracySnapshot, setPromotionHistory, setPlayers]);
 
   const handleDoneWithBureaucracyAction = React.useCallback(() => {
     if (!currentBureaucracyPurchase) return;
@@ -288,6 +291,10 @@ export function useBureaucracyHandlers({
       setShowBureaucracyMenu(true);
       setCurrentBureaucracyPurchase(null);
       setBureaucracyMoves([]);
+      // Clear stale promotion entries so a subsequent attempt starts fresh.
+      // Without this, leftover entries cap the maxPromotions counter and
+      // prevent the player from promoting on the very next try.
+      setPromotionHistory([]);
       return;
     }
 
