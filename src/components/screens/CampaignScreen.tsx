@@ -1821,7 +1821,7 @@ const CampaignScreen: React.FC = () => {
               CHALLENGED!
             </h2>
             <p className="text-slate-300 mb-4">
-              The placed tile is revealed to all players as evidence.
+              Let’s see what was played…
             </p>
             <div className="bg-stone-100 w-20 h-40 p-1 rounded-lg shadow-lg border-2 border-gray-300 mx-auto mb-6">
               <img

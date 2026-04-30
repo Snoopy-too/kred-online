@@ -190,15 +190,38 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
     !!message &&
     !(targetPlayerId && currentPlayerId && targetPlayerId !== currentPlayerId);
 
+  const [isFadingOut, setIsFadingOut] = React.useState(false);
+
   useEffect(() => {
     if (visible) {
+      setIsFadingOut(false);
       logDiag({
         category: 'dialog',
         event_type: 'DIALOG_OPENED',
         payload: { dialog_type: 'ChallengeResultMessage', message },
       });
+
+      const fadeTimer = setTimeout(() => {
+        setIsFadingOut(true);
+      }, 3000);
+
+      const closeTimer = setTimeout(() => {
+        if (onClose) {
+          logDiag({
+            category: 'dialog',
+            event_type: 'DIALOG_DISMISSED',
+            payload: { dialog_type: 'ChallengeResultMessage', auto: true },
+          });
+          onClose();
+        }
+      }, 4000);
+
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(closeTimer);
+      };
     }
-  }, [visible, message, logDiag]);
+  }, [visible, message, logDiag, onClose]);
 
   if (!visible) return null;
 
@@ -212,7 +235,9 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
 
   return (
     <div
-      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4"
+      className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 p-4 transition-opacity duration-1000 ${
+        isFadingOut ? "opacity-0" : "opacity-100"
+      }`}
       aria-live="polite"
       role="status"
     >
@@ -223,22 +248,7 @@ export const ChallengeResultMessage: React.FC<ChallengeResultMessageProps> = ({
           }`}
       >
         <h2 className="text-2xl font-bold mb-2">{heading}</h2>
-        <p className="text-lg mb-4">{message}</p>
-        {onClose && (
-          <button
-            onClick={() => {
-              logDiag({
-                category: 'dialog',
-                event_type: 'DIALOG_DISMISSED',
-                payload: { dialog_type: 'ChallengeResultMessage' },
-              });
-              onClose();
-            }}
-            className="px-4 py-1.5 bg-white/20 hover:bg-white/30 text-white text-sm rounded transition-colors"
-          >
-            Dismiss
-          </button>
-        )}
+        <p className="text-lg mb-0">{message}</p>
       </div>
     </div>
   );
