@@ -620,12 +620,12 @@ export function useChallengeFlowHandlers({
         );
         
         setChallengeResultMessage(
-          `Challenge Failed: ${challengerName} challenged, but ${challengedPlayerName} played the tile perfectly.`
+          `Challenge Failed: ${challengerName} challenged, but ${challengedPlayerName} played the tile honestly.`
         );
         setChallengeResultMessagePlayerId(null);
 
         addGameLog(
-          `${challengerName} lost 1 credibility: Unsuccessful challenge - tile was played perfectly`
+          `${challengerName} lost 1 credibility: Unsuccessful challenge - tile was played honestly`
         );
 
         finalizeTilePlay(true, challengerId);

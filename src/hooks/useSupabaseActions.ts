@@ -123,6 +123,7 @@ export function useSupabaseActions() {
   const bureaucracyComplete = useCallback(() => emitAction('BUREAUCRACY_COMPLETE'), [emitAction]);
 
   const resetTurn = useCallback(() => emitAction('RESET_TURN'), [emitAction]);
+  const resetPiecesCorrection = useCallback(() => emitAction('RESET_PIECES_CORRECTION'), [emitAction]);
 
   return {
     // Core
@@ -152,5 +153,6 @@ export function useSupabaseActions() {
     promoteBureaucracyPiece,
     bureaucracyComplete,
     resetTurn,
+    resetPiecesCorrection,
   };
 }
