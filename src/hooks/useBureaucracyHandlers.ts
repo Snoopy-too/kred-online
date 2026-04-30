@@ -170,23 +170,51 @@ export function useBureaucracyHandlers({
         validationMessage =
           "No promotion was performed. Please click a piece to promote it.";
       } else {
-        // Validate every promotion in the history
+        // Reconstruct the expected post-promotion pieces by replaying every
+        // recorded promotion on top of the snapshot.  This avoids a
+        // multiplayer race where a host state-sync can overwrite the guest's
+        // local `pieces` back to the pre-promotion state before "Done" runs,
+        // causing validation against the stale `pieces` to fail.
+        let reconstructedPieces = snapshot.pieces.map((p: Piece) => ({ ...p }));
         let allValid = true;
+
         for (const entry of promotionHistory) {
-          const validation = validatePromotion(
-            pieces,
+          // performPromotion validates piece type, community piece
+          // availability, etc. internally before swapping.
+          const promotionResult = performPromotion(reconstructedPieces, entry.promotedPieceId);
+
+          if (!promotionResult.success) {
+            allValid = false;
+            validationMessage = promotionResult.reason || "Promotion failed during replay";
+            break;
+          }
+
+          // Validate the swap result: checks location type, player
+          // ownership, and that the correct higher-tier piece was placed.
+          const postValidation = validatePromotion(
+            promotionResult.pieces,
             entry.promotedPieceId,
             currentBureaucracyPurchase.item.promotionLocation!,
             currentPlayerId,
-            snapshot.pieces
+            reconstructedPieces
           );
-          if (!validation.isValid) {
+
+          if (!postValidation.isValid) {
             allValid = false;
-            validationMessage = validation.reason;
+            validationMessage = postValidation.reason;
             break;
           }
+
+          // Advance reconstructed state for next iteration
+          reconstructedPieces = promotionResult.pieces;
         }
-        if (allValid) isValid = true;
+
+        if (allValid) {
+          isValid = true;
+          // Ensure `pieces` reflects the reconstructed promoted state
+          // in case a state-sync clobbered the guest's local copy.
+          setPieces(reconstructedPieces);
+        }
       }
     } else if (currentBureaucracyPurchase.item.type === "MOVE") {
       // Use the same calculateMoves logic as Campaign phase
