@@ -1678,7 +1678,7 @@ const CampaignScreen: React.FC = () => {
                     Reset Turn
                   </button>
                 )}
-                {gameState === "CORRECTION_REQUIRED" && playedTile && (
+                {gameState === "CORRECTION_REQUIRED" && (
                   <button
                     onClick={onResetPiecesCorrection}
                     className="w-full px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-500 transition-colors shadow-md"
