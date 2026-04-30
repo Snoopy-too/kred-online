@@ -437,12 +437,15 @@ export function useBureaucracyHandlers({
           .filter(bt => bt.ownerId === p.id && bt.faceUp)
           .map(bt => bt.tile);
         
-        // Rule 44: start of new campaign, take all tiles from bank into hand.
-        // We combine unspent funding (face-down) and rejected tiles (face-up).
+        // If the player already has keptTiles (meaning they skipped directly to Bureaucracy),
+        // we preserve those keptTiles so they have a full hand for the upcoming Campaign phase.
+        // Otherwise, for normal play, we combine banked and unspent bureaucracy tiles.
+        const isSkipToBureaucracy = p.keptTiles && p.keptTiles.length > 0;
+        
         return {
           ...p,
           hand: [],
-          keptTiles: [...faceUpBankedTiles, ...p.bureaucracyTiles],
+          keptTiles: isSkipToBureaucracy ? p.keptTiles : [...faceUpBankedTiles, ...p.bureaucracyTiles],
           bureaucracyTiles: [],
         };
       });

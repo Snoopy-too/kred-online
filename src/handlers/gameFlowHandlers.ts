@@ -229,8 +229,8 @@ export function createGameFlowHandlers(
         return {
           ...player,
           hand: [],
-          keptTiles: [],
-          bureaucracyTiles: playerTiles,
+          keptTiles: [...playerTiles], // The full hand for the subsequent campaign
+          bureaucracyTiles: [...playerTiles], // Funding for the immediate bureaucracy phase
         };
       });
 
