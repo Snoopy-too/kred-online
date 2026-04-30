@@ -100,6 +100,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
       challengeResultMessage, challengeResultMessagePlayerId,
       pendingChallengerReward: null,
       bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
+      piecesAtCorrectionStart,
       serverAlert: null,
       stateVersion: 0, lastUpdated: Date.now(),
     });
@@ -147,6 +148,9 @@ const App: React.FC<MultiplayerProps> = (props) => {
         if (packet.piecesBeforeBonusMove) {
           setPiecesBeforeBonusMove(packet.piecesBeforeBonusMove);
         }
+        if (packet.piecesAtCorrectionStart) {
+          setPiecesAtCorrectionStart(packet.piecesAtCorrectionStart);
+        }
         logDiag({
           category: 'system',
           event_type: 'STATE_SYNC_APPLIED',
@@ -171,7 +175,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
-    bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
+    bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove, piecesAtCorrectionStart,
   ]);
 
   // ─── Multiplayer sync: host pushes state on change ──────────────────────────
@@ -188,7 +192,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
-    bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
+    bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove, piecesAtCorrectionStart,
   ]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
@@ -295,7 +299,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     }
   }, [isMultiplayer, isHost, hydrated, multiplayerPlayerCount, players.length, gameFlowHandlers, multiplayerSkipDraft, multiplayerSkipCampaign]);
 
-  useMultiplayerHost({ isHost, setActionDispatch, players, pieces, playerCount, currentPlayerIndex, draftRound, gameState, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleBureaucracyPieceMove: bureaucracyHandlers.handleBureaucracyPieceMove, handleSelectBureaucracyMenuItem: bureaucracyHandlers.handleSelectBureaucracyMenuItem, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleResetTurn: pieceMovementHandlers.handleResetTurn, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn, completeBureaucracyTurn: bureaucracyHandlers.completeBureaucracyTurn, handleDoneWithBureaucracyAction: bureaucracyHandlers.handleDoneWithBureaucracyAction, handleResetBureaucracyAction: bureaucracyHandlers.handleResetBureaucracyAction, handleBureaucracyPiecePromote: bureaucracyHandlers.handleBureaucracyPiecePromote, setTakeAdvantagePurchase, setCurrentBureaucracyPurchase, setPromotionHistory } as any);
+  useMultiplayerHost({ isHost, setActionDispatch, players, pieces, playerCount, currentPlayerIndex, draftRound, gameState, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleBureaucracyPieceMove: bureaucracyHandlers.handleBureaucracyPieceMove, handleSelectBureaucracyMenuItem: bureaucracyHandlers.handleSelectBureaucracyMenuItem, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleResetTurn: pieceMovementHandlers.handleResetTurn, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn, completeBureaucracyTurn: bureaucracyHandlers.completeBureaucracyTurn, handleDoneWithBureaucracyAction: bureaucracyHandlers.handleDoneWithBureaucracyAction, handleResetBureaucracyAction: bureaucracyHandlers.handleResetBureaucracyAction, handleBureaucracyPiecePromote: bureaucracyHandlers.handleBureaucracyPiecePromote, setTakeAdvantagePurchase, setCurrentBureaucracyPurchase, setPromotionHistory, forcePushState: pushStateRef ? () => pushStateRef.current?.() : undefined } as any);
 
   // ─── Derived values ─────────────────────────────────────────────────────────
 

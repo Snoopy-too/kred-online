@@ -659,13 +659,7 @@ export function useChallengeFlowHandlers({
           )(updatedPlayers);
         }
 
-        const credibilityResult = handleCredibilityGain(
-          challengerId,
-          1,
-          updatedPlayers
-        );
-        const finalPlayers = credibilityResult.newPlayers;
-        setPlayers(finalPlayers);
+        setPlayers(updatedPlayers);
 
         addGameLog(
           `Player ${playedTile.playerId} lost 1 credibility: Challenge succeeded - tile did not meet requirements`
@@ -677,14 +671,10 @@ export function useChallengeFlowHandlers({
           );
         }
 
-        const challenger = getPlayerById(finalPlayers, challengerId);
+        const challenger = getPlayerById(updatedPlayers, challengerId);
         const challengerName = challenger
           ? getPlayerName(challenger, challengerId)
           : "Player";
-        addGameLog(
-          `${challengerName} gained credibility for successful challenge (now ${challenger?.credibility ?? 0
-          })`
-        );
 
         if (challenger) {
           const hasTiles =
@@ -692,6 +682,8 @@ export function useChallengeFlowHandlers({
             challenger.bureaucracyTiles.length > 0;
 
           if (hasTiles) {
+            // Challenger chooses: restore 1 credibility OR use funding for a Bureaucracy action.
+            // The gain is deferred to the Take Advantage modal (Recover Credibility button).
             const reward = {
               challengerId,
               rewardType: 'TAKE_ADVANTAGE' as const,
@@ -700,7 +692,7 @@ export function useChallengeFlowHandlers({
             };
             setPendingChallengerReward(reward);
             pendingChallengerRewardRef.current = reward;
-            
+
             transitionToCorrectionPhase();
 
             setTimeout(() => {
@@ -710,8 +702,11 @@ export function useChallengeFlowHandlers({
 
             return;
           } else {
+            // No tiles to spend — challenger can only restore credibility, apply it directly.
+            const credibilityResult = handleCredibilityGain(challengerId, 1, updatedPlayers);
+            setPlayers(credibilityResult.newPlayers);
             addGameLog(
-              `${challengerName} has no tiles for Take Advantage - skipping reward`
+              `${challengerName} restored 1 credibility for successful challenge (now ${credibilityResult.newPlayers.find(p => p.id === challengerId)?.credibility ?? 0})`
             );
             setTakeAdvantageChallengerId(null);
             setTakeAdvantageChallengerCredibility(0);

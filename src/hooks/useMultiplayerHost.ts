@@ -21,7 +21,8 @@ interface useMultiplayerHostProps {
   setPlayers: (players: Player[] | ((prev: Player[]) => Player[])) => void;
   setDraftRound: (round: number) => void;
   handlePlaceTile: (tileId: number, targetSpace: any) => void;
-  handlePieceMove: (pieceId: string, position: any, location: string) => void;
+  handlePieceMove: (pieceId: string, position: any, location: string) => { success: boolean };
+  forcePushState?: () => void;
   handleBureaucracyPieceMove: (pieceId: string, position: any, location?: string) => void;
   handleSelectBureaucracyMenuItem: (item: any) => void;
   handleResetPiecesCorrection: () => void;
@@ -82,6 +83,7 @@ export function useMultiplayerHost({
   setTakeAdvantagePurchase,
   setCurrentBureaucracyPurchase,
   setPromotionHistory,
+  forcePushState,
 }: useMultiplayerHostProps) {
   React.useLayoutEffect(() => {
     if (!setActionDispatch || !isHost) return;
@@ -169,7 +171,11 @@ export function useMultiplayerHost({
           if (gameState === 'BUREAUCRACY') {
             handleBureaucracyPieceMove(pieceId, position, location);
           } else {
-            handlePieceMove(pieceId, position, location);
+            const result = handlePieceMove(pieceId, position, location);
+            if (!result.success) {
+              // Host rejected the move — force-push current state so guest snaps back
+              forcePushState?.();
+            }
           }
           break;
         }
