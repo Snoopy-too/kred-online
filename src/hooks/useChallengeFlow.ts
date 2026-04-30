@@ -20,40 +20,43 @@ import { useChallenge, useChallengeDispatch } from "../providers/ChallengeProvid
  * @returns Challenge flow state and management functions
  */
 export function useChallengeFlow() {
-  // Challenge reveal state — bystanders, bystanderIndex now from ChallengeProvider
-  const { bystanders, bystanderIndex } = useChallenge();
-  const { setBystanders, setBystanderIndex } = useChallengeDispatch();
-  const [isPrivatelyViewing, setIsPrivatelyViewing] = useState(false);
-  const [showChallengeRevealModal, setShowChallengeRevealModal] =
-    useState(false);
-  const [challengedTile, setChallengedTile] = useState<Tile | null>(null);
-
-  // Take Advantage modal and state
-  const [showTakeAdvantageModal, setShowTakeAdvantageModal] = useState(false);
-  const [takeAdvantageChallengerId, setTakeAdvantageChallengerId] = useState<
-    number | null
-  >(null);
-  const [
+  // State from ChallengeProvider
+  const {
+    bystanders,
+    bystanderIndex,
+    isPrivatelyViewing,
+    showChallengeRevealModal,
+    challengedTile,
+    showTakeAdvantageModal,
+    takeAdvantageChallengerId,
     takeAdvantageChallengerCredibility,
+    showTakeAdvantageTileSelection,
+    selectedTilesForAdvantage,
+    totalKredcoinForAdvantage,
+    showTakeAdvantageMenu,
+    takeAdvantagePurchase,
+    takeAdvantageValidationError,
+  } = useChallenge();
+
+  const {
+    setBystanders,
+    setBystanderIndex,
+    setIsPrivatelyViewing,
+    setShowChallengeRevealModal,
+    setChallengedTile,
+    setShowTakeAdvantageModal,
+    setTakeAdvantageChallengerId,
     setTakeAdvantageChallengerCredibility,
-  ] = useState<number>(0);
+    setShowTakeAdvantageTileSelection,
+    setSelectedTilesForAdvantage,
+    setTotalKredcoinForAdvantage,
+    setShowTakeAdvantageMenu,
+    setTakeAdvantagePurchase,
+    setTakeAdvantageValidationError,
+  } = useChallengeDispatch();
 
-  // Tile selection for advantage
-  const [showTakeAdvantageTileSelection, setShowTakeAdvantageTileSelection] =
-    useState(false);
-  const [selectedTilesForAdvantage, setSelectedTilesForAdvantage] = useState<
-    Tile[]
-  >([]);
-  const [totalKredcoinForAdvantage, setTotalKredcoinForAdvantage] = useState(0);
-
-  // Purchase menu and validation
-  const [showTakeAdvantageMenu, setShowTakeAdvantageMenu] = useState(false);
-  const [takeAdvantagePurchase, setTakeAdvantagePurchase] =
-    useState<BureaucracyPurchase | null>(null);
-  const [takeAdvantagePiecesSnapshot, setTakeAdvantagePiecesSnapshot] =
-    useState<Piece[]>([]);
-  const [takeAdvantageValidationError, setTakeAdvantageValidationError] =
-    useState<string | null>(null);
+  // This one remains local as it's not in the global state (yet)
+  const [takeAdvantagePiecesSnapshot, setTakeAdvantagePiecesSnapshot] = useState<Piece[]>([]);
 
   /**
    * Initialize the challenge reveal process.
