@@ -243,15 +243,18 @@ export function useAppWrappers({
     }
   }, [isMultiplayer, multiplayerActions, handleReceiverAcceptanceDecision]);
 
-  // Wrap reset pieces correction for multiplayer
+  // Wrap reset pieces correction for multiplayer — guest must NOT run locally
+  // (piecesAtCorrectionStart is maintained by the host; the guest's copy is
+  // empty/stale, so calling handleResetPiecesCorrection locally would be a no-op).
   const wrappedResetPiecesCorrection = React.useCallback(async () => {
-    handleResetPiecesCorrection();
     if (isMultiplayer && multiplayerActions) {
       try {
         await multiplayerActions.resetPiecesCorrection();
       } catch (error) {
         console.error('[MULTIPLAYER] Reset pieces correction sync failed:', error);
       }
+    } else {
+      handleResetPiecesCorrection();
     }
   }, [isMultiplayer, multiplayerActions, handleResetPiecesCorrection]);
 
