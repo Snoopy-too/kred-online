@@ -1688,7 +1688,7 @@ const CampaignScreen: React.FC = () => {
                 )}
                 {gameState === "CORRECTION_REQUIRED" && (
                   <button
-                    onClick={onEndTurn}
+                    onClick={onCorrectionComplete}
                     className="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 transition-colors shadow-md"
                   >
                     {isFreeAdvancer ? 'Complete Advance' : 'Complete Correction'}
