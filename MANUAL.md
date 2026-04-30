@@ -181,7 +181,7 @@ Restrictions:
 
 Move one of an opponent's **Marks or Heels** one space left or right:
 1. **Seat -> Adjacent Seat**: Move an opponent's Mark or Heel from a Seat to an adjacent Seat. Moving between domains (including into your own) is permitted.
-2. **Rostrum -> Adjacent Rostrum**: Move an opponent's Mark or Heel from a Rostrum to an adjacent Rostrum in another player's domain.
+2. **Rostrum -> Adjacent Rostrum**: Move an opponent's Mark or Heel from a Rostrum to an adjacent Rostrum in another player's domain. **Rostrum Rule**: The destination Rostrum's supporting seats do not need to be occupied — a player may use Influence to bring an opponent's piece onto their own adjacent Rostrum even if their own seats are empty.
 
 Restrictions:
 - Cannot Influence a **Pawn** into or out of any domain.
@@ -492,7 +492,7 @@ A winning setup achieved partway through Bureaucracy does not end the game immed
 ### 9.8 Rostrum-to-Rostrum Movement
 
 - **Organize**: A player may move their own piece from their Rostrum to an adjacent Rostrum in an opponent's domain.
-- **Influence**: A player may move an opponent's Mark or Heel from a Rostrum to an adjacent Rostrum.
+- **Influence**: A player may move an opponent's Mark or Heel from a Rostrum to an adjacent Rostrum. **Rostrum Rule**: The destination Rostrum's supporting seats do NOT need to be occupied for this move — a player may Influence an opponent's piece onto their own adjacent Rostrum even without the normal seat support.
 - Movement between Rostrums within the **same** domain is NOT possible (Rostrum 1 and Rostrum 2 are not adjacent).
 
 ---

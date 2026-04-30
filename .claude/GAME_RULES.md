@@ -59,6 +59,7 @@ From the official manual's "How the Pieces Move" section:
 - Move opponent's Mark or Heel one space left or right
 - Can move between Domains (including into your own)
 - Cannot Influence Pawns
+- **Rostrum Rule**: A player may move an opponent's piece from the opponent's Rostrum to their own adjacent Rostrum even if their own supporting seats are not occupied. The normal support-seat prerequisite is waived for this Influence move.
 
 ### Assist (Optional)
 

@@ -364,8 +364,8 @@ function validateInfluence(
     if (!isVacant(to, pieces)) return false;
     // Cannot influence a rostrum piece if it would leave opponent's office unsupported
     if (wouldLeaveOfficeUnsupported(from, pieces)) return false;
-    // Cannot place on destination rostrum if it lacks supporting seats
-    if (!isRostrumSupportedForPlacement(to, pieces)) return false;
+    // Rostrum Rule: Influence may place a piece on the destination rostrum even if
+    // that rostrum's supporting seats are not occupied (no isRostrumSupportedForPlacement check).
     return true;
   }
 
@@ -668,7 +668,8 @@ export function findLegalMoves(
         // Cannot influence a rostrum piece if it would leave opponent's office unsupported
         if (wouldLeaveOfficeUnsupported(piece.locationId, pieces)) continue;
         const adjRostrum = getAdjacentRostrum(piece.locationId, playerCount);
-        if (adjRostrum && isVacant(adjRostrum, pieces) && isRostrumSupportedForPlacement(adjRostrum, pieces)) {
+        // Rostrum Rule: no isRostrumSupportedForPlacement check for Influence
+        if (adjRostrum && isVacant(adjRostrum, pieces)) {
           moves.push({
             moveType,
             pieceId: piece.id,
