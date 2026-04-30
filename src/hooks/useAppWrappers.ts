@@ -23,6 +23,7 @@ interface AppWrappersProps {
   currentBureaucracyPlayerIndex?: number;
   playerCount?: number;
   setShowFinishTurnConfirm?: (state: { isOpen: boolean; remainingKredcoin: number }) => void;
+  isHost?: boolean;
 }
 
 export function useAppWrappers({
@@ -46,12 +47,13 @@ export function useAppWrappers({
   currentBureaucracyPlayerIndex,
   playerCount,
   setShowFinishTurnConfirm,
+  isHost,
 }: AppWrappersProps) {
 
   // Wrap piece movement for multiplayer
   const wrappedPieceMove = React.useCallback(async (pieceId: string, newPosition: any, locationId: string) => {
     const result = pieceMovementHandlers.handlePieceMove(pieceId, newPosition, locationId);
-    if (isMultiplayer && multiplayerActions && result.success) {
+    if (isMultiplayer && multiplayerActions && result.success && !isHost) {
       try {
         await multiplayerActions.movePiece(pieceId, newPosition, locationId);
       } catch (error) {
@@ -59,31 +61,31 @@ export function useAppWrappers({
       }
     }
     return result;
-  }, [isMultiplayer, multiplayerActions, pieceMovementHandlers]);
+  }, [isMultiplayer, multiplayerActions, pieceMovementHandlers, isHost]);
 
   // Wrap bureaucracy piece movement for multiplayer
   const wrappedBureaucracyPieceMove = React.useCallback(async (pieceId: string, newPosition: any, locationId: string) => {
     bureaucracyHandlers.handleBureaucracyPieceMove(pieceId, newPosition, locationId);
-    if (isMultiplayer && multiplayerActions) {
+    if (isMultiplayer && multiplayerActions && !isHost) {
       try {
         await multiplayerActions.movePiece(pieceId, newPosition, locationId);
       } catch (error) {
         console.error('[MULTIPLAYER] Bureaucracy piece movement sync failed:', error);
       }
     }
-  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers, isHost]);
 
   // Wrap bureaucracy piece promotion for multiplayer
   const wrappedBureaucracyPiecePromote = React.useCallback(async (pieceId: string) => {
     bureaucracyHandlers.handleBureaucracyPiecePromote(pieceId);
-    if (isMultiplayer && multiplayerActions) {
+    if (isMultiplayer && multiplayerActions && !isHost) {
       try {
         await multiplayerActions.promoteBureaucracyPiece?.(pieceId);
       } catch (error) {
         console.error('[MULTIPLAYER] Bureaucracy piece promote sync failed:', error);
       }
     }
-  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers, isHost]);
 
   // Wrap bureaucracy undo last promotion
   const wrappedBureaucracyUndoLastPromotion = React.useCallback(async () => {
