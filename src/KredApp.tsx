@@ -141,6 +141,7 @@ function KredAppInner() {
               promoteBureaucracyPiece: actions.promoteBureaucracyPiece,
               bureaucracyComplete: actions.bureaucracyComplete,
               resetTurn: actions.resetTurn,
+              resetPiecesCorrection: actions.resetPiecesCorrection,
               joinAsSpectator: async () => { },
             }}
             onLegacyStateChange={setLegacyState}
