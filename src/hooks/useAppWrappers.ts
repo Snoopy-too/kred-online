@@ -133,6 +133,18 @@ export function useAppWrappers({
     }
   }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
 
+  // Wrap bureaucracy cancel action (player changes their mind, returns to menu)
+  const wrappedBureaucracyCancelAction = React.useCallback(async () => {
+    bureaucracyHandlers.handleCancelBureaucracyAction();
+    if (isMultiplayer && multiplayerActions) {
+      try {
+        await multiplayerActions.purchaseBureaucracyCancel?.();
+      } catch (error) {
+        console.error('[MULTIPLAYER] Bureaucracy cancel sync failed:', error);
+      }
+    }
+  }, [isMultiplayer, multiplayerActions, bureaucracyHandlers]);
+
   // Wrap bureaucracy finish turn.
   //
   // In multiplayer, the confirmation modal ("you still have Kredcoin — are you
@@ -331,6 +343,7 @@ export function useAppWrappers({
     wrappedBureaucracySelectMenuItem,
     wrappedBureaucracyDoneWithAction,
     wrappedBureaucracyResetAction,
+    wrappedBureaucracyCancelAction,
     wrappedBureaucracyFinishTurn,
     wrappedBureaucracyConfirmFinishTurn,
   };

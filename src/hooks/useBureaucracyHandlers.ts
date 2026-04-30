@@ -506,6 +506,40 @@ export function useBureaucracyHandlers({
     setPromotionHistory([]);
   }, [bureaucracySnapshot, setPieces, setBoardTiles, setBureaucracyMoves, setBureaucracyValidationError, setPromotionHistory]);
 
+  /**
+   * Cancel the current purchase entirely and return to the actions menu.
+   * Unlike Reset (which keeps the purchase active), Cancel reverts all
+   * in-progress changes — including credibility if a CREDIBILITY item
+   * was selected — then clears the purchase and re-shows the menu.
+   */
+  const handleCancelBureaucracyAction = React.useCallback(() => {
+    // Revert pieces/board from snapshot
+    if (bureaucracySnapshot) {
+      setPieces(bureaucracySnapshot.pieces);
+      setBoardTiles(bureaucracySnapshot.boardTiles);
+    }
+
+    // If this was a CREDIBILITY purchase, revert the immediately-applied
+    // credibility bump (handleSelectBureaucracyMenuItem adds +1 on select)
+    if (currentBureaucracyPurchase?.item.type === "CREDIBILITY") {
+      const currentPlayerId = bureaucracyTurnOrder[currentBureaucracyPlayerIndex];
+      setPlayers(
+        players.map((p) =>
+          p.id === currentPlayerId
+            ? { ...p, credibility: Math.max(0, p.credibility - 1) }
+            : p
+        )
+      );
+    }
+
+    // Clear all action state and return to menu
+    setBureaucracyMoves([]);
+    setBureaucracyValidationError(null);
+    setPromotionHistory([]);
+    setCurrentBureaucracyPurchase(null);
+    setShowBureaucracyMenu(true);
+  }, [bureaucracySnapshot, currentBureaucracyPurchase, bureaucracyTurnOrder, currentBureaucracyPlayerIndex, players, setPieces, setBoardTiles, setPlayers, setBureaucracyMoves, setBureaucracyValidationError, setPromotionHistory, setCurrentBureaucracyPurchase, setShowBureaucracyMenu]);
+
   const handleCheckBureaucracyMove = React.useCallback(() => {
     if (
       !currentBureaucracyPurchase ||
@@ -743,6 +777,7 @@ export function useBureaucracyHandlers({
     handleCancelFinishTurn,
     handleClearBureaucracyValidationError,
     handleResetBureaucracyAction,
+    handleCancelBureaucracyAction,
     handleCheckBureaucracyMove,
     handleCloseBureaucracyMoveCheckResult,
     handleBureaucracyPieceMove,

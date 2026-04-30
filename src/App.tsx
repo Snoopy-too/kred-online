@@ -469,6 +469,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     promotionHistory,
     onClearValidationError: () => setBureaucracyValidationError(null),
     onResetAction: (wrappers as any).wrappedBureaucracyResetAction,
+    onCancelAction: (wrappers as any).wrappedBureaucracyCancelAction,
     onCheckMove: bureaucracyHandlers.handleCheckBureaucracyMove,
     showMoveCheckResult: showBureaucracyMoveCheckResult,
     moveCheckResult: bureaucracyMoveCheckResult,

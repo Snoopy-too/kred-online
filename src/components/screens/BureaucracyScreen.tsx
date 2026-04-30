@@ -35,6 +35,7 @@ interface BureaucracyScreenHandlers {
   onPiecePromote: (pieceId: string) => void;
   onClearValidationError: () => void;
   onResetAction: () => void;
+  onCancelAction: () => void;
   onCheckMove: () => void;
   showMoveCheckResult: boolean;
   moveCheckResult: { isValid: boolean; reason: string } | null;
@@ -64,6 +65,7 @@ const BureaucracyScreen: React.FC = () => {
     onPiecePromote,
     onClearValidationError,
     onResetAction,
+    onCancelAction,
     onCheckMove,
     showMoveCheckResult,
     moveCheckResult,
@@ -755,6 +757,15 @@ const BureaucracyScreen: React.FC = () => {
                   }`}
                 >
                   Done
+                </button>
+                <button
+                  onClick={() => isMyTurn && onCancelAction()}
+                  disabled={!isMyTurn}
+                  className={`px-6 py-3 text-white font-bold rounded-lg transition-colors shadow-lg ${
+                    isMyTurn ? "bg-red-700 hover:bg-red-600" : "bg-gray-600 cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  Cancel
                 </button>
               </div>
             </div>
