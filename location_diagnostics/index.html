@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Diagnostics</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Add base campaign background and styling */
+    body {
+      background-color: #1e293b; /* slate-800 */
+      color: #f1f5f9; /* slate-100 */
+    }
+  </style>
+</head>
+<body class="overflow-hidden w-screen h-screen">
+  <div id="root" class="w-full h-full"></div>
+  
+  <script>
+// Initial Game Board Coordinates (Migrated from src/config/board.ts)
+
+window.THREE_PLAYER_DROP_LOCATIONS = [
+  // Player 1 Seats
+  { id: "p1_seat1", position: { left: 48.25, top: 29.91 } },
+  { id: "p1_seat2", position: { left: 43.87, top: 32.62 } },
+  { id: "p1_seat3", position: { left: 39.96, top: 35.65 } },
+  { id: "p1_seat4", position: { left: 38.17, top: 39.19 } },
+  { id: "p1_seat5", position: { left: 37.3, top: 43.94 } },
+  { id: "p1_seat6", position: { left: 37.73, top: 48.54 } },
+  // Player 3 Seats
+  { id: "p3_seat1", position: { left: 40.17, top: 53.08 } },
+  { id: "p3_seat2", position: { left: 44.01, top: 56.13 } },
+  { id: "p3_seat3", position: { left: 48.46, top: 58.4 } },
+  { id: "p3_seat4", position: { left: 52.92, top: 58.18 } },
+  { id: "p3_seat5", position: { left: 57.71, top: 56.27 } },
+  { id: "p3_seat6", position: { left: 60.96, top: 53.51 } },
+  // Player 2 Seats
+  { id: "p2_seat1", position: { left: 63.98, top: 48.83 } },
+  { id: "p2_seat2", position: { left: 64.61, top: 44.16 } },
+  { id: "p2_seat3", position: { left: 63.76, top: 39.48 } },
+  { id: "p2_seat4", position: { left: 61.83, top: 35.25 } },
+  { id: "p2_seat5", position: { left: 57.39, top: 32.89 } },
+  { id: "p2_seat6", position: { left: 53.51, top: 30.86 } },
+  // Rostrums
+  { id: "p1_rostrum1", position: { left: 46.64, top: 22.25 } },
+  { id: "p1_rostrum2", position: { left: 29.84, top: 51.31 } },
+  { id: "p3_rostrum1", position: { left: 35.89, top: 59.51 } },
+  { id: "p3_rostrum2", position: { left: 66.07, top: 58.91 } },
+  { id: "p2_rostrum1", position: { left: 72.2, top: 52.48 } },
+  { id: "p2_rostrum2", position: { left: 54.82, top: 22.39 } },
+  // Offices
+  { id: "p1_office", position: { left: 31.95, top: 25.01 } },
+  { id: "p2_office", position: { left: 76.22, top: 36.38 } },
+  { id: "p3_office", position: { left: 44.03, top: 68.87 } },
+  // Community (18 spaces with proper spacing - no overlap with seats)
+  // Middle row (top: 46.0-47.8%)
+  { id: "community1", position: { left: 53.5, top: 47.8 } },
+  { id: "community2", position: { left: 43.7, top: 47.7 } },
+  { id: "community3", position: { left: 57.0, top: 46.0 } },
+  // Top row (top: 38.0%)
+  { id: "community4", position: { left: 45.2, top: 38.0 } },
+  { id: "community5", position: { left: 48.7, top: 38.0 } },
+  { id: "community6", position: { left: 52.2, top: 38.0 } },
+  { id: "community7", position: { left: 55.7, top: 38.0 } },
+  // Second row (top: 42.0%)
+  { id: "community8", position: { left: 45.2, top: 42.0 } },
+  { id: "community9", position: { left: 48.7, top: 42.0 } },
+  { id: "community10", position: { left: 52.2, top: 42.0 } },
+  { id: "community11", position: { left: 55.7, top: 42.0 } },
+  { id: "community12", position: { left: 50.4, top: 46.0 } },
+  // Bottom row (top: 50.0%)
+  { id: "community13", position: { left: 46.9, top: 50.0 } },
+  { id: "community14", position: { left: 50.4, top: 50.0 } },
+  { id: "community15", position: { left: 53.9, top: 50.0 } },
+  // Additional locations
+  { id: "community16", position: { left: 43.78, top: 44.51 } },
+  { id: "community17", position: { left: 42.53, top: 42.85 } },
+  { id: "community18", position: { left: 56.7, top: 49.51 } },
+];
+
+window.FOUR_PLAYER_DROP_LOCATIONS = [
+      { id: "p1_seat1", position: { left: 36.87, top: 39.26 } },
+      { id: "p1_seat2", position: { left: 35.30, top: 43.16 } },
+      { id: "p1_seat3", position: { left: 34.33, top: 47.17 } },
+      { id: "p1_seat4", position: { left: 34.03, top: 51.17 } },
+      { id: "p1_seat5", position: { left: 35.21, top: 54.98 } },
+      { id: "p1_seat6", position: { left: 36.96, top: 58.98 } },
+      { id: "p2_seat1", position: { left: 60.01, top: 36.43 } },
+      { id: "p2_seat2", position: { left: 56.01, top: 34.67 } },
+      { id: "p2_seat3", position: { left: 52.00, top: 33.50 } },
+      { id: "p2_seat4", position: { left: 48.10, top: 33.40 } },
+      { id: "p2_seat5", position: { left: 44.19, top: 34.57 } },
+      { id: "p2_seat6", position: { left: 40.28, top: 36.82 } },
+      { id: "p3_seat1", position: { left: 62.94, top: 59.18 } },
+      { id: "p3_seat2", position: { left: 64.79, top: 55.18 } },
+      { id: "p3_seat3", position: { left: 65.87, top: 51.07 } },
+      { id: "p3_seat4", position: { left: 65.87, top: 47.07 } },
+      { id: "p3_seat5", position: { left: 64.50, top: 42.97 } },
+      { id: "p3_seat6", position: { left: 62.84, top: 39.26 } },
+      { id: "p4_seat1", position: { left: 39.99, top: 62.21 } },
+      { id: "p4_seat2", position: { left: 44.19, top: 63.67 } },
+      { id: "p4_seat3", position: { left: 48.19, top: 64.94 } },
+      { id: "p4_seat4", position: { left: 52.00, top: 64.94 } },
+      { id: "p4_seat5", position: { left: 56.01, top: 63.67 } },
+      { id: "p4_seat6", position: { left: 59.81, top: 61.72 } },
+      { id: "p1_rostrum1", position: { left: 31.40, top: 34.77 } },
+      { id: "p1_rostrum2", position: { left: 31.79, top: 63.87 } },
+      { id: "p2_rostrum1", position: { left: 64.31, top: 31.15 } },
+      { id: "p2_rostrum2", position: { left: 35.89, top: 31.05 } },
+      { id: "p3_rostrum1", position: { left: 68.41, top: 63.57 } },
+      { id: "p3_rostrum2", position: { left: 68.60, top: 34.57 } },
+      { id: "p4_rostrum1", position: { left: 35.79, top: 67.68 } },
+      { id: "p4_rostrum2", position: { left: 64.31, top: 67.19 } },
+      { id: "p1_office", position: { left: 23.39, top: 58.20 } },
+      { id: "p2_office", position: { left: 40.97, top: 22.36 } },
+      { id: "p3_office", position: { left: 76.71, top: 40.04 } },
+      { id: "p4_office", position: { left: 59.23, top: 75.98 } },
+      { id: "community1", position: { left: 45.10, top: 42.20 } },
+      { id: "community2", position: { left: 48.20, top: 41.50 } },
+      { id: "community3", position: { left: 51.30, top: 41.60 } },
+      { id: "community4", position: { left: 54.80, top: 41.60 } },
+      { id: "community5", position: { left: 44.50, top: 45.60 } },
+      { id: "community6", position: { left: 48.00, top: 45.60 } },
+      { id: "community7", position: { left: 51.30, top: 45.60 } },
+      { id: "community8", position: { left: 55.00, top: 45.60 } },
+      { id: "community9", position: { left: 44.60, top: 49.60 } },
+      { id: "community10", position: { left: 48.20, top: 49.60 } },
+      { id: "community11", position: { left: 51.60, top: 49.60 } },
+      { id: "community12", position: { left: 55.20, top: 49.60 } },
+      { id: "community13", position: { left: 44.40, top: 53.60 } },
+      { id: "community14", position: { left: 48.10, top: 53.60 } },
+      { id: "community15", position: { left: 51.60, top: 53.60 } },
+      { id: "community16", position: { left: 55.20, top: 53.60 } },
+      { id: "community17", position: { left: 44.70, top: 57.50 } },
+      { id: "community18", position: { left: 48.20, top: 57.60 } },
+      { id: "community19", position: { left: 51.70, top: 57.60 } },
+      { id: "community20", position: { left: 55.20, top: 57.60 } },
+      { id: "community21", position: { left: 58.50, top: 45.25 } },
+      { id: "community22", position: { left: 59.20, top: 49.84 } },
+      { id: "community23", position: { left: 58.80, top: 53.93 } },
+      { id: "community24", position: { left: 50.00, top: 60.34 } },
+      { id: "community25", position: { left: 40.84, top: 46.53 } },
+      { id: "community26", position: { left: 40.94, top: 50.62 } },
+      { id: "community27", position: { left: 41.54, top: 55.13 } },
+    ];
+
+window.FIVE_PLAYER_DROP_LOCATIONS = [
+  // Player 1 Seats (pushed 2% outward from center for better spacing)
+  { id: "p1_seat1", position: { left: 29.48, top: 44.06 } },
+  { id: "p1_seat2", position: { left: 29.4, top: 47.67 } },
+  { id: "p1_seat3", position: { left: 29.52, top: 51.79 } },
+  { id: "p1_seat4", position: { left: 31.25, top: 54.83 } },
+  { id: "p1_seat5", position: { left: 33.33, top: 58.19 } },
+  { id: "p1_seat6", position: { left: 36.33, top: 60.69 } },
+  // Player 2 Seats
+  { id: "p2_seat1", position: { left: 45.22, top: 29.89 } },
+  { id: "p2_seat2", position: { left: 41.42, top: 30.76 } },
+  { id: "p2_seat3", position: { left: 38.06, top: 32.07 } },
+  { id: "p2_seat4", position: { left: 34.6, top: 34.12 } },
+  { id: "p2_seat5", position: { left: 32.85, top: 37.7 } },
+  { id: "p2_seat6", position: { left: 29.56, top: 40.64 } },
+  // Player 3 Seats
+  { id: "p3_seat1", position: { left: 64.67, top: 39.1 } },
+  { id: "p3_seat2", position: { left: 62.59, top: 35.96 } },
+  { id: "p3_seat3", position: { left: 59.41, top: 32.49 } },
+  { id: "p3_seat4", position: { left: 56.34, top: 31.2 } },
+  { id: "p3_seat5", position: { left: 52.8, top: 29.57 } },
+  { id: "p3_seat6", position: { left: 49.06, top: 29.24 } },
+  // Player 4 Seats
+  { id: "p4_seat1", position: { left: 60.93, top: 59.49 } },
+  { id: "p4_seat2", position: { left: 63.28, top: 56.67 } },
+  { id: "p4_seat3", position: { left: 65.38, top: 53.53 } },
+  { id: "p4_seat4", position: { left: 66.52, top: 50.17 } },
+  { id: "p4_seat5", position: { left: 66.52, top: 46.05 } },
+  { id: "p4_seat6", position: { left: 65.71, top: 42.47 } },
+  // Player 5 Seats
+  { id: "p5_seat1", position: { left: 39.34, top: 62.96 } },
+  { id: "p5_seat2", position: { left: 42.93, top: 64.04 } },
+  { id: "p5_seat3", position: { left: 46.75, top: 65.24 } },
+  { id: "p5_seat4", position: { left: 50.8, top: 65.35 } },
+  { id: "p5_seat5", position: { left: 54.96, top: 63.72 } },
+  { id: "p5_seat6", position: { left: 58.31, top: 61.88 } },
+  // Rostrums
+  { id: "p1_rostrum1", position: { left: 24.89, top: 45.32 } },
+  { id: "p1_rostrum2", position: { left: 31.85, top: 62.83 } },
+  { id: "p2_rostrum1", position: { left: 42.56, top: 26.12 } },
+  { id: "p2_rostrum2", position: { left: 27.08, top: 37.39 } },
+  { id: "p3_rostrum1", position: { left: 67.86, top: 35.44 } },
+  { id: "p3_rostrum2", position: { left: 51.37, top: 25.22 } },
+  { id: "p4_rostrum1", position: { left: 65.36, top: 61.27 } },
+  { id: "p4_rostrum2", position: { left: 70.77, top: 43.3 } },
+  { id: "p5_rostrum1", position: { left: 39.17, top: 67.54 } },
+  { id: "p5_rostrum2", position: { left: 58.79, top: 66.69 } },
+  // Offices
+  { id: "p1_office", position: { left: 15.7, top: 44.75 } },
+  { id: "p2_office", position: { left: 39.45, top: 17.1 } },
+  { id: "p3_office", position: { left: 75.18, top: 29.31 } },
+  { id: "p4_office", position: { left: 72.89, top: 65.24 } },
+  { id: "p5_office", position: { left: 36.22, top: 74.7 } },
+  // Community (40 spaces in organized grid - shifted southwest for better centering)
+  // Row 1 (top: 39.40)
+  { id: "community1", position: { left: 36.5, top: 39.4 } },
+  { id: "community2", position: { left: 40.0, top: 39.4 } },
+  { id: "community3", position: { left: 43.5, top: 39.4 } },
+  { id: "community4", position: { left: 47.0, top: 39.4 } },
+  { id: "community5", position: { left: 50.5, top: 39.4 } },
+  { id: "community6", position: { left: 54.0, top: 39.4 } },
+  { id: "community7", position: { left: 57.5, top: 39.4 } },
+  // Row 2 (top: 43.40)
+  { id: "community8", position: { left: 38.25, top: 43.4 } },
+  { id: "community9", position: { left: 41.75, top: 43.4 } },
+  { id: "community10", position: { left: 45.25, top: 43.4 } },
+  { id: "community11", position: { left: 48.75, top: 43.4 } },
+  { id: "community12", position: { left: 52.25, top: 43.4 } },
+  { id: "community13", position: { left: 55.75, top: 43.4 } },
+  // Row 3 (top: 47.40)
+  { id: "community14", position: { left: 36.5, top: 47.4 } },
+  { id: "community15", position: { left: 40.0, top: 47.4 } },
+  { id: "community16", position: { left: 43.5, top: 47.4 } },
+  { id: "community17", position: { left: 47.0, top: 47.4 } },
+  { id: "community18", position: { left: 50.5, top: 47.4 } },
+  { id: "community19", position: { left: 54.0, top: 47.4 } },
+  { id: "community20", position: { left: 57.5, top: 47.4 } },
+  // Row 4 (top: 51.40)
+  { id: "community21", position: { left: 38.25, top: 51.4 } },
+  { id: "community22", position: { left: 41.75, top: 51.4 } },
+  { id: "community23", position: { left: 45.25, top: 51.4 } },
+  { id: "community24", position: { left: 48.75, top: 51.4 } },
+  { id: "community25", position: { left: 52.25, top: 51.4 } },
+  { id: "community26", position: { left: 55.75, top: 51.4 } },
+  // Row 5 (top: 55.40)
+  { id: "community27", position: { left: 36.5, top: 55.4 } },
+  { id: "community28", position: { left: 40.0, top: 55.4 } },
+  { id: "community29", position: { left: 43.5, top: 55.4 } },
+  { id: "community30", position: { left: 47.0, top: 55.4 } },
+  { id: "community31", position: { left: 50.5, top: 55.4 } },
+  { id: "community32", position: { left: 54.0, top: 55.4 } },
+  { id: "community33", position: { left: 57.5, top: 55.4 } },
+  // Row 6 (top: 59.40)
+  { id: "community34", position: { left: 38.25, top: 59.4 } },
+  { id: "community35", position: { left: 41.75, top: 59.4 } },
+  { id: "community36", position: { left: 45.25, top: 59.4 } },
+  { id: "community37", position: { left: 48.75, top: 59.4 } },
+  { id: "community38", position: { left: 52.25, top: 59.4 } },
+  { id: "community39", position: { left: 55.75, top: 59.4 } },
+  // Extra space (centered at bottom)
+  { id: "community40", position: { left: 47.0, top: 62.9 } },
+];
+
+window.TILE_SPACES_BY_PLAYER_COUNT = {
+  3: [
+    { ownerId: 1, position: { left: 15.3, top: 44.76 }, rotation: 168.0 },
+    { ownerId: 2, position: { left: 75.42, top: 15.71 }, rotation: 288.0 },
+    { ownerId: 3, position: { left: 68.51, top: 75.24 }, rotation: 48.0 },
+  ],
+  4: [
+      { ownerId: 1, position: { left: 24.17, top: 68.64 }, rotation: 126 },
+      { ownerId: 2, position: { left: 31.51, top: 24.18 }, rotation: 218 },
+      { ownerId: 3, position: { left: 76.01, top: 31.34 }, rotation: 307 },
+      { ownerId: 4, position: { left: 68.54, top: 75.89 }, rotation: 37.5 },
+    ],
+    5: [
+    { ownerId: 1, position: { left: 14.64, top: 72.07 }, rotation: 93.0 },
+    { ownerId: 2, position: { left: 11.93, top: 25.49 }, rotation: 165.0 },
+    { ownerId: 3, position: { left: 58.59, top: 8.5 }, rotation: 237.0 },
+    { ownerId: 4, position: { left: 89.53, top: 44.43 }, rotation: 309.0 },
+    { ownerId: 5, position: { left: 63.07, top: 83.98 }, rotation: 21.0 },
+  ]
+};
+
+window.BANK_SPACES_BY_PLAYER_COUNT = {
+  3: [
+    // Player 1
+    { ownerId: 1, position: { left: 42.11, top: 16.04 }, rotation: 181.0 },
+    { ownerId: 1, position: { left: 37.11, top: 16.04 }, rotation: 181.0 },
+    { ownerId: 1, position: { left: 32.61, top: 16.04 }, rotation: 181.0 },
+    { ownerId: 1, position: { left: 28.11, top: 16.04 }, rotation: 181.0 },
+    { ownerId: 1, position: { left: 21.61, top: 22.54 }, rotation: 90.0 },
+    { ownerId: 1, position: { left: 21.61, top: 27.04 }, rotation: 90.0 },
+    { ownerId: 1, position: { left: 21.61, top: 31.54 }, rotation: 90.0 },
+    { ownerId: 1, position: { left: 21.61, top: 36.04 }, rotation: 90.0 },
+    // Player 2
+    { ownerId: 2, position: { left: 79.7, top: 50.48 }, rotation: 300.0 },
+    { ownerId: 2, position: { left: 82.2, top: 46.48 }, rotation: 300.0 },
+    { ownerId: 2, position: { left: 84.2, top: 42.48 }, rotation: 300.0 },
+    { ownerId: 2, position: { left: 87.2, top: 38.98 }, rotation: 300.0 },
+    { ownerId: 2, position: { left: 84.12, top: 30.24 }, rotation: 211.0 },
+    { ownerId: 2, position: { left: 80.12, top: 27.74 }, rotation: 211.0 },
+    { ownerId: 2, position: { left: 76.12, top: 25.24 }, rotation: 211.0 },
+    { ownerId: 2, position: { left: 72.62, top: 23.24 }, rotation: 211.0 },
+    // Player 3
+    { ownerId: 3, position: { left: 30.7, top: 65.75 }, rotation: 60.0 },
+    { ownerId: 3, position: { left: 33.2, top: 70.25 }, rotation: 60.0 },
+    { ownerId: 3, position: { left: 35.2, top: 74.25 }, rotation: 60.0 },
+    { ownerId: 3, position: { left: 37.2, top: 77.75 }, rotation: 60.0 },
+    { ownerId: 3, position: { left: 46.07, top: 80.82 }, rotation: 330.0 },
+    { ownerId: 3, position: { left: 50.07, top: 77.82 }, rotation: 330.0 },
+    { ownerId: 3, position: { left: 54.04, top: 75.88 }, rotation: 330.0 },
+    { ownerId: 3, position: { left: 58.04, top: 73.38 }, rotation: 330.0 },
+  ],
+  4: [
+      { ownerId: 1, position: { left: 22.00, top: 33.32 }, rotation: 110 },
+      { ownerId: 1, position: { left: 20.50, top: 37.37 }, rotation: 110 },
+      { ownerId: 1, position: { left: 18.96, top: 41.43 }, rotation: 110 },
+      { ownerId: 1, position: { left: 17.50, top: 45.30 }, rotation: 110 },
+      { ownerId: 1, position: { left: 16.00, top: 49.32 }, rotation: 110 },
+      { ownerId: 1, position: { left: 14.60, top: 52.80 }, rotation: 110 },
+      { ownerId: 2, position: { left: 66.70, top: 22.20 }, rotation: 202 },
+      { ownerId: 2, position: { left: 62.28, top: 20.38 }, rotation: 202 },
+      { ownerId: 2, position: { left: 58.28, top: 18.98 }, rotation: 202 },
+      { ownerId: 2, position: { left: 54.58, top: 17.48 }, rotation: 202 },
+      { ownerId: 2, position: { left: 50.78, top: 15.98 }, rotation: 202 },
+      { ownerId: 2, position: { left: 46.98, top: 14.58 }, rotation: 202 },
+      { ownerId: 3, position: { left: 78.09, top: 65.76 }, rotation: 291 },
+      { ownerId: 3, position: { left: 79.66, top: 61.83 }, rotation: 291 },
+      { ownerId: 3, position: { left: 80.97, top: 58.19 }, rotation: 291 },
+      { ownerId: 3, position: { left: 82.51, top: 54.47 }, rotation: 291 },
+      { ownerId: 3, position: { left: 83.95, top: 50.84 }, rotation: 291 },
+      { ownerId: 3, position: { left: 85.41, top: 46.87 }, rotation: 291 },
+      { ownerId: 4, position: { left: 34.00, top: 78.07 }, rotation: 21.8 },
+      { ownerId: 4, position: { left: 38.24, top: 79.57 }, rotation: 21.8 },
+      { ownerId: 4, position: { left: 41.83, top: 80.91 }, rotation: 21.8 },
+      { ownerId: 4, position: { left: 46.07, top: 82.72 }, rotation: 21.8 },
+      { ownerId: 4, position: { left: 49.04, top: 83.93 }, rotation: 21.8 },
+      { ownerId: 4, position: { left: 53.10, top: 85.46 }, rotation: 21.8 },
+    ],
+    5: [
+    // Player 1
+    { ownerId: 1, position: { left: 7.86, top: 51.17 }, rotation: 49.0 },
+    { ownerId: 1, position: { left: 10.86, top: 54.17 }, rotation: 49.0 },
+    { ownerId: 1, position: { left: 12.86, top: 56.67 }, rotation: 49.0 },
+    { ownerId: 1, position: { left: 15.86, top: 59.67 }, rotation: 49.0 },
+    { ownerId: 1, position: { left: 18.86, top: 62.67 }, rotation: 49.0 },
+    // Player 2
+    { ownerId: 2, position: { left: 31.05, top: 12.46 }, rotation: 119.0 },
+    { ownerId: 2, position: { left: 29.05, top: 16.46 }, rotation: 119.0 },
+    { ownerId: 2, position: { left: 27.03, top: 19.24 }, rotation: 119.0 },
+    { ownerId: 2, position: { left: 24.97, top: 22.75 }, rotation: 119.0 },
+    { ownerId: 2, position: { left: 22.97, top: 25.75 }, rotation: 119.0 },
+    // Player 3
+    { ownerId: 3, position: { left: 77.86, top: 21.19 }, rotation: 193.0 },
+    { ownerId: 3, position: { left: 73.59, top: 20.51 }, rotation: 193.0 },
+    { ownerId: 3, position: { left: 69.64, top: 19.93 }, rotation: 193.0 },
+    { ownerId: 3, position: { left: 65.68, top: 18.85 }, rotation: 193.0 },
+    { ownerId: 3, position: { left: 61.84, top: 18.05 }, rotation: 193.0 },
+    // Player 4
+    { ownerId: 4, position: { left: 82.82, top: 65.82 }, rotation: 265.0 },
+    { ownerId: 4, position: { left: 82.34, top: 62.01 }, rotation: 265.0 },
+    { ownerId: 4, position: { left: 82.11, top: 58.21 }, rotation: 265.0 },
+    { ownerId: 4, position: { left: 81.61, top: 54.79 }, rotation: 265.0 },
+    { ownerId: 4, position: { left: 81.32, top: 51.07 }, rotation: 265.0 },
+    // Player 5
+    { ownerId: 5, position: { left: 39.82, top: 84.18 }, rotation: 335.0 },
+    { ownerId: 5, position: { left: 43.2, top: 82.71 }, rotation: 335.0 },
+    { ownerId: 5, position: { left: 47.14, top: 81.15 }, rotation: 335.0 },
+    { ownerId: 5, position: { left: 50.47, top: 79.99 }, rotation: 335.0 },
+    { ownerId: 5, position: { left: 54.43, top: 78.31 }, rotation: 335.0 },
+  ]
+};
+
+
+window.CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT = {
+  3: [
+    { ownerId: 1, position: { left: 21.18, top: 15.35 }, rotation: -35.0 },
+    { ownerId: 2, position: { left: 90.3, top: 33.16 }, rotation: 75.0 },
+    { ownerId: 3, position: { left: 40.45, top: 83.68 }, rotation: 200.0 },
+  ],
+  4: [
+    { ownerId: 1, position: { left: 15.97, top: 20.64 }, rotation: -34.0 },
+    { ownerId: 2, position: { left: 82.95, top: 18.65 }, rotation: 51.0 },
+    { ownerId: 3, position: { left: 84.62, top: 82.16 }, rotation: 136.0 },
+    { ownerId: 4, position: { left: 17.53, top: 83.04 }, rotation: -129.0 },
+  ],
+  5: [
+    { ownerId: 1, position: { left: 8.11, top: 63.8 }, rotation: 224.0 },
+    { ownerId: 2, position: { left: 18.06, top: 16.34 }, rotation: -45.0 },
+    { ownerId: 3, position: { left: 69.62, top: 11.07 }, rotation: 15.0 },
+    { ownerId: 4, position: { left: 91.28, top: 55.4 }, rotation: 74.0 },
+    { ownerId: 5, position: { left: 52.95, top: 88.41 }, rotation: 164.0 },
+  ]
+};
+
+</script>
+  <script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+const BOARD_IMAGES = {
+  3: '../public/images/3player_board.jpg',
+  4: '../public/images/4player_board.png',
+  5: '../public/images/5player_board.jpg'
+};
+
+const PIECE_IMAGE = '../public/images/mark-transparent_bg.png';
+const TILE_IMAGE = '../public/images/01.svg';
+
+const SCALE_MULTIPLIERS = {
+  3: 0.85,
+  4: 1,
+  5: 0.9
+};
+const BASE_SCALE = 0.798;
+
+function App() {
+  const [playerCount, setPlayerCount] = useState(4);
+  
+  // State for coordinates
+  const loadSavedState = (count, key, defaultData) => {
+    const saved = localStorage.getItem(`kred_diag_${count}_${key}`);
+    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultData));
+  };
+
+  const [dropLocations, setDropLocations] = useState(() => loadSavedState(4, 'dropLocations', window.FOUR_PLAYER_DROP_LOCATIONS));
+  const [tileSpaces, setTileSpaces] = useState(() => loadSavedState(4, 'tileSpaces', window.TILE_SPACES_BY_PLAYER_COUNT[4]));
+  const [bankSpaces, setBankSpaces] = useState(() => loadSavedState(4, 'bankSpaces', window.BANK_SPACES_BY_PLAYER_COUNT[4]));
+  const [credibilitySpaces, setCredibilitySpaces] = useState(() => loadSavedState(4, 'credibilitySpaces', window.CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[4]));
+
+  // Diagnostic states
+  const [diagPiece, setDiagPiece] = useState({ left: 50, top: 50 });
+  const [diagTile, setDiagTile] = useState({ left: 50, top: 50, rotation: 0 });
+  const [dragging, setDragging] = useState(null); // 'piece' or 'tile'
+
+  const boardRef = useRef(null);
+
+  // Switch player count
+  useEffect(() => {
+    let drops = [];
+    if (playerCount === 3) drops = window.THREE_PLAYER_DROP_LOCATIONS;
+    else if (playerCount === 4) drops = window.FOUR_PLAYER_DROP_LOCATIONS;
+    else if (playerCount === 5) drops = window.FIVE_PLAYER_DROP_LOCATIONS;
+    
+    setDropLocations(loadSavedState(playerCount, 'dropLocations', drops));
+    setTileSpaces(loadSavedState(playerCount, 'tileSpaces', window.TILE_SPACES_BY_PLAYER_COUNT[playerCount] || []));
+    setBankSpaces(loadSavedState(playerCount, 'bankSpaces', window.BANK_SPACES_BY_PLAYER_COUNT[playerCount] || []));
+    setCredibilitySpaces(loadSavedState(playerCount, 'credibilitySpaces', window.CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || []));
+  }, [playerCount]);
+
+  // Auto-save changes
+  useEffect(() => {
+    localStorage.setItem(`kred_diag_${playerCount}_dropLocations`, JSON.stringify(dropLocations));
+    localStorage.setItem(`kred_diag_${playerCount}_tileSpaces`, JSON.stringify(tileSpaces));
+    localStorage.setItem(`kred_diag_${playerCount}_bankSpaces`, JSON.stringify(bankSpaces));
+    localStorage.setItem(`kred_diag_${playerCount}_credibilitySpaces`, JSON.stringify(credibilitySpaces));
+  }, [playerCount, dropLocations, tileSpaces, bankSpaces, credibilitySpaces]);
+
+  const resetToDefaults = () => {
+    if (confirm(`Are you sure you want to reset all unsaved changes for the ${playerCount}-player board back to the game defaults?`)) {
+      localStorage.removeItem(`kred_diag_${playerCount}_dropLocations`);
+      localStorage.removeItem(`kred_diag_${playerCount}_tileSpaces`);
+      localStorage.removeItem(`kred_diag_${playerCount}_bankSpaces`);
+      localStorage.removeItem(`kred_diag_${playerCount}_credibilitySpaces`);
+      
+      let drops = [];
+      if (playerCount === 3) drops = window.THREE_PLAYER_DROP_LOCATIONS;
+      else if (playerCount === 4) drops = window.FOUR_PLAYER_DROP_LOCATIONS;
+      else if (playerCount === 5) drops = window.FIVE_PLAYER_DROP_LOCATIONS;
+      
+      setDropLocations(JSON.parse(JSON.stringify(drops)));
+      setTileSpaces(JSON.parse(JSON.stringify(window.TILE_SPACES_BY_PLAYER_COUNT[playerCount] || [])));
+      setBankSpaces(JSON.parse(JSON.stringify(window.BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [])));
+      setCredibilitySpaces(JSON.parse(JSON.stringify(window.CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [])));
+    }
+  };
+
+  const handlePointerDown = (e, type) => {
+    e.preventDefault();
+    setDragging(type);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragging || !boardRef.current) return;
+    
+    const rect = boardRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+    if (dragging === 'piece') {
+      setDiagPiece({ left: x, top: y });
+    } else if (dragging === 'tile') {
+      setDiagTile(prev => ({ ...prev, left: x, top: y }));
+    }
+  };
+
+  const handlePointerUp = () => {
+    setDragging(null);
+  };
+
+  useEffect(() => {
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [dragging]);
+
+  // Exporter
+  const exportMD = () => {
+    let md = `# Coordinates for ${playerCount}-Player Mode\n\n`;
+    
+    md += `## Drop Locations (Pieces)\n`;
+    md += `| ID | Left (%) | Top (%) |\n|---|---|---|\n`;
+    dropLocations.forEach(loc => {
+      md += `| ${loc.id} | ${loc.position.left.toFixed(2)} | ${loc.position.top.toFixed(2)} |\n`;
+    });
+
+    md += `\n## Tile Spaces (Receiving)\n`;
+    md += `| Owner ID | Left (%) | Top (%) | Rotation (deg) |\n|---|---|---|---|\n`;
+    tileSpaces.forEach(space => {
+      md += `| Player ${space.ownerId} | ${space.position.left.toFixed(2)} | ${space.position.top.toFixed(2)} | ${space.rotation} |\n`;
+    });
+
+    md += `\n## Credibility Locations\n`;
+    md += `| Owner ID | Left (%) | Top (%) | Rotation (deg) |\n|---|---|---|---|\n`;
+    credibilitySpaces.forEach(space => {
+      md += `| Player ${space.ownerId} | ${space.position.left.toFixed(2)} | ${space.position.top.toFixed(2)} | ${space.rotation} |\n`;
+    });
+
+    md += `\n## Bank Spaces\n`;
+    md += `| Owner ID | Left (%) | Top (%) | Rotation (deg) |\n|---|---|---|---|\n`;
+    bankSpaces.forEach(space => {
+      md += `| Player ${space.ownerId} | ${space.position.left.toFixed(2)} | ${space.position.top.toFixed(2)} | ${space.rotation} |\n`;
+    });
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `coordinates_${playerCount}p.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const updateDropLocation = (index, field, value) => {
+    const val = parseFloat(value);
+    if (isNaN(val)) return;
+    const newLocs = [...dropLocations];
+    newLocs[index].position[field] = val;
+    setDropLocations(newLocs);
+  };
+
+  const updateTileSpace = (listName, index, field, value) => {
+    const val = parseFloat(value);
+    if (isNaN(val)) return;
+    if (listName === 'tileSpaces') {
+      const newSpaces = [...tileSpaces];
+      if (field === 'rotation') newSpaces[index].rotation = val;
+      else newSpaces[index].position[field] = val;
+      setTileSpaces(newSpaces);
+    } else {
+      const newSpaces = [...bankSpaces];
+      if (field === 'rotation') newSpaces[index].rotation = val;
+      else newSpaces[index].position[field] = val;
+      setBankSpaces(newSpaces);
+    }
+  };
+
+  const updateCredibilitySpace = (index, field, value) => {
+    const val = parseFloat(value);
+    if (isNaN(val)) return;
+    const newSpaces = [...credibilitySpaces];
+    if (field === 'rotation') newSpaces[index].rotation = val;
+    else newSpaces[index].position[field] = val;
+    setCredibilitySpaces(newSpaces);
+  };
+
+  const finalScale = BASE_SCALE * SCALE_MULTIPLIERS[playerCount];
+
+  return (
+    <div className="flex h-screen flex-col bg-slate-900 text-slate-100 font-sans">
+      {/* Header */}
+      <header className="flex-none p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center z-10 shadow-md">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-cyan-400">Location Diagnostics</h1>
+          <select 
+            className="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-white"
+            value={playerCount}
+            onChange={(e) => setPlayerCount(parseInt(e.target.value))}
+          >
+            <option value={3}>3 Players</option>
+            <option value={4}>4 Players</option>
+            <option value={5}>5 Players</option>
+          </select>
+        </div>
+        
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col text-sm bg-slate-700 px-4 py-2 rounded shadow-inner">
+            <span className="text-cyan-300 font-bold">Diagnostic Piece (Mark)</span>
+            <span>X: {diagPiece.left.toFixed(2)}% | Y: {diagPiece.top.toFixed(2)}%</span>
+          </div>
+          <div className="flex flex-col text-sm bg-slate-700 px-4 py-2 rounded shadow-inner">
+            <span className="text-pink-300 font-bold">Diagnostic Tile</span>
+            <span>X: {diagTile.left.toFixed(2)}% | Y: {diagTile.top.toFixed(2)}% | Rot: {diagTile.rotation}°</span>
+            <input 
+              type="range" min="0" max="360" value={diagTile.rotation} 
+              onChange={e => setDiagTile(prev => ({...prev, rotation: parseInt(e.target.value)}))}
+              className="mt-1"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={resetToDefaults}
+              className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded transition-colors shadow-lg text-sm"
+            >
+              Reset to Game Defaults
+            </button>
+            <button 
+              onClick={exportMD}
+              className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded transition-colors shadow-lg"
+            >
+              Export MD
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Board Area */}
+        <div className="flex-1 bg-gray-600 flex items-center justify-center p-4 overflow-auto relative">
+          
+          {/* Board Container */}
+          <div 
+            ref={boardRef}
+            className="w-full max-w-5xl aspect-[1/1] relative bg-slate-800 shadow-2xl"
+          >
+            <img 
+              src={BOARD_IMAGES[playerCount]} 
+              className="w-full h-full object-contain absolute inset-0 pointer-events-none" 
+            />
+            
+            {/* Grid Lines for reference */}
+            <div className="absolute inset-0 pointer-events-none opacity-20"
+                 style={{
+                   backgroundImage: `linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)`,
+                   backgroundSize: "2% 2%"
+                 }}
+            />
+
+            {/* Render Drop Location Markers (Pieces) */}
+            {dropLocations.map((loc, i) => (
+              <div key={`drop-${i}`} className="absolute w-2 h-2 bg-yellow-400 rounded-full -ml-1 -mt-1 shadow hover:scale-150 transition-transform cursor-crosshair z-10"
+                   style={{ left: `${loc.position.left}%`, top: `${loc.position.top}%` }}
+                   title={`${loc.id} (${loc.position.left}, ${loc.position.top})`} />
+            ))}
+
+            {/* Render Tile Spaces */}
+            {tileSpaces.map((space, i) => (
+              <div key={`tspace-${i}`} className="absolute border border-cyan-400/50 bg-cyan-400/20 rounded z-10 flex items-center justify-center text-xs text-white"
+                   style={{ width: '4.6875%', height: '9.375%',
+                     left: `${space.position.left}%`, top: `${space.position.top}%`, 
+                     transform: `translate(-50%, -50%) rotate(${space.rotation}deg)` 
+                   }}
+                   title={`Tile Space P${space.ownerId}`}>
+                T{space.ownerId}
+              </div>
+            ))}
+
+            {/* Render Bank Spaces */}
+            {bankSpaces.map((space, i) => (
+              <div key={`bspace-${i}`} className="absolute border border-pink-400/50 bg-pink-400/20 rounded z-10 flex items-center justify-center text-xs text-white"
+                   style={{ width: '4.6875%', height: '9.375%',
+                     left: `${space.position.left}%`, top: `${space.position.top}%`, 
+                     transform: `translate(-50%, -50%) rotate(${space.rotation}deg)` 
+                   }}
+                   title={`Bank Space P${space.ownerId}`}>
+                B{space.ownerId}
+              </div>
+            ))}
+
+            
+            {/* Render Credibility Spaces */}
+            {credibilitySpaces.map((space, i) => (
+              <div key={`cred-${i}`} className="absolute rounded-full border-2 border-emerald-400 bg-emerald-400/30 z-20 flex items-center justify-center text-xs text-white font-bold"
+                   style={{ width: '4%', height: '4%',
+                     left: `${space.position.left}%`, top: `${space.position.top}%`, 
+                     transform: `translate(-50%, -50%) rotate(${space.rotation}deg)` 
+                   }}
+                   title={`Credibility P${space.ownerId}`}>
+                C${space.ownerId}
+              </div>
+            ))}
+
+            {/* Diagnostic Tile */}
+            <div 
+              onPointerDown={e => handlePointerDown(e, 'tile')}
+              className="absolute rounded-lg shadow-2xl cursor-grab z-40 transition-transform hover:scale-105"
+              style={{ width: '4.6875%', height: '9.375%',
+                left: `${diagTile.left}%`, 
+                top: `${diagTile.top}%`,
+                transform: `translate(-50%, -50%) rotate(${diagTile.rotation}deg)`
+              }}
+            >
+              <img src={TILE_IMAGE} className="w-full h-full object-contain pointer-events-none" />
+            </div>
+
+            {/* Diagnostic Piece */}
+            <div 
+              onPointerDown={e => handlePointerDown(e, 'piece')}
+              className="absolute cursor-grab z-50 transition-transform hover:brightness-125"
+              style={{ width: '5.46875%', height: '5.46875%',
+                left: `${diagPiece.left}%`, 
+                top: `${diagPiece.top}%`,
+                transform: `translate(-50%, -50%) scale(${finalScale})`,
+                filter: "drop-shadow(0 0 8px rgba(0,0,0,0.5))"
+              }}
+            >
+              <img src={PIECE_IMAGE} className="w-full h-full object-contain pointer-events-none" />
+            </div>
+
+          </div>
+        </div>
+
+        {/* Right: Sidebar Editor */}
+        <div className="w-[450px] bg-slate-800 border-l border-slate-700 flex flex-col shadow-2xl z-20">
+          
+          <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+            <h2 className="text-lg font-bold text-cyan-300 mb-4 sticky top-0 bg-slate-800 py-2">Piece Drop Locations</h2>
+            
+            <div className="grid grid-cols-[2fr_1fr_1fr] gap-2 font-bold text-xs text-slate-400 mb-2 px-1">
+              <div>LOCATION ID</div>
+              <div>X (%)</div>
+              <div>Y (%)</div>
+            </div>
+            
+            <div className="space-y-1 mb-8">
+              {dropLocations.map((loc, i) => (
+                <div key={i} className="grid grid-cols-[2fr_1fr_1fr] gap-2 items-center bg-slate-700/50 p-1 rounded hover:bg-slate-700">
+                  <span className="text-xs font-mono truncate px-1" title={loc.id}>{loc.id}</span>
+                  <input type="number" step="0.1" value={loc.position.left} 
+                         onChange={e => updateDropLocation(i, 'left', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                  <input type="number" step="0.1" value={loc.position.top} 
+                         onChange={e => updateDropLocation(i, 'top', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                </div>
+              ))}
+            </div>
+
+            <h2 className="text-lg font-bold text-pink-300 mb-4 sticky top-0 bg-slate-800 py-2">Tile Drop Locations</h2>
+            
+            <div className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 font-bold text-xs text-slate-400 mb-2 px-1">
+              <div>OWNER/TYPE</div>
+              <div>X (%)</div>
+              <div>Y (%)</div>
+              <div>ROT (°)</div>
+            </div>
+
+            <div className="space-y-1 mb-4">
+              <div className="text-xs font-bold text-slate-500 mb-1 mt-4">Tile Spaces (Receiving)</div>
+              {tileSpaces.map((space, i) => (
+                <div key={`ts-${i}`} className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 items-center bg-slate-700/50 p-1 rounded hover:bg-slate-700">
+                  <span className="text-xs font-mono px-1">P{space.ownerId} Space</span>
+                  <input type="number" step="0.1" value={space.position.left} 
+                         onChange={e => updateTileSpace('tileSpaces', i, 'left', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                  <input type="number" step="0.1" value={space.position.top} 
+                         onChange={e => updateTileSpace('tileSpaces', i, 'top', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                  <input type="number" step="0.1" value={space.rotation} 
+                         onChange={e => updateTileSpace('tileSpaces', i, 'rotation', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                </div>
+              ))}
+              
+              
+              <div className="text-xs font-bold text-slate-500 mb-1 mt-4">Credibility Tokens</div>
+              {credibilitySpaces.map((space, i) => (
+                <div key={`cred-${i}`} className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 items-center bg-slate-700/50 p-1 rounded hover:bg-slate-700 border-l-2 border-emerald-400">
+                  <span className="text-xs font-mono px-1">P{space.ownerId} Cred</span>
+                  <input type="number" step="0.1" value={space.position.left} 
+                         onChange={e => updateCredibilitySpace(i, 'left', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-emerald-500 outline-none" />
+                  <input type="number" step="0.1" value={space.position.top} 
+                         onChange={e => updateCredibilitySpace(i, 'top', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-emerald-500 outline-none" />
+                  <input type="number" step="0.1" value={space.rotation} 
+                         onChange={e => updateCredibilitySpace(i, 'rotation', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-emerald-500 outline-none" />
+                </div>
+              ))}
+
+              <div className="text-xs font-bold text-slate-500 mb-1 mt-4">Bank Spaces</div>
+              {bankSpaces.map((space, i) => (
+                <div key={`bs-${i}`} className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 items-center bg-slate-700/50 p-1 rounded hover:bg-slate-700">
+                  <span className="text-xs font-mono px-1">P{space.ownerId} Bank</span>
+                  <input type="number" step="0.1" value={space.position.left} 
+                         onChange={e => updateTileSpace('bankSpaces', i, 'left', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                  <input type="number" step="0.1" value={space.position.top} 
+                         onChange={e => updateTileSpace('bankSpaces', i, 'top', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                  <input type="number" step="0.1" value={space.rotation} 
+                         onChange={e => updateTileSpace('bankSpaces', i, 'rotation', e.target.value)}
+                         className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-xs text-white focus:border-cyan-500 outline-none" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+      `}</style>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+</script>
+</body>
+</html>
+
+
+
