@@ -924,7 +924,6 @@ const CampaignScreen: React.FC = () => {
               src={BOARD_IMAGE_URLS[playerCount]}
               alt={`A ${playerCount}-player game board`}
               className="w-full h-full object-contain relative z-0"
-              style={playerCount === 4 ? { transform: "translateY(2.5%)" } : undefined}
             />
 
             {/* Grid Overlay */}
@@ -1049,12 +1048,14 @@ const CampaignScreen: React.FC = () => {
                   key={`space-${space.ownerId}`}
                   onDrop={(e) => handleDropOnTileSpace(e, space)}
                   onDragOver={handleDragOver}
-                  className={`absolute w-12 h-24 rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all duration-300
+                  className={`absolute rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all duration-300
                     ${isDraggingTile
                       ? `${colors.draggingBorder} ${colors.draggingBg} scale-105 border-solid shadow-lg`
                       : `${colors.border} ${colors.bg}`
                     }`}
                   style={{
+                    width: '4.6875%',
+                    height: '9.375%',
                     top: `${space.position.top}%`,
                     left: `${space.position.left}%`,
                     transform: `translate(-50%, -50%) rotate(${space.rotation}deg)`,
@@ -1172,9 +1173,11 @@ const CampaignScreen: React.FC = () => {
                       : undefined
                   }
                   onClick={isTileClickable ? handleTileClick : undefined}
-                  className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[boardTile.ownerId]?.border || "border-gray-200"
+                  className={`absolute rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[boardTile.ownerId]?.border || "border-gray-200"
                     } ${isPlayedTile ? "ring-2 " + (PLAYER_COLORS[boardTile.ownerId]?.ring || "") : ""}`}
                   style={{
+                    width: '4.6875%',
+                    height: '9.375%',
                     top: `${boardTile.position.top}%`,
                     left: `${boardTile.position.left}%`,
                     transform: `translate(-50%, -50%) rotate(${boardTile.rotation || 0
@@ -1209,9 +1212,11 @@ const CampaignScreen: React.FC = () => {
             {bankedTiles.map((bankedTile) => (
               <div
                 key={bankedTile.id}
-                className={`absolute w-12 h-24 rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[bankedTile.ownerId]?.border || "border-gray-200"
+                className={`absolute rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[bankedTile.ownerId]?.border || "border-gray-200"
                   }`}
                 style={{
+                  width: '4.6875%',
+                  height: '9.375%',
                   top: `${bankedTile.position.top}%`,
                   left: `${bankedTile.position.left}%`,
                   transform: `translate(-50%, -50%) rotate(${bankedTile.rotation || 0
@@ -1352,8 +1357,10 @@ const CampaignScreen: React.FC = () => {
                 draggable
                 onDragStart={handleDragStartDummyTile}
                 onDragEnd={handleDragEndDummyTile}
-                className="absolute w-12 h-24 rounded-lg shadow-xl bg-indigo-500/30 border-2 border-indigo-400 border-dashed"
+                className="absolute rounded-lg shadow-xl bg-indigo-500/30 border-2 border-indigo-400 border-dashed"
                 style={{
+                  width: '4.6875%',
+                  height: '9.375%',
                   top: `${dummyTile.position.top}%`,
                   left: `${dummyTile.position.left}%`,
                   transform: `translate(-50%, -50%) rotate(${dummyTile.rotation}deg)`,
