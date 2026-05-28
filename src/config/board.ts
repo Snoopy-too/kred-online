@@ -255,11 +255,11 @@ const THREE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
 ];
 
 const FOUR_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
-    { ownerId: 1, position: { left: 24.17, top: 68.64 }, rotation: 126 },
-    { ownerId: 2, position: { left: 31.51, top: 24.18 }, rotation: 218 },
-    { ownerId: 3, position: { left: 76.01, top: 31.34 }, rotation: 307 },
-    { ownerId: 4, position: { left: 68.54, top: 75.89 }, rotation: 37.5 },
-  ];
+  { ownerId: 1, position: { left: 24.17, top: 68.64 }, rotation: 126 },
+  { ownerId: 2, position: { left: 31.51, top: 24.18 }, rotation: 218 },
+  { ownerId: 3, position: { left: 76.01, top: 31.34 }, rotation: 307 },
+  { ownerId: 4, position: { left: 68.54, top: 75.89 }, rotation: 37.5 },
+];
 
 const FIVE_PLAYER_TILE_SPACES: TileReceivingSpace[] = [
   { ownerId: 1, position: { left: 14.64, top: 72.07 }, rotation: 93.0 },
@@ -309,31 +309,31 @@ const THREE_PLAYER_BANK_SPACES: BankSpace[] = [
 ];
 
 const FOUR_PLAYER_BANK_SPACES: BankSpace[] = [
-    { ownerId: 1, position: { left: 22.00, top: 33.32 }, rotation: 110 },
-    { ownerId: 1, position: { left: 20.50, top: 37.37 }, rotation: 110 },
-    { ownerId: 1, position: { left: 18.96, top: 41.43 }, rotation: 110 },
-    { ownerId: 1, position: { left: 17.50, top: 45.30 }, rotation: 110 },
-    { ownerId: 1, position: { left: 16.00, top: 49.32 }, rotation: 110 },
-    { ownerId: 1, position: { left: 14.60, top: 52.80 }, rotation: 110 },
-    { ownerId: 2, position: { left: 66.70, top: 22.20 }, rotation: 202 },
-    { ownerId: 2, position: { left: 62.28, top: 20.38 }, rotation: 202 },
-    { ownerId: 2, position: { left: 58.28, top: 18.98 }, rotation: 202 },
-    { ownerId: 2, position: { left: 54.58, top: 17.48 }, rotation: 202 },
-    { ownerId: 2, position: { left: 50.78, top: 15.98 }, rotation: 202 },
-    { ownerId: 2, position: { left: 46.98, top: 14.58 }, rotation: 202 },
-    { ownerId: 3, position: { left: 78.09, top: 65.76 }, rotation: 291 },
-    { ownerId: 3, position: { left: 79.66, top: 61.83 }, rotation: 291 },
-    { ownerId: 3, position: { left: 80.97, top: 58.19 }, rotation: 291 },
-    { ownerId: 3, position: { left: 82.51, top: 54.47 }, rotation: 291 },
-    { ownerId: 3, position: { left: 83.95, top: 50.84 }, rotation: 291 },
-    { ownerId: 3, position: { left: 85.41, top: 46.87 }, rotation: 291 },
-    { ownerId: 4, position: { left: 34.00, top: 78.07 }, rotation: 21.8 },
-    { ownerId: 4, position: { left: 38.24, top: 79.57 }, rotation: 21.8 },
-    { ownerId: 4, position: { left: 41.83, top: 80.91 }, rotation: 21.8 },
-    { ownerId: 4, position: { left: 46.07, top: 82.72 }, rotation: 21.8 },
-    { ownerId: 4, position: { left: 49.04, top: 83.93 }, rotation: 21.8 },
-    { ownerId: 4, position: { left: 53.10, top: 85.46 }, rotation: 21.8 },
-  ];
+  { ownerId: 1, position: { left: 22.00, top: 33.32 }, rotation: 110 },
+  { ownerId: 1, position: { left: 20.50, top: 37.37 }, rotation: 110 },
+  { ownerId: 1, position: { left: 18.96, top: 41.43 }, rotation: 110 },
+  { ownerId: 1, position: { left: 17.50, top: 45.30 }, rotation: 110 },
+  { ownerId: 1, position: { left: 16.00, top: 49.32 }, rotation: 110 },
+  { ownerId: 1, position: { left: 14.60, top: 52.80 }, rotation: 110 },
+  { ownerId: 2, position: { left: 66.70, top: 22.20 }, rotation: 202 },
+  { ownerId: 2, position: { left: 62.28, top: 20.38 }, rotation: 202 },
+  { ownerId: 2, position: { left: 58.28, top: 18.98 }, rotation: 202 },
+  { ownerId: 2, position: { left: 54.58, top: 17.48 }, rotation: 202 },
+  { ownerId: 2, position: { left: 50.78, top: 15.98 }, rotation: 202 },
+  { ownerId: 2, position: { left: 46.98, top: 14.58 }, rotation: 202 },
+  { ownerId: 3, position: { left: 78.09, top: 65.76 }, rotation: 291 },
+  { ownerId: 3, position: { left: 79.66, top: 61.83 }, rotation: 291 },
+  { ownerId: 3, position: { left: 80.97, top: 58.19 }, rotation: 291 },
+  { ownerId: 3, position: { left: 82.51, top: 54.47 }, rotation: 291 },
+  { ownerId: 3, position: { left: 83.95, top: 50.84 }, rotation: 291 },
+  { ownerId: 3, position: { left: 85.41, top: 46.87 }, rotation: 291 },
+  { ownerId: 4, position: { left: 34.00, top: 78.07 }, rotation: 21.8 },
+  { ownerId: 4, position: { left: 38.24, top: 79.57 }, rotation: 21.8 },
+  { ownerId: 4, position: { left: 41.83, top: 80.91 }, rotation: 21.8 },
+  { ownerId: 4, position: { left: 46.07, top: 82.72 }, rotation: 21.8 },
+  { ownerId: 4, position: { left: 49.04, top: 83.93 }, rotation: 21.8 },
+  { ownerId: 4, position: { left: 53.10, top: 85.46 }, rotation: 21.8 },
+];
 
 const FIVE_PLAYER_BANK_SPACES: BankSpace[] = [
   // Player 1
