@@ -36,7 +36,7 @@ describe('Game Constants', () => {
 
     it('should have correct image paths format', () => {
       expect(BOARD_IMAGE_URLS[3]).toBe('./images/3player_board.jpg');
-      expect(BOARD_IMAGE_URLS[4]).toBe('./images/4player_board.jpg');
+      expect(BOARD_IMAGE_URLS[4]).toBe('./images/4player_board.png');
       expect(BOARD_IMAGE_URLS[5]).toBe('./images/5player_board.jpg');
     });
 
