@@ -358,15 +358,11 @@ const THREE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
 ];
 
 const FOUR_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
-  // Player 1: 15.97/20.64, rotation: -34.0°
-  { ownerId: 1, position: { left: 15.97, top: 20.64 }, rotation: -34.0 },
-  // Player 2: 82.95/18.65, rotation: 51.0°
-  { ownerId: 2, position: { left: 82.95, top: 18.65 }, rotation: 51.0 },
-  // Player 3: 84.62/82.16, rotation: 136.0°
-  { ownerId: 3, position: { left: 84.62, top: 82.16 }, rotation: 136.0 },
-  // Player 4: 17.53/83.04, rotation: -129.0°
-  { ownerId: 4, position: { left: 17.53, top: 83.04 }, rotation: -129.0 },
-];
+    { ownerId: 1, position: { left: 8.15, top: 39.33 }, rotation: -67.2 },
+    { ownerId: 2, position: { left: 60.00, top: 8.25 }, rotation: 21.2 },
+    { ownerId: 3, position: { left: 91.72, top: 60.00 }, rotation: 118.5 },
+    { ownerId: 4, position: { left: 39.83, top: 91.64 }, rotation: 200 },
+  ];
 
 const FIVE_PLAYER_CREDIBILITY_LOCATIONS: BankSpace[] = [
   // Player 1: 8.11/63.80, rotation: 224.0°
