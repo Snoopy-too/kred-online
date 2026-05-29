@@ -417,7 +417,7 @@ export const PLAYER_PERSPECTIVE_ROTATIONS: {
   [playerCount: number]: { [playerId: number]: number };
 } = {
   3: { 1: -120, 2: 120, 3: 0 },
-  4: { 1: -90, 2: 180, 3: 90, 4: 0 },
+  4: { 1: -92, 2: 178, 3: 88, 4: -2 },
   // Recalculated based on the geometric center of each player's actual seat coordinates.
   5: { 1: -71, 2: -140, 3: 145, 4: 75, 5: 0 },
 };
