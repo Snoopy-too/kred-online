@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import CampaignScreen from "../../../components/screens/CampaignScreen";
 import type {
   Player,
@@ -14,6 +14,7 @@ import { RosterProvider } from "../../../providers/RosterProvider";
 import { BoardProvider } from "../../../providers/BoardProvider";
 import { CampaignProvider } from "../../../providers/CampaignProvider";
 import { ChallengeProvider } from "../../../providers/ChallengeProvider";
+import { HandlersProvider } from "../../../providers/HandlersProvider";
 
 describe("CampaignScreen", () => {
   const mockOnNewGame = vi.fn();
@@ -67,7 +68,7 @@ describe("CampaignScreen", () => {
     {
       id: 1,
       hand: [mockTile],
-      keptTiles: [],
+      keptTiles: [mockTile],
       bureaucracyTiles: [],
       credibility: 3,
     },
@@ -179,6 +180,7 @@ describe("CampaignScreen", () => {
     onResetTakeAdvantageAction: mockOnResetTakeAdvantageAction,
     onDoneTakeAdvantageAction: mockOnDoneTakeAdvantageAction,
     onTakeAdvantagePiecePromote: mockOnTakeAdvantagePiecePromote,
+    campaignRole: "mover",
   };
 
   type Overrides = Partial<typeof defaultProps> & {
@@ -219,6 +221,11 @@ describe("CampaignScreen", () => {
       ...props
     } = overrides;
 
+    const campaignValue = {
+      ...defaultProps,
+      ...props,
+    };
+
     return render(
       <PhaseProvider initial={{ gameState, currentPlayerIndex: 0 }}>
         <RosterProvider initial={{ players, pieces }}>
@@ -235,7 +242,17 @@ describe("CampaignScreen", () => {
               }}
             >
               <ChallengeProvider initial={{ bystanders, bystanderIndex, tileRejected }}>
-                <CampaignScreen {...defaultProps} {...props} />
+                <HandlersProvider
+                  common={{
+                    isMultiplayer: props.isMultiplayer ?? defaultProps.isMultiplayer,
+                    playerIndex: props.playerIndex ?? defaultProps.playerIndex,
+                  } as any}
+                  drafting={{} as any}
+                  campaign={campaignValue}
+                  bureaucracy={{} as any}
+                >
+                  <CampaignScreen />
+                </HandlersProvider>
               </ChallengeProvider>
             </CampaignProvider>
           </BoardProvider>
@@ -250,12 +267,12 @@ describe("CampaignScreen", () => {
 
   it("should display campaign phase title", () => {
     renderCampaign();
-    expect(screen.getByText("Player 1's Turn")).toBeInTheDocument();
+    expect(screen.getByText("Your Turn")).toBeInTheDocument();
   });
 
   it("should display current player information", () => {
     renderCampaign();
-    expect(screen.getByText("Player 1's Turn")).toBeInTheDocument();
+    expect(screen.getByText("Your Turn")).toBeInTheDocument();
   });
 
   it("should display the game board image", () => {
@@ -273,16 +290,7 @@ describe("CampaignScreen", () => {
 
   it("should display player hand with tiles", () => {
     renderCampaign();
-    expect(screen.getByText(/Player 1's Hand/)).toBeInTheDocument();
-  });
-
-  it("should display end turn button", () => {
-    renderCampaign({ hasPlayedTileThisTurn: true });
-    const endTurnButton = screen.getByText("End Turn");
-    expect(endTurnButton).toBeInTheDocument();
-    expect(endTurnButton).not.toBeDisabled();
-    fireEvent.click(endTurnButton);
-    expect(mockOnEndTurn).toHaveBeenCalledTimes(1);
+    expect(screen.getByAltText("Tile 1")).toBeInTheDocument();
   });
 
   it("should display board rotation toggle", () => {
@@ -295,8 +303,8 @@ describe("CampaignScreen", () => {
     expect(screen.getByText(/Grid Overlay/)).toBeInTheDocument();
   });
 
-  it("should show undo button when tile has been played", () => {
-    renderCampaign({ gameState: "TILE_PLAYED" as GameState });
+  it("should show reset turn button during campaign phase before tile is played", () => {
+    renderCampaign({ gameState: "CAMPAIGN" as GameState });
     expect(screen.getByText(/Reset Turn/)).toBeInTheDocument();
   });
 
@@ -342,11 +350,6 @@ describe("CampaignScreen", () => {
     expect(screen.getByText(/Check Move/)).toBeInTheDocument();
   });
 
-  it("should display game log toggle button", () => {
-    renderCampaign();
-    expect(screen.getByText(/Game Log/)).toBeInTheDocument();
-  });
-
   it("should show tile transaction modal when tileTransaction exists", () => {
     const transaction = {
       placerId: 1,
@@ -368,7 +371,7 @@ describe("CampaignScreen", () => {
   });
 
   it("should call onResetTurn when reset turn button is clicked", () => {
-    renderCampaign({ gameState: "TILE_PLAYED" as GameState });
+    renderCampaign({ gameState: "CAMPAIGN" as GameState });
     const resetButton = screen.getByText(/Reset Turn/);
     fireEvent.click(resetButton);
     expect(mockOnResetTurn).toHaveBeenCalledTimes(1);
@@ -386,5 +389,118 @@ describe("CampaignScreen", () => {
     const checkbox = screen.getByRole("checkbox", { name: /Grid Overlay/ });
     fireEvent.click(checkbox);
     expect(mockSetShowGridOverlay).toHaveBeenCalledWith(true);
+  });
+
+  it("should not show replay button in CAMPAIGN phase or to the mover", () => {
+    const mockPlayedTile = {
+      tileId: "01",
+      playerId: 1,
+      receivingPlayerId: 2,
+      originalPieces: mockPieces,
+    };
+    // Mover's view (currentPlayerId is 1, which matches playedTile.playerId)
+    renderCampaign({
+      gameState: "PENDING_ACCEPTANCE",
+      playedTile: mockPlayedTile,
+      currentPlayerId: 1,
+    });
+    expect(screen.queryByText("Replay Last Move")).not.toBeInTheDocument();
+  });
+
+  it("should show replay button to the receiver in PENDING_ACCEPTANCE", () => {
+    const mockPlayedTile = {
+      tileId: "01",
+      playerId: 1,
+      receivingPlayerId: 2,
+      originalPieces: mockPieces,
+    };
+    // Receiver's view (currentPlayerId is 2, which matches playedTile.receivingPlayerId)
+    renderCampaign({
+      gameState: "PENDING_ACCEPTANCE",
+      playedTile: mockPlayedTile,
+      currentPlayerId: 2,
+      campaignRole: "receiver",
+    });
+    expect(screen.getByText("Replay Last Move")).toBeInTheDocument();
+  });
+
+  it("should start and complete replay sequence when clicked", () => {
+    vi.useFakeTimers();
+    const mockPlayedTile = {
+      tileId: "01",
+      playerId: 1,
+      receivingPlayerId: 2,
+      originalPieces: [
+        {
+          id: "mark_1_1",
+          name: "Mark",
+          position: { top: 10, left: 10 },
+          rotation: 0,
+          imageUrl: "./images/pieces/mark_1.svg",
+          locationId: "seat_1",
+        }
+      ],
+    };
+    
+    // Receiver's view
+    renderCampaign({
+      gameState: "PENDING_ACCEPTANCE",
+      playedTile: mockPlayedTile,
+      currentPlayerId: 2,
+      campaignRole: "receiver",
+      pieces: [
+        {
+          id: "mark_1_1",
+          name: "Mark",
+          position: { top: 50, left: 50 },
+          rotation: 0,
+          imageUrl: "./images/pieces/mark_1.svg",
+          locationId: "seat_1",
+        }
+      ]
+    });
+
+    const replayButton = screen.getByText("Replay Last Move");
+    expect(replayButton).toBeInTheDocument();
+
+    // Before clicking, piece is at final position
+    let pieceImage = screen.getByAltText("Mark");
+    expect(pieceImage.style.top).toBe("50%");
+    expect(pieceImage.style.left).toBe("50%");
+
+    // Click replay button
+    act(() => {
+      fireEvent.click(replayButton);
+    });
+
+    // Button should now show replaying text and be disabled
+    expect(screen.getByText("Replaying Move...")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Replaying Move..." })).toBeDisabled();
+
+    // Piece should be at original position
+    pieceImage = screen.getByAltText("Mark");
+    expect(pieceImage.style.top).toBe("10%");
+    expect(pieceImage.style.left).toBe("10%");
+
+    // Fast-forward first timer (1500ms)
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    // Piece should have moved back to final position
+    pieceImage = screen.getByAltText("Mark");
+    expect(pieceImage.style.top).toBe("50%");
+    expect(pieceImage.style.left).toBe("50%");
+
+    // Fast-forward second timer (1200ms)
+    act(() => {
+      vi.advanceTimersByTime(1200);
+    });
+
+    // Replay should be completed: button is back to original text and enabled
+    expect(screen.getByText("Replay Last Move")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Replay Last Move" })).not.toBeDisabled();
+
+    vi.useRealTimers();
   });
 });

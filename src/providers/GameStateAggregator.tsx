@@ -37,6 +37,12 @@ export interface AggregatorLegacyProps {
   showTakeAdvantageModal: boolean;
   takeAdvantageChallengerId: number | null;
   takeAdvantageChallengerCredibility: number;
+  showTakeAdvantageTileSelection: boolean;
+  selectedTilesForAdvantage: any[];
+  totalKredcoinForAdvantage: number;
+  showTakeAdvantageMenu: boolean;
+  takeAdvantagePurchase: any | null;
+  takeAdvantageValidationError: string | null;
 
   // Bonus Move
   bonusMovePlayerId: number | null;
@@ -75,6 +81,8 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
     playerCount,
     showChallengeRevealModal, challengedTile,
     showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
+    showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage,
+    showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError,
     bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
     challengeResultMessage, challengeResultMessagePlayerId, pendingChallengerReward,
     serverAlert,
@@ -119,6 +127,12 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       showTakeAdvantageModal,
       takeAdvantageChallengerId,
       takeAdvantageChallengerCredibility,
+      showTakeAdvantageTileSelection,
+      selectedTilesForAdvantage,
+      totalKredcoinForAdvantage,
+      showTakeAdvantageMenu,
+      takeAdvantagePurchase,
+      takeAdvantageValidationError,
       bonusMovePlayerId,
       showBonusMoveModal,
       piecesBeforeBonusMove,
@@ -141,6 +155,8 @@ export function GameStateAggregator(props: GameStateAggregatorProps) {
       playerCount,
       showChallengeRevealModal, challengedTile,
       showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
+      showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage,
+      showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError,
       bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove,
       challengeResultMessage, challengeResultMessagePlayerId, pendingChallengerReward,
       serverAlert,

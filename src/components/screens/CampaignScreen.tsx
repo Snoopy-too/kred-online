@@ -292,6 +292,8 @@ const CampaignScreen: React.FC = () => {
   const {
     bystanders,
     bystanderIndex,
+    challengeOrder,
+    currentChallengerIndex,
     tileRejected,
     isPrivatelyViewing,
     showChallengeRevealModal,
@@ -328,6 +330,10 @@ const CampaignScreen: React.FC = () => {
     pieceId: string;
     locationId?: string;
   } | null>(null);
+  const [replayPieces, setReplayPieces] = useState<Piece[] | null>(null);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const replayTimeout1Ref = useRef<NodeJS.Timeout | null>(null);
+  const replayTimeout2Ref = useRef<NodeJS.Timeout | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{
     position: { top: number; left: number };
     rotation: number;
@@ -379,6 +385,74 @@ const CampaignScreen: React.FC = () => {
     window.addEventListener('resize', updateZoom);
     return () => window.removeEventListener('resize', updateZoom);
   }, []);
+
+  // Replay Last Move logic
+  const canReplay = (() => {
+    if (!playedTile) return false;
+    const moverId = playedTile.playerId;
+    const receiverId = playedTile.receivingPlayerId;
+
+    if (currentPlayerId === moverId) return false;
+
+    if (gameState === "PENDING_ACCEPTANCE") {
+      return true;
+    }
+
+    if (gameState === "PENDING_CHALLENGE") {
+      if (currentPlayerId === receiverId) return false;
+
+      if (isMultiplayer) {
+        const myQueueIndex = challengeOrder?.indexOf(currentPlayerId) ?? -1;
+        if (myQueueIndex !== -1 && myQueueIndex >= (currentChallengerIndex ?? 0)) {
+          return true;
+        }
+      } else {
+        const myQueueIndex = bystanders?.findIndex((b) => b.id === currentPlayerId) ?? -1;
+        if (myQueueIndex !== -1 && myQueueIndex >= (bystanderIndex ?? 0)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  })();
+
+  const handleReplayLastMove = () => {
+    if (isReplaying || !playedTile?.originalPieces) return;
+
+    if (replayTimeout1Ref.current) clearTimeout(replayTimeout1Ref.current);
+    if (replayTimeout2Ref.current) clearTimeout(replayTimeout2Ref.current);
+
+    setIsReplaying(true);
+    setReplayPieces(playedTile.originalPieces);
+
+    // Slide back completes in 1s. Pause for 500ms, then slide forward.
+    replayTimeout1Ref.current = setTimeout(() => {
+      setReplayPieces(pieces);
+
+      // Slide forward completes in 1s. Wait for it to finish, then clean up.
+      replayTimeout2Ref.current = setTimeout(() => {
+        setIsReplaying(false);
+        setReplayPieces(null);
+      }, 1200); // 1.2s to fully finish the forward animation and stay in final position
+    }, 1500); // 1.5s to let the backward transition finish and sit at the start position
+  };
+
+  useEffect(() => {
+    return () => {
+      if (replayTimeout1Ref.current) clearTimeout(replayTimeout1Ref.current);
+      if (replayTimeout2Ref.current) clearTimeout(replayTimeout2Ref.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (gameState !== "PENDING_ACCEPTANCE" && gameState !== "PENDING_CHALLENGE") {
+      setIsReplaying(false);
+      setReplayPieces(null);
+      if (replayTimeout1Ref.current) clearTimeout(replayTimeout1Ref.current);
+      if (replayTimeout2Ref.current) clearTimeout(replayTimeout2Ref.current);
+    }
+  }, [gameState]);
 
   // ============================================================================
   // UTILITY FUNCTIONS
@@ -1146,6 +1220,9 @@ const CampaignScreen: React.FC = () => {
               const shouldShowWhiteBack =
                 isTilePlayedButNotYetAccepted && !showGiverReceiverView && !showExposedView && !showCorrectionView;
 
+              // ponytail: identify face-up tiles to apply hover zoom
+              const isFaceUp = !shouldShowWhiteBack && isRevealed;
+
               const handleTileClick = () => {
                 if (canPlacerClickToView) {
                   onPlacerViewTile(boardTile.id);
@@ -1174,7 +1251,9 @@ const CampaignScreen: React.FC = () => {
                   }
                   onClick={isTileClickable ? handleTileClick : undefined}
                   className={`absolute rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[boardTile.ownerId]?.border || "border-gray-200"
-                    } ${isPlayedTile ? "ring-2 " + (PLAYER_COLORS[boardTile.ownerId]?.ring || "") : ""}`}
+                    } ${isPlayedTile ? "ring-2 " + (PLAYER_COLORS[boardTile.ownerId]?.ring || "") : ""} ${
+                      isFaceUp ? "tile-hover-zoom" : ""
+                    }`}
                   style={{
                     width: '4.6875%',
                     height: '9.375%',
@@ -1213,7 +1292,7 @@ const CampaignScreen: React.FC = () => {
               <div
                 key={bankedTile.id}
                 className={`absolute rounded-lg shadow-xl transition-all duration-200 bg-stone-100 p-1 border-2 ${PLAYER_COLORS[bankedTile.ownerId]?.border || "border-gray-200"
-                  }`}
+                  } ${bankedTile.faceUp ? "tile-hover-zoom" : ""}`}
                 style={{
                   width: '4.6875%',
                   height: '9.375%',
@@ -1272,84 +1351,89 @@ const CampaignScreen: React.FC = () => {
             })()}
 
             {/* Pieces */}
-            {pieces.map((piece) => {
-              let pieceSizeClass = "w-10 h-10 sm:w-14 sm:h-14"; // Mark
-              if (piece.name === "Heel")
-                pieceSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
-              if (piece.name === "Pawn")
-                pieceSizeClass = "w-16 h-16 sm:w-20 sm:h-20";
+            {(() => {
+              const displayPieces = (isReplaying && replayPieces) ? replayPieces : pieces;
+              return displayPieces.map((piece) => {
+                let pieceSizeClass = "w-10 h-10 sm:w-14 sm:h-14"; // Mark
+                if (piece.name === "Heel")
+                  pieceSizeClass = "w-14 h-14 sm:w-16 sm:h-16";
+                if (piece.name === "Pawn")
+                  pieceSizeClass = "w-16 h-16 sm:w-20 sm:h-20";
 
-              // Apply size reduction for different player counts
-              const scaleMultiplier =
-                playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
-              const baseScale = 0.798;
+                // Apply size reduction for different player counts
+                const scaleMultiplier =
+                  playerCount === 3 ? 0.85 : playerCount === 5 ? 0.9 : 1;
+                const baseScale = 0.798;
 
-              // Scale down pieces in community for 3 and 4 player modes to avoid overlap
-              const isInCommunity = piece.locationId?.startsWith("community") || false;
-              const communityScale = (playerCount === 3 || playerCount === 4) && isInCommunity ? 0.8 : 1;
+                // Scale down pieces in community for 3 and 4 player modes to avoid overlap
+                const isInCommunity = piece.locationId?.startsWith("community") || false;
+                const communityScale = (playerCount === 3 || playerCount === 4) && isInCommunity ? 0.8 : 1;
 
-              const finalScale = baseScale * scaleMultiplier * communityScale;
+                const finalScale = baseScale * scaleMultiplier * communityScale;
 
-              // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
-              // Check both position AND locationId to avoid false positives for seats near the community
+                // For pieces in community locations, apply inverse board rotation to counteract the board's perspective rotation
+                // Check both position AND locationId to avoid false positives for seats near the community
 
-              // Prevent moving Heels until Marks are gone, and Pawns until Heels/Marks are gone.
-              // Pieces returned to the community during the current turn are "pending" and
-              // don't count until the turn is fully resolved.
-              let isRestrictedCommunityPiece = false;
-              if (isInCommunity) {
-                const markCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Mark" && !movedPiecesThisTurn.has(p.id)).length;
-                const heelCount = pieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Heel" && !movedPiecesThisTurn.has(p.id)).length;
-                if (piece.name === "Heel" && markCount > 0) isRestrictedCommunityPiece = true;
-                if (piece.name === "Pawn" && (markCount > 0 || heelCount > 0)) isRestrictedCommunityPiece = true;
-              }
+                // Prevent moving Heels until Marks are gone, and Pawns until Heels/Marks are gone.
+                // Pieces returned to the community during the current turn are "pending" and
+                // don't count until the turn is fully resolved.
+                let isRestrictedCommunityPiece = false;
+                if (isInCommunity) {
+                  const markCount = displayPieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Mark" && !movedPiecesThisTurn.has(p.id)).length;
+                  const heelCount = displayPieces.filter((p) => p.locationId?.startsWith("community") && p.name === "Heel" && !movedPiecesThisTurn.has(p.id)).length;
+                  if (piece.name === "Heel" && markCount > 0) isRestrictedCommunityPiece = true;
+                  if (piece.name === "Pawn" && (markCount > 0 || heelCount > 0)) isRestrictedCommunityPiece = true;
+                }
 
-              const communityCounterRotation = isInCommunity
-                ? -boardRotation
-                : 0;
+                const communityCounterRotation = isInCommunity
+                  ? -boardRotation
+                  : 0;
 
-              // Check if this piece has been moved this turn
-              const hasMoved = movedPiecesThisTurn.has(piece.id);
+                // Check if this piece has been moved this turn
+                const hasMoved = movedPiecesThisTurn.has(piece.id);
 
-              // Only allow dragging pieces for:
-              // - Mover during CAMPAIGN phase (before tile played)
-              // - Correcting player during CORRECTION_REQUIRED
-              // - Receiver making their free Advance move
-              const canDragPiece =
-                !isRestrictedCommunityPiece &&
-                ((isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) ||
-                  (isCorrecting && gameState === 'CORRECTION_REQUIRED') ||
-                  (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED') ||
-                  (isBonusMover && gameState === 'BONUS_MOVE') ||
-                  (isChallenger && gameState === 'TAKE_ADVANTAGE'));
+                // Only allow dragging pieces for:
+                // - Mover during CAMPAIGN phase (before tile played)
+                // - Correcting player during CORRECTION_REQUIRED
+                // - Receiver making their free Advance move
+                const canDragPiece =
+                  !isReplaying &&
+                  !isRestrictedCommunityPiece &&
+                  ((isMover && gameState === 'CAMPAIGN' && !hasPlayedTileThisTurn) ||
+                    (isCorrecting && gameState === 'CORRECTION_REQUIRED') ||
+                    (isFreeAdvancer && gameState === 'CORRECTION_REQUIRED') ||
+                    (isBonusMover && gameState === 'BONUS_MOVE') ||
+                    (isChallenger && gameState === 'TAKE_ADVANTAGE'));
 
-              return (
-                <img
-                  key={piece.id}
-                  src={piece.imageUrl}
-                  alt={piece.name}
-                  draggable={canDragPiece}
-                  onDragStart={(e) => handleDragStartPiece(e, piece.id)}
-                  onDragEnd={handleDragEndPiece}
-                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved
-                    ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
-                    : ""
-                    } ${isRestrictedCommunityPiece ? "opacity-40 grayscale" : ""}`}
-                  style={{
-                    position: "absolute",
-                    top: `${piece.position.top}%`,
-                    left: `${piece.position.left}%`,
-                    transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation
-                      }deg) scale(${finalScale})`,
-                    cursor: "grab",
-                    filter: hasMoved
-                      ? "brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))"
-                      : undefined,
-                  }}
-                  aria-hidden="true"
-                />
-              );
-            })}
+                return (
+                  <img
+                    key={piece.id}
+                    src={piece.imageUrl}
+                    alt={piece.name}
+                    draggable={canDragPiece}
+                    onDragStart={(e) => handleDragStartPiece(e, piece.id)}
+                    onDragEnd={handleDragEndPiece}
+                    className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved
+                      ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
+                      : ""
+                      } ${isRestrictedCommunityPiece ? "opacity-40 grayscale" : ""}`}
+                    style={{
+                      position: "absolute",
+                      top: `${piece.position.top}%`,
+                      left: `${piece.position.left}%`,
+                      transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation
+                        }deg) scale(${finalScale})`,
+                      cursor: "grab",
+                      filter: hasMoved
+                        ? "brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))"
+                        : undefined,
+                      transition: isReplaying ? "all 1.0s ease-in-out" : undefined
+                    }}
+                    aria-hidden="true"
+                  />
+                );
+              });
+            })()}
 
             {/* Dummy Tile (Test Mode) */}
             {isTestMode && dummyTile && (
@@ -1556,6 +1640,22 @@ const CampaignScreen: React.FC = () => {
                 <p className={`mt-2 text-sm font-semibold rounded-md py-1 px-3 ${roleBanner.color} text-white`}>
                   {roleBanner.text}
                 </p>
+              )}
+              {canReplay && (
+                <div className="mt-3">
+                  <button
+                    onClick={handleReplayLastMove}
+                    disabled={isReplaying}
+                    className={`w-full px-4 py-2 bg-gradient-to-r from-indigo-600/90 to-cyan-600/90 hover:from-indigo-500 hover:to-cyan-500 text-white text-sm font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isReplaying ? "animate-pulse ring-2 ring-cyan-400" : ""
+                    }`}
+                  >
+                    <svg className={`w-4 h-4 ${isReplaying ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                    </svg>
+                    {isReplaying ? "Replaying Move..." : "Replay Last Move"}
+                  </button>
+                </div>
               )}
             </div>
 

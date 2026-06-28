@@ -96,6 +96,8 @@ const App: React.FC<MultiplayerProps> = (props) => {
       bystanders, bystanderIndex, challengeOrder, currentChallengerIndex,
       tileRejected, showChallengeRevealModal, challengedTile,
       showTakeAdvantageModal, takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
+      showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage,
+      showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError,
       bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
       challengeResultMessage, challengeResultMessagePlayerId,
       pendingChallengerReward: null,
@@ -138,6 +140,12 @@ const App: React.FC<MultiplayerProps> = (props) => {
         setShowTakeAdvantageModal(packet.showTakeAdvantageModal);
         setTakeAdvantageChallengerId(packet.takeAdvantageChallengerId);
         setTakeAdvantageChallengerCredibility(packet.takeAdvantageChallengerCredibility);
+        setShowTakeAdvantageTileSelection(!!packet.showTakeAdvantageTileSelection);
+        if (packet.selectedTilesForAdvantage) setSelectedTilesForAdvantage(packet.selectedTilesForAdvantage);
+        setTotalKredcoinForAdvantage(packet.totalKredcoinForAdvantage ?? 0);
+        setShowTakeAdvantageMenu(!!packet.showTakeAdvantageMenu);
+        setTakeAdvantagePurchase(packet.takeAdvantagePurchase ?? null);
+        setTakeAdvantageValidationError(packet.takeAdvantageValidationError ?? null);
         setBureaucracyStates(packet.bureaucracyStates ?? []);
         setBureaucracyTurnOrder(packet.bureaucracyTurnOrder ?? []);
         setCurrentBureaucracyPlayerIndex(packet.currentBureaucracyPlayerIndex ?? 0);
@@ -173,6 +181,8 @@ const App: React.FC<MultiplayerProps> = (props) => {
     challengeOrder, currentChallengerIndex, tileRejected,
     showChallengeRevealModal, challengedTile, showTakeAdvantageModal,
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
+    showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage,
+    showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
     bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove, piecesAtCorrectionStart,
@@ -190,6 +200,8 @@ const App: React.FC<MultiplayerProps> = (props) => {
     challengeOrder, currentChallengerIndex, tileRejected,
     showChallengeRevealModal, challengedTile, showTakeAdvantageModal,
     takeAdvantageChallengerId, takeAdvantageChallengerCredibility,
+    showTakeAdvantageTileSelection, selectedTilesForAdvantage, totalKredcoinForAdvantage,
+    showTakeAdvantageMenu, takeAdvantagePurchase, takeAdvantageValidationError,
     bureaucracyStates, bureaucracyTurnOrder, currentBureaucracyPlayerIndex,
     challengeResultMessage, challengeResultMessagePlayerId,
     bonusMovePlayerId, showBonusMoveModal, piecesBeforeBonusMove, piecesAtCorrectionStart,
@@ -299,7 +311,7 @@ const App: React.FC<MultiplayerProps> = (props) => {
     }
   }, [isMultiplayer, isHost, hydrated, multiplayerPlayerCount, players.length, gameFlowHandlers, multiplayerSkipDraft, multiplayerSkipCampaign]);
 
-  useMultiplayerHost({ isHost, setActionDispatch, players, pieces, playerCount, currentPlayerIndex, draftRound, gameState, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleBureaucracyPieceMove: bureaucracyHandlers.handleBureaucracyPieceMove, handleSelectBureaucracyMenuItem: bureaucracyHandlers.handleSelectBureaucracyMenuItem, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleResetTurn: pieceMovementHandlers.handleResetTurn, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn, completeBureaucracyTurn: bureaucracyHandlers.completeBureaucracyTurn, handleDoneWithBureaucracyAction: bureaucracyHandlers.handleDoneWithBureaucracyAction, handleResetBureaucracyAction: bureaucracyHandlers.handleResetBureaucracyAction, handleBureaucracyPiecePromote: bureaucracyHandlers.handleBureaucracyPiecePromote, setTakeAdvantagePurchase, setCurrentBureaucracyPurchase, setPromotionHistory, forcePushState: pushStateRef ? () => pushStateRef.current?.() : undefined } as any);
+  useMultiplayerHost({ isHost, setActionDispatch, players, pieces, playerCount, currentPlayerIndex, draftRound, gameState, setGameState, setPieces, setPiecesAtTurnStart, setCurrentPlayerIndex, setHasPlayedTileThisTurn, setPlayers, setDraftRound, handlePlaceTile: tilePlayHandlers.handlePlaceTile, handlePieceMove: pieceMovementHandlers.handlePieceMove, handleBureaucracyPieceMove: bureaucracyHandlers.handleBureaucracyPieceMove, handleSelectBureaucracyMenuItem: bureaucracyHandlers.handleSelectBureaucracyMenuItem, handleResetPiecesCorrection: pieceMovementHandlers.handleResetPiecesCorrection, handleResetTurn: pieceMovementHandlers.handleResetTurn, handleEndTurn, handleReceiverAcceptanceDecision: challengeFlowHandlers.handleReceiverAcceptanceDecision, handleChallengerDecision: challengeFlowHandlers.handleChallengerDecision, handleContinueAfterChallengeReveal: challengeFlowHandlers.handleContinueAfterChallengeReveal, handleBonusMoveComplete: challengeFlowHandlers.handleBonusMoveComplete, handleCorrectionComplete: challengeFlowHandlers.handleCorrectionComplete, setSelectedTilesForAdvantage, handleTakeAdvantageDecline: challengeFlowHandlers.handleTakeAdvantageDecline, handleTakeAdvantageYes: challengeFlowHandlers.handleTakeAdvantageYes, handleRecoverCredibility: challengeFlowHandlers.handleRecoverCredibility, handlePurchaseMove: challengeFlowHandlers.handlePurchaseMove, handleConfirmTileSelection: challengeFlowHandlers.handleConfirmTileSelection, handleCancelTileSelection: challengeFlowHandlers.handleCancelTileSelection, handleSelectTakeAdvantageAction: challengeFlowHandlers.handleSelectTakeAdvantageAction, handleResetTakeAdvantageAction: challengeFlowHandlers.handleResetTakeAdvantageAction, handleDoneTakeAdvantageAction: challengeFlowHandlers.handleDoneTakeAdvantageAction, handleTakeAdvantagePiecePromote: challengeFlowHandlers.handleTakeAdvantagePiecePromote, handleFinishBureaucracyTurn: bureaucracyHandlers.handleFinishBureaucracyTurn, completeBureaucracyTurn: bureaucracyHandlers.completeBureaucracyTurn, handleDoneWithBureaucracyAction: bureaucracyHandlers.handleDoneWithBureaucracyAction, handleResetBureaucracyAction: bureaucracyHandlers.handleResetBureaucracyAction, handleBureaucracyPiecePromote: bureaucracyHandlers.handleBureaucracyPiecePromote, setTakeAdvantagePurchase, setCurrentBureaucracyPurchase, setPromotionHistory, forcePushState: pushStateRef ? () => pushStateRef.current?.() : undefined } as any);
 
   // ─── Derived values ─────────────────────────────────────────────────────────
 
@@ -446,16 +458,35 @@ const App: React.FC<MultiplayerProps> = (props) => {
         challengeFlowHandlers.handleTakeAdvantageDecline();
       }
     },
-    onTakeAdvantageYes: challengeFlowHandlers.handleTakeAdvantageYes,
-    onRecoverCredibility: challengeFlowHandlers.handleRecoverCredibility,
-    onPurchaseMove: challengeFlowHandlers.handlePurchaseMove,
+    // ponytail: guest TA actions — emit to host when multiplayer guest, run locally when host/singleplayer
+    onTakeAdvantageYes: isMultiplayer && !isHost && multiplayerActions
+      ? () => multiplayerActions.advantageYes()
+      : challengeFlowHandlers.handleTakeAdvantageYes,
+    onRecoverCredibility: isMultiplayer && !isHost && multiplayerActions
+      ? () => multiplayerActions.advantageRecover()
+      : challengeFlowHandlers.handleRecoverCredibility,
+    onPurchaseMove: isMultiplayer && !isHost && multiplayerActions
+      ? () => multiplayerActions.advantagePurchaseMove()
+      : challengeFlowHandlers.handlePurchaseMove,
     onToggleTileSelection: challengeFlowHandlers.handleToggleTileSelection,
-    onConfirmTileSelection: challengeFlowHandlers.handleConfirmTileSelection,
-    onCancelTileSelection: challengeFlowHandlers.handleCancelTileSelection,
-    onSelectTakeAdvantageAction: challengeFlowHandlers.handleSelectTakeAdvantageAction,
-    onResetTakeAdvantageAction: challengeFlowHandlers.handleResetTakeAdvantageAction,
-    onDoneTakeAdvantageAction: challengeFlowHandlers.handleDoneTakeAdvantageAction,
-    onTakeAdvantagePiecePromote: challengeFlowHandlers.handleTakeAdvantagePiecePromote,
+    onConfirmTileSelection: isMultiplayer && !isHost && multiplayerActions
+      ? () => multiplayerActions.advantageConfirmTiles()
+      : challengeFlowHandlers.handleConfirmTileSelection,
+    onCancelTileSelection: isMultiplayer && !isHost && multiplayerActions
+      ? () => multiplayerActions.advantageCancelTiles()
+      : challengeFlowHandlers.handleCancelTileSelection,
+    onSelectTakeAdvantageAction: isMultiplayer && !isHost && multiplayerActions
+      ? (item: any) => multiplayerActions.advantageSelectAction(item)
+      : challengeFlowHandlers.handleSelectTakeAdvantageAction,
+    onResetTakeAdvantageAction: isMultiplayer && !isHost && multiplayerActions
+      ? () => multiplayerActions.advantageResetAction()
+      : challengeFlowHandlers.handleResetTakeAdvantageAction,
+    onDoneTakeAdvantageAction: isMultiplayer && !isHost && multiplayerActions
+      ? () => multiplayerActions.advantageDoneAction()
+      : challengeFlowHandlers.handleDoneTakeAdvantageAction,
+    onTakeAdvantagePiecePromote: isMultiplayer && !isHost && multiplayerActions
+      ? (pieceId: string) => multiplayerActions.advantagePromote(pieceId)
+      : challengeFlowHandlers.handleTakeAdvantagePiecePromote,
   };
 
   const bureaucracyValue = {

@@ -41,6 +41,16 @@ interface useMultiplayerHostProps {
   handleResetBureaucracyAction: () => void;
   handleBureaucracyPiecePromote: (pieceId: string) => void;
   setTakeAdvantagePurchase: (purchase: any) => void;
+  // ponytail: guest TA flow handlers
+  handleTakeAdvantageYes: () => void;
+  handleRecoverCredibility: () => void;
+  handlePurchaseMove: () => void;
+  handleConfirmTileSelection: () => void;
+  handleCancelTileSelection: () => void;
+  handleSelectTakeAdvantageAction: (item: any) => void;
+  handleResetTakeAdvantageAction: () => void;
+  handleDoneTakeAdvantageAction: () => void;
+  handleTakeAdvantagePiecePromote: (pieceId: string) => void;
   setCurrentBureaucracyPurchase: (purchase: any) => void;
   setPromotionHistory: React.Dispatch<React.SetStateAction<PromotionHistoryEntry[]>>;
 }
@@ -81,6 +91,15 @@ export function useMultiplayerHost({
   handleResetBureaucracyAction,
   handleBureaucracyPiecePromote,
   setTakeAdvantagePurchase,
+  handleTakeAdvantageYes,
+  handleRecoverCredibility,
+  handlePurchaseMove,
+  handleConfirmTileSelection,
+  handleCancelTileSelection,
+  handleSelectTakeAdvantageAction,
+  handleResetTakeAdvantageAction,
+  handleDoneTakeAdvantageAction,
+  handleTakeAdvantagePiecePromote,
   setCurrentBureaucracyPurchase,
   setPromotionHistory,
   forcePushState,
@@ -206,15 +225,49 @@ export function useMultiplayerHost({
         case 'COMPLETE_CORRECTION':
           handleCorrectionComplete();
           break;
-        case 'ADVANTAGE_SELECT_TILES':
-          // Guest selected tiles for take advantage
-          setSelectedTilesForAdvantage(action.payload.tileIds);
+        case 'ADVANTAGE_SELECT_TILES': {
+          // ponytail: resolve IDs → full Tile objects from challenger's bank
+          const tileIds: number[] = action.payload.tileIds;
+          const challenger = players.find(p => p.id === Number(action.playerId));
+          const fullTiles = challenger
+            ? challenger.bureaucracyTiles.filter(t => tileIds.includes(t.id))
+            : [];
+          setSelectedTilesForAdvantage(fullTiles as any);
           break;
+        }
         case 'ADVANTAGE_PURCHASE':
           setTakeAdvantagePurchase(action.payload.purchase);
           break;
         case 'ADVANTAGE_DECLINE':
           handleTakeAdvantageDecline();
+          break;
+        // ponytail: guest TA flow
+        case 'ADVANTAGE_YES':
+          handleTakeAdvantageYes();
+          break;
+        case 'ADVANTAGE_RECOVER':
+          handleRecoverCredibility();
+          break;
+        case 'ADVANTAGE_PURCHASE_MOVE':
+          handlePurchaseMove();
+          break;
+        case 'ADVANTAGE_CONFIRM_TILES':
+          handleConfirmTileSelection();
+          break;
+        case 'ADVANTAGE_CANCEL_TILES':
+          handleCancelTileSelection();
+          break;
+        case 'ADVANTAGE_SELECT_ACTION':
+          handleSelectTakeAdvantageAction(action.payload.item);
+          break;
+        case 'ADVANTAGE_RESET_ACTION':
+          handleResetTakeAdvantageAction();
+          break;
+        case 'ADVANTAGE_DONE_ACTION':
+          handleDoneTakeAdvantageAction();
+          break;
+        case 'ADVANTAGE_PROMOTE':
+          handleTakeAdvantagePiecePromote(action.payload.pieceId);
           break;
         case 'RECEIVER_REWARD':
           // Process on host side directly
@@ -314,6 +367,15 @@ export function useMultiplayerHost({
     handleResetBureaucracyAction,
     handleBureaucracyPiecePromote,
     setTakeAdvantagePurchase,
+    handleTakeAdvantageYes,
+    handleRecoverCredibility,
+    handlePurchaseMove,
+    handleConfirmTileSelection,
+    handleCancelTileSelection,
+    handleSelectTakeAdvantageAction,
+    handleResetTakeAdvantageAction,
+    handleDoneTakeAdvantageAction,
+    handleTakeAdvantagePiecePromote,
     setCurrentBureaucracyPurchase,
     setPromotionHistory,
   ]);

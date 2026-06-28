@@ -105,6 +105,22 @@ export function useSupabaseActions() {
   );
 
   const declineAdvantage = useCallback(() => emitAction('ADVANTAGE_DECLINE'), [emitAction]);
+  // ponytail: guest TA flow actions
+  const advantageYes = useCallback(() => emitAction('ADVANTAGE_YES'), [emitAction]);
+  const advantageRecover = useCallback(() => emitAction('ADVANTAGE_RECOVER'), [emitAction]);
+  const advantagePurchaseMove = useCallback(() => emitAction('ADVANTAGE_PURCHASE_MOVE'), [emitAction]);
+  const advantageConfirmTiles = useCallback(() => emitAction('ADVANTAGE_CONFIRM_TILES'), [emitAction]);
+  const advantageCancelTiles = useCallback(() => emitAction('ADVANTAGE_CANCEL_TILES'), [emitAction]);
+  const advantageSelectAction = useCallback(
+    (item: any) => emitAction('ADVANTAGE_SELECT_ACTION', { item }),
+    [emitAction]
+  );
+  const advantageResetAction = useCallback(() => emitAction('ADVANTAGE_RESET_ACTION'), [emitAction]);
+  const advantageDoneAction = useCallback(() => emitAction('ADVANTAGE_DONE_ACTION'), [emitAction]);
+  const advantagePromote = useCallback(
+    (pieceId: string) => emitAction('ADVANTAGE_PROMOTE', { pieceId }),
+    [emitAction]
+  );
 
   const receiverRewardChoice = useCallback(
     (choice: 'credibility' | 'advance') => emitAction('RECEIVER_REWARD', { choice }),
@@ -146,6 +162,15 @@ export function useSupabaseActions() {
     selectAdvantageTiles,
     purchaseAdvantage,
     declineAdvantage,
+    advantageYes,
+    advantageRecover,
+    advantagePurchaseMove,
+    advantageConfirmTiles,
+    advantageCancelTiles,
+    advantageSelectAction,
+    advantageResetAction,
+    advantageDoneAction,
+    advantagePromote,
     receiverRewardChoice,
     purchaseBureaucracy,
     purchaseBureaucracyDone,

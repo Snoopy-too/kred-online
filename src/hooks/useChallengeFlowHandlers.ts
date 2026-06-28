@@ -796,22 +796,23 @@ export function useChallengeFlowHandlers({
       setMovedPiecesThisTurn(new Set());
       setPendingCommunityPieces(new Set());
 
-      setPlayers((prev) =>
-        handleCredibilityLoss(
-          "tile_rejected_by_receiver",
-          playedTile.playerId
-        )(prev)
-      );
-      addGameLog(
-        `Player ${playedTile.playerId} lost 1 credibility: Tile was rejected by Player ${playedTile.receivingPlayerId}`
-      );
+      // ponytail: chain credibility updates to prevent React state race condition/overwriting
+      const playersAfterLoss = handleCredibilityLoss(
+        "tile_rejected_by_receiver",
+        playedTile.playerId
+      )(players);
 
       const credibilityResult = handleCredibilityGain(
         playedTile.receivingPlayerId,
-        2
+        2,
+        playersAfterLoss
       );
 
       setPlayers(credibilityResult.newPlayers);
+
+      addGameLog(
+        `Player ${playedTile.playerId} lost 1 credibility: Tile was rejected by Player ${playedTile.receivingPlayerId}`
+      );
 
       if (credibilityResult.hadMaxCredibility) {
         const reward = {
@@ -1501,55 +1502,16 @@ export function useChallengeFlowHandlers({
       takeAdvantageChallengerId!
     );
 
+    // ponytail: flip existing banked tiles to face-up instead of creating duplicates
     if (takeAdvantageChallengerId !== null) {
-      const bankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
-      const playerBankSpaces = bankSpaces.filter(
-        (bs) => bs.ownerId === takeAdvantageChallengerId
+      const tilesToFlip = new Set(selectedTilesForAdvantage.map((t) => t.id));
+      setBankedTiles((prev: any) =>
+        prev.map((bt: any) =>
+          bt.ownerId === takeAdvantageChallengerId && tilesToFlip.has(bt.tile.id)
+            ? { ...bt, faceUp: true }
+            : bt
+        )
       );
-
-      const usedBankIndices = new Set(
-        bankedTiles
-          .filter((bt) => bt.ownerId === takeAdvantageChallengerId)
-          .map((bt) =>
-            playerBankSpaces.findIndex(
-              (bs) =>
-                bs.position.left === bt.position.left &&
-                bs.position.top === bt.position.top
-            )
-          )
-      );
-
-      const newBankedTiles: (BoardTile & { faceUp: boolean })[] = [];
-      let bankIndex = 0;
-
-      for (const tile of selectedTilesForAdvantage) {
-        while (
-          bankIndex < playerBankSpaces.length &&
-          usedBankIndices.has(bankIndex)
-        ) {
-          bankIndex++;
-        }
-
-        if (bankIndex < playerBankSpaces.length) {
-          const bankSpace = playerBankSpaces[bankIndex];
-          const newBankedTile: BoardTile & { faceUp: boolean } = {
-            id: `bank_${takeAdvantageChallengerId}_${bankIndex}_${Date.now()}_${tile.id
-              }`,
-            tile: tile,
-            position: bankSpace.position,
-            rotation: bankSpace.rotation,
-            placerId: takeAdvantageChallengerId,
-            ownerId: takeAdvantageChallengerId,
-            faceUp: true,
-          };
-
-          newBankedTiles.push(newBankedTile);
-          usedBankIndices.add(bankIndex);
-          bankIndex++;
-        }
-      }
-
-      setBankedTiles((prev: any) => [...prev, ...newBankedTiles]);
     }
 
     setPlayers((prev: Player[]) =>
