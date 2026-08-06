@@ -11,7 +11,7 @@
  * @module components/screens/CampaignScreen
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 
 // ============================================================================
 // TYPE IMPORTS - TypeScript interfaces and type definitions
@@ -34,6 +34,8 @@ import type {
 import {
   BOARD_IMAGE_URLS,
   TILE_SPACES_BY_PLAYER_COUNT,
+  BANK_SPACES_BY_PLAYER_COUNT,
+  DROP_LOCATIONS_BY_PLAYER_COUNT,
   TILE_KREDCOIN_VALUES,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
   PLAYER_PERSPECTIVE_ROTATIONS,
@@ -42,14 +44,14 @@ import {
 // ============================================================================
 // UTILITY IMPORTS - Helper functions
 // ============================================================================
-import { calculatePieceRotation } from "../../utils/positioning";
+import { calculatePieceRotation, BOARD_CENTERS } from "../../utils/positioning";
 import { findNearestVacantLocation, calculateMoves, validateTileRequirementsWithImpossibleMoveExceptions } from "../../game";
 import { validatePieceMovement, areSeatsAdjacent } from "../../rules";
 import {
   getBureaucracyMenu,
   getAvailablePurchases,
 } from "../../game/bureaucracy";
-import { getPlayerById, getPieceById } from "../../utils";
+import { getPlayerById, getPieceById, formatLocationId, playPieceMoveSound, playTilePlaySound } from "../../utils";
 import LanguageModal from "../shared/LanguageModal";
 
 // ============================================================================
@@ -342,6 +344,15 @@ const CampaignScreen: React.FC = () => {
     isValid?: boolean;
   } | null>(null);
 
+  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
+  const [selectedTileId, setSelectedTileId] = useState<number | null>(null);
+
+  // Clear selections when turn or game state changes
+  useEffect(() => {
+    setSelectedPieceId(null);
+    setSelectedTileId(null);
+  }, [currentPlayerId, gameState]);
+
   // ============================================================================
   // DERIVED STATE & CALCULATIONS
   // ============================================================================
@@ -358,6 +369,76 @@ const CampaignScreen: React.FC = () => {
   const unoccupiedSpaces = tileSpaces.filter(
     (space) => !occupiedOwnerIds.has(space.ownerId)
   );
+
+  // Valid piece movement target locations for selected piece
+  const validPieceTargets = useMemo(() => {
+    if (!selectedPieceId) return [];
+    const p = pieces.find((item) => item.id === selectedPieceId);
+    if (!p) return [];
+
+    const allLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+    return allLocations.filter((loc) => {
+      const validation = validatePieceMovement(
+        p.id,
+        p.locationId,
+        loc.id,
+        currentPlayerId,
+        pieces
+      );
+      if (!validation.isAllowed) return false;
+
+      const capacityAtCoord = allLocations.filter(
+        (other) =>
+          Math.abs(other.position.left - loc.position.left) < 0.01 &&
+          Math.abs(other.position.top - loc.position.top) < 0.01
+      ).length;
+      const piecesAtCoord = pieces.filter(
+        (other) =>
+          other.id !== p.id &&
+          other.position != null &&
+          Math.abs(other.position.left - loc.position.left) < 0.01 &&
+          Math.abs(other.position.top - loc.position.top) < 0.01
+      ).length;
+
+      return piecesAtCoord < capacityAtCoord;
+    });
+  }, [selectedPieceId, pieces, playerCount, currentPlayerId]);
+
+  // Valid tile receiving spaces for selected tile
+  const validTileReceivingSpaces = useMemo(() => {
+    if (selectedTileId === null) return [];
+    const allBankSpaces = BANK_SPACES_BY_PLAYER_COUNT[playerCount] || [];
+    const tilesPerPlayer = allBankSpaces.length / playerCount;
+    const totalTilesPlayed = players.reduce(
+      (sum, p) => sum + p.bureaucracyTiles.length,
+      0
+    );
+    const isLastTile = totalTilesPlayed === allBankSpaces.length - 1;
+
+    return unoccupiedSpaces.filter((space) => {
+      const targetPlayer = getPlayerById(players, space.ownerId);
+      if (!targetPlayer) return false;
+
+      if (targetPlayer.id === currentPlayerId) {
+        const otherPlayers = players.filter((p) => p.id !== currentPlayerId);
+        const allOthersAreOutOfTiles = otherPlayers.every(
+          (p) => p.keptTiles.length === 0
+        );
+        if (!allOthersAreOutOfTiles) return false;
+      }
+
+      if (targetPlayer.bureaucracyTiles.length >= tilesPerPlayer) return false;
+
+      if (isLastTile) {
+        if (targetPlayer.bureaucracyTiles.length !== tilesPerPlayer - 1) return false;
+      } else {
+        if (targetPlayer.keptTiles.length === 0) return false;
+      }
+
+      return true;
+    });
+  }, [selectedTileId, unoccupiedSpaces, players, playerCount, currentPlayerId]);
+
 
   const logContainerRef = useRef<HTMLDivElement>(null);
 
@@ -521,8 +602,9 @@ const CampaignScreen: React.FC = () => {
     let top = rawTop;
     if (boardRotation !== 0) {
       const angleRad = -boardRotation * (Math.PI / 180);
-      const centerX = 50;
-      const centerY = 50;
+      const boardCenter = BOARD_CENTERS[playerCount] || { left: 50, top: 50 };
+      const centerX = boardCenter.left;
+      const centerY = boardCenter.top;
       const translatedX = rawLeft - centerX;
       const translatedY = rawTop - centerY;
       const rotatedX =
@@ -592,8 +674,9 @@ const CampaignScreen: React.FC = () => {
     let top = rawTop;
     if (boardRotation !== 0) {
       const angleRad = -boardRotation * (Math.PI / 180);
-      const centerX = 50;
-      const centerY = 50;
+      const boardCenter = BOARD_CENTERS[playerCount] || { left: 50, top: 50 };
+      const centerX = boardCenter.left;
+      const centerY = boardCenter.top;
       const translatedX = rawLeft - centerX;
       const translatedY = rawTop - centerY;
       const rotatedX =
@@ -705,6 +788,11 @@ const CampaignScreen: React.FC = () => {
   ) => {
     e.dataTransfer.setData("pieceId", pieceId);
     e.dataTransfer.effectAllowed = "move";
+    
+    // Fix ghost image offset caused by CSS transforms by centering it on cursor
+    const rect = e.currentTarget.getBoundingClientRect();
+    e.dataTransfer.setDragImage(e.currentTarget, rect.width / 2, rect.height / 2);
+
     const piece = getPieceById(pieces, pieceId);
     if (piece) {
       setDraggedPieceInfo({
@@ -980,8 +1068,11 @@ const CampaignScreen: React.FC = () => {
             onDragOver={handleDragOverBoard}
             onDrop={handleDropOnBoard}
             onClick={(e) => {
-              if (e.target === e.currentTarget) {
+              const targetTag = (e.target as HTMLElement).tagName;
+              if (e.target === e.currentTarget || targetTag === 'IMG') {
                 onRevealTile(null);
+                setSelectedPieceId(null);
+                setSelectedTileId(null);
               }
             }}
             onMouseMove={handleMouseMoveOnBoard}
@@ -989,7 +1080,7 @@ const CampaignScreen: React.FC = () => {
             style={{
               transform: `rotate(${boardRotation}deg)`,
               transformStyle: "preserve-3d",
-              transformOrigin: "center center",
+              transformOrigin: `${BOARD_CENTERS[playerCount]?.left ?? 50}% ${BOARD_CENTERS[playerCount]?.top ?? 50}%`,
               transition: isMultiplayer ? "none" : "transform 0.7s ease-in-out",
             }}
           >
@@ -1116,17 +1207,28 @@ const CampaignScreen: React.FC = () => {
             {unoccupiedSpaces.map((space) => {
               const colors = PLAYER_COLORS[space.ownerId] || PLAYER_COLORS[1];
               const playerName = nameById(space.ownerId);
+              const isTarget = validTileReceivingSpaces.some((s) => s.ownerId === space.ownerId);
 
               return (
                 <div
                   key={`space-${space.ownerId}`}
-                  onDrop={(e) => handleDropOnTileSpace(e, space)}
-                  onDragOver={handleDragOver}
-                  className={`absolute rounded-lg border-2 border-dashed flex items-center justify-center text-center transition-all duration-300
-                    ${isDraggingTile
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedTileId !== null && isTarget) {
+                      onPlaceTile(selectedTileId, space);
+                      playTilePlaySound();
+                      setSelectedTileId(null);
+                    }
+                  }}
+                  className={`absolute rounded-lg border-2 flex items-center justify-center text-center transition-all duration-300 ${
+                    selectedTileId !== null && isTarget
+                      ? "pulsing-green-space border-green-500 bg-green-500/20 scale-105 shadow-lg shadow-green-500/30 cursor-pointer z-30"
+                      : selectedTileId !== null
+                      ? "opacity-40 border-gray-600 bg-gray-900/40 cursor-not-allowed"
+                      : isDraggingTile
                       ? `${colors.draggingBorder} ${colors.draggingBg} scale-105 border-solid shadow-lg`
-                      : `${colors.border} ${colors.bg}`
-                    }`}
+                      : `${colors.border} ${colors.bg} border-dashed`
+                  }`}
                   style={{
                     width: '4.6875%',
                     height: '9.375%',
@@ -1139,10 +1241,17 @@ const CampaignScreen: React.FC = () => {
                     style={{
                       transform: `rotate(${-space.rotation - boardRotation}deg)`,
                     }}
-                    className={`font-bold text-[10px] leading-tight transition-colors duration-300 ${isDraggingTile ? colors.indicator : colors.text
-                      }`}
+                    className={`font-bold text-[10px] leading-tight transition-colors duration-300 ${
+                      selectedTileId !== null && isTarget
+                        ? "text-green-300 font-extrabold scale-105"
+                        : isDraggingTile
+                        ? colors.indicator
+                        : colors.text
+                    }`}
                   >
-                    <div className="uppercase tracking-tighter opacity-60 leading-none scale-90 mb-0.5">Pass to</div>
+                    <div className="uppercase tracking-tighter opacity-60 leading-none scale-90 mb-0.5">
+                      {selectedTileId !== null && isTarget ? "Play Tile To" : "Pass to"}
+                    </div>
                     <div className="text-[13px] font-black uppercase leading-tight truncate px-1" title={playerName}>{playerName}</div>
                   </div>
                 </div>
@@ -1405,26 +1514,43 @@ const CampaignScreen: React.FC = () => {
                     (isBonusMover && gameState === 'BONUS_MOVE') ||
                     (isChallenger && gameState === 'TAKE_ADVANTAGE'));
 
+                const isSelectedPiece = selectedPieceId === piece.id;
+
                 return (
                   <img
                     key={piece.id}
                     src={piece.imageUrl}
                     alt={piece.name}
-                    draggable={canDragPiece}
-                    onDragStart={(e) => handleDragStartPiece(e, piece.id)}
-                    onDragEnd={handleDragEndPiece}
-                    className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${hasMoved
-                      ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
-                      : ""
-                      } ${isRestrictedCommunityPiece ? "opacity-40 grayscale" : ""}`}
+                    draggable={false}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (canDragPiece) {
+                        if (isSelectedPiece) {
+                          setSelectedPieceId(null);
+                        } else {
+                          setSelectedPieceId(piece.id);
+                          setSelectedTileId(null);
+                        }
+                      }
+                    }}
+                    className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
+                      isSelectedPiece
+                        ? "ring-4 ring-green-400 ring-offset-2 ring-offset-black scale-110 z-30 animate-pulse cursor-pointer"
+                        : hasMoved
+                        ? "ring-4 ring-amber-400 ring-opacity-70 rounded-full"
+                        : ""
+                      } ${isRestrictedCommunityPiece ? "opacity-40 grayscale" : ""} ${
+                        canDragPiece ? "cursor-pointer hover:scale-110" : "cursor-not-allowed"
+                      }`}
                     style={{
                       position: "absolute",
                       top: `${piece.position.top}%`,
                       left: `${piece.position.left}%`,
                       transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation
                         }deg) scale(${finalScale})`,
-                      cursor: "grab",
-                      filter: hasMoved
+                      filter: isSelectedPiece
+                        ? "brightness(1.25) drop-shadow(0 0 12px rgba(34, 197, 94, 0.9))"
+                        : hasMoved
                         ? "brightness(1.2) drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))"
                         : undefined,
                       transition: isReplaying ? "all 1.0s ease-in-out" : undefined
@@ -1434,6 +1560,29 @@ const CampaignScreen: React.FC = () => {
                 );
               });
             })()}
+
+            {/* Pulsing Green Target Circles for Selected Piece */}
+            {validPieceTargets.map((target) => (
+              <button
+                key={`target-circle-${target.id}-${target.position.left}-${target.position.top}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedPieceId) {
+                    onPieceMove(selectedPieceId, target.position, target.id);
+                    playPieceMoveSound();
+                    setSelectedPieceId(null);
+                  }
+                }}
+                className="pulsing-green-target absolute z-40 w-7 h-7 rounded-full bg-green-500 border-2 border-white shadow-xl cursor-pointer hover:scale-125 transition-transform"
+                style={{
+                  top: `${target.position.top}%`,
+                  left: `${target.position.left}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+                title={`Move piece to ${formatLocationId(target.id)}`}
+                aria-label={`Move piece to ${formatLocationId(target.id)}`}
+              />
+            ))}
 
             {/* Dummy Tile (Test Mode) */}
             {isTestMode && dummyTile && (
@@ -1808,7 +1957,7 @@ const CampaignScreen: React.FC = () => {
             <div id="campaign-player-hand">
               {((gameState === "SELECTING_TILE" || gameState === "CAMPAIGN") && isMyTurn && !hasPlayedTileThisTurn) && (
                 <div className="text-center text-sm text-green-300 font-semibold mb-1 animate-pulse">
-                  Move your pieces, then drag a tile to a player's space to end your turn
+                  Click a piece to move to a green circle. Click a tile, then click a pulsing green receiving space to play it!
                 </div>
               )}
               <div className="flex flex-wrap justify-center gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700 min-h-[8rem]">
@@ -1816,15 +1965,29 @@ const CampaignScreen: React.FC = () => {
                   const tileKey = tile.id === 0 ? "BLANK" : tile.id.toString().padStart(2, "0");
                   const isHonestMatch = matchingTileIds.includes(tileKey);
                   const canDragTile = (gameState === "SELECTING_TILE" || gameState === "CAMPAIGN") && isMyTurn && !hasPlayedTileThisTurn;
+                  const isSelectedTile = selectedTileId === tile.id;
+
                   return (
                     <div
                       key={tile.id}
-                      draggable={canDragTile}
-                      onDragStart={(e) => handleDragStartTile(e, tile.id)}
-                      onDragEnd={() => setIsDraggingTile(false)}
-                      className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md transition-transform hover:scale-105 flex-shrink-0 ${canDragTile
-                        ? "cursor-grab"
-                        : "cursor-not-allowed opacity-60"
+                      draggable={false}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (canDragTile) {
+                          if (isSelectedTile) {
+                            setSelectedTileId(null);
+                          } else {
+                            setSelectedTileId(tile.id);
+                            setSelectedPieceId(null);
+                          }
+                        }
+                      }}
+                      className={`bg-stone-100 w-12 h-24 p-1 rounded-md shadow-md transition-all flex-shrink-0 ${
+                        isSelectedTile
+                          ? "ring-4 ring-green-400 scale-110 z-20 shadow-green-500/50 shadow-xl animate-pulse cursor-pointer"
+                          : canDragTile
+                          ? "cursor-pointer hover:scale-105"
+                          : "cursor-not-allowed opacity-60"
                         } border border-gray-300`}
                     >
                       <img

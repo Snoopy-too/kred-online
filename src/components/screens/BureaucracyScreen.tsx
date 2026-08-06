@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type {
   BureaucracyMenuItem,
   BureaucracyPurchase,
@@ -6,12 +6,13 @@ import type {
 import { validatePieceMovement } from "../../rules";
 import { calculatePieceRotation } from "../../utils/positioning";
 import { findNearestVacantLocation } from "../../game/locations";
-import { getPlayerById, getPieceById, getPlayerName } from "../../utils";
+import { getPlayerById, getPieceById, getPlayerName, formatLocationId, playPieceMoveSound } from "../../utils";
 import { getBureaucracyMenu, getAvailablePurchases } from "../../game";
 import {
   PLAYER_PERSPECTIVE_ROTATIONS,
   CREDIBILITY_LOCATIONS_BY_PLAYER_COUNT,
   BOARD_IMAGE_URLS,
+  DROP_LOCATIONS_BY_PLAYER_COUNT,
 } from "../../config";
 import { useRoster } from "../../providers/RosterProvider";
 import { useBoard } from "../../providers/BoardProvider";
@@ -141,6 +142,42 @@ const BureaucracyScreen: React.FC = () => {
       ? PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[playerIndex + 1] ?? 0
       : PLAYER_PERSPECTIVE_ROTATIONS[playerCount]?.[currentPlayerId] ?? 0)
     : 0;
+
+  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
+
+  // Valid piece movement target locations for selected piece in Bureaucracy phase
+  const validPieceTargets = useMemo(() => {
+    if (!selectedPieceId) return [];
+    const p = pieces.find((item) => item.id === selectedPieceId);
+    if (!p) return [];
+
+    const allLocations = DROP_LOCATIONS_BY_PLAYER_COUNT[playerCount] || [];
+    return allLocations.filter((loc) => {
+      const validation = validatePieceMovement(
+        p.id,
+        p.locationId,
+        loc.id,
+        currentPlayerId,
+        pieces
+      );
+      if (!validation.isAllowed) return false;
+
+      const capacityAtCoord = allLocations.filter(
+        (other) =>
+          Math.abs(other.position.left - loc.position.left) < 0.01 &&
+          Math.abs(other.position.top - loc.position.top) < 0.01
+      ).length;
+      const piecesAtCoord = pieces.filter(
+        (other) =>
+          other.id !== p.id &&
+          other.position != null &&
+          Math.abs(other.position.left - loc.position.left) < 0.01 &&
+          Math.abs(other.position.top - loc.position.top) < 0.01
+      ).length;
+
+      return piecesAtCoord < capacityAtCoord;
+    });
+  }, [selectedPieceId, pieces, playerCount, currentPlayerId]);
 
   // Drag and drop state
   const [draggedPieceInfo, setDraggedPieceInfo] = useState<{
@@ -429,41 +466,72 @@ const BureaucracyScreen: React.FC = () => {
                 : 0;
 
               const isDraggable = !showPurchaseMenu && !isPromotionPurchase && isMyTurn;
+              const isSelectedPiece = selectedPieceId === piece.id;
 
               return (
                 <img
                   key={piece.id}
                   src={piece.imageUrl}
                   alt={piece.name}
-                  draggable={isDraggable}
-                  onDragStart={(e) => {
-                    if (isDraggable) {
-                      handleDragStartPiece(e, piece.id);
-                    }
-                  }}
-                  onDragEnd={handleDragEndPiece}
-                  onClick={() => {
+                  draggable={false}
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (isPromotionPurchase && isMyTurn) {
                       onPiecePromote(piece.id);
+                    } else if (isDraggable) {
+                      if (isSelectedPiece) {
+                        setSelectedPieceId(null);
+                      } else {
+                        setSelectedPieceId(piece.id);
+                      }
                     }
                   }}
-                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${(isPromotionPurchase && isMyTurn)
-                    ? "cursor-pointer hover:scale-110"
-                    : isDraggable
-                      ? "cursor-grab"
+                  className={`${pieceSizeClass} object-contain drop-shadow-lg transition-all duration-100 ease-in-out ${
+                    isSelectedPiece
+                      ? "ring-4 ring-green-400 ring-offset-2 ring-offset-black scale-110 z-30 animate-pulse cursor-pointer"
+                      : isPromotionPurchase && isMyTurn
+                      ? "cursor-pointer hover:scale-110"
+                      : isDraggable
+                      ? "cursor-pointer hover:scale-110"
                       : "cursor-not-allowed"
-                    }`}
+                  }`}
                   style={{
                     position: "absolute",
                     top: `${piece.position.top}%`,
                     left: `${piece.position.left}%`,
                     transform: `translate(-50%, -50%) rotate(${piece.rotation + communityCounterRotation
                       }deg) scale(${finalScale})`,
+                    filter: isSelectedPiece
+                      ? "brightness(1.25) drop-shadow(0 0 12px rgba(34, 197, 94, 0.9))"
+                      : undefined,
                   }}
                   aria-hidden="true"
                 />
               );
             })}
+
+            {/* Pulsing Green Target Circles for Selected Piece in Bureaucracy */}
+            {validPieceTargets.map((target) => (
+              <button
+                key={`target-circle-bureaucracy-${target.id}-${target.position.left}-${target.position.top}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedPieceId) {
+                    onPieceMove(selectedPieceId, target.position, target.id);
+                    playPieceMoveSound();
+                    setSelectedPieceId(null);
+                  }
+                }}
+                className="pulsing-green-target absolute z-40 w-7 h-7 rounded-full bg-green-500 border-2 border-white shadow-xl cursor-pointer hover:scale-125 transition-transform"
+                style={{
+                  top: `${target.position.top}%`,
+                  left: `${target.position.left}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+                title={`Move piece to ${formatLocationId(target.id)}`}
+                aria-label={`Move piece to ${formatLocationId(target.id)}`}
+              />
+            ))}
 
             {/* Render board tiles */}
             {boardTiles.map((boardTile) => (

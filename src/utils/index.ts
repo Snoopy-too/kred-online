@@ -19,3 +19,7 @@ export {
   isPlayerDomain,
   isCommunityLocation
 } from "./lookup";
+
+// Audio utilities - sound effects
+export { playPieceMoveSound, playTilePlaySound } from "./audio";
+
