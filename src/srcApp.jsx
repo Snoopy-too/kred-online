@@ -158,6 +158,54 @@ export function KredApp() {
     setOnlineContext({ lobbyId: null, playerIndex: 0, userId: null, playerNames: [] });
   };
 
+  const handleQuickRejoinOnline = async (pin) => {
+    try {
+      const { user } = await ensureAnonymousAuth();
+      if (!user) {
+        alert('Could not establish user session for Quick Rejoin.');
+        return;
+      }
+      const { data: lobbyData, error: lobbyErr } = await supabase
+        .from('kred_lobbies')
+        .select('*')
+        .eq('pin', String(pin).trim())
+        .in('status', ['WAITING', 'ACTIVE'])
+        .maybeSingle();
+
+      if (lobbyErr || !lobbyData) {
+        alert('The saved room could not be found.');
+        return;
+      }
+      const { data: existingPlayers } = await supabase
+        .from('kred_players')
+        .select('*')
+        .eq('lobby_id', lobbyData.id);
+
+      const myExistingPlayer = existingPlayers?.find(p => p.user_id === user.id);
+
+      if (myExistingPlayer && lobbyData.status === 'ACTIVE') {
+        const pNames = existingPlayers.map(p => p.name || `Player ${p.player_index + 1}`);
+        handleStartOnlineGame({
+          lobbyId: lobbyData.id,
+          numPlayers: lobbyData.player_count,
+          playerIndex: myExistingPlayer.player_index,
+          userId: user.id,
+          playerNames: pNames,
+          pin: lobbyData.pin
+        });
+      } else if (lobbyData.status === 'WAITING') {
+        // If it's WAITING, just drop them in the lobby view so they can join properly
+        setGameMode('online_lobby');
+      } else {
+        alert('Could not auto-resume. Your browser session may have changed. Please use the Lobby to join.');
+        setGameMode('online_lobby');
+      }
+    } catch (err) {
+      console.error('Quick rejoin failed:', err);
+      alert('Failed to rejoin: ' + err.message);
+    }
+  };
+
   // 1. Online Lobby Selection Screen
   if (gameMode === 'online_lobby') {
     return (
@@ -241,7 +289,7 @@ export function KredApp() {
                 <button
                   className="btn btn-secondary"
                   style={{ marginTop: '12px', padding: '12px', border: '1px solid var(--accent-gold)' }}
-                  onClick={() => setGameMode('online_lobby')}
+                  onClick={() => handleQuickRejoinOnline(lastOnline.pin)}
                 >
                   🔄 Quick Rejoin PIN: {lastOnline.pin}
                 </button>
