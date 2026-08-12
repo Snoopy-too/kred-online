@@ -84,11 +84,14 @@ export function useSupabaseGameSync(lobbyId, userId) {
       if (stateErr && stateErr.code !== 'PGRST116') throw stateErr;
 
       if (stateData && stateData.state_json) {
-        if ((stateData.version || 0) > latestStateVersionRef.current) {
+        setGameState(prev => {
           const normalized = normalizeOnlineMasterState(stateData.state_json, stateData.phase);
-          setGameState(normalized);
-          updateVersion(stateData.version || 0);
-        }
+          if (JSON.stringify(prev) !== JSON.stringify(normalized)) {
+            updateVersion(stateData.version || 0);
+            return normalized;
+          }
+          return prev;
+        });
       }
     } catch (err) {
       console.error('Error fetching room data from Supabase:', err);
@@ -116,11 +119,14 @@ export function useSupabaseGameSync(lobbyId, userId) {
         },
         (payload) => {
           if (payload.new && payload.new.state_json) {
-            if ((payload.new.version || 0) > latestStateVersionRef.current) {
+            setGameState(prev => {
               const normalized = normalizeOnlineMasterState(payload.new.state_json, payload.new.phase);
-              setGameState(normalized);
-              updateVersion(payload.new.version || 0);
-            }
+              if (JSON.stringify(prev) !== JSON.stringify(normalized)) {
+                updateVersion(payload.new.version || 0);
+                return normalized;
+              }
+              return prev;
+            });
           }
         }
       )
