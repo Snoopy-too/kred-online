@@ -3,7 +3,7 @@ import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES }
 import { enforceSupportRule, checkVictory, getNextPlayer, getOrderedChallengers } from '../board.js';
 import { validateMoveCombination, applyMoveToState, classifyPlay, validateSingleMove } from '../moves.js';
 import { handleLoadSaveState } from '../sharedMoves.js';
-import { executeBureaucracyActionPayload } from '../bureaucracy.js';
+import { executeBureaucracyActionPayload, selectBestBankTilesToPay } from '../bureaucracy.js';
 
 export function finishPendingPlayOrReward(G) {
   const challengerId = G.pendingPlay?.successfulChallengerId;
@@ -456,8 +456,7 @@ export function createCampaignPhase() {
           return INVALID_MOVE;
         }
         const player = G.players[pId];
-        const facedownTiles = (player.bank || []).filter(t => t.faceDown);
-        const totalFunding = facedownTiles.reduce((sum, item) => sum + (TILES[item.tileId]?.funding || 0), 0);
+        const facedownTiles = (player?.bank || []).filter(t => t.faceDown);
 
         const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
         let cost = 0;
@@ -468,18 +467,15 @@ export function createCampaignPhase() {
         else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
         else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
 
-        if (cost === 0 || totalFunding < cost) return INVALID_MOVE;
+        const tilesToPay = selectBestBankTilesToPay(facedownTiles, cost);
+        if (tilesToPay.length === 0) return INVALID_MOVE;
 
         const success = executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction });
         if (!success) return INVALID_MOVE;
 
-        let collected = 0;
-        for (const bTile of player.bank) {
-          if (bTile.faceDown && collected < cost) {
-            bTile.faceDown = false;
-            collected += (TILES[bTile.tileId]?.funding || 0);
-          }
-        }
+        tilesToPay.forEach(t => {
+          t.faceDown = false;
+        });
 
         const receiverId = G.pendingPlay.receiverId;
         G.pendingPlay = null;

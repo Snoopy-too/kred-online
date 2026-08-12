@@ -2,7 +2,7 @@ import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES }
 import { enforceSupportRule, checkVictory, getOrderedChallengers, getNextPlayer } from './board.js';
 import { validateMoveCombination, applyMoveToState, classifyPlay } from './moves.js';
 import { getClockwiseOrder } from './board.js';
-import { initBureaucracy, cleanupBureaucracy, executeBureaucracyActionPayload } from './bureaucracy.js';
+import { initBureaucracy, cleanupBureaucracy, executeBureaucracyActionPayload, selectBestBankTilesToPay } from './bureaucracy.js';
 
 export function isCampaignOver(G) {
   if (!G || !G.players) return false;
@@ -379,7 +379,6 @@ export function executeOnlineChallengerBureaucracyAction(effectiveG, playerID, a
   if (!player) return;
 
   const facedownTiles = (player.bank || []).filter(t => t.faceDown);
-  const totalFunding = facedownTiles.reduce((sum, item) => sum + (TILES[item.tileId]?.funding || 0), 0);
 
   const { actionType, targetLoc, subAction } = actionPayload;
   const prices = BUREAUCRACY_PRICES[nextG.numPlayers] || BUREAUCRACY_PRICES[3];
@@ -391,18 +390,15 @@ export function executeOnlineChallengerBureaucracyAction(effectiveG, playerID, a
   else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
   else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
 
-  if (cost === 0 || totalFunding < cost) return;
+  const tilesToPay = selectBestBankTilesToPay(facedownTiles, cost);
+  if (tilesToPay.length === 0) return;
 
   const success = executeBureaucracyActionPayload(nextG, pId, { actionType, targetLoc, subAction });
   if (!success) return;
 
-  let collected = 0;
-  for (const bTile of player.bank) {
-    if (bTile.faceDown && collected < cost) {
-      bTile.faceDown = false;
-      collected += (TILES[bTile.tileId]?.funding || 0);
-    }
-  }
+  tilesToPay.forEach(t => {
+    t.faceDown = false;
+  });
 
   const receiverId = nextG.pendingPlay.receiverId;
   nextG.pendingPlay = null;

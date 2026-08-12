@@ -4,6 +4,42 @@ import { checkVictory, enforceSupportRule } from './board.js';
 import { applyMoveToState, validateSingleMove } from './moves.js';
 import { handleLoadSaveState } from './sharedMoves.js';
 
+export function selectBestBankTilesToPay(facedownBankTiles, cost) {
+  if (!facedownBankTiles || facedownBankTiles.length === 0 || cost <= 0) return [];
+
+  let bestSubset = null;
+  let bestFundingSum = Infinity;
+  let bestTileCount = Infinity;
+
+  const n = facedownBankTiles.length;
+  const numSubsets = 1 << n; // 2^n
+
+  for (let i = 1; i < numSubsets; i++) {
+    const subset = [];
+    let sum = 0;
+    for (let j = 0; j < n; j++) {
+      if ((i & (1 << j)) !== 0) {
+        subset.push(facedownBankTiles[j]);
+        sum += (TILES[facedownBankTiles[j].tileId]?.funding || 0);
+      }
+    }
+
+    if (sum >= cost) {
+      const isBetter =
+        sum < bestFundingSum ||
+        (sum === bestFundingSum && subset.length < bestTileCount);
+
+      if (isBetter) {
+        bestFundingSum = sum;
+        bestTileCount = subset.length;
+        bestSubset = subset;
+      }
+    }
+  }
+
+  return bestSubset || [];
+}
+
 function promoteSwapInState(G, targetLoc, targetType, higherType) {
   const commKey = Object.keys(G.boardState).find(
     k => k.startsWith('community_') && G.boardState[k]?.type === higherType
