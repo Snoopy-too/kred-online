@@ -324,6 +324,7 @@ export function KredApp() {
           isOnline={isOnline}
           playerNames={effectivePlayerNames}
           dbMasterState={dbMasterState}
+          updateMasterGameState={updateMasterGameState}
           onStateChange={(state) => {
             if (state) {
               setCurrentGameState(state);

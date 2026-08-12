@@ -2,6 +2,63 @@ import { INVALID_MOVE } from 'boardgame.io/core';
 import { getClockwiseOrder } from '../board.js';
 import { handleLoadSaveState } from '../sharedMoves.js';
 
+export function executeOnlineDraftTileSelect(effectiveG, playerID, tileId, updateMasterGameState) {
+  if (!effectiveG || !effectiveG.draftPacks || !updateMasterGameState) return;
+  const pId = String(playerID);
+  const pack = effectiveG.draftPacks[pId] || [];
+
+  if (!pack.includes(tileId)) return;
+  if (effectiveG.draftSelectionsThisRound && effectiveG.draftSelectionsThisRound[pId]) return;
+
+  const nextG = JSON.parse(JSON.stringify(effectiveG));
+
+  if (!nextG.players[pId].hand) nextG.players[pId].hand = [];
+  nextG.players[pId].hand.push(tileId);
+  nextG.draftPacks[pId] = pack.filter(t => t !== tileId);
+
+  if (!nextG.draftSelectionsThisRound) nextG.draftSelectionsThisRound = {};
+  nextG.draftSelectionsThisRound[pId] = true;
+
+  const playerKeys = Object.keys(nextG.players || {});
+  const allSelected = playerKeys.length > 0 && playerKeys.every(id => nextG.draftSelectionsThisRound[id]);
+
+  let nextPhase = 'draft';
+  if (allSelected) {
+    const order = getClockwiseOrder(nextG.numPlayers || playerKeys.length);
+    const newPacks = {};
+    for (let i = 0; i < order.length; i++) {
+      const currentP = order[i];
+      const nextP = order[(i + 1) % order.length];
+      newPacks[nextP] = nextG.draftPacks[currentP];
+    }
+    nextG.draftPacks = newPacks;
+    nextG.draftSelectionsThisRound = {};
+
+    const hasMoreTiles = Object.values(nextG.draftPacks).some(p => p && p.length > 0);
+    if (!hasMoreTiles) {
+      nextPhase = 'campaign';
+    }
+  }
+
+  updateMasterGameState(nextG, nextPhase);
+}
+
+export function executeOnlineSkipDraft(effectiveG, updateMasterGameState) {
+  if (!effectiveG || !updateMasterGameState) return;
+  const nextG = JSON.parse(JSON.stringify(effectiveG));
+  const np = nextG.numPlayers || 3;
+  const order = getClockwiseOrder(np);
+
+  order.forEach(pId => {
+    const pack = nextG.draftPacks ? nextG.draftPacks[pId] || [] : [];
+    nextG.players[pId].hand = [...(nextG.players[pId].hand || []), ...pack];
+    if (nextG.draftPacks) nextG.draftPacks[pId] = [];
+  });
+
+  nextG.draftSelectionsThisRound = {};
+  updateMasterGameState(nextG, 'campaign');
+}
+
 export function createDraftPhase() {
   const handleSkipDraft = ({ G, events }) => {
     const np = G.numPlayers || 3;

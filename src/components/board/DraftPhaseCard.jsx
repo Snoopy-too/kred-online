@@ -1,26 +1,43 @@
 import React from 'react';
+import { executeOnlineDraftTileSelect, executeOnlineSkipDraft } from '../../domain/phases/draftPhase.js';
 
 export function DraftPhaseCard({
   G,
   playerID,
   moves,
   hasDraftedThisRound,
-  autoDraftTileId
+  autoDraftTileId,
+  isOnline = false,
+  updateMasterGameState = null
 }) {
+  const handleSelectTile = (tileId) => {
+    if (isOnline) {
+      executeOnlineDraftTileSelect(G, playerID, tileId, updateMasterGameState);
+    } else if (moves?.selectDraftTile) {
+      moves.selectDraftTile(tileId);
+    }
+  };
+
+  const handleSkip = () => {
+    if (isOnline) {
+      executeOnlineSkipDraft(G, updateMasterGameState);
+    } else if (moves?.skipDraftPhase) {
+      moves.skipDraftPhase();
+    }
+  };
+
   return (
     <div className="control-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <h2 className="phase-title" style={{ margin: 0 }}>Draft Phase: Choose a Tile</h2>
-        {moves?.skipDraftPhase && (
-          <button
-            className="btn btn-warning"
-            style={{ fontSize: '12px', padding: '6px 12px' }}
-            onClick={() => moves.skipDraftPhase()}
-            title="Auto-deal remaining tiles to all players & jump to Campaign phase"
-          >
-            ⚡ Skip Draft
-          </button>
-        )}
+        <button
+          className="btn btn-warning"
+          style={{ fontSize: '12px', padding: '6px 12px' }}
+          onClick={handleSkip}
+          title="Auto-deal remaining tiles to all players & jump to Campaign phase"
+        >
+          ⚡ Skip Draft
+        </button>
       </div>
       <p className="phase-desc">
         {autoDraftTileId
@@ -42,7 +59,7 @@ export function DraftPhaseCard({
               <div
                 key={tileId}
                 className={`tile-card ${isAutoFloating ? 'auto-float-to-hand' : ''}`}
-                onClick={() => moves.selectDraftTile(tileId)}
+                onClick={() => handleSelectTile(tileId)}
               >
                 <img
                   src={`/images/${tileId}.svg`}

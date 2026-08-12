@@ -17,8 +17,10 @@ import { StateSaveLoadModal } from './components/board/StateSaveLoadModal.jsx';
 import { getPendingPlayActivePlayer } from './domain/board.js';
 import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
 import { DraftPhaseCard } from './components/board/DraftPhaseCard.jsx';
+import { executeOnlineDraftTileSelect } from './domain/phases/draftPhase.js';
+import { BoardHeaderControls } from './components/board/BoardHeaderControls.jsx';
 
-export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, playerNames = [], dbMasterState = null }) {
+export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
   const G = (isOnline && dbMasterState && dbMasterState.G) ? dbMasterState.G : rawG;
   const ctx = (isOnline && dbMasterState && dbMasterState.ctx) ? dbMasterState.ctx : rawCtx;
   // Move builder & interactive state
@@ -148,20 +150,24 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
   // Auto-float and select final tile if only 1 tile remains in draft pack
   useEffect(() => {
-    if (currentPhase === 'draft' && !hasDraftedThisRound && moves?.selectDraftTile) {
+    if (currentPhase === 'draft' && !hasDraftedThisRound) {
       const pack = G?.draftPacks?.[playerID] || [];
       if (pack.length === 1) {
         const autoTileId = pack[0];
         setAutoDraftTileId(autoTileId);
         const timer = setTimeout(() => {
-          moves.selectDraftTile(autoTileId);
+          if (isOnline) {
+            executeOnlineDraftTileSelect(G, playerID, autoTileId, updateMasterGameState);
+          } else if (moves?.selectDraftTile) {
+            moves.selectDraftTile(autoTileId);
+          }
           setAutoDraftTileId(null);
         }, 900);
         return () => clearTimeout(timer);
       }
     }
     setAutoDraftTileId(null);
-  }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID], playerID]);
+  }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID], playerID, isOnline, G, updateMasterGameState, moves]);
 
   // Reset local transient state whenever boardState, phase, or currentPlayer updates externally
   useEffect(() => {
@@ -419,30 +425,14 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
   return (
     <div className="kred-container" style={{ zoom: autoScale }}>
-      <header className="kred-header">
-        <div className="logo-brand">
-          <img src="/images/logo.png" alt="KRED" className="logo-img" />
-          <div className="brand-text">
-            <span className="subtitle">Deception & Strategy</span>
-          </div>
-        </div>
-
-        <div className="header-controls">
-          <div className="status-badge phase-badge">Phase: <strong>{currentPhase.toUpperCase()}</strong></div>
-          <div className="status-badge turn-badge">Current Turn: <strong>{getPlayerLabel(ctx.currentPlayer)}</strong></div>
-          <div className="status-badge perspective-badge">Viewing As: <strong>{getPlayerLabel(playerID)}</strong></div>
-          {!isOnline && (
-            <button
-              className="btn btn-secondary"
-              style={{ fontSize: '11px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', background: '#26201b', color: 'var(--accent-gold)', border: '1px solid var(--accent-gold)' }}
-              onClick={() => setShowSaveLoadModal(true)}
-              title="Save & Load local testing game state snapshots"
-            >
-              💾 Save/Load State
-            </button>
-          )}
-        </div>
-      </header>
+      <BoardHeaderControls
+        currentPhase={currentPhase}
+        ctx={ctx}
+        playerID={playerID}
+        getPlayerLabel={getPlayerLabel}
+        isOnline={isOnline}
+        setShowSaveLoadModal={setShowSaveLoadModal}
+      />
 
       {G.winner && (
         <div className="winner-banner">
@@ -581,6 +571,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                   moves={moves}
                   hasDraftedThisRound={hasDraftedThisRound}
                   autoDraftTileId={autoDraftTileId}
+                  isOnline={isOnline}
+                  updateMasterGameState={updateMasterGameState}
                 />
               )}
 
