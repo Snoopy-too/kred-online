@@ -127,6 +127,7 @@ export function KredApp() {
               userId: user.id,
               playerNames: playersToInsert.map(p => p.name)
             });
+            localStorage.setItem('kred_last_local', JSON.stringify({ lobbyId: lobbyData.id, numPlayers: mode, skipDraft }));
             setGameMode('local');
             return;
           }
@@ -141,12 +142,15 @@ export function KredApp() {
   };
 
   // Handlers for Online Multiplayer Mode
-  const handleStartOnlineGame = ({ lobbyId, numPlayers, playerIndex, userId, playerNames = [] }) => {
+  const handleStartOnlineGame = ({ lobbyId, numPlayers, playerIndex, userId, playerNames = [], pin }) => {
     setSelectedNumPlayers(numPlayers);
     setOnlineContext({ lobbyId, playerIndex, userId, playerNames });
     setActivePerspective(String(playerIndex));
     setGameMode('online_playing');
     setGameKey(Date.now());
+    if (pin) {
+      localStorage.setItem('kred_last_online', JSON.stringify({ pin, numPlayers }));
+    }
   };
 
   const handleReturnToMenu = () => {
@@ -166,6 +170,9 @@ export function KredApp() {
 
   // 2. Main Landing Screen / Mode Selector
   if (!gameMode) {
+    const lastLocal = JSON.parse(localStorage.getItem('kred_last_local') || 'null');
+    const lastOnline = JSON.parse(localStorage.getItem('kred_last_online') || 'null');
+
     return (
       <div className="landing-screen">
         <div className="landing-card">
@@ -204,6 +211,14 @@ export function KredApp() {
                 <button className="btn btn-primary mode-btn" onClick={() => handleStartLocalGame(5)}>
                   Start 5-Player Test Game {skipDraft ? '(No Draft)' : ''}
                 </button>
+                {lastLocal && (
+                  <button className="btn btn-secondary mode-btn" style={{ marginTop: '12px', border: '1px solid var(--accent-gold)' }} onClick={() => {
+                    setSkipDraft(lastLocal.skipDraft || false);
+                    handleStartLocalGame(lastLocal.numPlayers);
+                  }}>
+                    🔄 Resume Last Local Session ({lastLocal.numPlayers}P)
+                  </button>
+                )}
               </div>
             </div>
 
@@ -222,6 +237,15 @@ export function KredApp() {
               >
                 Enter Online Lobby & Room PINs →
               </button>
+              {lastOnline && (
+                <button
+                  className="btn btn-secondary"
+                  style={{ marginTop: '12px', padding: '12px', border: '1px solid var(--accent-gold)' }}
+                  onClick={() => setGameMode('online_lobby')}
+                >
+                  🔄 Quick Rejoin PIN: {lastOnline.pin}
+                </button>
+              )}
             </div>
           </div>
         </div>

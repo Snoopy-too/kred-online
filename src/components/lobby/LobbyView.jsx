@@ -57,7 +57,8 @@ export function LobbyView({ onStartOnlineGame, onCancel }) {
           numPlayers: activeLobby.player_count,
           playerIndex,
           userId: currentUser?.id,
-          playerNames
+          playerNames,
+          pin: activeLobby.pin
         });
       }
     };
@@ -162,16 +163,16 @@ export function LobbyView({ onStartOnlineGame, onCancel }) {
       if (!user) throw new Error('Could not establish guest user session.');
       setCurrentUser(user);
 
-      // Find lobby by PIN
+      // Find lobby by PIN (allowing WAITING and ACTIVE for rejoins)
       const { data: lobbyData, error: lobbyErr } = await supabase
         .from('kred_lobbies')
         .select('*')
         .eq('pin', pinInput.trim())
-        .eq('status', 'WAITING')
+        .in('status', ['WAITING', 'ACTIVE'])
         .maybeSingle();
 
       if (lobbyErr || !lobbyData) {
-        throw new Error('Lobby not found or game already in progress.');
+        throw new Error('Lobby not found.');
       }
 
       // Check current players count
@@ -179,6 +180,23 @@ export function LobbyView({ onStartOnlineGame, onCancel }) {
         .from('kred_players')
         .select('*')
         .eq('lobby_id', lobbyData.id);
+
+      // Check if user is already in this lobby (rejoining)
+      const myExistingPlayer = existingPlayers?.find(p => p.user_id === user.id);
+
+      if (myExistingPlayer && lobbyData.status === 'ACTIVE') {
+        // Direct rejoin!
+        const playerNames = existingPlayers.map(p => p.name || `Player ${p.player_index + 1}`);
+        onStartOnlineGame({
+          lobbyId: lobbyData.id,
+          numPlayers: lobbyData.player_count,
+          playerIndex: myExistingPlayer.player_index,
+          userId: user.id,
+          playerNames,
+          pin: lobbyData.pin
+        });
+        return;
+      }
 
       if (existingPlayers && existingPlayers.length >= lobbyData.player_count) {
         throw new Error('Lobby is already full!');
@@ -260,7 +278,8 @@ export function LobbyView({ onStartOnlineGame, onCancel }) {
         numPlayers: activeLobby.player_count,
         playerIndex: myPlayerIndex,
         userId: currentUser?.id,
-        playerNames
+        playerNames,
+        pin: activeLobby.pin
       });
     } catch (err) {
       console.error('Error starting online game:', err);
