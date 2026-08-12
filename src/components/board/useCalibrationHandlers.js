@@ -20,6 +20,19 @@ const isLocalEnvironment = () => {
   );
 };
 
+// Helper to determine if Supabase database sync is enabled and credentials are configured
+const isDbSyncEnabled = () => {
+  if (isLocalEnvironment()) return false;
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  return Boolean(
+    url &&
+    key &&
+    !url.includes('placeholder') &&
+    url !== 'https://your-supabase-project.supabase.co'
+  );
+};
+
 export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHotspots) {
   const [calibrationMode, setCalibrationMode] = useState(window.KRED_CALIBRATION_MODE || propCalibrationMode || false);
   const [showSpotLabels, setShowSpotLabels] = useState(true);
@@ -68,10 +81,10 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
       console.warn('Failed to load local calibration cache:', err);
     }
 
-    // 2. Async fetch from Supabase (Only if NOT local environment)
+    // 2. Async fetch from Supabase (Only if online and DB is enabled/configured)
     async function syncFromDb() {
-      if (isLocalEnvironment()) {
-        console.log(`ℹ️ Local environment detected. Bypassing database calibration for ${numPlayers}P.`);
+      if (!isDbSyncEnabled()) {
+        console.log(`ℹ️ Bypassing database calibration for ${numPlayers}P (Local or missing/placeholder credentials).`);
         return;
       }
 
@@ -117,12 +130,12 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
 
       const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      if (isLocalEnvironment()) {
-        setDraftSavedMsg(`💾 Saved to Local Drafts (DB bypassed) at ${nowStr}!`);
-      } else {
-        // Persist to Supabase Database only for production / online deployment
+      if (isDbSyncEnabled()) {
+        // Persist to Supabase Database only if enabled and configured
         await saveCalibrationToDb(numPlayers, calibratedPositions, perspectiveOffsets);
         setDraftSavedMsg(`💾 Saved to DB & Local Drafts at ${nowStr}!`);
+      } else {
+        setDraftSavedMsg(`💾 Saved to Local Drafts (DB bypassed) at ${nowStr}!`);
       }
       setTimeout(() => setDraftSavedMsg(''), 3500);
     } catch (err) {
@@ -137,7 +150,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
       localStorage.removeItem(localStorageKey);
       localStorage.removeItem(offsetStorageKey);
 
-      if (!isLocalEnvironment()) {
+      if (isDbSyncEnabled()) {
         // Remove row from Supabase Database for production
         await deleteCalibrationFromDb(numPlayers);
       }
@@ -148,9 +161,9 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     setPerspectiveOffsets({});
     setSelectedCalibrateKeys([]);
     setDraftSavedMsg(
-      isLocalEnvironment()
-        ? '🗑️ Calibration Reset to Master Defaults locally!'
-        : '🗑️ Calibration Reset to Master Defaults (DB cleared)!'
+      isDbSyncEnabled()
+        ? '🗑️ Calibration Reset to Master Defaults (DB cleared)!'
+        : '🗑️ Calibration Reset to Master Defaults locally!'
     );
     setTimeout(() => setDraftSavedMsg(''), 3000);
   };
@@ -185,12 +198,12 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
         localStorage.setItem(offsetStorageKey, JSON.stringify(nextOffsets));
       }
 
-      if (isLocalEnvironment()) {
-        setDraftSavedMsg('📥 Calibration Imported & Saved locally!');
-      } else {
+      if (isDbSyncEnabled()) {
         // Sync imported coordinates to database
         await saveCalibrationToDb(numPlayers, nextHotspots, nextOffsets);
         setDraftSavedMsg('📥 Calibration Imported & Saved to DB!');
+      } else {
+        setDraftSavedMsg('📥 Calibration Imported & Saved locally!');
       }
       setTimeout(() => setDraftSavedMsg(''), 3500);
       return true;
