@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MOVE_TYPES, INITIAL_PIECE_COUNTS } from './domain/types.js';
 import { computeHotspots } from './components/ComputeHotspots.js';
 import { TurnBuilder } from './components/TurnBuilder.jsx';
@@ -161,26 +161,52 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   const currentPhase = ctx?.phase || 'draft';
   const hasDraftedThisRound = G?.draftSelectionsThisRound && G.draftSelectionsThisRound[playerID];
 
+  const autoDraftingTileRef = useRef(null);
+  const latestGRef = useRef(G);
+  const latestUpdateRef = useRef(updateMasterGameState);
+  const latestMovesRef = useRef(moves);
+
+  useEffect(() => {
+    latestGRef.current = G;
+    latestUpdateRef.current = updateMasterGameState;
+    latestMovesRef.current = moves;
+  }, [G, updateMasterGameState, moves]);
+
   // Auto-float and select final tile if only 1 tile remains in draft pack
   useEffect(() => {
     if (currentPhase === 'draft' && !hasDraftedThisRound) {
       const pack = G?.draftPacks?.[playerID] || [];
       if (pack.length === 1) {
         const autoTileId = pack[0];
+        if (autoDraftingTileRef.current === autoTileId) {
+          return;
+        }
+        autoDraftingTileRef.current = autoTileId;
         setAutoDraftTileId(autoTileId);
+
         const timer = setTimeout(() => {
           if (isOnline) {
-            executeOnlineDraftTileSelect(G, playerID, autoTileId, updateMasterGameState);
-          } else if (moves?.selectDraftTile) {
-            moves.selectDraftTile(autoTileId);
+            executeOnlineDraftTileSelect(
+              latestGRef.current,
+              playerID,
+              autoTileId,
+              latestUpdateRef.current
+            );
+          } else if (latestMovesRef.current?.selectDraftTile) {
+            latestMovesRef.current.selectDraftTile(autoTileId);
           }
           setAutoDraftTileId(null);
+          autoDraftingTileRef.current = null;
         }, 900);
-        return () => clearTimeout(timer);
+
+        return () => {
+          // Keep animation timer uninterrupted when state updates during auto-float
+        };
       }
     }
+    autoDraftingTileRef.current = null;
     setAutoDraftTileId(null);
-  }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID], playerID, isOnline, G, updateMasterGameState, moves]);
+  }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID]?.length, playerID, isOnline]);
 
   // Reset local transient state whenever boardState, phase, or currentPlayer updates externally
   useEffect(() => {
