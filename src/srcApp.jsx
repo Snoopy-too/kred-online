@@ -306,7 +306,39 @@ export function KredApp() {
 
   return (
     <div className="app-shell">
-      <div className="top-toolbar">
+      {(() => { window.KRED_CALIBRATION_MODE = calibrationMode; return null; })()}
+      <div className="client-wrapper">
+        <OnlineGameContext.Provider
+          value={{
+            isOnline,
+            dbMasterState,
+            updateMasterGameState,
+            playerNames: effectivePlayerNames,
+            onlinePlayerIndex: onlineContext.playerIndex
+          }}
+        >
+          <KredClient
+            matchID={matchID}
+            key={`${selectedNumPlayers}-${gameKey}`}
+            playerID={activePerspective}
+            isOnline={isOnline}
+            playerNames={effectivePlayerNames}
+            dbMasterState={dbMasterState}
+            updateMasterGameState={updateMasterGameState}
+            onStateChange={(state) => {
+              if (state) {
+                setCurrentGameState(state);
+                gameLogger.handleStateChange(state);
+                if (onlineContext.lobbyId && state.G) {
+                  updateMasterGameState(state.G, state.ctx?.phase);
+                }
+              }
+            }}
+          />
+        </OnlineGameContext.Provider>
+      </div>
+
+      <div className="bottom-toolbar">
         <div className="left-controls">
           <button className="btn btn-secondary" onClick={handleReturnToMenu}>
             ← Main Menu
@@ -386,38 +418,6 @@ export function KredApp() {
             </button>
           </div>
         )}
-      </div>
-
-      {(() => { window.KRED_CALIBRATION_MODE = calibrationMode; return null; })()}
-      <div className="client-wrapper">
-        <OnlineGameContext.Provider
-          value={{
-            isOnline,
-            dbMasterState,
-            updateMasterGameState,
-            playerNames: effectivePlayerNames,
-            onlinePlayerIndex: onlineContext.playerIndex
-          }}
-        >
-          <KredClient
-            matchID={matchID}
-            key={`${selectedNumPlayers}-${gameKey}`}
-            playerID={activePerspective}
-            isOnline={isOnline}
-            playerNames={effectivePlayerNames}
-            dbMasterState={dbMasterState}
-            updateMasterGameState={updateMasterGameState}
-            onStateChange={(state) => {
-              if (state) {
-                setCurrentGameState(state);
-                gameLogger.handleStateChange(state);
-                if (onlineContext.lobbyId && state.G) {
-                  updateMasterGameState(state.G, state.ctx?.phase);
-                }
-              }
-            }}
-          />
-        </OnlineGameContext.Provider>
       </div>
 
       {!isOnline && (
