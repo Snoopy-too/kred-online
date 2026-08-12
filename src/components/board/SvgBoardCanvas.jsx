@@ -314,7 +314,7 @@ export function SvgBoardCanvas({
                   />
                 )
               ) : (
-                <span className="drop-tile-label" style={counterRotationStyle}>P-{domainNum}</span>
+                <span className="drop-tile-label">{pLabel}</span>
               )}
             </div>
           );
