@@ -508,7 +508,7 @@
 
 .replay-piece-walking {
   animation: pieceWalkBob 0.3s ease-in-out infinite alternate;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 12px rgba(59, 130, 246, 0.8));
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.7));
 }
 
 @keyframes pieceWalkBob {

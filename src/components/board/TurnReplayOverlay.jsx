@@ -21,6 +21,9 @@ export function TurnReplayOverlay({
     }
   }
 
+  const isPreGlow = animatingPiece?.phase === 'PRE_GLOW';
+  const isWalking = animatingPiece?.phase === 'WALKING';
+
   return (
     <>
       {replayNoticeText && (
@@ -32,7 +35,22 @@ export function TurnReplayOverlay({
         </div>
       )}
 
-      {animatingPiece && (
+      {/* Phase 1: 750ms Attention-getting pre-glow ring over static piece at start spot */}
+      {isPreGlow && (
+        <div
+          className="replay-piece-container"
+          style={{
+            left: animatingPiece.left,
+            top: animatingPiece.top,
+            transition: 'none'
+          }}
+        >
+          <div className="replay-preglow-ring" style={counterRotationStyle} />
+        </div>
+      )}
+
+      {/* Phase 2: Piece takes its walk across the board without any glow */}
+      {isWalking && (
         <div
           className="replay-piece-container"
           style={{
@@ -43,14 +61,7 @@ export function TurnReplayOverlay({
               : 'none'
           }}
         >
-          {animatingPiece.isPreGlow && (
-            <div className="replay-preglow-ring" style={counterRotationStyle} />
-          )}
-
-          <div
-            className={`piece-token-board ${animatingPiece.isPreGlow ? 'replay-piece-preglow' : 'replay-piece-walking'}`}
-            style={counterRotationStyle}
-          >
+          <div className="piece-token-board replay-piece-walking" style={counterRotationStyle}>
             <img
               src={iconSrc}
               alt={animatingPiece.pieceType}
