@@ -20,6 +20,21 @@ import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
 export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibrationMode }) {
   // Move builder & interactive state
   const [zoomLevel, setZoomLevel] = useState(0.75);
+  const [autoScale, setAutoScale] = useState(1);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      // 1200px is the reference width for the layout.
+      // Cap max scale at 1.4 to prevent huge UI elements on ultra-wide screens.
+      const calculatedScale = Math.min(1.4, width / 1200);
+      setAutoScale(calculatedScale);
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [selectedTileId, setSelectedTileId] = useState('');
   const [selectedReceiverId, setSelectedReceiverId] = useState('');
   const [stagedMoves, setStagedMoves] = useState([]);
@@ -389,7 +404,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
   const showTurnBuilderForPending = isReexecutingMe || isPenaltyWithdrawMe || isFreeAdvanceMe;
 
   return (
-    <div className="kred-container">
+    <div className="kred-container" style={{ zoom: autoScale }}>
       <header className="kred-header">
         <div className="logo-brand">
           <img src="/images/logo.png" alt="KRED" className="logo-img" />
@@ -485,7 +500,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
               onPieceClick={currentPhase === 'bureaucracy' ? bureaucracyBoard.handleBureaucracySpotClick : handlePieceClick}
               onDestinationClick={currentPhase === 'bureaucracy' ? bureaucracyBoard.handleBureaucracyDestinationClick : handleDestinationClick}
               transientBoardState={transientBoardState}
-              zoomLevel={zoomLevel}
+              zoomLevel={zoomLevel * autoScale}
               peekPendingTile={peekPendingTile}
               onTogglePeekTile={handleTogglePeekTile}
               validPromotionSpots={currentPhase === 'bureaucracy' ? bureaucracyBoard.validPromotionSpots : []}
