@@ -26,7 +26,7 @@ export function KredApp() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [currentGameState, setCurrentGameState] = useState(null);
   const [skipDraft, setSkipDraft] = useState(false);
-
+  const [showBottomToolbar, setShowBottomToolbar] = useState(false);
 
   useEffect(() => {
     window.onKredStateUpdate = (state) => {
@@ -37,6 +37,20 @@ export function KredApp() {
     return () => {
       delete window.onKredStateUpdate;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const threshold = 60;
+      const distFromBottom = window.innerHeight - e.clientY;
+      if (distFromBottom <= threshold) {
+        setShowBottomToolbar(true);
+      } else if (distFromBottom > 110) {
+        setShowBottomToolbar(false);
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
 
@@ -338,7 +352,22 @@ export function KredApp() {
         </OnlineGameContext.Provider>
       </div>
 
-      <div className="bottom-toolbar">
+      <div
+        className={`bottom-toolbar-tab ${showBottomToolbar ? 'hidden' : ''}`}
+        onMouseEnter={() => setShowBottomToolbar(true)}
+      >
+        ▲ Menu & Info
+      </div>
+
+      <div
+        className={`bottom-toolbar ${showBottomToolbar ? 'visible' : ''}`}
+        onMouseEnter={() => setShowBottomToolbar(true)}
+        onMouseLeave={(e) => {
+          if (window.innerHeight - e.clientY > 60) {
+            setShowBottomToolbar(false);
+          }
+        }}
+      >
         <div className="left-controls">
           <button className="btn btn-secondary" onClick={handleReturnToMenu}>
             ← Main Menu

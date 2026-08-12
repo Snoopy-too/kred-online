@@ -16,8 +16,7 @@
   white-space: nowrap;
 }
 
-.top-toolbar,
-.bottom-toolbar {
+.top-toolbar {
   position: relative;
   z-index: 1000;
   display: flex;
@@ -29,14 +28,70 @@
   background: rgba(18, 14, 12, 0.92);
   backdrop-filter: blur(10px);
   flex-shrink: 0;
-}
-
-.top-toolbar {
   border-bottom: 1px solid var(--border-color);
 }
 
 .bottom-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  background: rgba(18, 14, 12, 0.94);
+  backdrop-filter: blur(12px);
   border-top: 1px solid var(--border-color);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bottom-toolbar.visible,
+.bottom-toolbar:hover {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Subtle trigger tab when bottom info bar is hidden */
+.bottom-toolbar-tab {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: rgba(26, 20, 17, 0.9);
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: var(--accent-gold);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 16px;
+  cursor: pointer;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.25s ease;
+  user-select: none;
+  opacity: 0.85;
+}
+
+.bottom-toolbar-tab:hover {
+  opacity: 1;
+  background: rgba(45, 35, 28, 0.95);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.bottom-toolbar-tab.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(100%);
 }
 
 .client-wrapper {
