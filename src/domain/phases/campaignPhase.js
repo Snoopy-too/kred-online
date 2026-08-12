@@ -134,6 +134,8 @@ export function createCampaignPhase() {
           challengesPassed: []
         };
 
+        G.lastOutcomeNotice = null;
+
         if (G.players[receiverId].credibilityNotchesLost >= 3 || tileId === 'BLANK') {
           G.pendingPlay.step = 'challenge';
         }

@@ -51,6 +51,8 @@ export function executeOnlineCampaignTurn(effectiveG, playerID, payload, updateM
     challengesPassed: []
   };
 
+  nextG.lastOutcomeNotice = null;
+
   if (nextG.players[receiverId].credibilityNotchesLost >= 3 || tileId === 'BLANK') {
     nextG.pendingPlay.step = 'challenge';
   }
