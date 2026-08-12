@@ -19,6 +19,7 @@ import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
 import { DraftPhaseCard } from './components/board/DraftPhaseCard.jsx';
 import { executeOnlineDraftTileSelect } from './domain/phases/draftPhase.js';
 import { BoardHeaderControls } from './components/board/BoardHeaderControls.jsx';
+import { useOnlineGame } from './context/OnlineGameContext.jsx';
 import {
   executeOnlineCampaignTurn,
   executeOnlineReexecute,
@@ -26,7 +27,13 @@ import {
   executeOnlineFreeAdvance
 } from './domain/onlineEngine.js';
 
-export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
+export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline: propIsOnline = false, playerNames: propPlayerNames = [], dbMasterState: propDbMasterState = null, updateMasterGameState: propUpdateMasterGameState = null }) {
+  const onlineCtx = useOnlineGame();
+  const isOnline = onlineCtx.isOnline || propIsOnline;
+  const dbMasterState = onlineCtx.dbMasterState || propDbMasterState;
+  const updateMasterGameState = onlineCtx.updateMasterGameState || propUpdateMasterGameState;
+  const playerNames = (onlineCtx.playerNames && onlineCtx.playerNames.length > 0) ? onlineCtx.playerNames : propPlayerNames;
+
   const G = (isOnline && dbMasterState) ? (dbMasterState.G || dbMasterState) : rawG;
   const ctx = (isOnline && dbMasterState) ? (dbMasterState.ctx || rawCtx) : rawCtx;
   // Move builder & interactive state

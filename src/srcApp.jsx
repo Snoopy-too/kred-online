@@ -6,6 +6,7 @@ import { KredBoard } from './srcBoard.jsx';
 import { isPlayerActionRequired } from './domain/board.js';
 import { LobbyView } from './components/lobby/LobbyView.jsx';
 import { useSupabaseGameSync } from './hooks/useSupabaseGameSync.js';
+import { OnlineGameContext } from './context/OnlineGameContext.jsx';
 import { supabase, ensureAnonymousAuth } from './lib/supabaseClient.js';
 import { GameLogger } from '../diagnostics/gameLogger.js';
 import { DiagnosticsPanel } from '../diagnostics/DiagnosticsPanel.jsx';
@@ -317,25 +318,34 @@ export function KredApp() {
 
       {(() => { window.KRED_CALIBRATION_MODE = calibrationMode; return null; })()}
       <div className="client-wrapper">
-        <KredClient
-          matchID={matchID}
-          key={`${selectedNumPlayers}-${gameKey}`}
-          playerID={activePerspective}
-          isOnline={isOnline}
-          playerNames={effectivePlayerNames}
-          dbMasterState={dbMasterState}
-          updateMasterGameState={updateMasterGameState}
-          onStateChange={(state) => {
-            if (state) {
-              setCurrentGameState(state);
-              gameLogger.handleStateChange(state);
-              if (onlineContext.lobbyId && state.G) {
-                updateMasterGameState(state.G, state.ctx?.phase);
-              }
-            }
+        <OnlineGameContext.Provider
+          value={{
+            isOnline,
+            dbMasterState,
+            updateMasterGameState,
+            playerNames: effectivePlayerNames,
+            onlinePlayerIndex: onlineContext.playerIndex
           }}
-        />
-
+        >
+          <KredClient
+            matchID={matchID}
+            key={`${selectedNumPlayers}-${gameKey}`}
+            playerID={activePerspective}
+            isOnline={isOnline}
+            playerNames={effectivePlayerNames}
+            dbMasterState={dbMasterState}
+            updateMasterGameState={updateMasterGameState}
+            onStateChange={(state) => {
+              if (state) {
+                setCurrentGameState(state);
+                gameLogger.handleStateChange(state);
+                if (onlineContext.lobbyId && state.G) {
+                  updateMasterGameState(state.G, state.ctx?.phase);
+                }
+              }
+            }}
+          />
+        </OnlineGameContext.Provider>
       </div>
 
       {!isOnline && (
