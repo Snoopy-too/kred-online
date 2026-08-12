@@ -4,7 +4,8 @@ import {
   executeOnlineAcceptTile,
   executeOnlineRejectTile,
   executeOnlineChallengeTile,
-  executeOnlinePassChallenge
+  executeOnlinePassChallenge,
+  executeOnlineChallengerCredibility
 } from '../domain/onlineEngine.js';
 
 export function PendingPlayModal({
@@ -209,6 +210,40 @@ export function PendingPlayModal({
                 Waiting for <strong>{getPlayerLabel(G.pendingPlay.receiverId)}</strong> to execute free Advance...
               </p>
             </div>
+          )}
+
+          {/* Challenger Reward Step */}
+          {G.pendingPlay.step === 'challengerReward' && (
+            String(playerID) === String(G.pendingPlay.successfulChallengerId) ? (
+              <div className="challenger-reward-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #eab308', borderRadius: '8px', padding: '12px' }}>
+                  <h4 style={{ margin: '0 0 6px 0', color: '#facc15', fontSize: '15px' }}>
+                    🎯 Successful Challenge Reward!
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#f8fafc', lineHeight: 1.4 }}>
+                    You successfully exposed Player <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong>'s dishonest play! As per KRED rules, choose your reward:
+                  </p>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    className="btn btn-success"
+                    onClick={() => handleAction(() => isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility())}
+                  >
+                    🛡️ Restore 1 Credibility Notch
+                  </button>
+                  <p style={{ fontSize: '12px', color: '#fbbf24', margin: '4px 0 0 0', textAlign: 'center' }}>
+                    — OR — Use the Bureaucracy Panel in the sidebar to perform 1 Bureaucracy Action using tile funding.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="challenger-reward-actions">
+                <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
+                  Waiting for Challenger <strong>{getPlayerLabel(G.pendingPlay.successfulChallengerId)}</strong> to select their challenge reward...
+                </p>
+              </div>
+            )
           )}
         </>
       )}

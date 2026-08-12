@@ -75,7 +75,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   const [bureaucracySubActionType, setBureaucracySubActionType] = useState(MOVE_TYPES.ADVANCE);
 
   const numPlayers = (ctx && ctx.numPlayers) || (G && G.numPlayers) || 3;
-  const bureaucracyBoard = useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers });
+  const bureaucracyBoard = useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnline, updateMasterGameState });
 
   // Sync transient board state and clear staged selections when turn or pending step changes
   useEffect(() => {
@@ -550,16 +550,16 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
               selectedTileId={selectedTileId}
               onSelectReceiver={handleSelectReceiver}
               canSelfPlay={canSelfPlay}
-              validDestinations={currentPhase === 'bureaucracy' ? bureaucracyBoard.moveValidDestinations : validDestinations}
-              selectedPieceLoc={currentPhase === 'bureaucracy' ? bureaucracyBoard.moveFromLoc : selectedPieceLoc}
+              validDestinations={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.moveValidDestinations : validDestinations}
+              selectedPieceLoc={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.moveFromLoc : selectedPieceLoc}
               stagedMoves={stagedMoves}
-              onPieceClick={currentPhase === 'bureaucracy' ? bureaucracyBoard.handleBureaucracySpotClick : handlePieceClick}
-              onDestinationClick={currentPhase === 'bureaucracy' ? bureaucracyBoard.handleBureaucracyDestinationClick : handleDestinationClick}
+              onPieceClick={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.handleBureaucracySpotClick : handlePieceClick}
+              onDestinationClick={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.handleBureaucracyDestinationClick : handleDestinationClick}
               transientBoardState={transientBoardState}
               zoomLevel={zoomLevel * autoScale}
               peekPendingTile={peekPendingTile}
               onTogglePeekTile={handleTogglePeekTile}
-              validPromotionSpots={currentPhase === 'bureaucracy' ? bureaucracyBoard.validPromotionSpots : []}
+              validPromotionSpots={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.validPromotionSpots : []}
               getPlayerLabel={getPlayerLabel}
             />
           </div>
@@ -596,6 +596,27 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                   getPlayerLabel={getPlayerLabel}
                   peekPendingTile={peekPendingTile}
                   onTogglePeekTile={handleTogglePeekTile}
+                  isOnline={isOnline}
+                  updateMasterGameState={updateMasterGameState}
+                />
+              )}
+
+              {G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId) && (
+                <BureaucracyPanel
+                  myPlayer={myPlayer}
+                  isMyTurn={true}
+                  moves={moves}
+                  numPlayers={numPlayers}
+                  getPlayerLabel={getPlayerLabel}
+                  ctx={ctx}
+                  selectedShopItem={bureaucracyBoard.selectedShopItem}
+                  handleSelectShopItem={bureaucracyBoard.handleSelectShopItem}
+                  selectedActionType={bureaucracyBoard.selectedActionType}
+                  setSelectedActionType={bureaucracyBoard.setSelectedActionType}
+                  moveFromLoc={bureaucracyBoard.moveFromLoc}
+                  validPromotionSpots={bureaucracyBoard.validPromotionSpots}
+                  G={G}
+                  playerID={playerID}
                   isOnline={isOnline}
                   updateMasterGameState={updateMasterGameState}
                 />

@@ -1,6 +1,10 @@
 import React from 'react';
-import { MOVE_TYPES, BUREAUCRACY_PRICES } from '../domain/types.js';
-import { executeOnlineBureaucracyAction, executeOnlineEndBureaucracyTurn } from '../domain/onlineEngine.js';
+import { MOVE_TYPES, BUREAUCRACY_PRICES, TILES } from '../domain/types.js';
+import {
+  executeOnlineBureaucracyAction,
+  executeOnlineEndBureaucracyTurn,
+  executeOnlineChallengerCredibility
+} from '../domain/onlineEngine.js';
 
 export function BureaucracyPanel({
   myPlayer,
@@ -20,8 +24,12 @@ export function BureaucracyPanel({
   isOnline = false,
   updateMasterGameState = null
 }) {
+  const pId = String(playerID);
+  const isChallengerReward = G?.pendingPlay?.step === 'challengerReward' && String(G?.pendingPlay?.successfulChallengerId) === pId;
   const prices = BUREAUCRACY_PRICES[numPlayers] || BUREAUCRACY_PRICES[3];
-  const funding = myPlayer.funding || 0;
+
+  const facedownFunding = (myPlayer.bank || []).reduce((sum, item) => item.faceDown ? sum + (TILES[item.tileId]?.funding || 0) : sum, 0);
+  const funding = isChallengerReward ? facedownFunding : (myPlayer.funding || 0);
   const credibilityNotchesLost = myPlayer.credibilityNotchesLost || 0;
 
   const basicActions = [MOVE_TYPES.ADVANCE, MOVE_TYPES.WITHDRAW, MOVE_TYPES.ORGANIZE];
@@ -36,21 +44,27 @@ export function BureaucracyPanel({
         <div className="bazaar-title-group">
           <span className="bazaar-icon">🏛️</span>
           <div>
-            <h2 className="bazaar-title">Bureaucracy Phase</h2>
-            <p className="bazaar-subtitle">Spend your campaign funding on upgrades & actions</p>
+            <h2 className="bazaar-title">
+              {isChallengerReward ? 'Challenge Bureaucracy Reward' : 'Bureaucracy Phase'}
+            </h2>
+            <p className="bazaar-subtitle">
+              {isChallengerReward
+                ? 'Spend face-down bank tile funding on 1 action'
+                : 'Spend your campaign funding on upgrades & actions'}
+            </p>
           </div>
         </div>
 
         <div className="bazaar-funding-badge">
           <span className="coin-icon">🪙</span>
           <div className="funding-amount-group">
-            <span className="funding-label">Funding Total</span>
+            <span className="funding-label">{isChallengerReward ? 'Tile Bank Funding' : 'Funding Total'}</span>
             <span className="funding-val">{funding} <small><span className="k-strike">K</span>redcoin</small></span>
           </div>
         </div>
       </div>
 
-      {isMyTurn ? (
+      {isMyTurn || isChallengerReward ? (
         <div className="bazaar-body">
           {/* Active Guidance Banner when an item is selected */}
           {selectedShopItem && (
@@ -97,11 +111,19 @@ export function BureaucracyPanel({
                 </div>
                 <button
                   className="btn btn-purchase"
-                  disabled={funding < prices.RESTORE_CRED || credibilityNotchesLost === 0}
-                  onClick={() => isOnline ? executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState) : moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' })}
+                  disabled={isChallengerReward ? false : (funding < prices.RESTORE_CRED || credibilityNotchesLost === 0)}
+                  onClick={() => {
+                    if (isChallengerReward) {
+                      if (isOnline) executeOnlineChallengerCredibility(G, playerID, updateMasterGameState);
+                      else moves?.claimChallengerCredibility();
+                    } else {
+                      if (isOnline) executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState);
+                      else moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' });
+                    }
+                  }}
                 >
-                  <span className="price-tag"><span className="k-strike">K</span> {prices.RESTORE_CRED}</span>
-                  <span>Restore</span>
+                  {!isChallengerReward && <span className="price-tag"><span className="k-strike">K</span> {prices.RESTORE_CRED}</span>}
+                  <span>Restore Notch</span>
                 </button>
               </div>
             </div>
@@ -242,14 +264,24 @@ export function BureaucracyPanel({
             </div>
           </div>
 
-          {/* Section 4: End Bureaucracy Turn */}
+          {/* Section 4: Footer */}
           <div className="bazaar-footer" style={{ marginTop: 'auto', paddingTop: '16px' }}>
-            <button
-              className="btn btn-end-bureaucracy"
-              onClick={() => isOnline ? executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState) : moves?.endBureaucracyTurn()}
-            >
-              Finish & End Bureaucracy Turn
-            </button>
+            {isChallengerReward ? (
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%' }}
+                onClick={() => isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility()}
+              >
+                🛡️ Restore 1 Credibility Notch Instead
+              </button>
+            ) : (
+              <button
+                className="btn btn-end-bureaucracy"
+                onClick={() => isOnline ? executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState) : moves?.endBureaucracyTurn()}
+              >
+                Finish & End Bureaucracy Turn
+              </button>
+            )}
           </div>
         </div>
       ) : (

@@ -1,18 +1,26 @@
 import { useState, useMemo } from 'react';
-import { PIECE_TYPES, BUREAUCRACY_PRICES, MOVE_TYPES } from '../../domain/types.js';
+import { PIECE_TYPES, BUREAUCRACY_PRICES, MOVE_TYPES, TILES } from '../../domain/types.js';
 import { getValidDestinations, inferMoveType } from '../../domain/moveRulesUtils.js';
+import { executeOnlineBureaucracyAction, executeOnlineChallengerBureaucracyAction } from '../../domain/onlineEngine.js';
 
-export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers }) {
+export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnline = false, updateMasterGameState = null }) {
   const [selectedShopItem, setSelectedShopItem] = useState(null); // 'PROMOTE_SEAT' | 'PROMOTE_ROSTRUM' | 'PROMOTE_OFFICE' | 'MOVE_ACTION' | null
   const [selectedActionType, setSelectedActionType] = useState(MOVE_TYPES.ADVANCE);
   const [moveFromLoc, setMoveFromLoc] = useState('');
   const [moveValidDestinations, setMoveValidDestinations] = useState([]);
 
-  const isMyTurn = ctx && String(ctx.currentPlayer) === String(playerID);
   const pId = String(playerID);
+  const isChallengerReward = G?.pendingPlay?.step === 'challengerReward' && String(G?.pendingPlay?.successfulChallengerId) === pId;
+  const isMyTurn = (ctx && String(ctx.currentPlayer) === pId) || isChallengerReward;
   const domainKey = `p${parseInt(pId, 10) + 1}`;
   const myPlayer = (G && G.players && G.players[pId]) || {};
-  const funding = myPlayer.funding || 0;
+
+  const facedownFunding = useMemo(() => {
+    if (!myPlayer.bank) return 0;
+    return myPlayer.bank.reduce((sum, item) => item.faceDown ? sum + (TILES[item.tileId]?.funding || 0) : sum, 0);
+  }, [myPlayer.bank]);
+
+  const funding = isChallengerReward ? facedownFunding : (myPlayer.funding || 0);
   const prices = BUREAUCRACY_PRICES[numPlayers] || BUREAUCRACY_PRICES[3];
 
   const playerHasPawn = useMemo(() => {
@@ -75,10 +83,17 @@ export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers }) {
     // Promotion targeting
     if (['PROMOTE_SEAT', 'PROMOTE_ROSTRUM', 'PROMOTE_OFFICE'].includes(selectedShopItem)) {
       if (validPromotionSpots.includes(locKey)) {
-        moves.buyBureaucracyAction({
+        const payload = {
           actionType: selectedShopItem,
           targetLoc: locKey
-        });
+        };
+        if (isChallengerReward) {
+          if (isOnline) executeOnlineChallengerBureaucracyAction(G, playerID, payload, updateMasterGameState);
+          else moves?.buyChallengerBureaucracyAction(payload);
+        } else {
+          if (isOnline) executeOnlineBureaucracyAction(G, playerID, payload, updateMasterGameState);
+          else moves?.buyBureaucracyAction(payload);
+        }
         resetBureaucracySelection();
       }
       return;
@@ -134,14 +149,22 @@ export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers }) {
     const actionType = isBasic ? 'BASIC_ACTION' : 'EXTRA_ACTION';
     const normTo = toLoc.startsWith('community_') ? 'community' : toLoc;
 
-    moves.buyBureaucracyAction({
+    const payload = {
       actionType,
       subAction: {
         type: selectedActionType,
         from: moveFromLoc,
         to: normTo
       }
-    });
+    };
+
+    if (isChallengerReward) {
+      if (isOnline) executeOnlineChallengerBureaucracyAction(G, playerID, payload, updateMasterGameState);
+      else moves?.buyChallengerBureaucracyAction(payload);
+    } else {
+      if (isOnline) executeOnlineBureaucracyAction(G, playerID, payload, updateMasterGameState);
+      else moves?.buyBureaucracyAction(payload);
+    }
 
     resetBureaucracySelection();
   };

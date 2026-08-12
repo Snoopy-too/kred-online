@@ -80,6 +80,49 @@ export function cleanupBureaucracy(G) {
   });
 }
 
+export function executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction }) {
+  const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
+  const player = G.players[pId];
+  if (!player) return false;
+
+  const playerHasPawn = Object.keys(G.boardState).some(k => k.startsWith(`p${parseInt(pId, 10) + 1}_`) && G.boardState[k]?.type === PIECE_TYPES.PAWN);
+
+  if (actionType === 'RESTORE_CRED') {
+    if (player.credibilityNotchesLost === 0) return false;
+    player.credibilityNotchesLost--;
+    return true;
+  }
+
+  if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
+    const piece = G.boardState[targetLoc];
+    if (!piece) return false;
+
+    if (piece.type === PIECE_TYPES.MARK && G.community.heels > 0) {
+      return promoteSwapInState(G, targetLoc, PIECE_TYPES.MARK, PIECE_TYPES.HEEL);
+    } else if (piece.type === PIECE_TYPES.HEEL && G.community.pawns > 0) {
+      if (playerHasPawn) return false;
+      return promoteSwapInState(G, targetLoc, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN);
+    }
+    return false;
+  }
+
+  if (actionType === 'BASIC_ACTION' || actionType === 'EXTRA_ACTION') {
+    if (!subAction || !subAction.type || !subAction.from || !subAction.to) return false;
+    const isBasic = actionType === 'BASIC_ACTION';
+    const allowedTypes = isBasic ? ['Advance', 'Withdraw', 'Organize'] : ['Assist', 'Remove', 'Influence'];
+    if (!allowedTypes.includes(subAction.type)) return false;
+
+    const val = validateSingleMove(subAction, pId, G.boardState, G.community, G.numPlayers);
+    if (!val.valid) return false;
+
+    applyMoveToState(subAction, G.boardState, G.community);
+    G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
+    return true;
+  }
+
+  return false;
+}
+
 export function createBureaucracyPhase() {
   return {
     onBegin: ({ G }) => {
@@ -105,96 +148,21 @@ export function createBureaucracyPhase() {
         const pId = String(playerID);
         const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
         const player = G.players[pId];
-        // ponytail: check if player already has a pawn
-        const playerHasPawn = Object.keys(G.boardState).some(k => k.startsWith(`p${parseInt(pId, 10) + 1}_`) && G.boardState[k]?.type === PIECE_TYPES.PAWN);
 
-        if (actionType === 'RESTORE_CRED') {
-          if (player.funding < prices.RESTORE_CRED) return INVALID_MOVE;
-          if (player.credibilityNotchesLost === 0) return INVALID_MOVE;
-          player.funding -= prices.RESTORE_CRED;
-          player.credibilityNotchesLost--;
-          return;
-        }
+        let cost = 0;
+        if (actionType === 'RESTORE_CRED') cost = prices.RESTORE_CRED;
+        else if (actionType === 'PROMOTE_SEAT') cost = prices.PROMOTE_SEAT;
+        else if (actionType === 'PROMOTE_ROSTRUM') cost = prices.PROMOTE_ROSTRUM;
+        else if (actionType === 'PROMOTE_OFFICE') cost = prices.PROMOTE_OFFICE;
+        else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
+        else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
 
-        if (actionType === 'PROMOTE_SEAT') {
-          if (player.funding < prices.PROMOTE_SEAT) return INVALID_MOVE;
-          const piece = G.boardState[targetLoc];
-          if (!piece) return INVALID_MOVE;
+        if (cost === 0 || player.funding < cost) return INVALID_MOVE;
 
-          if (piece.type === PIECE_TYPES.MARK && G.community.heels > 0) {
-            const ok = promoteSwapInState(G, targetLoc, PIECE_TYPES.MARK, PIECE_TYPES.HEEL);
-            if (!ok) return INVALID_MOVE;
-            player.funding -= prices.PROMOTE_SEAT;
-          } else if (piece.type === PIECE_TYPES.HEEL && G.community.pawns > 0) {
-            if (playerHasPawn) return INVALID_MOVE;
-            const ok = promoteSwapInState(G, targetLoc, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN);
-            if (!ok) return INVALID_MOVE;
-            player.funding -= prices.PROMOTE_SEAT;
-          } else {
-            return INVALID_MOVE;
-          }
-          return;
-        }
+        const success = executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction });
+        if (!success) return INVALID_MOVE;
 
-        if (actionType === 'PROMOTE_ROSTRUM') {
-          if (player.funding < prices.PROMOTE_ROSTRUM) return INVALID_MOVE;
-          const piece = G.boardState[targetLoc];
-          if (!piece) return INVALID_MOVE;
-
-          if (piece.type === PIECE_TYPES.MARK && G.community.heels > 0) {
-            const ok = promoteSwapInState(G, targetLoc, PIECE_TYPES.MARK, PIECE_TYPES.HEEL);
-            if (!ok) return INVALID_MOVE;
-            player.funding -= prices.PROMOTE_ROSTRUM;
-          } else if (piece.type === PIECE_TYPES.HEEL && G.community.pawns > 0) {
-            if (playerHasPawn) return INVALID_MOVE;
-            const ok = promoteSwapInState(G, targetLoc, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN);
-            if (!ok) return INVALID_MOVE;
-            player.funding -= prices.PROMOTE_ROSTRUM;
-          } else {
-            return INVALID_MOVE;
-          }
-          return;
-        }
-
-        if (actionType === 'PROMOTE_OFFICE') {
-          if (player.funding < prices.PROMOTE_OFFICE) return INVALID_MOVE;
-          const piece = G.boardState[targetLoc];
-          if (!piece) return INVALID_MOVE;
-
-          if (piece.type === PIECE_TYPES.MARK && G.community.heels > 0) {
-            const ok = promoteSwapInState(G, targetLoc, PIECE_TYPES.MARK, PIECE_TYPES.HEEL);
-            if (!ok) return INVALID_MOVE;
-            player.funding -= prices.PROMOTE_OFFICE;
-          } else if (piece.type === PIECE_TYPES.HEEL && G.community.pawns > 0) {
-            if (playerHasPawn) return INVALID_MOVE;
-            const ok = promoteSwapInState(G, targetLoc, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN);
-            if (!ok) return INVALID_MOVE;
-            player.funding -= prices.PROMOTE_OFFICE;
-          } else {
-            return INVALID_MOVE;
-          }
-          return;
-        }
-
-        // ponytail: handle basic/extra action generic validation
-        if (actionType === 'BASIC_ACTION' || actionType === 'EXTRA_ACTION') {
-          const cost = actionType === 'BASIC_ACTION' ? prices.BASIC_ACTION : prices.EXTRA_ACTION;
-          if (player.funding < cost) return INVALID_MOVE;
-          
-          if (!subAction || !subAction.type || !subAction.from || !subAction.to) return INVALID_MOVE;
-          
-          const isBasic = actionType === 'BASIC_ACTION';
-          const allowedTypes = isBasic ? ['Advance', 'Withdraw', 'Organize'] : ['Assist', 'Remove', 'Influence'];
-          if (!allowedTypes.includes(subAction.type)) return INVALID_MOVE;
-          
-          const val = validateSingleMove(subAction, pId, G.boardState, G.community, G.numPlayers);
-          if (!val.valid) return INVALID_MOVE;
-          
-          player.funding -= cost;
-          applyMoveToState(subAction, G.boardState, G.community);
-          G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
-          return;
-        }
+        player.funding -= cost;
       },
 
       endBureaucracyTurn: ({ G, events }) => {

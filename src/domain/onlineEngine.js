@@ -1,8 +1,8 @@
-import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS } from './types.js';
+import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES } from './types.js';
 import { enforceSupportRule, checkVictory, getOrderedChallengers, getNextPlayer } from './board.js';
 import { validateMoveCombination, applyMoveToState, classifyPlay } from './moves.js';
 import { getClockwiseOrder } from './board.js';
-import { initBureaucracy, cleanupBureaucracy } from './bureaucracy.js';
+import { initBureaucracy, cleanupBureaucracy, executeBureaucracyActionPayload } from './bureaucracy.js';
 
 export function isCampaignOver(G) {
   if (!G || !G.players) return false;
@@ -15,6 +15,35 @@ export function advanceCampaignPhaseOnline(nextG, updateMasterGameState) {
     updateMasterGameState(nextG, 'bureaucracy');
   } else {
     updateMasterGameState(nextG, 'campaign');
+  }
+}
+
+export function finishOnlinePendingPlayOrReward(nextG) {
+  const challengerId = nextG.pendingPlay?.successfulChallengerId;
+  const receiverId = nextG.pendingPlay?.receiverId || nextG.nextMoverId;
+  const tileId = nextG.pendingPlay?.reexecuteTileId || nextG.pendingPlay?.tileIdPlayed;
+
+  if (tileId && tileId !== 'BLANK') {
+    const winners = Object.keys(nextG.players).filter(p => checkVictory(nextG.boardState, p));
+    if (winners.length > 1) nextG.winner = 'draw';
+    else if (winners.length === 1) nextG.winner = winners[0];
+  }
+
+  if (challengerId && nextG.players[challengerId]) {
+    const hasFacedownTiles = (nextG.players[challengerId].bank || []).some(t => t.faceDown);
+    if (hasFacedownTiles) {
+      nextG.pendingPlay.step = 'challengerReward';
+      return;
+    } else {
+      if (nextG.players[challengerId].credibilityNotchesLost > 0) {
+        nextG.players[challengerId].credibilityNotchesLost--;
+      }
+    }
+  }
+
+  nextG.pendingPlay = null;
+  if (receiverId !== undefined && receiverId !== null) {
+    nextG.nextMoverId = receiverId;
   }
 }
 
@@ -179,7 +208,7 @@ export function executeOnlineChallengeTile(effectiveG, playerID, updateMasterGam
 
   const nextG = JSON.parse(JSON.stringify(effectiveG));
   const challengerId = pId;
-  const { moverId, receiverId, tileIdPlayed, playType, backupBoard, backupCommunity, moverStartCredNotches } = nextG.pendingPlay;
+  const { moverId, receiverId, tileIdPlayed, playType, backupBoard, backupCommunity } = nextG.pendingPlay;
 
   nextG.nextMoverId = receiverId;
 
@@ -193,8 +222,10 @@ export function executeOnlineChallengeTile(effectiveG, playerID, updateMasterGam
       nextG.players[moverId].pendingPenaltyWithdraw = true;
     }
 
-    if (nextG.players[challengerId].credibilityNotchesLost > 0) {
-      nextG.players[challengerId].credibilityNotchesLost = Math.max(0, nextG.players[challengerId].credibilityNotchesLost - 2);
+    nextG.pendingPlay.successfulChallengerId = challengerId;
+
+    if (nextG.players[receiverId].credibilityNotchesLost < 3) {
+      nextG.players[receiverId].credibilityNotchesLost++;
     }
 
     nextG.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: false });
@@ -270,7 +301,7 @@ export function executeOnlinePassChallenge(effectiveG, playerID, updateMasterGam
 export function executeOnlineReexecute(effectiveG, playerID, stagedMoves, updateMasterGameState) {
   if (!effectiveG?.pendingPlay || !updateMasterGameState) return;
   const nextG = JSON.parse(JSON.stringify(effectiveG));
-  const { moverId, receiverId, reexecuteTileId } = nextG.pendingPlay;
+  const { moverId } = nextG.pendingPlay;
 
   stagedMoves.forEach(m => applyMoveToState(m, nextG.boardState, nextG.community));
   nextG.boardState = enforceSupportRule(nextG.boardState, nextG.numPlayers);
@@ -280,8 +311,7 @@ export function executeOnlineReexecute(effectiveG, playerID, stagedMoves, update
   } else if (nextG.pendingPlay.receiverFreeAdvance) {
     nextG.pendingPlay.step = 'freeAdvance';
   } else {
-    nextG.pendingPlay = null;
-    nextG.nextMoverId = receiverId;
+    finishOnlinePendingPlayOrReward(nextG);
   }
 
   advanceCampaignPhaseOnline(nextG, updateMasterGameState);
@@ -290,7 +320,7 @@ export function executeOnlineReexecute(effectiveG, playerID, stagedMoves, update
 export function executeOnlinePenaltyWithdraw(effectiveG, playerID, stagedMove, updateMasterGameState) {
   if (!effectiveG?.pendingPlay || !updateMasterGameState) return;
   const nextG = JSON.parse(JSON.stringify(effectiveG));
-  const { moverId, receiverId } = nextG.pendingPlay;
+  const { moverId } = nextG.pendingPlay;
 
   if (stagedMove) {
     applyMoveToState(stagedMove, nextG.boardState, nextG.community);
@@ -302,8 +332,7 @@ export function executeOnlinePenaltyWithdraw(effectiveG, playerID, stagedMove, u
   if (nextG.pendingPlay.receiverFreeAdvance) {
     nextG.pendingPlay.step = 'freeAdvance';
   } else {
-    nextG.pendingPlay = null;
-    nextG.nextMoverId = receiverId;
+    finishOnlinePendingPlayOrReward(nextG);
   }
 
   advanceCampaignPhaseOnline(nextG, updateMasterGameState);
@@ -312,15 +341,72 @@ export function executeOnlinePenaltyWithdraw(effectiveG, playerID, stagedMove, u
 export function executeOnlineFreeAdvance(effectiveG, playerID, stagedMove, updateMasterGameState) {
   if (!effectiveG?.pendingPlay || !updateMasterGameState) return;
   const nextG = JSON.parse(JSON.stringify(effectiveG));
-  const { receiverId } = nextG.pendingPlay;
 
   if (stagedMove) {
     applyMoveToState(stagedMove, nextG.boardState, nextG.community);
     nextG.boardState = enforceSupportRule(nextG.boardState, nextG.numPlayers);
   }
 
+  finishOnlinePendingPlayOrReward(nextG);
+
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
+}
+
+export function executeOnlineChallengerCredibility(effectiveG, playerID, updateMasterGameState) {
+  if (!effectiveG?.pendingPlay || !updateMasterGameState) return;
+  const pId = String(playerID);
+  if (effectiveG.pendingPlay.step !== 'challengerReward' || String(effectiveG.pendingPlay.successfulChallengerId) !== pId) return;
+
+  const nextG = JSON.parse(JSON.stringify(effectiveG));
+  if (nextG.players[pId].credibilityNotchesLost > 0) {
+    nextG.players[pId].credibilityNotchesLost--;
+  }
+
+  const receiverId = nextG.pendingPlay.receiverId;
   nextG.pendingPlay = null;
-  nextG.nextMoverId = receiverId;
+  if (receiverId !== undefined && receiverId !== null) nextG.nextMoverId = receiverId;
+
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
+}
+
+export function executeOnlineChallengerBureaucracyAction(effectiveG, playerID, actionPayload, updateMasterGameState) {
+  if (!effectiveG?.pendingPlay || !updateMasterGameState) return;
+  const pId = String(playerID);
+  if (effectiveG.pendingPlay.step !== 'challengerReward' || String(effectiveG.pendingPlay.successfulChallengerId) !== pId) return;
+
+  const nextG = JSON.parse(JSON.stringify(effectiveG));
+  const player = nextG.players[pId];
+  if (!player) return;
+
+  const facedownTiles = (player.bank || []).filter(t => t.faceDown);
+  const totalFunding = facedownTiles.reduce((sum, item) => sum + (TILES[item.tileId]?.funding || 0), 0);
+
+  const { actionType, targetLoc, subAction } = actionPayload;
+  const prices = BUREAUCRACY_PRICES[nextG.numPlayers] || BUREAUCRACY_PRICES[3];
+  let cost = 0;
+  if (actionType === 'RESTORE_CRED') cost = prices.RESTORE_CRED;
+  else if (actionType === 'PROMOTE_SEAT') cost = prices.PROMOTE_SEAT;
+  else if (actionType === 'PROMOTE_ROSTRUM') cost = prices.PROMOTE_ROSTRUM;
+  else if (actionType === 'PROMOTE_OFFICE') cost = prices.PROMOTE_OFFICE;
+  else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
+  else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
+
+  if (cost === 0 || totalFunding < cost) return;
+
+  const success = executeBureaucracyActionPayload(nextG, pId, { actionType, targetLoc, subAction });
+  if (!success) return;
+
+  let collected = 0;
+  for (const bTile of player.bank) {
+    if (bTile.faceDown && collected < cost) {
+      bTile.faceDown = false;
+      collected += (TILES[bTile.tileId]?.funding || 0);
+    }
+  }
+
+  const receiverId = nextG.pendingPlay.receiverId;
+  nextG.pendingPlay = null;
+  if (receiverId !== undefined && receiverId !== null) nextG.nextMoverId = receiverId;
 
   advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }

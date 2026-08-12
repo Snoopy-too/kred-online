@@ -1,8 +1,38 @@
 import { INVALID_MOVE } from 'boardgame.io/core';
-import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS } from '../types.js';
+import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES } from '../types.js';
 import { enforceSupportRule, checkVictory, getNextPlayer, getOrderedChallengers } from '../board.js';
 import { validateMoveCombination, applyMoveToState, classifyPlay, validateSingleMove } from '../moves.js';
 import { handleLoadSaveState } from '../sharedMoves.js';
+import { executeBureaucracyActionPayload } from '../bureaucracy.js';
+
+export function finishPendingPlayOrReward(G) {
+  const challengerId = G.pendingPlay?.successfulChallengerId;
+  const receiverId = G.pendingPlay?.receiverId || G.nextMoverId;
+  const tileId = G.pendingPlay?.reexecuteTileId || G.pendingPlay?.tileIdPlayed;
+
+  if (tileId && tileId !== 'BLANK') {
+    const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
+    if (winners.length > 1) G.winner = 'draw';
+    else if (winners.length === 1) G.winner = winners[0];
+  }
+
+  if (challengerId && G.players[challengerId]) {
+    const hasFacedownTiles = (G.players[challengerId].bank || []).some(t => t.faceDown);
+    if (hasFacedownTiles) {
+      G.pendingPlay.step = 'challengerReward';
+      return;
+    } else {
+      if (G.players[challengerId].credibilityNotchesLost > 0) {
+        G.players[challengerId].credibilityNotchesLost--;
+      }
+    }
+  }
+
+  G.pendingPlay = null;
+  if (receiverId !== undefined && receiverId !== null) {
+    G.nextMoverId = receiverId;
+  }
+}
 
 export function createCampaignPhase() {
   return {
@@ -50,6 +80,9 @@ export function createCampaignPhase() {
             }
             if (G.pendingPlay.step === 'freeAdvance') {
               return parseInt(G.pendingPlay.receiverId, 10);
+            }
+            if (G.pendingPlay.step === 'challengerReward') {
+              return parseInt(G.pendingPlay.successfulChallengerId, 10);
             }
             if (G.pendingPlay.nextMoverId !== undefined) {
               return parseInt(G.pendingPlay.nextMoverId, 10);
@@ -261,9 +294,7 @@ export function createCampaignPhase() {
             G.players[moverId].pendingPenaltyWithdraw = true;
           }
 
-          if (G.players[challengerId].credibilityNotchesLost > 0) {
-            G.players[challengerId].credibilityNotchesLost--;
-          }
+          G.pendingPlay.successfulChallengerId = challengerId;
 
           if (G.players[receiverId].credibilityNotchesLost < 3) {
             G.players[receiverId].credibilityNotchesLost++;
@@ -363,15 +394,7 @@ export function createCampaignPhase() {
         } else if (G.pendingPlay.receiverFreeAdvance) {
           G.pendingPlay.step = 'freeAdvance';
         } else {
-          if (G.pendingPlay.receiverId) {
-            G.nextMoverId = G.pendingPlay.receiverId;
-          }
-          G.pendingPlay = null;
-          if (tileId !== 'BLANK') {
-            const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-            if (winners.length > 1) G.winner = 'draw';
-            else if (winners.length === 1) G.winner = winners[0];
-          }
+          finishPendingPlayOrReward(G);
         }
         events.endTurn();
       },
@@ -392,16 +415,7 @@ export function createCampaignPhase() {
         if (G.pendingPlay.receiverFreeAdvance) {
           G.pendingPlay.step = 'freeAdvance';
         } else {
-          const reexecuteTileId = G.pendingPlay.reexecuteTileId || '';
-          if (G.pendingPlay.receiverId) {
-            G.nextMoverId = G.pendingPlay.receiverId;
-          }
-          G.pendingPlay = null;
-          if (reexecuteTileId !== 'BLANK') {
-            const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-            if (winners.length > 1) G.winner = 'draw';
-            else if (winners.length === 1) G.winner = winners[0];
-          }
+          finishPendingPlayOrReward(G);
         }
         events.endTurn();
       },
@@ -418,16 +432,58 @@ export function createCampaignPhase() {
         applyMoveToState(moveAction, G.boardState, G.community);
         G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
 
-        const tileId = G.pendingPlay.reexecuteTileId;
-        if (G.pendingPlay.receiverId) {
-          G.nextMoverId = G.pendingPlay.receiverId;
+        finishPendingPlayOrReward(G);
+        events.endTurn();
+      },
+
+      claimChallengerCredibility: ({ G, ctx, playerID, events }) => {
+        const pId = String(playerID);
+        if (!G.pendingPlay || G.pendingPlay.step !== 'challengerReward' || String(G.pendingPlay.successfulChallengerId) !== pId) {
+          return INVALID_MOVE;
         }
+        if (G.players[pId].credibilityNotchesLost > 0) {
+          G.players[pId].credibilityNotchesLost--;
+        }
+        const receiverId = G.pendingPlay.receiverId;
         G.pendingPlay = null;
-        if (tileId !== 'BLANK') {
-          const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-          if (winners.length > 1) G.winner = 'draw';
-          else if (winners.length === 1) G.winner = winners[0];
+        if (receiverId !== undefined && receiverId !== null) G.nextMoverId = receiverId;
+        events.endTurn();
+      },
+
+      buyChallengerBureaucracyAction: ({ G, ctx, playerID, events }, { actionType, targetLoc, subAction }) => {
+        const pId = String(playerID);
+        if (!G.pendingPlay || G.pendingPlay.step !== 'challengerReward' || String(G.pendingPlay.successfulChallengerId) !== pId) {
+          return INVALID_MOVE;
         }
+        const player = G.players[pId];
+        const facedownTiles = (player.bank || []).filter(t => t.faceDown);
+        const totalFunding = facedownTiles.reduce((sum, item) => sum + (TILES[item.tileId]?.funding || 0), 0);
+
+        const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
+        let cost = 0;
+        if (actionType === 'RESTORE_CRED') cost = prices.RESTORE_CRED;
+        else if (actionType === 'PROMOTE_SEAT') cost = prices.PROMOTE_SEAT;
+        else if (actionType === 'PROMOTE_ROSTRUM') cost = prices.PROMOTE_ROSTRUM;
+        else if (actionType === 'PROMOTE_OFFICE') cost = prices.PROMOTE_OFFICE;
+        else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
+        else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
+
+        if (cost === 0 || totalFunding < cost) return INVALID_MOVE;
+
+        const success = executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction });
+        if (!success) return INVALID_MOVE;
+
+        let collected = 0;
+        for (const bTile of player.bank) {
+          if (bTile.faceDown && collected < cost) {
+            bTile.faceDown = false;
+            collected += (TILES[bTile.tileId]?.funding || 0);
+          }
+        }
+
+        const receiverId = G.pendingPlay.receiverId;
+        G.pendingPlay = null;
+        if (receiverId !== undefined && receiverId !== null) G.nextMoverId = receiverId;
         events.endTurn();
       }
     },
