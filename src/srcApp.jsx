@@ -41,11 +41,13 @@ export function KredApp() {
 
   useEffect(() => {
     const handleMouseMove = (e) => {
-      const threshold = 60;
       const distFromBottom = window.innerHeight - e.clientY;
-      if (distFromBottom <= threshold) {
+      const screenCenterX = window.innerWidth / 2;
+      const distFromCenterX = Math.abs(e.clientX - screenCenterX);
+
+      if (distFromBottom <= 45 && distFromCenterX <= 120) {
         setShowBottomToolbar(true);
-      } else if (distFromBottom > 110) {
+      } else if (distFromBottom > 100) {
         setShowBottomToolbar(false);
       }
     };
@@ -362,11 +364,7 @@ export function KredApp() {
       <div
         className={`bottom-toolbar ${showBottomToolbar ? 'visible' : ''}`}
         onMouseEnter={() => setShowBottomToolbar(true)}
-        onMouseLeave={(e) => {
-          if (window.innerHeight - e.clientY > 60) {
-            setShowBottomToolbar(false);
-          }
-        }}
+        onMouseLeave={() => setShowBottomToolbar(false)}
       >
         <div className="left-controls">
           <button className="btn btn-secondary" onClick={handleReturnToMenu}>

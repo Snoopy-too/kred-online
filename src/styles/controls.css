@@ -53,8 +53,7 @@
   pointer-events: none;
 }
 
-.bottom-toolbar.visible,
-.bottom-toolbar:hover {
+.bottom-toolbar.visible {
   transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
