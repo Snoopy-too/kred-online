@@ -16,6 +16,16 @@ export function PendingPlayModal({
 
   const [visibleNotice, setVisibleNotice] = useState(null);
   const [isFading, setIsFading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    setIsProcessing(false);
+  }, [G]);
+
+  const handleAction = (actionFn) => {
+    setIsProcessing(true);
+    actionFn();
+  };
 
   useEffect(() => {
     if (G?.lastOutcomeNotice) {
@@ -37,7 +47,19 @@ export function PendingPlayModal({
   const isChallenger = G.pendingPlay && String(playerID) === String(activeChallenger);
 
   return (
-    <div className="pending-play-modal">
+    <div className="pending-play-modal" style={{ position: 'relative' }}>
+      {isProcessing && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)', zIndex: 10,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: '8px', color: '#fff', fontWeight: 'bold',
+          backdropFilter: 'blur(2px)'
+        }}>
+          Updating Database...
+        </div>
+      )}
+      <div style={{ opacity: isProcessing ? 0.4 : 1, pointerEvents: isProcessing ? 'none' : 'auto' }}>
       {/* Challenge / Resolution Outcome Modal Notice */}
       {visibleNotice && (
         <div className="outcome-notice-banner" style={{ marginBottom: G.pendingPlay ? '16px' : '0', padding: '12px', borderRadius: '8px', background: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)', border: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? '1px solid #ef4444' : '1px solid #22c55e', transition: 'opacity 0.5s ease', opacity: isFading ? 0 : 1 }}>
@@ -88,7 +110,7 @@ export function PendingPlayModal({
                       )}
                       <button
                         className="btn btn-success"
-                        onClick={() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile()}
+                        onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
                       >
                         Accept (Place Face-Down in Bank)
                       </button>
@@ -107,13 +129,13 @@ export function PendingPlayModal({
                       </button>
                       <button
                         className="btn btn-success"
-                        onClick={() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile()}
+                        onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
                       >
                         Accept (Place Face-Down in Bank)
                       </button>
                       <button
                         className="btn btn-danger"
-                        onClick={() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile()}
+                        onClick={() => handleAction(() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile())}
                       >
                         Expose / Whistle Blower (Place Face-Up in Bank)
                       </button>
@@ -141,13 +163,13 @@ export function PendingPlayModal({
                 <div className="btn-group" style={{ display: 'flex', gap: '8px' }}>
                   <button
                     className="btn btn-warning"
-                    onClick={() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile()}
+                    onClick={() => handleAction(() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile())}
                   >
                     Challenge Play
                   </button>
                   <button
                     className="btn btn-secondary"
-                    onClick={() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge()}
+                    onClick={() => handleAction(() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge())}
                   >
                     Pass Challenge
                   </button>
@@ -190,6 +212,7 @@ export function PendingPlayModal({
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
