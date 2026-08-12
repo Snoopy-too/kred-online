@@ -2,6 +2,17 @@ import { INVALID_MOVE } from 'boardgame.io/core';
 import { getClockwiseOrder } from '../board.js';
 import { handleLoadSaveState } from '../sharedMoves.js';
 
+export function getStartingPlayerForCampaign(G) {
+  if (!G || !G.players) return '0';
+  let startP = '0';
+  Object.keys(G.players).forEach(pId => {
+    if (G.players[pId]?.hand && G.players[pId].hand.includes('03')) {
+      startP = pId;
+    }
+  });
+  return startP;
+}
+
 export function executeOnlineDraftTileSelect(effectiveG, playerID, tileId, updateMasterGameState) {
   if (!effectiveG || !effectiveG.draftPacks || !updateMasterGameState) return;
   const pId = String(playerID);
@@ -37,6 +48,7 @@ export function executeOnlineDraftTileSelect(effectiveG, playerID, tileId, updat
     const hasMoreTiles = Object.values(nextG.draftPacks).some(p => p && p.length > 0);
     if (!hasMoreTiles) {
       nextPhase = 'campaign';
+      nextG.nextMoverId = getStartingPlayerForCampaign(nextG);
     }
   }
 
@@ -56,6 +68,7 @@ export function executeOnlineSkipDraft(effectiveG, updateMasterGameState) {
   });
 
   nextG.draftSelectionsThisRound = {};
+  nextG.nextMoverId = getStartingPlayerForCampaign(nextG);
   updateMasterGameState(nextG, 'campaign');
 }
 

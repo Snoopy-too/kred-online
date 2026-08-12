@@ -2,6 +2,36 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
 import { GameStatePayloadSchema } from '../lib/lobbySchemas.js';
 
+function normalizeOnlineMasterState(raw, dbPhase) {
+  if (!raw) return null;
+  const gObj = (raw && raw.G) ? JSON.parse(JSON.stringify(raw.G)) : JSON.parse(JSON.stringify(raw));
+  const phase = dbPhase || raw?.ctx?.phase || 'draft';
+
+  let currentP = '0';
+  if (gObj.nextMoverId !== undefined && gObj.nextMoverId !== null) {
+    currentP = String(gObj.nextMoverId);
+  } else if (phase !== 'draft' && gObj.players) {
+    // If nextMoverId is not set in Campaign/Bureaucracy, locate tile '03' (funding 0) in player hands
+    Object.keys(gObj.players).forEach(pId => {
+      if (gObj.players[pId]?.hand && gObj.players[pId].hand.includes('03')) {
+        currentP = String(pId);
+      }
+    });
+    gObj.nextMoverId = currentP;
+  } else if (raw?.ctx?.currentPlayer !== undefined) {
+    currentP = String(raw.ctx.currentPlayer);
+  }
+
+  return {
+    G: gObj,
+    ctx: {
+      phase,
+      currentPlayer: currentP,
+      numPlayers: gObj?.numPlayers || 3
+    }
+  };
+}
+
 export function useSupabaseGameSync(lobbyId, userId) {
   const [gameState, setGameState] = useState(null);
   const [players, setPlayers] = useState([]);
@@ -47,11 +77,7 @@ export function useSupabaseGameSync(lobbyId, userId) {
       if (stateErr && stateErr.code !== 'PGRST116') throw stateErr;
 
       if (stateData && stateData.state_json) {
-        const raw = stateData.state_json;
-        const normalized = (raw && raw.G && raw.ctx) ? raw : {
-          G: (raw && raw.G) ? raw.G : raw,
-          ctx: { phase: stateData.phase || 'draft', currentPlayer: String(raw?.nextMoverId ?? '0'), numPlayers: raw?.numPlayers || 3 }
-        };
+        const normalized = normalizeOnlineMasterState(stateData.state_json, stateData.phase);
         setGameState(normalized);
         setStateVersion(stateData.version || 0);
       }
@@ -81,11 +107,7 @@ export function useSupabaseGameSync(lobbyId, userId) {
         },
         (payload) => {
           if (payload.new && payload.new.state_json) {
-            const raw = payload.new.state_json;
-            const normalized = (raw && raw.G && raw.ctx) ? raw : {
-              G: (raw && raw.G) ? raw.G : raw,
-              ctx: { phase: payload.new.phase || 'draft', currentPlayer: String(raw?.nextMoverId ?? '0'), numPlayers: raw?.numPlayers || 3 }
-            };
+            const normalized = normalizeOnlineMasterState(payload.new.state_json, payload.new.phase);
             setGameState(normalized);
             setStateVersion(payload.new.version || 0);
           }
@@ -151,16 +173,7 @@ export function useSupabaseGameSync(lobbyId, userId) {
     async (nextStateJson, nextPhase = 'campaign') => {
       if (!lobbyId) return;
 
-      const wrappedState = (nextStateJson && nextStateJson.G && nextStateJson.ctx)
-        ? nextStateJson
-        : {
-            G: (nextStateJson && nextStateJson.G) ? nextStateJson.G : nextStateJson,
-            ctx: {
-              phase: nextPhase,
-              currentPlayer: String((nextStateJson && nextStateJson.nextMoverId) ?? '0'),
-              numPlayers: (nextStateJson && (nextStateJson.numPlayers || nextStateJson.G?.numPlayers)) || 3
-            }
-          };
+      const wrappedState = normalizeOnlineMasterState(nextStateJson, nextPhase);
 
       const nextVersion = stateVersion + 1;
       const payload = {
