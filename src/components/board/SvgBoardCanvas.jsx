@@ -38,7 +38,7 @@ export function SvgBoardCanvas({
   validPromotionSpots = []
 }) {
   const counterRotationStyle = perspectiveRotation ? { transform: `rotate(${-perspectiveRotation}deg)` } : {};
-  const transformStyle = getPerspectiveTransform(numPlayers, playerID, perspectiveOffsets, zoomLevel);
+  const transformStyle = getPerspectiveTransform(numPlayers, playerID, perspectiveOffsets, 1);
   const currentBoardState = transientBoardState || (G && G.boardState) || {};
 
   const getShortLabel = (locKey) => {

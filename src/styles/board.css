@@ -17,8 +17,8 @@
 .board-image-overlay-container {
   position: relative;
   width: 100%;
-  max-width: min(100%, calc(100vh - 110px));
-  max-height: calc(100vh - 110px);
+  max-width: min(100%, 46.4rem);
+  max-height: 45rem;
   aspect-ratio: 1320 / 1280;
   margin: 0 auto;
   display: flex;

@@ -451,7 +451,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
         handleRotateSelectedSpotsAroundCenter={handleRotateSelectedSpotsAroundCenter}
       />
 
-      <div className="kred-layout">
+      <div className="kred-layout" style={{ zoom: zoomLevel }}>
         <div className="domains-section">
           <BoardZoomControls zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} />
           <div className="board-canvas-card">
