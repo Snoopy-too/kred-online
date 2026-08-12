@@ -42,8 +42,8 @@
 .board-hotspot {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: clamp(24px, 4.2cqw, 34px);
-  height: clamp(24px, 4.2cqw, 34px);
+  width: 4.2cqw;
+  height: 4.2cqw;
   border-radius: 50%;
   border: 1px solid transparent;
   background: transparent;
@@ -81,8 +81,8 @@
 }
 
 .piece-img-board {
-  width: clamp(21px, 3.65cqw, 30px);
-  height: clamp(21px, 3.65cqw, 30px);
+  width: 3.65cqw;
+  height: 3.65cqw;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
 }
@@ -103,8 +103,8 @@
 }
 
 .cred-token-img {
-  width: clamp(24px, 4.5cqw, 40px);
-  height: clamp(24px, 4.5cqw, 40px);
+  width: 4.5cqw;
+  height: 4.5cqw;
   object-fit: contain;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.7));
 }
@@ -385,8 +385,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: clamp(24px, 4.2cqw, 34px);
-  height: clamp(24px, 4.2cqw, 34px);
+  width: 4.2cqw;
+  height: 4.2cqw;
   pointer-events: none;
 }
 
@@ -475,8 +475,8 @@
 }
 
 .gold-circle-pulse {
-  width: clamp(28px, 4.5cqw, 38px);
-  height: clamp(28px, 4.5cqw, 38px);
+  width: 4.5cqw;
+  height: 4.5cqw;
   border-radius: 50%;
   border: 3px solid #eab308;
   background: rgba(234, 179, 8, 0.35);
