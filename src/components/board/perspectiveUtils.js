@@ -58,6 +58,7 @@ export function getPerspectiveTransform(numPlayers, playerID, customOffsets = {}
   const custom = customOffsets[pNum] || def;
   let rawX = custom.x !== undefined ? custom.x : def.x;
   let rawY = custom.y !== undefined ? custom.y : def.y;
+  let customRot = custom.r !== undefined ? custom.r : 0;
 
   // Sanitize legacy pixel values from older localStorage drafts (e.g. > 45 or < -45)
   if (typeof rawX === 'number' && (rawX > 45 || rawX < -45)) {
@@ -70,5 +71,7 @@ export function getPerspectiveTransform(numPlayers, playerID, customOffsets = {}
   const unitX = typeof rawX === 'string' ? rawX : `${rawX}%`;
   const unitY = typeof rawY === 'string' ? rawY : `${rawY}%`;
 
-  return `translate(${unitX}, ${unitY}) rotate(${rot}deg) scale(${zoomLevel})`;
+  const finalRot = rot + customRot;
+
+  return `translate(${unitX}, ${unitY}) rotate(${finalRot}deg) scale(${zoomLevel})`;
 }

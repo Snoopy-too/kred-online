@@ -101,6 +101,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
     setScaleInput,
     perspectiveOffsets,
     handleNudgePerspective,
+    handleRotatePerspective,
     handleResetPerspectiveOffset,
     copiedJson,
     draftSavedMsg,
@@ -445,6 +446,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
         playerID={playerID}
         perspectiveOffsets={perspectiveOffsets}
         handleNudgePerspective={handleNudgePerspective}
+        handleRotatePerspective={handleRotatePerspective}
         handleResetPerspectiveOffset={handleResetPerspectiveOffset}
         handleSaveDraft={handleSaveDraft}
         handleResetDraft={handleResetDraft}

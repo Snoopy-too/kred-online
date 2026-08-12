@@ -12,6 +12,7 @@ export function BoardCalibrationToolbar({
   playerID = 0,
   perspectiveOffsets = {},
   handleNudgePerspective,
+  handleRotatePerspective,
   handleResetPerspectiveOffset,
   handleSaveDraft,
   handleResetDraft,
@@ -193,6 +194,18 @@ export function BoardCalibrationToolbar({
           <button className="btn btn-xs" onClick={() => handleNudgePerspective && handleNudgePerspective(playerID, 1, 0)}>
             → Right (+1%)
           </button>
+          <button className="btn btn-xs" onClick={() => handleRotatePerspective && handleRotatePerspective(playerID, -5)}>
+            ↺ Rot (-5°)
+          </button>
+          <button className="btn btn-xs" onClick={() => handleRotatePerspective && handleRotatePerspective(playerID, -1)}>
+            ↺ Rot (-1°)
+          </button>
+          <button className="btn btn-xs" onClick={() => handleRotatePerspective && handleRotatePerspective(playerID, 1)}>
+            ↻ Rot (+1°)
+          </button>
+          <button className="btn btn-xs" onClick={() => handleRotatePerspective && handleRotatePerspective(playerID, 5)}>
+            ↻ Rot (+5°)
+          </button>
           <button className="btn btn-xs btn-clear" onClick={() => handleResetPerspectiveOffset && handleResetPerspectiveOffset(playerID)}>
             Reset View
           </button>
@@ -200,9 +213,10 @@ export function BoardCalibrationToolbar({
             const pIdx = parseInt(playerID || 0, 10);
             const defOffset = DEFAULT_PERSPECTIVE_OFFSETS[numPlayers]?.[pIdx] || { x: 0, y: 0 };
             const activeOff = perspectiveOffsets[pIdx] || defOffset;
+            const rotOff = activeOff.r !== undefined ? activeOff.r : 0;
             return (
               <span className="cal-metrics" style={{ color: 'var(--accent-gold)' }}>
-                Offset: X={activeOff.x}%, Y={activeOff.y}%
+                Offset: X={activeOff.x}%, Y={activeOff.y}%, Rot={rotOff}°
               </span>
             );
           })()}

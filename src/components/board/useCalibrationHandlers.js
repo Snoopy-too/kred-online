@@ -441,7 +441,22 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     const def = DEFAULT_PERSPECTIVE_OFFSETS[numPlayers]?.[p] || { x: 0, y: 0 };
     setPerspectiveOffsets(prev => {
       const current = prev[p] || def;
-      const nextP = { x: current.x + dx, y: current.y + dy };
+      const nextP = { ...current, x: current.x + dx, y: current.y + dy };
+      const updated = { ...prev, [p]: nextP };
+      try {
+        localStorage.setItem(`kred_perspective_offsets_${numPlayers}P`, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const handleRotatePerspective = (playerID, dr) => {
+    const p = parseInt(playerID, 10) || 0;
+    const def = DEFAULT_PERSPECTIVE_OFFSETS[numPlayers]?.[p] || { x: 0, y: 0 };
+    setPerspectiveOffsets(prev => {
+      const current = prev[p] || def;
+      const currentR = current.r !== undefined ? current.r : 0;
+      const nextP = { ...current, r: currentR + dr };
       const updated = { ...prev, [p]: nextP };
       try {
         localStorage.setItem(`kred_perspective_offsets_${numPlayers}P`, JSON.stringify(updated));
@@ -540,6 +555,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     perspectiveOffsets,
     setPerspectiveOffsets,
     handleNudgePerspective,
+    handleRotatePerspective,
     handleResetPerspectiveOffset,
     copiedJson,
     draftSavedMsg,
