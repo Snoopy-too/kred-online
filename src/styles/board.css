@@ -27,11 +27,7 @@
   overflow: visible;
   container-type: inline-size;
   container-name: board;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  will-change: transform;
-  isolation: isolate;
+  transform-origin: center center;
 }
 
 .main-board-graphic {

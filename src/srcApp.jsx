@@ -9,6 +9,11 @@ import { useSupabaseGameSync } from './hooks/useSupabaseGameSync.js';
 import { supabase, ensureAnonymousAuth } from './lib/supabaseClient.js';
 import { GameLogger } from '../diagnostics/gameLogger.js';
 import { DiagnosticsPanel } from '../diagnostics/DiagnosticsPanel.jsx';
+import './styles/base.css';
+import './styles/board.css';
+import './styles/controls.css';
+import './styles/hand.css';
+import './styles/zoom.css';
 import './index.css';
 
 export function KredApp() {
