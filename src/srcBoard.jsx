@@ -19,7 +19,7 @@ import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
 
 export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibrationMode }) {
   // Move builder & interactive state
-  const [zoomLevel, setZoomLevel] = useState(1.0);
+  const [zoomLevel, setZoomLevel] = useState(0.75);
   const [selectedTileId, setSelectedTileId] = useState('');
   const [selectedReceiverId, setSelectedReceiverId] = useState('');
   const [stagedMoves, setStagedMoves] = useState([]);
@@ -453,7 +453,11 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
 
       <div className="kred-layout" style={{ zoom: zoomLevel }}>
         <div className="domains-section">
-          <BoardZoomControls zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} />
+          <BoardZoomControls
+            zoomLevel={zoomLevel}
+            setZoomLevel={setZoomLevel}
+            style={{ zoom: 1 / zoomLevel }}
+          />
           <div className="board-canvas-card">
             <SvgBoardCanvas
               activeBoardImage={activeBoardImage}
