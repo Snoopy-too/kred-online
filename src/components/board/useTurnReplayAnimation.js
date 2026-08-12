@@ -86,28 +86,31 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
       }
       setOverrideBoardState(boardDuringMove);
 
-      setReplayNoticeText(`🚶 ${moverName} move ${moveIndex + 1} of ${totalMoves}`);
+      setReplayNoticeText(`👀 Watch ${moverName}'s move ${moveIndex + 1} of ${totalMoves}...`);
 
-      // Phase A: Set piece at start coords
+      // Phase A (0ms - 750ms): 750ms attention-getting pre-glow at start spot
       setAnimatingPiece({
         pieceType,
         left: startCoords.left,
         top: startCoords.top,
+        isPreGlow: true,
         isMoving: false
       });
 
-      // Phase B: Trigger transition to target coords after small delay for DOM layout
+      // Phase B (at 750ms): Pre-glow completes -> start walking transition to target coords
       const t1 = setTimeout(() => {
+        setReplayNoticeText(`🚶 ${moverName} move ${moveIndex + 1} of ${totalMoves}`);
         setAnimatingPiece({
           pieceType,
           left: endCoords.left,
           top: endCoords.top,
+          isPreGlow: false,
           isMoving: true
         });
-      }, 50);
+      }, 750);
       animationTimersRef.current.push(t1);
 
-      // Phase C: Move animation lands after 900ms
+      // Phase C (at 750ms + 900ms = 1650ms): Move animation lands at target spot
       const t2 = setTimeout(() => {
         // Apply move to state so piece rests at destination spot
         const nextBoard = JSON.parse(JSON.stringify(currentBoard));
@@ -135,7 +138,7 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
           }, 400);
           animationTimersRef.current.push(tFinish);
         }
-      }, 950);
+      }, 1650);
       animationTimersRef.current.push(t2);
     };
 

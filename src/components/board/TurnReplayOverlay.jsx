@@ -43,7 +43,14 @@ export function TurnReplayOverlay({
               : 'none'
           }}
         >
-          <div className="piece-token-board replay-piece-walking" style={counterRotationStyle}>
+          {animatingPiece.isPreGlow && (
+            <div className="replay-preglow-ring" style={counterRotationStyle} />
+          )}
+
+          <div
+            className={`piece-token-board ${animatingPiece.isPreGlow ? 'replay-piece-preglow' : 'replay-piece-walking'}`}
+            style={counterRotationStyle}
+          >
             <img
               src={iconSrc}
               alt={animatingPiece.pieceType}

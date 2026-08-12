@@ -551,3 +551,49 @@
   }
 }
 
+/* 750ms Attention-Getting Pre-Glow Styles */
+.replay-piece-preglow {
+  filter: drop-shadow(0 0 16px #38bdf8) drop-shadow(0 0 28px #3b82f6);
+  animation: piecePreGlowScale 0.75s ease-in-out infinite alternate;
+}
+
+@keyframes piecePreGlowScale {
+  0% {
+    transform: scale(0.9);
+    filter: drop-shadow(0 0 8px #38bdf8);
+  }
+  100% {
+    transform: scale(1.35);
+    filter: drop-shadow(0 0 24px #38bdf8) drop-shadow(0 0 40px #60a5fa);
+  }
+}
+
+.replay-preglow-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4.8cqw;
+  height: 4.8cqw;
+  border-radius: 50%;
+  border: 3.5px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.35);
+  transform: translate(-50%, -50%);
+  animation: preGlowPulse 0.75s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 190;
+}
+
+@keyframes preGlowPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0.5;
+    box-shadow: 0 0 10px #38bdf8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.7);
+    opacity: 1;
+    box-shadow: 0 0 32px #38bdf8, 0 0 55px #3b82f6, inset 0 0 16px #38bdf8;
+  }
+}
+
+
