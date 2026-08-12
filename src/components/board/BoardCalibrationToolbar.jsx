@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DEFAULT_PERSPECTIVE_OFFSETS } from './perspectiveUtils.js';
 
 export function BoardCalibrationToolbar({
   calibrationMode,
@@ -184,9 +185,16 @@ export function BoardCalibrationToolbar({
           <button className="btn btn-xs btn-clear" onClick={() => handleResetPerspectiveOffset && handleResetPerspectiveOffset(playerID)}>
             Reset View
           </button>
-          <span className="cal-metrics" style={{ color: 'var(--accent-gold)' }}>
-            Offset: X={perspectiveOffsets[playerID]?.x ?? (playerID == 0 ? 9 : playerID == 1 ? -9 : 0)}%, Y={perspectiveOffsets[playerID]?.y ?? (playerID == 0 ? -6 : playerID == 1 ? -6 : 0)}%
-          </span>
+          {(() => {
+            const pIdx = parseInt(playerID || 0, 10);
+            const defOffset = DEFAULT_PERSPECTIVE_OFFSETS[numPlayers]?.[pIdx] || { x: 0, y: 0 };
+            const activeOff = perspectiveOffsets[pIdx] || defOffset;
+            return (
+              <span className="cal-metrics" style={{ color: 'var(--accent-gold)' }}>
+                Offset: X={activeOff.x}%, Y={activeOff.y}%
+              </span>
+            );
+          })()}
         </div>
       </div>
 
