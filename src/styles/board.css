@@ -497,3 +497,57 @@
     box-shadow: 0 0 22px #eab308, 0 0 12px #fef08a;
   }
 }
+
+/* Animated Turn Replay Styles */
+.replay-piece-container {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 200;
+}
+
+.replay-piece-walking {
+  animation: pieceWalkBob 0.3s ease-in-out infinite alternate;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 12px rgba(59, 130, 246, 0.8));
+}
+
+@keyframes pieceWalkBob {
+  0% {
+    transform: translateY(0px) scale(1.0);
+  }
+  100% {
+    transform: translateY(-8px) scale(1.1);
+  }
+}
+
+.replay-notice-banner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid rgba(59, 130, 246, 0.6);
+  color: #60a5fa;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px rgba(59, 130, 246, 0.3);
+  z-index: 250;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+  animation: noticeBannerFadeIn 0.3s ease-out;
+}
+
+@keyframes noticeBannerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
