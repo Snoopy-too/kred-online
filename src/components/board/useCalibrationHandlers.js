@@ -398,6 +398,77 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     });
   };
 
+  const handleNudgeSelectedSpotsPixels = (dxPx, dyPx) => {
+    if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
+    const containerEl = document.querySelector('.board-image-overlay-container');
+    const width = (containerEl && containerEl.offsetWidth) || 1000;
+    const height = (containerEl && containerEl.offsetHeight) || 1000;
+
+    const percentDx = (dxPx / width) * 100;
+    const percentDy = (dyPx / height) * 100;
+
+    setCalibratedPositions(prev => {
+      const nextCal = { ...prev };
+      selectedCalibrateKeys.forEach(k => {
+        const base = (activeHotspots && activeHotspots[k]) || {};
+        const cal = prev[k] || {};
+        const current = { ...base, ...cal };
+
+        const startLeft = parseFloat(current.left || '50');
+        const startTop = parseFloat(current.top || '50');
+
+        nextCal[k] = {
+          ...current,
+          left: `${(startLeft + percentDx).toFixed(2)}%`,
+          top: `${(startTop + percentDy).toFixed(2)}%`
+        };
+      });
+      return nextCal;
+    });
+  };
+
+  const handleRotateSelectedSpotsAroundCenter = (deltaAngle) => {
+    if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
+    const rad = (deltaAngle * Math.PI) / 180;
+    const cosR = Math.cos(rad);
+    const sinR = Math.sin(rad);
+
+    setCalibratedPositions(prev => {
+      const nextCal = { ...prev };
+      selectedCalibrateKeys.forEach(k => {
+        const base = (activeHotspots && activeHotspots[k]) || {};
+        const cal = prev[k] || {};
+        const current = { ...base, ...cal };
+
+        const leftVal = parseFloat(current.left || '50') - 50;
+        const topVal = parseFloat(current.top || '50') - 50;
+
+        const nextLeft = leftVal * cosR - topVal * sinR + 50;
+        const nextTop = leftVal * sinR + topVal * cosR + 50;
+
+        let currentRot = current.rot;
+        if (currentRot === undefined && current.transform) {
+          const match = current.transform.match(/rotate\(([-?\d.]+)deg\)/);
+          if (match) currentRot = parseFloat(match[1]);
+        }
+        if (currentRot === undefined) currentRot = 0;
+
+        const newRot = Math.round(((currentRot + deltaAngle) % 360 + 360) % 360);
+        let currentScale = current.scale !== undefined ? current.scale : 1.0;
+
+        nextCal[k] = {
+          ...current,
+          left: `${nextLeft.toFixed(2)}%`,
+          top: `${nextTop.toFixed(2)}%`,
+          rot: newRot,
+          scale: currentScale,
+          transform: `translate(-50%, -50%) rotate(${newRot}deg) scale(${currentScale})`
+        };
+      });
+      return nextCal;
+    });
+  };
+
   return {
     calibrationMode,
     setCalibrationMode,
@@ -427,6 +498,8 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     handleSetExactScale,
     handleBoardMouseDown,
     handleBoardMouseMove,
-    handleBoardMouseUp
+    handleBoardMouseUp,
+    handleNudgeSelectedSpotsPixels,
+    handleRotateSelectedSpotsAroundCenter
   };
 }

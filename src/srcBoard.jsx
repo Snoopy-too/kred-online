@@ -99,7 +99,9 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
     handleSetExactScale,
     handleBoardMouseDown,
     handleBoardMouseMove,
-    handleBoardMouseUp
+    handleBoardMouseUp,
+    handleNudgeSelectedSpotsPixels,
+    handleRotateSelectedSpotsAroundCenter
   } = useCalibrationHandlers(numPlayers, propCalibrationMode, baseHotspots);
 
   const tilesPerPlayer = INITIAL_PIECE_COUNTS[numPlayers]?.TILES_PER_PLAYER || 8;
@@ -445,6 +447,8 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
         copiedJson={copiedJson}
         showSpotLabels={showSpotLabels}
         setShowSpotLabels={setShowSpotLabels}
+        handleNudgeSelectedSpotsPixels={handleNudgeSelectedSpotsPixels}
+        handleRotateSelectedSpotsAroundCenter={handleRotateSelectedSpotsAroundCenter}
       />
 
       <div className="kred-layout">

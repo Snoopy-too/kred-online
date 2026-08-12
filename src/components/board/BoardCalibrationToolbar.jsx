@@ -28,7 +28,9 @@ export function BoardCalibrationToolbar({
   draftSavedMsg,
   copiedJson,
   showSpotLabels,
-  setShowSpotLabels
+  setShowSpotLabels,
+  handleNudgeSelectedSpotsPixels,
+  handleRotateSelectedSpotsAroundCenter
 }) {
   const [showImportBox, setShowImportBox] = useState(false);
   const [importText, setImportText] = useState('');
@@ -48,6 +50,12 @@ export function BoardCalibrationToolbar({
   const selectAllCredTokens = () => {
     const credKeys = Array.from({ length: numPlayers }).map((_, i) => `p${i + 1}_cred`);
     setSelectedCalibrateKeys(credKeys);
+  };
+
+  const selectAllElements = () => {
+    if (activeHotspots) {
+      setSelectedCalibrateKeys(Object.keys(activeHotspots));
+    }
   };
 
   const getShortLabel = (locKey) => {
@@ -151,6 +159,9 @@ export function BoardCalibrationToolbar({
           <button className="badge-btn" onClick={selectAllCredTokens}>
             All Cred Tokens
           </button>
+          <button className="badge-btn" onClick={selectAllElements}>
+            Select All Elements
+          </button>
           {selectedCalibrateKeys.length > 0 && (
             <button className="badge-btn btn-clear" onClick={() => setSelectedCalibrateKeys([])}>
               Clear ({selectedCalibrateKeys.length})
@@ -203,7 +214,9 @@ export function BoardCalibrationToolbar({
           <div className="cal-selected-info">
             Selected ({selectedCalibrateKeys.length}):{' '}
             <strong>
-              {selectedCalibrateKeys.map(k => getShortLabel(k)).join(', ')}
+              {selectedCalibrateKeys.length > 6
+                ? `${selectedCalibrateKeys.slice(0, 6).map(k => getShortLabel(k)).join(', ')}... (+${selectedCalibrateKeys.length - 6} more)`
+                : selectedCalibrateKeys.map(k => getShortLabel(k)).join(', ')}
             </strong>
           </div>
 
@@ -247,6 +260,39 @@ export function BoardCalibrationToolbar({
 
           <div className="cal-metrics">
             Size: {activeWidthPx}px × {activeHeightPx}px
+          </div>
+        </div>
+      )}
+
+      {selectedCalibrateKeys.length > 0 && (
+        <div className="cal-controls-row" style={{ background: '#13191c', marginTop: '6px' }}>
+          <div className="cal-group" style={{ flexWrap: 'wrap', gap: '6px' }}>
+            <span className="cal-label" style={{ color: 'var(--accent-gold)' }}>
+              🎯 Precision Nudge:
+            </span>
+            <span className="cal-label">X:</span>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(-10, 0)}>-10px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(-5, 0)}>-5px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(-1, 0)}>-1px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(1, 0)}>+1px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(5, 0)}>+5px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(10, 0)}>+10px</button>
+
+            <span className="cal-label" style={{ marginLeft: '10px' }}>Y:</span>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(0, -10)}>-10px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(0, -5)}>-5px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(0, -1)}>-1px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(0, 1)}>+1px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(0, 5)}>+5px</button>
+            <button className="btn btn-xs" onClick={() => handleNudgeSelectedSpotsPixels && handleNudgeSelectedSpotsPixels(0, 10)}>+10px</button>
+
+            <span className="cal-label" style={{ marginLeft: '10px', color: 'var(--accent-gold)' }}>
+              🔄 Group Rot (Center):
+            </span>
+            <button className="btn btn-xs" onClick={() => handleRotateSelectedSpotsAroundCenter && handleRotateSelectedSpotsAroundCenter(-5)}>-5°</button>
+            <button className="btn btn-xs" onClick={() => handleRotateSelectedSpotsAroundCenter && handleRotateSelectedSpotsAroundCenter(-1)}>-1°</button>
+            <button className="btn btn-xs" onClick={() => handleRotateSelectedSpotsAroundCenter && handleRotateSelectedSpotsAroundCenter(1)}>+1°</button>
+            <button className="btn btn-xs" onClick={() => handleRotateSelectedSpotsAroundCenter && handleRotateSelectedSpotsAroundCenter(5)}>+5°</button>
           </div>
         </div>
       )}
