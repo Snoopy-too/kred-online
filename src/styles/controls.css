@@ -974,3 +974,86 @@ button.flashing-green-tab {
 .spinner-icon {
   font-size: 32px;
 }
+
+/* Draft Phase Submitting / Database Loading Overlay */
+.control-card.draft-modal-submitting {
+  position: relative;
+  overflow: hidden;
+}
+
+.draft-card-disabled-content {
+  opacity: 0.45;
+  filter: grayscale(40%);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+  pointer-events: none;
+}
+
+.draft-submitting-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(18, 14, 12, 0.88);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 100;
+  border: 1px solid var(--accent-gold);
+  box-shadow: 0 0 24px rgba(200, 155, 60, 0.25);
+  animation: fadeInOverlay 0.2s ease-in-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.draft-spinner {
+  width: 38px;
+  height: 38px;
+  border: 3.5px solid rgba(200, 155, 60, 0.2);
+  border-top-color: var(--accent-gold);
+  border-right-color: var(--accent-gold);
+  border-radius: 50%;
+  animation: draftSpinnerRotate 0.75s linear infinite;
+  box-shadow: 0 0 12px rgba(200, 155, 60, 0.3);
+}
+
+@keyframes draftSpinnerRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.draft-submitting-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.draft-submitting-text strong {
+  font-size: 14px;
+  color: var(--accent-gold);
+  letter-spacing: 0.5px;
+}
+
+.draft-submitting-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tile-card-submitting {
+  transform: scale(1.05) translateY(-4px) !important;
+}
+
+.tile-card-submitting .tile-svg {
+  border-color: var(--accent-gold) !important;
+  box-shadow: 0 0 16px var(--accent-gold) !important;
+}
+

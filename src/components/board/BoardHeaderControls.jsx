@@ -20,7 +20,9 @@ export function BoardHeaderControls({
       <div className="header-controls">
         <div className="status-badge phase-badge">Phase: <strong>{currentPhase.toUpperCase()}</strong></div>
         <div className="status-badge turn-badge">Current Turn: <strong>{getPlayerLabel(ctx.currentPlayer)}</strong></div>
-        <div className="status-badge perspective-badge">Viewing As: <strong>{getPlayerLabel(playerID)}</strong></div>
+        {!isOnline && (
+          <div className="status-badge perspective-badge">Viewing As: <strong>{getPlayerLabel(playerID)}</strong></div>
+        )}
         {!isOnline && (
           <button
             className="btn btn-secondary"
