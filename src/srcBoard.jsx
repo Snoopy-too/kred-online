@@ -35,7 +35,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth;
+      const width = window.outerWidth || window.innerWidth;
       // 1200px is the reference width for the layout.
       // Cap max scale at 1.4 to prevent huge UI elements on ultra-wide screens.
       const calculatedScale = Math.min(1.4, width / 1200);
