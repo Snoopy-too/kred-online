@@ -527,21 +527,36 @@ button.flashing-green-tab {
   position: fixed;
   top: 70px;
   right: 20px;
-  width: 450px;
+  width: 410px;
   max-width: calc(100vw - 40px);
-  max-height: 80vh;
+  max-height: calc(100vh - 90px);
   overflow-y: auto;
   z-index: 99999;
   background: rgba(24, 19, 16, 0.94);
   border: 2px solid var(--accent-gold);
   border-radius: 12px;
-  padding: 14px 18px;
+  padding: 10px 14px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   color: var(--text-main);
+}
+
+.calibration-floating-bar::-webkit-scrollbar {
+  width: 8px;
+}
+.calibration-floating-bar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+.calibration-floating-bar::-webkit-scrollbar-thumb {
+  background: var(--accent-gold);
+  border-radius: 4px;
+}
+.calibration-floating-bar::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b;
 }
 
 .cal-header {
@@ -549,38 +564,39 @@ button.flashing-green-tab {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .cal-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--accent-gold);
 }
 
 .cal-top-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .cal-quick-selects {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .cal-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
-  min-width: 80px;
+  min-width: 70px;
 }
 
 .cal-badge-group {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -590,7 +606,7 @@ button.flashing-green-tab {
   color: var(--text-main);
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  padding: 4px 10px;
+  padding: 3px 8px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -611,15 +627,15 @@ button.flashing-green-tab {
 .cal-controls-row {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   background: #261f1a;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 8px 10px;
 }
 
 .cal-selected-info {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--accent-gold);
   word-break: break-word;
 }
@@ -627,13 +643,13 @@ button.flashing-green-tab {
 .cal-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
-.btn-xs { background: #3d3028; color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.15s ease; }
+.btn-xs { background: #3d3028; color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.15s ease; }
 .btn-xs:hover { background: #4a3a30; border-color: var(--accent-gold); }
-.cal-input { width: 65px; background: #14100e; color: var(--accent-gold); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 6px; font-size: 11px; font-weight: 700; text-align: center; box-sizing: border-box; }
+.cal-input { width: 55px; background: #14100e; color: var(--accent-gold); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 4px; font-size: 11px; font-weight: 700; text-align: center; box-sizing: border-box; }
 .cal-input:focus { outline: none; border-color: var(--accent-gold); }
 .cal-metrics { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
