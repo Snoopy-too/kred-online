@@ -22,8 +22,7 @@
 
 html, body, #root {
   height: 100%;
-  max-height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
 }
@@ -32,6 +31,7 @@ body {
   font-family: 'Outfit', sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-main);
+  overflow-y: auto;
 }
 
 .app-shell {
@@ -67,10 +67,13 @@ body {
 .landing-screen {
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px;
+  padding: 32px 24px;
   background: var(--text-muted);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 155, 60, 0.5) rgba(20, 16, 14, 0.4);
 }
 
 .landing-card {
@@ -80,6 +83,7 @@ body {
   padding: 40px;
   max-width: 1000px;
   width: 100%;
+  margin: auto;
   backdrop-filter: blur(12px);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
   text-align: center;
