@@ -1,5 +1,6 @@
 import React from 'react';
 import { MOVE_TYPES, BUREAUCRACY_PRICES } from '../domain/types.js';
+import { executeOnlineBureaucracyAction, executeOnlineEndBureaucracyTurn } from '../domain/onlineEngine.js';
 
 export function BureaucracyPanel({
   myPlayer,
@@ -13,7 +14,11 @@ export function BureaucracyPanel({
   selectedActionType,
   setSelectedActionType,
   moveFromLoc,
-  validPromotionSpots
+  validPromotionSpots,
+  G,
+  playerID,
+  isOnline = false,
+  updateMasterGameState = null
 }) {
   const prices = BUREAUCRACY_PRICES[numPlayers] || BUREAUCRACY_PRICES[3];
   const funding = myPlayer.funding || 0;
@@ -93,7 +98,7 @@ export function BureaucracyPanel({
                 <button
                   className="btn btn-purchase"
                   disabled={funding < prices.RESTORE_CRED || credibilityNotchesLost === 0}
-                  onClick={() => moves.buyBureaucracyAction({ actionType: 'RESTORE_CRED' })}
+                  onClick={() => isOnline ? executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState) : moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' })}
                 >
                   <span className="price-tag"><span className="k-strike">K</span> {prices.RESTORE_CRED}</span>
                   <span>Restore</span>
@@ -241,7 +246,7 @@ export function BureaucracyPanel({
           <div className="bazaar-footer" style={{ marginTop: 'auto', paddingTop: '16px' }}>
             <button
               className="btn btn-end-bureaucracy"
-              onClick={() => moves.endBureaucracyTurn()}
+              onClick={() => isOnline ? executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState) : moves?.endBureaucracyTurn()}
             >
               Finish & End Bureaucracy Turn
             </button>

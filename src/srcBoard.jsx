@@ -19,6 +19,12 @@ import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
 import { DraftPhaseCard } from './components/board/DraftPhaseCard.jsx';
 import { executeOnlineDraftTileSelect } from './domain/phases/draftPhase.js';
 import { BoardHeaderControls } from './components/board/BoardHeaderControls.jsx';
+import {
+  executeOnlineCampaignTurn,
+  executeOnlineReexecute,
+  executeOnlinePenaltyWithdraw,
+  executeOnlineFreeAdvance
+} from './domain/onlineEngine.js';
 
 export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
   const G = (isOnline && dbMasterState && dbMasterState.G) ? dbMasterState.G : rawG;
@@ -379,14 +385,24 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     setValidDestinations([]);
   };
 
-  // Finish Turn Handler -> Submit to boardgame.io
+  // Finish Turn Handler -> Submit to boardgame.io / Supabase Master State
   const handleSubmitTurn = () => {
     if (!selectedTileId || !selectedReceiverId) return;
-    moves.submitTurnMovesAndTile({
-      tileId: selectedTileId,
-      receiverId: selectedReceiverId,
-      moves: stagedMoves
-    });
+
+    if (isOnline) {
+      executeOnlineCampaignTurn(
+        G,
+        playerID,
+        { tileId: selectedTileId, receiverId: selectedReceiverId, moves: stagedMoves },
+        updateMasterGameState
+      );
+    } else if (moves?.submitTurnMovesAndTile) {
+      moves.submitTurnMovesAndTile({
+        tileId: selectedTileId,
+        receiverId: selectedReceiverId,
+        moves: stagedMoves
+      });
+    }
 
     handleResetTurn();
   };
@@ -531,6 +547,10 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
               setSelectedActionType={bureaucracyBoard.setSelectedActionType}
               moveFromLoc={bureaucracyBoard.moveFromLoc}
               validPromotionSpots={bureaucracyBoard.validPromotionSpots}
+              G={G}
+              playerID={playerID}
+              isOnline={isOnline}
+              updateMasterGameState={updateMasterGameState}
             />
           ) : (
             <>
@@ -543,6 +563,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                   getPlayerLabel={getPlayerLabel}
                   peekPendingTile={peekPendingTile}
                   onTogglePeekTile={handleTogglePeekTile}
+                  isOnline={isOnline}
+                  updateMasterGameState={updateMasterGameState}
                 />
               )}
 
@@ -584,11 +606,11 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                   handleResetTurn={handleResetTurn}
                   handleSubmitTurn={
                     isReexecutingMe
-                      ? () => moves.reexecuteHonestly(stagedMoves)
+                      ? () => isOnline ? executeOnlineReexecute(G, playerID, stagedMoves, updateMasterGameState) : moves?.reexecuteHonestly(stagedMoves)
                       : isPenaltyWithdrawMe
-                      ? () => moves.executePenaltyWithdraw(stagedMoves[0])
+                      ? () => isOnline ? executeOnlinePenaltyWithdraw(G, playerID, stagedMoves[0], updateMasterGameState) : moves?.executePenaltyWithdraw(stagedMoves[0])
                       : isFreeAdvanceMe
-                      ? () => moves.executeFreeAdvance(stagedMoves[0])
+                      ? () => isOnline ? executeOnlineFreeAdvance(G, playerID, stagedMoves[0], updateMasterGameState) : moves?.executeFreeAdvance(stagedMoves[0])
                       : handleSubmitTurn
                   }
                   isMyTurn={showTurnBuilderForPending || isMyTurn}

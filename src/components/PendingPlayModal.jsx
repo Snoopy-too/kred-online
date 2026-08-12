@@ -1,8 +1,15 @@
 import React from 'react';
 import { getActiveChallenger } from '../domain/board.js';
+import {
+  executeOnlineAcceptTile,
+  executeOnlineRejectTile,
+  executeOnlineChallengeTile,
+  executeOnlinePassChallenge
+} from '../domain/onlineEngine.js';
 
 export function PendingPlayModal({
-  G, playerID, moves, getPlayerLabel, peekPendingTile = false, onTogglePeekTile
+  G, playerID, moves, getPlayerLabel, peekPendingTile = false, onTogglePeekTile,
+  isOnline = false, updateMasterGameState = null
 }) {
   const myPlayer = (G && G.players && G.players[playerID]) || {};
   const isZeroCredibility = (myPlayer.credibilityNotchesLost || 0) >= 3;
@@ -65,7 +72,10 @@ export function PendingPlayModal({
                           👁️ {peekPendingTile ? 'Hide Tile (Flip Face-Down)' : 'Peek / Flip Tile Privately'}
                         </button>
                       )}
-                      <button className="btn btn-success" onClick={() => moves.acceptTile()}>
+                      <button
+                        className="btn btn-success"
+                        onClick={() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile()}
+                      >
                         Accept (Place Face-Down in Bank)
                       </button>
                     </div>
@@ -81,10 +91,16 @@ export function PendingPlayModal({
                       >
                         👁️ {peekPendingTile ? 'Hide Tile (Flip Face-Down)' : 'Peek / Flip Tile Privately'}
                       </button>
-                      <button className="btn btn-success" onClick={() => moves.acceptTile()}>
+                      <button
+                        className="btn btn-success"
+                        onClick={() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile()}
+                      >
                         Accept (Place Face-Down in Bank)
                       </button>
-                      <button className="btn btn-danger" onClick={() => moves.rejectTile()}>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile()}
+                      >
                         Expose / Whistle Blower (Place Face-Up in Bank)
                       </button>
                     </div>
@@ -109,10 +125,16 @@ export function PendingPlayModal({
               <div className="challenge-actions">
                 <p>Tile accepted face-down. As a bystander, do you want to challenge the play?</p>
                 <div className="btn-group" style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn btn-warning" onClick={() => moves.challengeTile()}>
+                  <button
+                    className="btn btn-warning"
+                    onClick={() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile()}
+                  >
                     Challenge Play
                   </button>
-                  <button className="btn btn-secondary" onClick={() => moves.passChallenge()}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge()}
+                  >
                     Pass Challenge
                   </button>
                 </div>
