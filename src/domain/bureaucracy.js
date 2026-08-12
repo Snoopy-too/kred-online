@@ -27,42 +27,63 @@ function promoteSwapInState(G, targetLoc, targetType, higherType) {
   return true;
 }
 
+export function initBureaucracy(G) {
+  if (!G || !G.players) return;
+
+  Object.keys(G.players).forEach(pId => {
+    const funding = G.players[pId].bank ? G.players[pId].bank.reduce((sum, item) => {
+      if (item.faceDown) {
+        return sum + (TILES[item.tileId]?.funding || 0);
+      }
+      return sum;
+    }, 0) : 0;
+    G.players[pId].funding = funding;
+  });
+
+  const order = Object.keys(G.players).sort((a, b) => {
+    if (G.players[b].funding !== G.players[a].funding) {
+      return G.players[b].funding - G.players[a].funding;
+    }
+    const pawnA = Object.keys(G.boardState).some(k => k.startsWith(`p${parseInt(a, 10) + 1}_`) && G.boardState[k]?.type === 'Pawn');
+    const pawnB = Object.keys(G.boardState).some(k => k.startsWith(`p${parseInt(b, 10) + 1}_`) && G.boardState[k]?.type === 'Pawn');
+    if (pawnA !== pawnB) return pawnB ? 1 : -1;
+
+    const countHeels = (id) => Object.keys(G.boardState)
+      .filter(k => k.startsWith(`p${parseInt(id, 10) + 1}_`) && G.boardState[k]?.type === 'Heel').length;
+    if (countHeels(b) !== countHeels(a)) return countHeels(b) - countHeels(a);
+
+    const countMarks = (id) => Object.keys(G.boardState)
+      .filter(k => k.startsWith(`p${parseInt(id, 10) + 1}_`) && G.boardState[k]?.type === 'Mark').length;
+    if (countMarks(b) !== countMarks(a)) return countMarks(b) - countMarks(a);
+
+    return G.players[a].credibilityNotchesLost - G.players[b].credibilityNotchesLost;
+  });
+
+  G.bureaucracyTurnOrder = order;
+  G.bureaucracyTurnIndex = 0;
+}
+
+export function cleanupBureaucracy(G) {
+  if (!G || !G.players) return;
+  // Return bank tiles to hands for next campaign
+  Object.keys(G.players).forEach(pId => {
+    if (G.players[pId].bank) {
+      G.players[pId].hand = G.players[pId].bank.map(b => b.tileId);
+      G.players[pId].bank = [];
+    }
+  });
+
+  Object.keys(G.players).forEach(pId => {
+    if (checkVictory(G.boardState, pId)) {
+      G.winner = pId;
+    }
+  });
+}
+
 export function createBureaucracyPhase() {
   return {
-    onBegin: ({ G, ctx }) => {
-      if (!G || !G.players) return;
-
-      Object.keys(G.players).forEach(pId => {
-        const funding = G.players[pId].bank ? G.players[pId].bank.reduce((sum, item) => {
-          if (item.faceDown) {
-            return sum + (TILES[item.tileId]?.funding || 0);
-          }
-          return sum;
-        }, 0) : 0;
-        G.players[pId].funding = funding;
-      });
-
-      const order = Object.keys(G.players).sort((a, b) => {
-        if (G.players[b].funding !== G.players[a].funding) {
-          return G.players[b].funding - G.players[a].funding;
-        }
-        const pawnA = Object.keys(G.boardState).some(k => k.startsWith(`p${parseInt(a, 10) + 1}_`) && G.boardState[k]?.type === 'Pawn');
-        const pawnB = Object.keys(G.boardState).some(k => k.startsWith(`p${parseInt(b, 10) + 1}_`) && G.boardState[k]?.type === 'Pawn');
-        if (pawnA !== pawnB) return pawnB ? 1 : -1;
-
-        const countHeels = (id) => Object.keys(G.boardState)
-          .filter(k => k.startsWith(`p${parseInt(id, 10) + 1}_`) && G.boardState[k]?.type === 'Heel').length;
-        if (countHeels(b) !== countHeels(a)) return countHeels(b) - countHeels(a);
-
-        const countMarks = (id) => Object.keys(G.boardState)
-          .filter(k => k.startsWith(`p${parseInt(id, 10) + 1}_`) && G.boardState[k]?.type === 'Mark').length;
-        if (countMarks(b) !== countMarks(a)) return countMarks(b) - countMarks(a);
-
-        return G.players[a].credibilityNotchesLost - G.players[b].credibilityNotchesLost;
-      });
-
-      G.bureaucracyTurnOrder = order;
-      G.bureaucracyTurnIndex = 0;
+    onBegin: ({ G }) => {
+      initBureaucracy(G);
     },
 
     turn: {
@@ -195,20 +216,7 @@ export function createBureaucracyPhase() {
       return 'campaign';
     },
     onEnd: ({ G }) => {
-      if (!G || !G.players) return;
-      // Return bank tiles to hands for next campaign
-      Object.keys(G.players).forEach(pId => {
-        if (G.players[pId].bank) {
-          G.players[pId].hand = G.players[pId].bank.map(b => b.tileId);
-          G.players[pId].bank = [];
-        }
-      });
-
-      Object.keys(G.players).forEach(pId => {
-        if (checkVictory(G.boardState, pId)) {
-          G.winner = pId;
-        }
-      });
+      cleanupBureaucracy(G);
     }
   };
 }

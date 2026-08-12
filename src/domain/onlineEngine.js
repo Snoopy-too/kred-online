@@ -2,6 +2,21 @@ import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS } from './types.js';
 import { enforceSupportRule, checkVictory, getOrderedChallengers, getNextPlayer } from './board.js';
 import { validateMoveCombination, applyMoveToState, classifyPlay } from './moves.js';
 import { getClockwiseOrder } from './board.js';
+import { initBureaucracy, cleanupBureaucracy } from './bureaucracy.js';
+
+export function isCampaignOver(G) {
+  if (!G || !G.players) return false;
+  return Object.values(G.players).every(p => p && p.hand && p.hand.length === 0) && !G.pendingPlay;
+}
+
+export function advanceCampaignPhaseOnline(nextG, updateMasterGameState) {
+  if (isCampaignOver(nextG)) {
+    initBureaucracy(nextG);
+    updateMasterGameState(nextG, 'bureaucracy');
+  } else {
+    updateMasterGameState(nextG, 'campaign');
+  }
+}
 
 export function executeOnlineCampaignTurn(effectiveG, playerID, payload, updateMasterGameState) {
   if (!effectiveG || !updateMasterGameState) return;
@@ -57,7 +72,7 @@ export function executeOnlineCampaignTurn(effectiveG, playerID, payload, updateM
     nextG.pendingPlay.step = 'challenge';
   }
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlineAcceptTile(effectiveG, playerID, updateMasterGameState) {
@@ -83,7 +98,7 @@ export function executeOnlineAcceptTile(effectiveG, playerID, updateMasterGameSt
     nextG.pendingPlay.step = 'challenge';
   }
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlineRejectTile(effectiveG, playerID, updateMasterGameState) {
@@ -147,7 +162,7 @@ export function executeOnlineRejectTile(effectiveG, playerID, updateMasterGameSt
     }
   }
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlineChallengeTile(effectiveG, playerID, updateMasterGameState) {
@@ -218,7 +233,7 @@ export function executeOnlineChallengeTile(effectiveG, playerID, updateMasterGam
     }
   }
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlinePassChallenge(effectiveG, playerID, updateMasterGameState) {
@@ -249,7 +264,7 @@ export function executeOnlinePassChallenge(effectiveG, playerID, updateMasterGam
     }
   }
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlineReexecute(effectiveG, playerID, stagedMoves, updateMasterGameState) {
@@ -269,7 +284,7 @@ export function executeOnlineReexecute(effectiveG, playerID, stagedMoves, update
     nextG.nextMoverId = receiverId;
   }
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlinePenaltyWithdraw(effectiveG, playerID, stagedMove, updateMasterGameState) {
@@ -291,7 +306,7 @@ export function executeOnlinePenaltyWithdraw(effectiveG, playerID, stagedMove, u
     nextG.nextMoverId = receiverId;
   }
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlineFreeAdvance(effectiveG, playerID, stagedMove, updateMasterGameState) {
@@ -307,7 +322,7 @@ export function executeOnlineFreeAdvance(effectiveG, playerID, stagedMove, updat
   nextG.pendingPlay = null;
   nextG.nextMoverId = receiverId;
 
-  updateMasterGameState(nextG, 'campaign');
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }
 
 export function executeOnlineBureaucracyAction(effectiveG, playerID, actionPayload, updateMasterGameState) {
@@ -348,6 +363,7 @@ export function executeOnlineEndBureaucracyTurn(effectiveG, playerID, updateMast
 
   if (nextP === '0') {
     // All players completed bureaucracy -> Return to Campaign phase
+    cleanupBureaucracy(nextG);
     updateMasterGameState(nextG, 'campaign');
   } else {
     nextG.nextMoverId = nextP;
