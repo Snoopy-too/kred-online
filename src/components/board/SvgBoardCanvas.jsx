@@ -35,7 +35,8 @@ export function SvgBoardCanvas({
   zoomLevel = 1,
   peekPendingTile = false,
   onTogglePeekTile = null,
-  validPromotionSpots = []
+  validPromotionSpots = [],
+  getPlayerLabel = null
 }) {
   const counterRotationStyle = perspectiveRotation ? { transform: `rotate(${-perspectiveRotation}deg)` } : {};
   const transformStyle = getPerspectiveTransform(numPlayers, playerID, perspectiveOffsets, 1);
@@ -261,6 +262,8 @@ export function SvgBoardCanvas({
           const isSelfReceiver = isPendingActive && isSelf;
           const isTargetable = Boolean(selectedTileId) && !selectedReceiverId && !isReceiverLocked;
 
+          const pLabel = getPlayerLabel ? getPlayerLabel(targetPlayerId) : `Player ${domainNum}`;
+
           return (
             <div
               key={locKey}
@@ -283,11 +286,11 @@ export function SvgBoardCanvas({
               }}
               title={
                 isSelfReceiver ? (peekPendingTile ? "Click to flip face-down" : "Click to flip & view tile privately")
-                : isStagedReceiver ? `Tile staged for Player ${domainNum}`
-                : bankFull ? `Player ${domainNum}'s bank is full (${targetBankLength}/${tilesPerPlayer} tiles)`
+                : isStagedReceiver ? `Tile staged for ${pLabel}`
+                : bankFull ? `${pLabel}'s bank is full (${targetBankLength}/${tilesPerPlayer} tiles)`
                 : selfLocked ? `Cannot play to yourself — opponents with empty bank slots still exist`
-                : isTargetable ? `Click to play tile face-down to Player ${domainNum}`
-                : `Drop Zone Player ${domainNum}`
+                : isTargetable ? `Click to play tile face-down to ${pLabel}`
+                : `Drop Zone ${pLabel}`
               }
             >
               {isDropActive ? (

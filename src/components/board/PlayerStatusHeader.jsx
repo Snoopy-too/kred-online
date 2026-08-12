@@ -1,8 +1,8 @@
 import React from 'react';
 import { TILES } from '../../domain/types.js';
 
-export function PlayerStatusHeader({ G, ctx, playerID, numPlayers, isMyTurn }) {
-  const getPlayerLabel = (pIdx) => `Player ${parseInt(pIdx, 10) + 1}`;
+export function PlayerStatusHeader({ G, ctx, playerID, numPlayers, isMyTurn, getPlayerLabel: propGetPlayerLabel }) {
+  const getPlayerLabel = propGetPlayerLabel || ((pIdx) => `Player ${parseInt(pIdx, 10) + 1}`);
 
   return (
     <div className="player-status-header">
@@ -11,7 +11,7 @@ export function PlayerStatusHeader({ G, ctx, playerID, numPlayers, isMyTurn }) {
           <span className="badge badge-success">IT'S YOUR TURN!</span>
         ) : (
           <span className="badge badge-secondary">
-            Waiting for Player {parseInt(ctx.currentPlayer, 10) + 1}...
+            Waiting for {getPlayerLabel(ctx.currentPlayer)}...
           </span>
         )}
         <span className="phase-tag">Phase: {ctx.phase || 'draft'}</span>

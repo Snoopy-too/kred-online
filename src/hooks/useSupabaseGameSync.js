@@ -123,7 +123,13 @@ export function useSupabaseGameSync(lobbyId, userId) {
 
     channelRef.current = channel;
 
+    // Periodic state polling (every 2s) to guarantee real-time move sync
+    const pollInterval = setInterval(() => {
+      fetchRoomData();
+    }, 2000);
+
     return () => {
+      clearInterval(pollInterval);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
@@ -173,9 +179,12 @@ export function useSupabaseGameSync(lobbyId, userId) {
     [lobbyId, stateVersion]
   );
 
+  const playerNames = players.map(p => p.name || `Player ${p.player_index + 1}`);
+
   return {
     gameState,
     players,
+    playerNames,
     lobbyStatus,
     stateVersion,
     syncError,

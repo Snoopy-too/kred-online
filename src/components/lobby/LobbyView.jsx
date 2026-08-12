@@ -20,43 +20,68 @@ export function LobbyView({ onStartOnlineGame, onCancel }) {
     });
   }, []);
 
-  // Realtime subscription for connected players when inside a waiting room
+  // Realtime subscription + polling fallback for connected players when inside waiting room
   useEffect(() => {
     if (!activeLobby?.id) return;
 
-    const fetchPlayers = async () => {
-      const { data } = await supabase
+    let isMounted = true;
+
+    const checkLobbyAndPlayers = async () => {
+      // 1. Fetch player list
+      const { data: playerData } = await supabase
         .from('kred_players')
         .select('*')
         .eq('lobby_id', activeLobby.id)
         .order('player_index', { ascending: true });
-      if (data) setConnectedPlayers(data);
+
+      if (playerData && isMounted) {
+        setConnectedPlayers(playerData);
+      }
+
+      // 2. Fetch lobby status to see if host started game
+      const { data: lobbyData } = await supabase
+        .from('kred_lobbies')
+        .select('status, player_count')
+        .eq('id', activeLobby.id)
+        .single();
+
+      if (lobbyData?.status === 'ACTIVE' && isMounted) {
+        const playersList = playerData || [];
+        const myPlayer = playersList.find(p => p.user_id === currentUser?.id);
+        const playerIndex = myPlayer ? myPlayer.player_index : 0;
+        const playerNames = playersList.map(p => p.name || `Player ${p.player_index + 1}`);
+
+        onStartOnlineGame({
+          lobbyId: activeLobby.id,
+          numPlayers: activeLobby.player_count,
+          playerIndex,
+          userId: currentUser?.id,
+          playerNames
+        });
+      }
     };
 
-    fetchPlayers();
+    checkLobbyAndPlayers();
+
+    // Polling interval (1.5s) to guarantee guests join game even if Realtime drops
+    const pollInterval = setInterval(checkLobbyAndPlayers, 1500);
 
     const channel = supabase
       .channel(`waiting_room_${activeLobby.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kred_players', filter: `lobby_id=eq.${activeLobby.id}` }, () => {
-        fetchPlayers();
+        checkLobbyAndPlayers();
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kred_lobbies', filter: `id=eq.${activeLobby.id}` }, (payload) => {
-        if (payload.new?.status === 'ACTIVE') {
-          // Game started by host
-          onStartOnlineGame({
-            lobbyId: activeLobby.id,
-            numPlayers: activeLobby.player_count,
-            playerIndex: connectedPlayers.find(p => p.user_id === currentUser?.id)?.player_index ?? 0,
-            userId: currentUser?.id
-          });
-        }
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kred_lobbies', filter: `id=eq.${activeLobby.id}` }, () => {
+        checkLobbyAndPlayers();
       })
       .subscribe();
 
     return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [activeLobby, currentUser, onStartOnlineGame, connectedPlayers]);
+  }, [activeLobby?.id, currentUser?.id, onStartOnlineGame]);
 
   const generateUniquePin = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -195,12 +220,14 @@ export function LobbyView({ onStartOnlineGame, onCancel }) {
       if (error) throw error;
 
       const myPlayerIndex = connectedPlayers.find(p => p.user_id === currentUser?.id)?.player_index ?? 0;
+      const playerNames = connectedPlayers.map(p => p.name || `Player ${p.player_index + 1}`);
 
       onStartOnlineGame({
         lobbyId: activeLobby.id,
         numPlayers: activeLobby.player_count,
         playerIndex: myPlayerIndex,
-        userId: currentUser?.id
+        userId: currentUser?.id,
+        playerNames
       });
     } catch (err) {
       console.error('Error starting online game:', err);

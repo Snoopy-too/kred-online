@@ -45,14 +45,26 @@ export function KredApp() {
   const [onlineContext, setOnlineContext] = useState({
     lobbyId: null,
     playerIndex: 0,
-    userId: null
+    userId: null,
+    playerNames: []
   });
 
   // Supabase DB Realtime Master Sync Hook
   const {
     gameState: dbMasterState,
-    updateMasterGameState
+    updateMasterGameState,
+    playerNames: dbPlayerNames
   } = useSupabaseGameSync(onlineContext.lobbyId, onlineContext.userId);
+
+  const effectivePlayerNames = useMemo(() => {
+    if (onlineContext.playerNames && onlineContext.playerNames.length > 0) {
+      return onlineContext.playerNames;
+    }
+    if (dbPlayerNames && dbPlayerNames.length > 0) {
+      return dbPlayerNames;
+    }
+    return Array.from({ length: selectedNumPlayers }).map((_, i) => `Player ${i + 1}`);
+  }, [onlineContext.playerNames, dbPlayerNames, selectedNumPlayers]);
 
   // Create boardgame.io Client with factory-bound game engine
   const KredClient = useMemo(() => {
@@ -111,7 +123,8 @@ export function KredApp() {
             setOnlineContext({
               lobbyId: lobbyData.id,
               playerIndex: 0,
-              userId: user.id
+              userId: user.id,
+              playerNames: playersToInsert.map(p => p.name)
             });
             setGameMode('local');
             return;
@@ -122,14 +135,14 @@ export function KredApp() {
       }
     }
 
-    setOnlineContext({ lobbyId: null, playerIndex: 0, userId: null });
+    setOnlineContext({ lobbyId: null, playerIndex: 0, userId: null, playerNames: [] });
     setGameMode('local');
   };
 
   // Handlers for Online Multiplayer Mode
-  const handleStartOnlineGame = ({ lobbyId, numPlayers, playerIndex, userId }) => {
+  const handleStartOnlineGame = ({ lobbyId, numPlayers, playerIndex, userId, playerNames = [] }) => {
     setSelectedNumPlayers(numPlayers);
-    setOnlineContext({ lobbyId, playerIndex, userId });
+    setOnlineContext({ lobbyId, playerIndex, userId, playerNames });
     setActivePerspective(String(playerIndex));
     setGameMode('online_playing');
     setGameKey(Date.now());
@@ -137,7 +150,7 @@ export function KredApp() {
 
   const handleReturnToMenu = () => {
     setGameMode(null);
-    setOnlineContext({ lobbyId: null, playerIndex: 0, userId: null });
+    setOnlineContext({ lobbyId: null, playerIndex: 0, userId: null, playerNames: [] });
   };
 
   // 1. Online Lobby Selection Screen
@@ -234,54 +247,72 @@ export function KredApp() {
           </span>
         </div>
 
-        <div className="perspective-selector">
-          <label>View Perspective:</label>
-          <div className="btn-group">
-            {Array.from({ length: selectedNumPlayers }).map((_, p) => {
-              const pStr = String(p);
-              const isActionRequired = !isOnline && isPlayerActionRequired(pStr, currentGameState);
-              return (
-                <button
-                  key={pStr}
-                  className={`btn ${activePerspective === pStr ? 'btn-primary' : 'btn-secondary'} ${isActionRequired ? 'flashing-green-tab' : ''}`}
-                  onClick={() => setActivePerspective(pStr)}
-                  disabled={isOnline && pStr !== String(onlineContext.playerIndex)}
-                  title={isOnline && pStr !== String(onlineContext.playerIndex) ? 'Online seat assigned to another player' : ''}
-                >
-                  Player {p + 1} {isOnline && pStr === String(onlineContext.playerIndex) ? '(You)' : ''}
-                </button>
-              );
-            })}
+        {/* Perspective selector is ONLY shown in Local Test mode; in Online play, seat is fixed */}
+        {!isOnline ? (
+          <div className="perspective-selector">
+            <label>View Perspective:</label>
+            <div className="btn-group">
+              {Array.from({ length: selectedNumPlayers }).map((_, p) => {
+                const pStr = String(p);
+                const isActionRequired = isPlayerActionRequired(pStr, currentGameState);
+                const pName = effectivePlayerNames[p] || `Player ${p + 1}`;
+                return (
+                  <button
+                    key={pStr}
+                    className={`btn ${activePerspective === pStr ? 'btn-primary' : 'btn-secondary'} ${isActionRequired ? 'flashing-green-tab' : ''}`}
+                    onClick={() => setActivePerspective(pStr)}
+                  >
+                    {pName}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            className={`btn ${showDiagnostics ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setShowDiagnostics(!showDiagnostics)}
+        ) : (
+          <span
+            className="mode-tag"
+            style={{
+              background: 'rgba(200, 155, 60, 0.2)',
+              border: '1px solid var(--accent-gold)',
+              color: 'var(--accent-gold)',
+              fontSize: '14px',
+              fontWeight: '700',
+              padding: '6px 14px'
+            }}
           >
-            🔍 Diagnostics Log
-          </button>
+            👤 Playing as: {effectivePlayerNames[onlineContext.playerIndex] || `Player ${onlineContext.playerIndex + 1}`} (Seat {onlineContext.playerIndex + 1})
+          </span>
+        )}
 
-          {!isOnline && (
+        {/* Diagnostics, Reset, and Calibrate are hidden in Online mode */}
+        {!isOnline && (
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              className={`btn ${showDiagnostics ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+            >
+              🔍 Diagnostics Log
+            </button>
+
             <button
               className="btn btn-warning"
               onClick={() => setGameKey(Date.now())}
             >
               Reset Match
             </button>
-          )}
-          <button
-            className={`btn ${calibrationMode ? 'btn-danger' : 'btn-secondary'}`}
-            onClick={() => {
-              const nextMode = !calibrationMode;
-              setCalibrationMode(nextMode);
-              if (window.setCalibrationMode) window.setCalibrationMode(nextMode);
-            }}
-          >
-            ⚙ {calibrationMode ? 'Exit Calibrate' : 'Calibrate'}
-          </button>
-        </div>
+
+            <button
+              className={`btn ${calibrationMode ? 'btn-danger' : 'btn-secondary'}`}
+              onClick={() => {
+                const nextMode = !calibrationMode;
+                setCalibrationMode(nextMode);
+                if (window.setCalibrationMode) window.setCalibrationMode(nextMode);
+              }}
+            >
+              ⚙ {calibrationMode ? 'Exit Calibrate' : 'Calibrate'}
+            </button>
+          </div>
+        )}
       </div>
 
       {(() => { window.KRED_CALIBRATION_MODE = calibrationMode; return null; })()}
@@ -290,6 +321,9 @@ export function KredApp() {
           matchID={matchID}
           key={`${selectedNumPlayers}-${gameKey}`}
           playerID={activePerspective}
+          isOnline={isOnline}
+          playerNames={effectivePlayerNames}
+          dbMasterState={dbMasterState}
           onStateChange={(state) => {
             if (state) {
               setCurrentGameState(state);
@@ -303,11 +337,13 @@ export function KredApp() {
 
       </div>
 
-      <DiagnosticsPanel
-        gameLogger={gameLogger}
-        isOpen={showDiagnostics}
-        onClose={() => setShowDiagnostics(false)}
-      />
+      {!isOnline && (
+        <DiagnosticsPanel
+          gameLogger={gameLogger}
+          isOpen={showDiagnostics}
+          onClose={() => setShowDiagnostics(false)}
+        />
+      )}
     </div>
   );
 

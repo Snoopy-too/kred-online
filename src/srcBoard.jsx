@@ -16,8 +16,11 @@ import { applyMoveToState, isCommunityPieceAvailable } from './domain/moves.js';
 import { StateSaveLoadModal } from './components/board/StateSaveLoadModal.jsx';
 import { getPendingPlayActivePlayer } from './domain/board.js';
 import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
+import { DraftPhaseCard } from './components/board/DraftPhaseCard.jsx';
 
-export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibrationMode }) {
+export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, playerNames = [], dbMasterState = null }) {
+  const G = (isOnline && dbMasterState && dbMasterState.G) ? dbMasterState.G : rawG;
+  const ctx = (isOnline && dbMasterState && dbMasterState.ctx) ? dbMasterState.ctx : rawCtx;
   // Move builder & interactive state
   const [zoomLevel, setZoomLevel] = useState(0.75);
   const [autoScale, setAutoScale] = useState(1);
@@ -393,7 +396,17 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
     5: '/images/KREDonline_5P.png'
   };
   const activeBoardImage = boardImageMap[numPlayers] || boardImageMap[3];
-  const getPlayerLabel = (pIdx) => `Player ${parseInt(pIdx, 10) + 1}`;
+  const getPlayerLabel = (pIdx) => {
+    if (pIdx === undefined || pIdx === null) return '';
+    const idx = parseInt(pIdx, 10);
+    if (Array.isArray(playerNames) && playerNames[idx]) {
+      return playerNames[idx];
+    }
+    if (G?.playerNames && G.playerNames[idx]) {
+      return G.playerNames[idx];
+    }
+    return `Player ${idx + 1}`;
+  };
   const activePendingPlayer = getPendingPlayActivePlayer(G);
   const isPendingActiveMe = G?.pendingPlay && String(activePendingPlayer) === String(playerID);
   const pendingStep = G?.pendingPlay?.step;
@@ -418,14 +431,16 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
           <div className="status-badge phase-badge">Phase: <strong>{currentPhase.toUpperCase()}</strong></div>
           <div className="status-badge turn-badge">Current Turn: <strong>{getPlayerLabel(ctx.currentPlayer)}</strong></div>
           <div className="status-badge perspective-badge">Viewing As: <strong>{getPlayerLabel(playerID)}</strong></div>
-          <button
-            className="btn btn-secondary"
-            style={{ fontSize: '11px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', background: '#26201b', color: 'var(--accent-gold)', border: '1px solid var(--accent-gold)' }}
-            onClick={() => setShowSaveLoadModal(true)}
-            title="Save & Load local testing game state snapshots"
-          >
-            💾 Save/Load State
-          </button>
+          {!isOnline && (
+            <button
+              className="btn btn-secondary"
+              style={{ fontSize: '11px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', background: '#26201b', color: 'var(--accent-gold)', border: '1px solid var(--accent-gold)' }}
+              onClick={() => setShowSaveLoadModal(true)}
+              title="Save & Load local testing game state snapshots"
+            >
+              💾 Save/Load State
+            </button>
+          )}
         </div>
       </header>
 
@@ -506,6 +521,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
               peekPendingTile={peekPendingTile}
               onTogglePeekTile={handleTogglePeekTile}
               validPromotionSpots={currentPhase === 'bureaucracy' ? bureaucracyBoard.validPromotionSpots : []}
+              getPlayerLabel={getPlayerLabel}
             />
           </div>
         </div>
@@ -559,53 +575,13 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
               )}
 
               {currentPhase === 'draft' && (
-                <div className="control-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h2 className="phase-title" style={{ margin: 0 }}>Draft Phase: Choose a Tile</h2>
-                    {moves.skipDraftPhase && (
-                      <button
-                        className="btn btn-warning"
-                        style={{ fontSize: '12px', padding: '6px 12px' }}
-                        onClick={() => moves.skipDraftPhase()}
-                        title="Auto-deal remaining tiles to all players & jump to Campaign phase"
-                      >
-                        ⚡ Skip Draft
-                      </button>
-                    )}
-                  </div>
-                  <p className="phase-desc">
-                    {autoDraftTileId
-                      ? <span style={{ color: '#22c55e', fontWeight: '700' }}>✨ Final tile auto-floating into your hand...</span>
-                      : 'Select 1 tile to add to your hand. Remaining tiles will pass clockwise.'
-                    }
-                  </p>
-
-                  {hasDraftedThisRound ? (
-                    <div className="draft-confirmed-box">
-                      <h3>✓ Tile Selection Confirmed</h3>
-                      <p>Waiting for other players to complete their draft pick...</p>
-                    </div>
-                  ) : (
-                    <div className="cards-grid">
-                      {(G.draftPacks?.[playerID] || []).map((tileId) => {
-                        const isAutoFloating = tileId === autoDraftTileId;
-                        return (
-                          <div
-                            key={tileId}
-                            className={`tile-card ${isAutoFloating ? 'auto-float-to-hand' : ''}`}
-                            onClick={() => moves.selectDraftTile(tileId)}
-                          >
-                            <img
-                              src={`/images/${tileId}.svg`}
-                              alt={tileId === 'BLANK' ? '' : `Tile ${tileId}`}
-                              className="tile-svg"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <DraftPhaseCard
+                  G={G}
+                  playerID={playerID}
+                  moves={moves}
+                  hasDraftedThisRound={hasDraftedThisRound}
+                  autoDraftTileId={autoDraftTileId}
+                />
               )}
 
               {currentPhase === 'campaign' && (!G?.pendingPlay || showTurnBuilderForPending) && (
