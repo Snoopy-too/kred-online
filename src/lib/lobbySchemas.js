@@ -46,3 +46,14 @@ export const GameStatePayloadSchema = z.object({
   state_json: z.record(z.any()),
   version: z.number().int().nonnegative()
 });
+
+/**
+ * Zod schema for game board calibration verification.
+ */
+export const CalibrationDataSchema = z.object({
+  num_players: z.number().int().min(3).max(5),
+  hotspots: z.record(z.any()),
+  perspective_offsets: z.record(z.any()).optional().nullable(),
+  updated_at: z.string().optional()
+});
+

@@ -1,5 +1,24 @@
 import { useState, useEffect } from 'react';
 import { DEFAULT_PERSPECTIVE_OFFSETS } from './perspectiveUtils.js';
+import {
+  fetchCalibrationFromDb,
+  saveCalibrationToDb,
+  deleteCalibrationFromDb
+} from '../../lib/calibrationRepository.js';
+
+// Helper to determine if we are in local development / local testing environment
+const isLocalEnvironment = () => {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  return (
+    import.meta.env.DEV ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '[::1]' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.')
+  );
+};
 
 export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHotspots) {
   const [calibrationMode, setCalibrationMode] = useState(window.KRED_CALIBRATION_MODE || propCalibrationMode || false);
@@ -16,73 +35,123 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
   const localStorageKey = `kred_calibration_draft_${numPlayers}P`;
   const offsetStorageKey = `kred_perspective_offsets_${numPlayers}P`;
 
-  useEffect(() => {
-    try {
-      const savedOffsets = localStorage.getItem(offsetStorageKey);
-      if (savedOffsets) {
-        const parsed = JSON.parse(savedOffsets);
-        if (parsed && typeof parsed === 'object') setPerspectiveOffsets(parsed);
-      }
-    } catch (err) {
-      console.warn('Failed to load perspective offsets draft:', err);
-    }
-  }, [numPlayers]);
-
+  // Sync prop mode changes
   useEffect(() => {
     if (propCalibrationMode !== undefined) {
       setCalibrationMode(propCalibrationMode);
     }
   }, [propCalibrationMode]);
 
+  // Keep window global in sync for test scripts
   useEffect(() => {
     window.calibrationMode = calibrationMode;
     window.setCalibrationMode = setCalibrationMode;
   }, [calibrationMode]);
 
+  // Consolidated Initial Load: Load local storage first, then fetch/sync from database (if online)
   useEffect(() => {
+    let active = true;
+
+    // 1. Sync load from local storage
     try {
       const saved = localStorage.getItem(localStorageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') setCalibratedPositions(parsed);
       }
+      const savedOffsets = localStorage.getItem(offsetStorageKey);
+      if (savedOffsets) {
+        const parsed = JSON.parse(savedOffsets);
+        if (parsed && typeof parsed === 'object') setPerspectiveOffsets(parsed);
+      }
     } catch (err) {
-      console.warn('Failed to load calibration draft:', err);
+      console.warn('Failed to load local calibration cache:', err);
     }
+
+    // 2. Async fetch from Supabase (Only if NOT local environment)
+    async function syncFromDb() {
+      if (isLocalEnvironment()) {
+        console.log(`ℹ️ Local environment detected. Bypassing database calibration for ${numPlayers}P.`);
+        return;
+      }
+
+      const dbData = await fetchCalibrationFromDb(numPlayers);
+      if (!active || !dbData) return;
+
+      if (dbData.hotspots && Object.keys(dbData.hotspots).length > 0) {
+        setCalibratedPositions(dbData.hotspots);
+        try {
+          localStorage.setItem(localStorageKey, JSON.stringify(dbData.hotspots));
+        } catch (e) {}
+      }
+      if (dbData.perspective_offsets && Object.keys(dbData.perspective_offsets).length > 0) {
+        setPerspectiveOffsets(dbData.perspective_offsets);
+        try {
+          localStorage.setItem(offsetStorageKey, JSON.stringify(dbData.perspective_offsets));
+        } catch (e) {}
+      }
+    }
+
+    syncFromDb();
+
+    return () => {
+      active = false;
+    };
   }, [numPlayers]);
 
+  // Auto-save local draft on position changes (local cache persistence)
   useEffect(() => {
     if (Object.keys(calibratedPositions).length > 0) {
       try {
         localStorage.setItem(localStorageKey, JSON.stringify(calibratedPositions));
       } catch (err) {
-        console.warn('Failed to save calibration draft:', err);
+        console.warn('Failed to save calibration draft to localStorage:', err);
       }
     }
   }, [calibratedPositions, numPlayers]);
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     try {
       localStorage.setItem(localStorageKey, JSON.stringify(calibratedPositions));
       localStorage.setItem(offsetStorageKey, JSON.stringify(perspectiveOffsets));
+
       const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setDraftSavedMsg(`💾 Draft & View Offsets Saved at ${nowStr}!`);
+
+      if (isLocalEnvironment()) {
+        setDraftSavedMsg(`💾 Saved to Local Drafts (DB bypassed) at ${nowStr}!`);
+      } else {
+        // Persist to Supabase Database only for production / online deployment
+        await saveCalibrationToDb(numPlayers, calibratedPositions, perspectiveOffsets);
+        setDraftSavedMsg(`💾 Saved to DB & Local Drafts at ${nowStr}!`);
+      }
       setTimeout(() => setDraftSavedMsg(''), 3500);
     } catch (err) {
+      console.error('Failed to sync calibration:', err);
       setDraftSavedMsg('❌ Save error');
       setTimeout(() => setDraftSavedMsg(''), 3000);
     }
   };
 
-  const handleResetDraft = () => {
+  const handleResetDraft = async () => {
     try {
       localStorage.removeItem(localStorageKey);
       localStorage.removeItem(offsetStorageKey);
-    } catch (e) {}
+
+      if (!isLocalEnvironment()) {
+        // Remove row from Supabase Database for production
+        await deleteCalibrationFromDb(numPlayers);
+      }
+    } catch (err) {
+      console.error('Failed to clear database calibration:', err);
+    }
     setCalibratedPositions({});
     setPerspectiveOffsets({});
     setSelectedCalibrateKeys([]);
-    setDraftSavedMsg('🗑️ Calibration Reset to Master Defaults!');
+    setDraftSavedMsg(
+      isLocalEnvironment()
+        ? '🗑️ Calibration Reset to Master Defaults locally!'
+        : '🗑️ Calibration Reset to Master Defaults (DB cleared)!'
+    );
     setTimeout(() => setDraftSavedMsg(''), 3000);
   };
 
@@ -91,48 +160,49 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
       hotspots: activeHotspots,
       perspectiveOffsets: perspectiveOffsets
     };
-    const jsonStr = JSON.stringify(exportPayload, null, 2);
-    navigator.clipboard.writeText(jsonStr);
+    navigator.clipboard.writeText(JSON.stringify(exportPayload, null, 2));
     setCopiedJson(true);
     setTimeout(() => setCopiedJson(false), 3000);
   };
 
-  const handleImportJson = (jsonString) => {
+  const handleImportJson = async (jsonString) => {
     try {
       const parsed = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
       if (!parsed || typeof parsed !== 'object') throw new Error('Invalid JSON object');
 
-      let importedHotspots = null;
-      let importedOffsets = null;
+      const importedHotspots = (parsed.hotspots && typeof parsed.hotspots === 'object') ? parsed.hotspots : parsed;
+      const importedOffsets = (parsed.perspectiveOffsets && typeof parsed.perspectiveOffsets === 'object') ? parsed.perspectiveOffsets : null;
 
-      if (parsed.hotspots && typeof parsed.hotspots === 'object') {
-        importedHotspots = parsed.hotspots;
-        if (parsed.perspectiveOffsets && typeof parsed.perspectiveOffsets === 'object') {
-          importedOffsets = parsed.perspectiveOffsets;
-        }
+      const nextHotspots = (importedHotspots && Object.keys(importedHotspots).length > 0) ? importedHotspots : {};
+      const nextOffsets = (importedOffsets && Object.keys(importedOffsets).length > 0) ? importedOffsets : {};
+
+      if (Object.keys(nextHotspots).length > 0) {
+        setCalibratedPositions(nextHotspots);
+        localStorage.setItem(localStorageKey, JSON.stringify(nextHotspots));
+      }
+      if (Object.keys(nextOffsets).length > 0) {
+        setPerspectiveOffsets(nextOffsets);
+        localStorage.setItem(offsetStorageKey, JSON.stringify(nextOffsets));
+      }
+
+      if (isLocalEnvironment()) {
+        setDraftSavedMsg('📥 Calibration Imported & Saved locally!');
       } else {
-        importedHotspots = parsed;
+        // Sync imported coordinates to database
+        await saveCalibrationToDb(numPlayers, nextHotspots, nextOffsets);
+        setDraftSavedMsg('📥 Calibration Imported & Saved to DB!');
       }
-
-      if (importedHotspots && Object.keys(importedHotspots).length > 0) {
-        setCalibratedPositions(importedHotspots);
-        localStorage.setItem(localStorageKey, JSON.stringify(importedHotspots));
-      }
-      if (importedOffsets && Object.keys(importedOffsets).length > 0) {
-        setPerspectiveOffsets(importedOffsets);
-        localStorage.setItem(offsetStorageKey, JSON.stringify(importedOffsets));
-      }
-
-      setDraftSavedMsg('📥 Calibration Imported & Saved!');
       setTimeout(() => setDraftSavedMsg(''), 3500);
       return true;
     } catch (err) {
-      setDraftSavedMsg('❌ Import Error: Invalid JSON format');
+      console.error('Import error:', err);
+      setDraftSavedMsg('❌ Import Error');
       setTimeout(() => setDraftSavedMsg(''), 3500);
       return false;
     }
   };
 
+  // Sync selected spot angle/scale into input boxes
   useEffect(() => {
     if (selectedCalibrateKeys && selectedCalibrateKeys.length > 0) {
       const key = selectedCalibrateKeys[0];
@@ -161,25 +231,21 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
       const nextCal = { ...prev };
       let lastRot = null;
       targetKeys.forEach(locKey => {
-        const base = (activeHotspots && activeHotspots[locKey]) || {};
-        const cal = prev[locKey] || {};
-        const current = { ...base, ...cal };
-
+        const current = { ...((activeHotspots && activeHotspots[locKey]) || {}), ...(prev[locKey] || {}) };
         let currentRot = current.rot;
         if (currentRot === undefined && current.transform) {
           const match = current.transform.match(/rotate\(([-?\d.]+)deg\)/);
           if (match) currentRot = parseFloat(match[1]);
         }
-        if (currentRot === undefined) currentRot = 0;
-
-        let currentScale = current.scale !== undefined ? current.scale : 1.0;
+        currentRot = currentRot || 0;
         const newRot = Math.round(((currentRot + deltaAngle) % 360 + 360) % 360);
         lastRot = newRot;
+        const scale = current.scale !== undefined ? current.scale : 1.0;
         nextCal[locKey] = {
           ...current,
           rot: newRot,
-          scale: currentScale,
-          transform: `translate(-50%, -50%) rotate(${newRot}deg) scale(${currentScale})`
+          scale,
+          transform: `translate(-50%, -50%) rotate(${newRot}deg) scale(${scale})`
         };
       });
       if (lastRot !== null) setAngleInput(String(lastRot));
@@ -195,15 +261,13 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     setCalibratedPositions(prev => {
       const nextCal = { ...prev };
       selectedCalibrateKeys.forEach(locKey => {
-        const base = (activeHotspots && activeHotspots[locKey]) || {};
-        const cal = prev[locKey] || {};
-        const current = { ...base, ...cal };
-        let currentScale = current.scale !== undefined ? current.scale : 1.0;
+        const current = { ...((activeHotspots && activeHotspots[locKey]) || {}), ...(prev[locKey] || {}) };
+        const scale = current.scale !== undefined ? current.scale : 1.0;
         nextCal[locKey] = {
           ...current,
           rot: angleNum,
-          scale: currentScale,
-          transform: `translate(-50%, -50%) rotate(${angleNum}deg) scale(${currentScale})`
+          scale,
+          transform: `translate(-50%, -50%) rotate(${angleNum}deg) scale(${scale})`
         };
       });
       return nextCal;
@@ -216,10 +280,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
       const nextCal = { ...prev };
       let lastScale = null;
       selectedCalibrateKeys.forEach(locKey => {
-        const base = (activeHotspots && activeHotspots[locKey]) || {};
-        const cal = prev[locKey] || {};
-        const current = { ...base, ...cal };
-
+        const current = { ...((activeHotspots && activeHotspots[locKey]) || {}), ...(prev[locKey] || {}) };
         let currentScale = current.scale !== undefined ? current.scale : 1.0;
         let newScale = parseFloat((currentScale + deltaScale).toFixed(2));
         if (newScale < 0.3) newScale = 0.3;
@@ -249,9 +310,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     setCalibratedPositions(prev => {
       const nextCal = { ...prev };
       selectedCalibrateKeys.forEach(locKey => {
-        const base = (activeHotspots && activeHotspots[locKey]) || {};
-        const cal = prev[locKey] || {};
-        const current = { ...base, ...cal };
+        const current = { ...((activeHotspots && activeHotspots[locKey]) || {}), ...(prev[locKey] || {}) };
         let rot = current.rot !== undefined ? current.rot : 0;
         nextCal[locKey] = {
           ...current,
@@ -274,15 +333,10 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     let targetKeys = [];
 
     if (e.ctrlKey || e.shiftKey || e.metaKey) {
-      if (selectedCalibrateKeys.includes(locKey)) {
-        const nextKeys = selectedCalibrateKeys.filter(k => k !== locKey);
-        setSelectedCalibrateKeys(nextKeys);
-        targetKeys = nextKeys;
-      } else {
-        const nextKeys = [...selectedCalibrateKeys, locKey];
-        setSelectedCalibrateKeys(nextKeys);
-        targetKeys = nextKeys;
-      }
+      targetKeys = selectedCalibrateKeys.includes(locKey)
+        ? selectedCalibrateKeys.filter(k => k !== locKey)
+        : [...selectedCalibrateKeys, locKey];
+      setSelectedCalibrateKeys(targetKeys);
     } else {
       setSelectedCalibrateKeys([locKey]);
       targetKeys = [locKey];
@@ -374,10 +428,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     const def = DEFAULT_PERSPECTIVE_OFFSETS[numPlayers]?.[p] || { x: 0, y: 0 };
     setPerspectiveOffsets(prev => {
       const current = prev[p] || def;
-      const nextP = {
-        x: current.x + dx,
-        y: current.y + dy
-      };
+      const nextP = { x: current.x + dx, y: current.y + dy };
       const updated = { ...prev, [p]: nextP };
       try {
         localStorage.setItem(`kred_perspective_offsets_${numPlayers}P`, JSON.stringify(updated));
@@ -410,13 +461,9 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     setCalibratedPositions(prev => {
       const nextCal = { ...prev };
       selectedCalibrateKeys.forEach(k => {
-        const base = (activeHotspots && activeHotspots[k]) || {};
-        const cal = prev[k] || {};
-        const current = { ...base, ...cal };
-
+        const current = { ...((activeHotspots && activeHotspots[k]) || {}), ...(prev[k] || {}) };
         const startLeft = parseFloat(current.left || '50');
         const startTop = parseFloat(current.top || '50');
-
         nextCal[k] = {
           ...current,
           left: `${(startLeft + percentDx).toFixed(2)}%`,
@@ -436,13 +483,9 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     setCalibratedPositions(prev => {
       const nextCal = { ...prev };
       selectedCalibrateKeys.forEach(k => {
-        const base = (activeHotspots && activeHotspots[k]) || {};
-        const cal = prev[k] || {};
-        const current = { ...base, ...cal };
-
+        const current = { ...((activeHotspots && activeHotspots[k]) || {}), ...(prev[k] || {}) };
         const leftVal = parseFloat(current.left || '50') - 50;
         const topVal = parseFloat(current.top || '50') - 50;
-
         const nextLeft = leftVal * cosR - topVal * sinR + 50;
         const nextTop = leftVal * sinR + topVal * cosR + 50;
 
@@ -451,18 +494,17 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
           const match = current.transform.match(/rotate\(([-?\d.]+)deg\)/);
           if (match) currentRot = parseFloat(match[1]);
         }
-        if (currentRot === undefined) currentRot = 0;
-
+        currentRot = currentRot || 0;
         const newRot = Math.round(((currentRot + deltaAngle) % 360 + 360) % 360);
-        let currentScale = current.scale !== undefined ? current.scale : 1.0;
+        const scale = current.scale !== undefined ? current.scale : 1.0;
 
         nextCal[k] = {
           ...current,
           left: `${nextLeft.toFixed(2)}%`,
           top: `${nextTop.toFixed(2)}%`,
           rot: newRot,
-          scale: currentScale,
-          transform: `translate(-50%, -50%) rotate(${newRot}deg) scale(${currentScale})`
+          scale,
+          transform: `translate(-50%, -50%) rotate(${newRot}deg) scale(${scale})`
         };
       });
       return nextCal;
