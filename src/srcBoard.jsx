@@ -588,7 +588,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
           ) : (
             <>
               {/* Top of Sidebar: Pending Play modal for status/receipt/challenge */}
-              {G?.pendingPlay && !showTurnBuilderForPending && (
+              {(G?.pendingPlay || G?.lastOutcomeNotice) && !showTurnBuilderForPending && (
                 <PendingPlayModal
                   G={G}
                   playerID={playerID}
