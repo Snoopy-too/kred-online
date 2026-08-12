@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { getActiveChallenger } from '../domain/board.js';
 import {
   executeOnlineAcceptTile,
@@ -14,9 +14,23 @@ export function PendingPlayModal({
   const myPlayer = (G && G.players && G.players[playerID]) || {};
   const isZeroCredibility = (myPlayer.credibilityNotchesLost || 0) >= 3;
 
-  const outcomeNotice = G?.lastOutcomeNotice;
+  const [visibleNotice, setVisibleNotice] = useState(null);
+  const [isFading, setIsFading] = useState(false);
 
-  if (!G || (!G.pendingPlay && !outcomeNotice)) return null;
+  useEffect(() => {
+    if (G?.lastOutcomeNotice) {
+      setVisibleNotice(G.lastOutcomeNotice);
+      setIsFading(false);
+      const fadeTimer = setTimeout(() => setIsFading(true), 4500);
+      const removeTimer = setTimeout(() => setVisibleNotice(null), 5000);
+      return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer); };
+    } else {
+      setVisibleNotice(null);
+      setIsFading(false);
+    }
+  }, [G?.lastOutcomeNotice]);
+
+  if (!G || (!G.pendingPlay && !visibleNotice)) return null;
 
   const isReceiver = G.pendingPlay && String(playerID) === String(G.pendingPlay.receiverId);
   const activeChallenger = G.pendingPlay ? getActiveChallenger(G) : null;
@@ -25,13 +39,13 @@ export function PendingPlayModal({
   return (
     <div className="pending-play-modal">
       {/* Challenge / Resolution Outcome Modal Notice */}
-      {outcomeNotice && (
-        <div className="outcome-notice-banner" style={{ marginBottom: G.pendingPlay ? '16px' : '0', padding: '12px', borderRadius: '8px', background: outcomeNotice.type === 'challengeSuccess' || outcomeNotice.type === 'reject' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)', border: outcomeNotice.type === 'challengeSuccess' || outcomeNotice.type === 'reject' ? '1px solid #ef4444' : '1px solid #22c55e' }}>
-          <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', color: outcomeNotice.type === 'challengeSuccess' || outcomeNotice.type === 'reject' ? '#f87171' : '#4ade80' }}>
-            {outcomeNotice.title}
+      {visibleNotice && (
+        <div className="outcome-notice-banner" style={{ marginBottom: G.pendingPlay ? '16px' : '0', padding: '12px', borderRadius: '8px', background: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)', border: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? '1px solid #ef4444' : '1px solid #22c55e', transition: 'opacity 0.5s ease', opacity: isFading ? 0 : 1 }}>
+          <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', color: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? '#f87171' : '#4ade80' }}>
+            {visibleNotice.title}
           </h4>
           <p style={{ margin: 0, fontSize: '13px', color: '#f8fafc' }}>
-            {outcomeNotice.text}
+            {visibleNotice.text}
           </p>
         </div>
       )}
