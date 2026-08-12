@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export function BoardCalibrationToolbar({
   calibrationMode,
@@ -15,6 +15,7 @@ export function BoardCalibrationToolbar({
   handleSaveDraft,
   handleResetDraft,
   handleCopyCoordinates,
+  handleImportJson,
   handleRotateSelectedSpots,
   handleSetExactAngle,
   handleScaleSelectedSpots,
@@ -28,6 +29,9 @@ export function BoardCalibrationToolbar({
   showSpotLabels,
   setShowSpotLabels
 }) {
+  const [showImportBox, setShowImportBox] = useState(false);
+  const [importText, setImportText] = useState('');
+
   if (!calibrationMode) return null;
 
   const selectPlayerBank = (playerIdx) => {
@@ -83,8 +87,52 @@ export function BoardCalibrationToolbar({
           <button className="btn btn-sm btn-secondary" onClick={handleCopyCoordinates}>
             {copiedJson ? '✓ Copied!' : '📋 Copy All JSON'}
           </button>
+          <button className="btn btn-sm btn-primary" onClick={() => setShowImportBox(prev => !prev)}>
+            {showImportBox ? '✖ Close Import' : '📥 Import JSON'}
+          </button>
         </div>
       </div>
+
+      {showImportBox && (
+        <div style={{ padding: '10px', background: '#14100e', borderRadius: '6px', margin: '8px 0', border: '1px solid var(--accent-gold)' }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--accent-gold)', marginBottom: '6px', fontWeight: 'bold' }}>
+            📥 Import Calibration JSON:
+          </div>
+          <textarea
+            rows={5}
+            style={{
+              width: '100%',
+              background: '#090706',
+              color: '#fff',
+              border: '1px solid #444',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              fontFamily: 'monospace',
+              padding: '6px',
+              boxSizing: 'border-box'
+            }}
+            placeholder='Paste exported JSON here (e.g. {"hotspots": {...}, "perspectiveOffsets": {...}})'
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+          />
+          <div style={{ display: 'flex', gap: '8px', marginTop: '6px', justifyContent: 'flex-end' }}>
+            <button
+              className="btn btn-sm btn-success"
+              onClick={() => {
+                if (handleImportJson && handleImportJson(importText)) {
+                  setImportText('');
+                  setShowImportBox(false);
+                }
+              }}
+            >
+              Apply JSON Import
+            </button>
+            <button className="btn btn-sm btn-secondary" onClick={() => setShowImportBox(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {draftSavedMsg && <div className="cal-alert">{draftSavedMsg}</div>}
 

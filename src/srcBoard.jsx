@@ -92,6 +92,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
     handleSaveDraft,
     handleResetDraft,
     handleCopyCoordinates,
+    handleImportJson,
     handleRotateSelectedSpots,
     handleSetExactAngle,
     handleScaleSelectedSpots,
@@ -431,6 +432,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
         handleSaveDraft={handleSaveDraft}
         handleResetDraft={handleResetDraft}
         handleCopyCoordinates={handleCopyCoordinates}
+        handleImportJson={handleImportJson}
         handleRotateSelectedSpots={handleRotateSelectedSpots}
         handleSetExactAngle={handleSetExactAngle}
         handleScaleSelectedSpots={handleScaleSelectedSpots}

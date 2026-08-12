@@ -97,6 +97,42 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     setTimeout(() => setCopiedJson(false), 3000);
   };
 
+  const handleImportJson = (jsonString) => {
+    try {
+      const parsed = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+      if (!parsed || typeof parsed !== 'object') throw new Error('Invalid JSON object');
+
+      let importedHotspots = null;
+      let importedOffsets = null;
+
+      if (parsed.hotspots && typeof parsed.hotspots === 'object') {
+        importedHotspots = parsed.hotspots;
+        if (parsed.perspectiveOffsets && typeof parsed.perspectiveOffsets === 'object') {
+          importedOffsets = parsed.perspectiveOffsets;
+        }
+      } else {
+        importedHotspots = parsed;
+      }
+
+      if (importedHotspots && Object.keys(importedHotspots).length > 0) {
+        setCalibratedPositions(importedHotspots);
+        localStorage.setItem(localStorageKey, JSON.stringify(importedHotspots));
+      }
+      if (importedOffsets && Object.keys(importedOffsets).length > 0) {
+        setPerspectiveOffsets(importedOffsets);
+        localStorage.setItem(offsetStorageKey, JSON.stringify(importedOffsets));
+      }
+
+      setDraftSavedMsg('📥 Calibration Imported & Saved!');
+      setTimeout(() => setDraftSavedMsg(''), 3500);
+      return true;
+    } catch (err) {
+      setDraftSavedMsg('❌ Import Error: Invalid JSON format');
+      setTimeout(() => setDraftSavedMsg(''), 3500);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (selectedCalibrateKeys && selectedCalibrateKeys.length > 0) {
       const key = selectedCalibrateKeys[0];
@@ -384,6 +420,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     handleSaveDraft,
     handleResetDraft,
     handleCopyCoordinates,
+    handleImportJson,
     handleRotateSelectedSpots,
     handleSetExactAngle,
     handleScaleSelectedSpots,
