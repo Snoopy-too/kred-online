@@ -20,20 +20,47 @@
   padding: 0;
 }
 
+html, body, #root {
+  height: 100%;
+  max-height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   font-family: 'Outfit', sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-main);
-  min-height: 100vh;
 }
 
 .app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background: var(--text-muted);
+}
+
+/* Custom sleek scrollbars application-wide */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(20, 16, 14, 0.4);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(200, 155, 60, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 155, 60, 0.8);
 }
 
 /* Landing / Mode Selection Screen */
