@@ -47,7 +47,12 @@ export function useSupabaseGameSync(lobbyId, userId) {
       if (stateErr && stateErr.code !== 'PGRST116') throw stateErr;
 
       if (stateData && stateData.state_json) {
-        setGameState(stateData.state_json);
+        const raw = stateData.state_json;
+        const normalized = (raw && raw.G && raw.ctx) ? raw : {
+          G: (raw && raw.G) ? raw.G : raw,
+          ctx: { phase: stateData.phase || 'draft', currentPlayer: String(raw?.nextMoverId ?? '0'), numPlayers: raw?.numPlayers || 3 }
+        };
+        setGameState(normalized);
         setStateVersion(stateData.version || 0);
       }
     } catch (err) {
@@ -76,7 +81,12 @@ export function useSupabaseGameSync(lobbyId, userId) {
         },
         (payload) => {
           if (payload.new && payload.new.state_json) {
-            setGameState(payload.new.state_json);
+            const raw = payload.new.state_json;
+            const normalized = (raw && raw.G && raw.ctx) ? raw : {
+              G: (raw && raw.G) ? raw.G : raw,
+              ctx: { phase: payload.new.phase || 'draft', currentPlayer: String(raw?.nextMoverId ?? '0'), numPlayers: raw?.numPlayers || 3 }
+            };
+            setGameState(normalized);
             setStateVersion(payload.new.version || 0);
           }
         }
@@ -141,11 +151,22 @@ export function useSupabaseGameSync(lobbyId, userId) {
     async (nextStateJson, nextPhase = 'campaign') => {
       if (!lobbyId) return;
 
+      const wrappedState = (nextStateJson && nextStateJson.G && nextStateJson.ctx)
+        ? nextStateJson
+        : {
+            G: (nextStateJson && nextStateJson.G) ? nextStateJson.G : nextStateJson,
+            ctx: {
+              phase: nextPhase,
+              currentPlayer: String((nextStateJson && nextStateJson.nextMoverId) ?? '0'),
+              numPlayers: (nextStateJson && (nextStateJson.numPlayers || nextStateJson.G?.numPlayers)) || 3
+            }
+          };
+
       const nextVersion = stateVersion + 1;
       const payload = {
         lobby_id: lobbyId,
         phase: nextPhase,
-        state_json: nextStateJson,
+        state_json: wrappedState,
         version: nextVersion
       };
 
@@ -163,7 +184,7 @@ export function useSupabaseGameSync(lobbyId, userId) {
             {
               lobby_id: lobbyId,
               phase: nextPhase,
-              state_json: nextStateJson,
+              state_json: wrappedState,
               version: nextVersion,
               updated_at: new Date().toISOString()
             },

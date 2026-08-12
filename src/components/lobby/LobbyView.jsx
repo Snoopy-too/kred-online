@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, ensureAnonymousAuth } from '../../lib/supabaseClient.js';
 import { PinSchema, CreateLobbySchema, JoinLobbySchema } from '../../lib/lobbySchemas.js';
+import { createKredGame } from '../../srcGame.js';
 
 export function LobbyView({ onStartOnlineGame, onCancel }) {
   const [activeTab, setActiveTab] = useState('host'); // 'host' | 'join'
@@ -212,6 +213,38 @@ export function LobbyView({ onStartOnlineGame, onCancel }) {
     if (!activeLobby) return;
     setLoading(true);
     try {
+      // 1. Create initial game state config
+      const numPlayers = activeLobby.player_count || 3;
+      const gameEngine = createKredGame(numPlayers);
+      const pseudoRandom = {
+        Shuffle: (arr) => [...arr].sort(() => Math.random() - 0.5)
+      };
+      const initialG = gameEngine.setup({ ctx: { numPlayers }, random: pseudoRandom });
+      const initialCtx = {
+        phase: 'draft',
+        currentPlayer: '0',
+        numPlayers,
+        turn: 1
+      };
+      const initialMasterState = { G: initialG, ctx: initialCtx };
+
+      // 2. Upsert initial master game state into Supabase
+      const { error: stateErr } = await supabase
+        .from('kred_game_states')
+        .upsert(
+          {
+            lobby_id: activeLobby.id,
+            phase: 'draft',
+            state_json: initialMasterState,
+            version: 1,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'lobby_id' }
+        );
+
+      if (stateErr) console.warn('Warning: Could not seed initial game state:', stateErr);
+
+      // 3. Mark lobby as ACTIVE
       const { error } = await supabase
         .from('kred_lobbies')
         .update({ status: 'ACTIVE' })

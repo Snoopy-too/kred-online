@@ -27,8 +27,8 @@ import {
 } from './domain/onlineEngine.js';
 
 export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
-  const G = (isOnline && dbMasterState && dbMasterState.G) ? dbMasterState.G : rawG;
-  const ctx = (isOnline && dbMasterState && dbMasterState.ctx) ? dbMasterState.ctx : rawCtx;
+  const G = (isOnline && dbMasterState) ? (dbMasterState.G || dbMasterState) : rawG;
+  const ctx = (isOnline && dbMasterState) ? (dbMasterState.ctx || rawCtx) : rawCtx;
   // Move builder & interactive state
   const [zoomLevel, setZoomLevel] = useState(0.75);
   const [autoScale, setAutoScale] = useState(1);
