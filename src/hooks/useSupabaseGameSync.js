@@ -37,10 +37,17 @@ export function useSupabaseGameSync(lobbyId, userId) {
   const [players, setPlayers] = useState([]);
   const [lobbyStatus, setLobbyStatus] = useState('WAITING');
   const [stateVersion, setStateVersion] = useState(0);
+  const latestStateVersionRef = useRef(-1);
   const [syncError, setSyncError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
   const channelRef = useRef(null);
+
+  // Helper to safely update version
+  const updateVersion = (newVersion) => {
+    setStateVersion(newVersion);
+    latestStateVersionRef.current = newVersion;
+  };
 
   // 1. Fetch initial room state, players, and lobby status
   const fetchRoomData = useCallback(async () => {
@@ -77,9 +84,11 @@ export function useSupabaseGameSync(lobbyId, userId) {
       if (stateErr && stateErr.code !== 'PGRST116') throw stateErr;
 
       if (stateData && stateData.state_json) {
-        const normalized = normalizeOnlineMasterState(stateData.state_json, stateData.phase);
-        setGameState(normalized);
-        setStateVersion(stateData.version || 0);
+        if ((stateData.version || 0) > latestStateVersionRef.current) {
+          const normalized = normalizeOnlineMasterState(stateData.state_json, stateData.phase);
+          setGameState(normalized);
+          updateVersion(stateData.version || 0);
+        }
       }
     } catch (err) {
       console.error('Error fetching room data from Supabase:', err);
@@ -107,9 +116,11 @@ export function useSupabaseGameSync(lobbyId, userId) {
         },
         (payload) => {
           if (payload.new && payload.new.state_json) {
-            const normalized = normalizeOnlineMasterState(payload.new.state_json, payload.new.phase);
-            setGameState(normalized);
-            setStateVersion(payload.new.version || 0);
+            if ((payload.new.version || 0) > latestStateVersionRef.current) {
+              const normalized = normalizeOnlineMasterState(payload.new.state_json, payload.new.phase);
+              setGameState(normalized);
+              updateVersion(payload.new.version || 0);
+            }
           }
         }
       )
@@ -189,6 +200,10 @@ export function useSupabaseGameSync(lobbyId, userId) {
         console.error('Invalid game state payload:', validation.error.format());
         return;
       }
+
+      // Optimistic UI update
+      setGameState(wrappedState);
+      updateVersion(nextVersion);
 
       try {
         const { error } = await supabase
