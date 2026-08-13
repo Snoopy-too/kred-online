@@ -332,7 +332,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     }
 
     if (!isMyTurn) return;
-    if (!selectedTileId || !selectedReceiverId) return; // Must pick tile & drop zone first
+    if (!selectedTileId) return; // Must pick tile from hand first
     if (stagedMoves.length === 1 && stagedMoves[0].to === locKey) {
       return; // A piece may only move ONCE per turn
     }

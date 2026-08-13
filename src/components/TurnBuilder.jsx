@@ -79,25 +79,16 @@ export function TurnBuilder({
 
       <div className="turn-steps-container">
         {!isPenaltyWithdraw && !isFreeAdvance && (
-          <>
-            <div className={`step-item ${isTileSelected ? 'completed' : 'active'}`}>
-              <span className="step-num">1</span>
-              <span className="step-label">
-                {isTileSelected ? 'Tile Selected' : 'Select a tile from your hand'}
-              </span>
-            </div>
-
-            <div className={`step-item ${!isTileSelected ? 'disabled' : isReceiverSelected ? 'completed' : 'active'}`}>
-              <span className="step-num">2</span>
-              <span className="step-label">
-                {isReceiverSelected ? `Tile Played to ${getPlayerLabel(selectedReceiverId)}` : 'Select a player to play your tile to'}
-              </span>
-            </div>
-          </>
+          <div className={`step-item ${isTileSelected ? 'completed' : 'active'}`}>
+            <span className="step-num">1</span>
+            <span className="step-label">
+              {isTileSelected ? 'Tile Selected' : 'Select a tile from your hand'}
+            </span>
+          </div>
         )}
 
-        <div className={`step-item ${(!isPenaltyWithdraw && !isFreeAdvance && !isReceiverSelected) ? 'disabled' : stagedMoves.length > 0 ? 'completed' : 'active'}`}>
-          <span className="step-num">{isPenaltyWithdraw || isFreeAdvance ? 1 : 3}</span>
+        <div className={`step-item ${(!isPenaltyWithdraw && !isFreeAdvance && !isTileSelected) ? 'disabled' : stagedMoves.length > 0 ? 'completed' : 'active'}`}>
+          <span className="step-num">{isPenaltyWithdraw || isFreeAdvance ? 1 : 2}</span>
           <span className="step-label">
             {stagedMoves.length > 0
               ? `Moves Staged: ${stagedMoves.length} / ${isPenaltyWithdraw || isFreeAdvance ? 1 : 2}`
@@ -108,6 +99,15 @@ export function TurnBuilder({
               : 'Click a piece on board to stage move'}
           </span>
         </div>
+
+        {!isPenaltyWithdraw && !isFreeAdvance && (
+          <div className={`step-item ${!isTileSelected ? 'disabled' : isReceiverSelected ? 'completed' : 'active'}`}>
+            <span className="step-num">3</span>
+            <span className="step-label">
+              {isReceiverSelected ? `Tile Played to ${getPlayerLabel(selectedReceiverId)}` : 'Select a player to play your tile to'}
+            </span>
+          </div>
+        )}
       </div>
 
       {stagedMoves.length > 0 && (
