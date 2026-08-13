@@ -186,13 +186,13 @@ export function SvgBoardCanvas({
           return (
             <div
               key={locKey}
-              className={`domino-tile-container ${isPeekingTile ? 'domino-tile-faceup peeked-tile-container' : 'drop-tile-box'} ${isDropActive && !isPeekingTile ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked ? 'self-locked-drop-target' : ''}`}
+              className={`domino-tile-container ${isPeekingTile || isStagedReceiver ? 'domino-tile-faceup peeked-tile-container' : 'drop-tile-box'} ${isDropActive && !isPeekingTile && !isStagedReceiver ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked && !isDropActive ? 'self-locked-drop-target' : ''}`}
               style={{
                 left: coords.left,
                 top: coords.top,
                 transform: currentTransform,
                 cursor: isReceiverLocked ? 'not-allowed' : (isSelfReceiver || isTargetable) ? 'pointer' : 'default',
-                opacity: isReceiverLocked ? 0.4 : 1
+                opacity: (isReceiverLocked && !isDropActive) ? 0.4 : 1
               }}
               onClick={() => {
                 if (isSelfReceiver && onTogglePeekTile) {
@@ -217,6 +217,12 @@ export function SvgBoardCanvas({
                    <img
                      src={getTileSvgPath(G.pendingPlay.tileIdPlayed)}
                      alt={G.pendingPlay.tileIdPlayed === 'BLANK' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
+                     className="domino-tile-svg"
+                   />
+                 ) : isStagedReceiver && selectedTileId ? (
+                   <img
+                     src={getTileSvgPath(selectedTileId)}
+                     alt={selectedTileId === 'BLANK' ? '' : `Tile ${selectedTileId}`}
                      className="domino-tile-svg"
                    />
                  ) : (
