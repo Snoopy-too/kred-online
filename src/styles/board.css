@@ -336,16 +336,16 @@
   background: rgba(255, 255, 255, 0.9);
 }
 
-/* Domino Tile Face-Down (Complete Solid White Background with Domino border) */
+/* Domino Tile Face-Down (Bank Spot) */
 .domino-tile-facedown {
   background: transparent;
-  border: 1.5px solid #cbd5e1;
+  border: none;
 }
 
-/* Domino Tile Face-Up (Solid White Background with SVG image on top) */
+/* Domino Tile Face-Up (Bank Spot) */
 .domino-tile-faceup {
   background: transparent;
-  border: 1.5px solid #cbd5e1;
+  border: none;
   padding: 0;
 }
 
