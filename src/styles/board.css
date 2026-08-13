@@ -362,6 +362,19 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
 }
 
+/* Replay Traveling Tile Overlay */
+.replay-tile-container {
+  position: absolute;
+  width: 3.125cqw;
+  height: 6.25cqw;
+  border-radius: clamp(2px, 0.6cqw, 5px);
+  z-index: 250;
+  pointer-events: none;
+  background: transparent;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.75));
+  will-change: left, top, transform;
+}
+
 /* Selectable Drop Target */
 .selectable-drop-target {
   border-color: #22c55e !important;

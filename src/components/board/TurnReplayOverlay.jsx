@@ -3,6 +3,7 @@ import { PIECE_TYPES } from '../../domain/types.js';
 
 export function TurnReplayOverlay({
   animatingPiece,
+  animatingTile,
   perspectiveRotation = 0,
   replayNoticeText = ''
 }) {
@@ -68,6 +69,24 @@ export function TurnReplayOverlay({
               className={`piece-img-board ${isPawn ? 'piece-pawn-img' : ''}`}
             />
           </div>
+        </div>
+      )}
+
+      {/* Phase 3: Tile traveling outside the board from Mover to Receiver */}
+      {animatingTile && animatingTile.visible && (
+        <div
+          className="replay-tile-container replay-tile-traveling"
+          style={{
+            left: animatingTile.left,
+            top: animatingTile.top,
+            transform: `translate(-50%, -50%) rotate(${animatingTile.rotation}deg)`
+          }}
+        >
+          <img
+            src="/images/tile_back.svg"
+            alt="Tile Traveling Face-Down"
+            className="domino-tile-svg"
+          />
         </div>
       )}
     </>

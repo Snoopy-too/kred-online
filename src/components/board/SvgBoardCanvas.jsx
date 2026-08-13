@@ -54,6 +54,7 @@ export function SvgBoardCanvas({
     isReplaying,
     overrideBoardState,
     animatingPiece,
+    animatingTile,
     replayNoticeText
   } = useTurnReplayAnimation(G, activeHotspots, getPlayerLabel);
 
@@ -424,6 +425,7 @@ export function SvgBoardCanvas({
 
       <TurnReplayOverlay
         animatingPiece={animatingPiece}
+        animatingTile={animatingTile}
         perspectiveRotation={perspectiveRotation}
         replayNoticeText={replayNoticeText}
       />
