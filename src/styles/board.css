@@ -346,7 +346,7 @@
 .domino-tile-faceup {
   background: transparent;
   border: 1.5px solid #cbd5e1;
-  padding: 2px;
+  padding: 0;
 }
 
 .domino-tile-svg {
