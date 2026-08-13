@@ -1,0 +1,502 @@
+/* Modals, Bureaucracy Panel, Overlays & Winner Banners */
+.winner-banner {
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-crimson));
+  color: white;
+  text-align: center;
+  padding: 12px;
+  font-size: 20px;
+  font-weight: 800;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 10px 25px rgba(200, 155, 60, 0.35);
+  flex-shrink: 0;
+}
+
+.draft-confirmed-box {
+  background: rgba(45, 122, 93, 0.15);
+  border: 1px solid var(--accent-green);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.draft-confirmed-box h3 {
+  color: var(--accent-green);
+  margin-bottom: 6px;
+}
+
+.draft-confirmed-box p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Modern Glassmorphic Pending Play Modal */
+.pending-play-modal {
+  background: linear-gradient(135deg, rgba(30, 24, 20, 0.95), rgba(45, 30, 24, 0.95));
+  border: 1px solid var(--accent-gold);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.pending-play-modal h3 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-gold);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pending-play-modal p {
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.pending-play-modal .btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pending-play-modal .btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}
+
+.pending-play-modal .btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pending-play-modal .btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.45);
+}
+
+/* Bureaucracy Store / Bazaar Card Overhaul */
+.bureaucracy-bazaar-card {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(28, 22, 18, 0.95) 0%, rgba(18, 14, 12, 0.98) 100%);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  overflow: visible;
+}
+
+.bazaar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 12px;
+}
+
+.bazaar-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bazaar-icon {
+  font-size: 24px;
+}
+
+.bazaar-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fef08a;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.bazaar-subtitle {
+  font-size: 11px;
+  color: #a1a1aa;
+  margin: 2px 0 0 0;
+}
+
+.bazaar-funding-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.15);
+}
+
+.bazaar-funding-badge .coin-icon {
+  font-size: 20px;
+}
+
+.funding-amount-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.funding-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #d97706;
+  font-weight: 700;
+}
+
+.funding-val {
+  font-size: 16px;
+  font-weight: 900;
+  color: #fef08a;
+}
+
+.funding-val small {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.bazaar-instruction-banner {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.instruction-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #3b82f6;
+  animation: pulseDot 1s infinite alternate;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.4); opacity: 1; }
+}
+
+.btn-cancel-selection {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-selection:hover {
+  background: rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+}
+
+.bazaar-section {
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #d4d4d8;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px 0;
+}
+
+.store-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.store-item-card {
+  background: rgba(39, 32, 27, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.store-item-card:hover:not(.disabled) {
+  border-color: rgba(234, 179, 8, 0.4);
+  background: rgba(45, 38, 32, 0.8);
+}
+
+.store-item-card.disabled {
+  opacity: 0.45;
+}
+
+.store-item-card.active-store-selection {
+  border-color: #eab308;
+  background: rgba(234, 179, 8, 0.15);
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.2);
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f4f4f5;
+}
+
+.item-desc {
+  font-size: 11px;
+  color: #a1a1aa;
+  margin-top: 2px;
+}
+
+.k-strike {
+  position: relative;
+  display: inline-block;
+  font-weight: 900;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: currentColor;
+}
+
+.price-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fef08a;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.btn-purchase {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  border: 1px solid #f59e0b;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-purchase:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.btn-purchase:disabled {
+  background: #3f3f46;
+  border-color: #52525b;
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+
+.btn-active-select {
+  background: #eab308;
+  border: 1px solid #fef08a;
+  color: #18181b;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.move-action-bazaar-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.move-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.move-type-selector .label {
+  font-size: 11px;
+  color: #a1a1aa;
+  font-weight: 600;
+}
+
+.bazaar-select {
+  flex: 1;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #f4f4f5;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.btn-end-bureaucracy {
+  width: 100%;
+  background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+  border: 1px solid #4ade80;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-end-bureaucracy:hover {
+  background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.5);
+}
+
+.bazaar-waiting-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  gap: 12px;
+  color: #a1a1aa;
+}
+
+.spinner-icon {
+  font-size: 32px;
+}
+
+/* Draft Phase Submitting / Database Loading Overlay */
+.control-card.draft-modal-submitting {
+  position: relative;
+  overflow: hidden;
+}
+
+.draft-card-disabled-content {
+  opacity: 0.45;
+  filter: grayscale(40%);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+  pointer-events: none;
+}
+
+.draft-submitting-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(18, 14, 12, 0.88);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 100;
+  border: 1px solid var(--accent-gold);
+  box-shadow: 0 0 24px rgba(200, 155, 60, 0.25);
+  animation: fadeInOverlay 0.2s ease-in-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.draft-spinner {
+  width: 38px;
+  height: 38px;
+  border: 3.5px solid rgba(200, 155, 60, 0.2);
+  border-top-color: var(--accent-gold);
+  border-right-color: var(--accent-gold);
+  border-radius: 50%;
+  animation: draftSpinnerRotate 0.75s linear infinite;
+  box-shadow: 0 0 12px rgba(200, 155, 60, 0.3);
+}
+
+@keyframes draftSpinnerRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.draft-submitting-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.draft-submitting-text strong {
+  font-size: 14px;
+  color: var(--accent-gold);
+  letter-spacing: 0.5px;
+}
+
+.draft-submitting-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tile-card-submitting {
+  transform: scale(1.05) translateY(-4px) !important;
+}
+
+.tile-card-submitting .tile-svg {
+  border: 2px solid var(--accent-gold) !important;
+  filter: drop-shadow(0 0 16px var(--accent-gold)) !important;
+}

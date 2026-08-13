@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MOVE_TYPES, INITIAL_PIECE_COUNTS } from './domain/types.js';
+import { INITIAL_PIECE_COUNTS } from './domain/types.js';
 import { computeHotspots } from './components/ComputeHotspots.js';
 import { TurnBuilder } from './components/TurnBuilder.jsx';
 import { BureaucracyPanel } from './components/BureaucracyPanel.jsx';
@@ -11,8 +11,6 @@ import { PlayerHandDrawer } from './components/board/PlayerHandDrawer.jsx';
 import { OpponentHandSummary } from './components/board/OpponentHandSummary.jsx';
 import { useCalibrationHandlers } from './components/board/useCalibrationHandlers.js';
 import { getPerspectiveRotation } from './components/board/perspectiveUtils.js';
-import { getValidDestinations, inferMoveType } from './domain/moveRulesUtils.js';
-import { applyMoveToState, isCommunityPieceAvailable } from './domain/moves.js';
 import { StateSaveLoadModal } from './components/board/StateSaveLoadModal.jsx';
 import { getPendingPlayActivePlayer } from './domain/board.js';
 import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
@@ -21,11 +19,12 @@ import { executeOnlineDraftTileSelect } from './domain/phases/draftPhase.js';
 import { BoardHeaderControls } from './components/board/BoardHeaderControls.jsx';
 import { useOnlineGame } from './context/OnlineGameContext.jsx';
 import {
-  executeOnlineCampaignTurn,
   executeOnlineReexecute,
   executeOnlinePenaltyWithdraw,
   executeOnlineFreeAdvance
 } from './domain/onlineEngine.js';
+import { useBoardScale } from './hooks/useBoardScale.js';
+import { useStagedMoves } from './hooks/useStagedMoves.js';
 
 export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline: propIsOnline = false, playerNames: propPlayerNames = [], dbMasterState: propDbMasterState = null, updateMasterGameState: propUpdateMasterGameState = null }) {
   const onlineCtx = useOnlineGame();
@@ -36,114 +35,34 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
   const G = (isOnline && dbMasterState) ? (dbMasterState.G || dbMasterState) : rawG;
   const ctx = (isOnline && dbMasterState) ? (dbMasterState.ctx || rawCtx) : rawCtx;
-  // Move builder & interactive state
-  const [zoomLevel, setZoomLevel] = useState(0.75);
-  const [autoScale, setAutoScale] = useState(1);
 
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.outerWidth || window.innerWidth;
-      // 1200px is the reference width for the layout.
-      // Cap max scale at 1.4 to prevent huge UI elements on ultra-wide screens.
-      const calculatedScale = Math.min(1.4, width / 1200);
-      setAutoScale(calculatedScale);
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const [selectedTileId, setSelectedTileId] = useState('');
-  const [selectedReceiverId, setSelectedReceiverId] = useState('');
-  const [stagedMoves, setStagedMoves] = useState([]);
-  const [transientBoardState, setTransientBoardState] = useState(null);
-  const [transientCommunity, setTransientCommunity] = useState(null);
-  const [selectedPieceLoc, setSelectedPieceLoc] = useState('');
-  const [validDestinations, setValidDestinations] = useState([]);
-  const [peekPendingTile, setPeekPendingTile] = useState(false);
+  const { zoomLevel, setZoomLevel, autoScale } = useBoardScale();
   const [autoDraftTileId, setAutoDraftTileId] = useState(null);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
 
-  const handleTogglePeekTile = () => {
-    setPeekPendingTile(prev => !prev);
-  };
-
-  // Legacy compatibility states
-  const [selectedFrom, setSelectedFrom] = useState('');
-  const [selectedTo, setSelectedTo] = useState('');
-  const [selectedBureaucracyTarget, setSelectedBureaucracyTarget] = useState('');
-  const [bureaucracySubActionType, setBureaucracySubActionType] = useState(MOVE_TYPES.ADVANCE);
-
   const numPlayers = (ctx && ctx.numPlayers) || (G && G.numPlayers) || 3;
+  const currentPhase = ctx?.phase || 'draft';
+  const tilesPerPlayer = INITIAL_PIECE_COUNTS[numPlayers]?.TILES_PER_PLAYER || 8;
+
+  const staged = useStagedMoves({
+    G, ctx, playerID, moves, isOnline, updateMasterGameState, numPlayers, tilesPerPlayer, currentPhase
+  });
+
   const bureaucracyBoard = useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnline, updateMasterGameState });
 
-  // Sync transient board state and clear staged selections when turn or pending step changes
-  useEffect(() => {
-    setSelectedTileId('');
-    setSelectedReceiverId('');
-    setStagedMoves([]);
-    setSelectedPieceLoc('');
-    setValidDestinations([]);
-    setPeekPendingTile(false);
-    if (G && G.boardState) {
-      setTransientBoardState(JSON.parse(JSON.stringify(G.boardState)));
-    }
-    if (G && G.community) {
-      setTransientCommunity(JSON.parse(JSON.stringify(G.community)));
-    }
-  }, [G?.boardState, G?.community, G?.pendingPlay?.step, G?.pendingPlay, ctx?.currentPlayer]);
-
-  // Broadcast game state to App level for perspective tab indicators
   useEffect(() => {
     if (G && ctx && typeof window.onKredStateUpdate === 'function') {
       window.onKredStateUpdate({ G, ctx });
     }
   }, [G, ctx]);
 
-
-  // Hotspots computation
   const baseHotspots = computeHotspots(numPlayers);
-
-  // Calibration handlers & state hook
-  const {
-    calibrationMode,
-    showSpotLabels,
-    setShowSpotLabels,
-    calibratedPositions,
-    setCalibratedPositions,
-    selectedCalibrateKeys,
-    setSelectedCalibrateKeys,
-    angleInput,
-    setAngleInput,
-    scaleInput,
-    setScaleInput,
-    perspectiveOffsets,
-    handleNudgePerspective,
-    handleRotatePerspective,
-    handleResetPerspectiveOffset,
-    copiedJson,
-    draftSavedMsg,
-    handleSaveDraft,
-    handleResetDraft,
-    handleCopyCoordinates,
-    handleImportJson,
-    handleRotateSelectedSpots,
-    handleSetExactAngle,
-    handleScaleSelectedSpots,
-    handleSetExactScale,
-    handleBoardMouseDown,
-    handleBoardMouseMove,
-    handleBoardMouseUp,
-    handleNudgeSelectedSpotsPixels,
-    handleRotateSelectedSpotsAroundCenter
-  } = useCalibrationHandlers(numPlayers, propCalibrationMode, baseHotspots);
-
-  const tilesPerPlayer = INITIAL_PIECE_COUNTS[numPlayers]?.TILES_PER_PLAYER || 8;
+  const calibration = useCalibrationHandlers(numPlayers, propCalibrationMode, baseHotspots);
 
   const activeHotspots = {};
   for (const k in baseHotspots) {
     const base = baseHotspots[k];
-    const cal = calibratedPositions[k] || {};
+    const cal = calibration.calibratedPositions[k] || {};
     const merged = { ...base, ...cal };
     let rotVal = merged.rot !== undefined ? Math.round((merged.rot + 360) % 360) : 0;
     let scaleVal = merged.scale !== undefined ? parseFloat(merged.scale.toFixed(2)) : 1.0;
@@ -153,12 +72,9 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     activeHotspots[k] = merged;
   }
 
-  // ponytail: preserve player perspective rotation in calibration mode to prevent board rotation jumps
   const perspectiveRotation = getPerspectiveRotation(numPlayers, playerID);
-
   const isMyTurn = ctx && String(ctx.currentPlayer) === String(playerID);
   const myPlayer = (G && G.players && G.players[playerID]) || {};
-  const currentPhase = ctx?.phase || 'draft';
   const hasDraftedThisRound = G?.draftSelectionsThisRound && G.draftSelectionsThisRound[playerID];
 
   const autoDraftingTileRef = useRef(null);
@@ -172,26 +88,18 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     latestMovesRef.current = moves;
   }, [G, updateMasterGameState, moves]);
 
-  // Auto-float and select final tile if only 1 tile remains in draft pack
   useEffect(() => {
     if (currentPhase === 'draft' && !hasDraftedThisRound) {
       const pack = G?.draftPacks?.[playerID] || [];
       if (pack.length === 1) {
         const autoTileId = pack[0];
-        if (autoDraftingTileRef.current === autoTileId) {
-          return;
-        }
+        if (autoDraftingTileRef.current === autoTileId) return;
         autoDraftingTileRef.current = autoTileId;
         setAutoDraftTileId(autoTileId);
 
         const timer = setTimeout(() => {
           if (isOnline) {
-            executeOnlineDraftTileSelect(
-              latestGRef.current,
-              playerID,
-              autoTileId,
-              latestUpdateRef.current
-            );
+            executeOnlineDraftTileSelect(latestGRef.current, playerID, autoTileId, latestUpdateRef.current);
           } else if (latestMovesRef.current?.selectDraftTile) {
             latestMovesRef.current.selectDraftTile(autoTileId);
           }
@@ -199,269 +107,27 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
           autoDraftingTileRef.current = null;
         }, 900);
 
-        return () => {
-          // Keep animation timer uninterrupted when state updates during auto-float
-        };
+        return () => {};
       }
     }
     autoDraftingTileRef.current = null;
     setAutoDraftTileId(null);
   }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID]?.length, playerID, isOnline]);
 
-  // Reset local transient state whenever boardState, phase, or currentPlayer updates externally
-  useEffect(() => {
-    setTransientBoardState(null);
-    setTransientCommunity(null);
-    setSelectedTileId('');
-    setSelectedReceiverId('');
-    setStagedMoves([]);
-    setSelectedPieceLoc('');
-    setValidDestinations([]);
-  }, [G?.boardState, G?.pendingPlay, ctx?.phase, ctx?.currentPlayer]);
-
-  // Self-play rule: allowed ONLY if all opponents have full banks
-  const canSelfPlay = G && G.players
-    ? !Object.keys(G.players).some(p => String(p) !== String(playerID) && (G.players[p].bank || []).length < tilesPerPlayer)
-    : false;
-
-  // Tile & Receiver Selection Handlers
-  const handleSelectTile = (tileId) => {
-    if (!isMyTurn || currentPhase !== 'campaign') return;
-    if (selectedTileId === tileId) {
-      setSelectedTileId('');
-    } else {
-      setSelectedTileId(tileId);
-    }
-  };
-
-  const handleSelectReceiver = (receiverId) => {
-    if (!isMyTurn || currentPhase !== 'campaign' || !selectedTileId) return;
-    const receiverBankLength = (G?.players?.[receiverId]?.bank || []).length;
-    if (receiverBankLength >= tilesPerPlayer) return; // Cannot play to a player whose bank is full!
-    if (String(receiverId) === String(playerID) && !canSelfPlay) return;
-    if (selectedReceiverId === String(receiverId)) {
-      setSelectedReceiverId('');
-    } else {
-      setSelectedReceiverId(String(receiverId));
-    }
-  };
-
-  // Reset Turn Handler - restores staged selections and board state
-  const handleResetTurn = () => {
-    setSelectedTileId('');
-    setSelectedReceiverId('');
-    setStagedMoves([]);
-    setSelectedPieceLoc('');
-    setValidDestinations([]);
-    if (G && G.boardState) {
-      setTransientBoardState(JSON.parse(JSON.stringify(G.boardState)));
-    }
-    if (G && G.community) {
-      setTransientCommunity(JSON.parse(JSON.stringify(G.community)));
-    }
-  };
-
-  // Click Piece Handler -> Calculate legal green throbbing destination circles
-  const handlePieceClick = (locKey) => {
-    if (currentPhase !== 'campaign') return;
-
-    if (G?.pendingPlay) {
-      const activeP = getPendingPlayActivePlayer(G);
-      if (activeP !== playerID) return;
-
-      const step = G.pendingPlay.step;
-      const currentBoard = transientBoardState || G.boardState;
-      const piece = currentBoard[locKey];
-
-      if (selectedPieceLoc === locKey) {
-        setSelectedPieceLoc('');
-        setValidDestinations([]);
-        return;
-      }
-
-      if (!piece && !locKey.startsWith('community')) {
-        setSelectedPieceLoc('');
-        setValidDestinations([]);
-        return;
-      }
-
-      const currentComm = transientCommunity || G.community;
-
-      if (step === 'reexecute') {
-        const tileId = G.pendingPlay.reexecuteTileId;
-        const validTargets = getValidDestinations(
-          locKey,
-          playerID,
-          currentBoard,
-          currentComm,
-          numPlayers,
-          stagedMoves,
-          tileId,
-          true
-        );
-        setSelectedPieceLoc(locKey);
-        setValidDestinations(validTargets);
-        return;
-      }
-
-      if (step === 'penaltyWithdraw') {
-        if (stagedMoves.length >= 1) return;
-        const allTargets = getValidDestinations(locKey, playerID, currentBoard, currentComm, numPlayers, [], '');
-        const withdrawTargets = allTargets.filter(toLoc => {
-          const inferred = inferMoveType(locKey, toLoc, playerID, currentBoard, currentComm, numPlayers, [], '');
-          return inferred === MOVE_TYPES.WITHDRAW;
-        });
-        setSelectedPieceLoc(locKey);
-        setValidDestinations(withdrawTargets);
-        return;
-      }
-
-      if (step === 'freeAdvance') {
-        if (stagedMoves.length >= 1) return;
-        const allTargets = getValidDestinations(locKey, playerID, currentBoard, currentComm, numPlayers, [], '');
-        const advanceTargets = allTargets.filter(toLoc => {
-          const inferred = inferMoveType(locKey, toLoc, playerID, currentBoard, currentComm, numPlayers, [], '');
-          return inferred === MOVE_TYPES.ADVANCE;
-        });
-        setSelectedPieceLoc(locKey);
-        setValidDestinations(advanceTargets);
-        return;
-      }
-
-      return;
-    }
-
-    if (!isMyTurn) return;
-    if (!selectedTileId) return; // Must pick tile from hand first
-    if (stagedMoves.length === 1 && stagedMoves[0].to === locKey) {
-      return; // A piece may only move ONCE per turn
-    }
-
-    const currentBoard = transientBoardState || G.boardState;
-    const piece = currentBoard[locKey];
-
-    if (stagedMoves.length === 1 && piece && stagedMoves[0]?.pieceId && piece.id === stagedMoves[0].pieceId) {
-      return; // A piece may only move ONCE per turn
-    }
-    if (stagedMoves.length === 1 && stagedMoves[0].to === locKey) {
-      return; // A piece may only move ONCE per turn
-    }
-
-    if (selectedPieceLoc === locKey) {
-      setSelectedPieceLoc('');
-      setValidDestinations([]);
-      return;
-    }
-
-    if (piece) {
-      const currentComm = transientCommunity || G.community;
-      if (locKey.startsWith('community_') && !isCommunityPieceAvailable(piece.type, currentBoard, currentComm, stagedMoves)) {
-        return; // Locked until lower-tier community pieces are depleted
-      }
-
-      const validTargets = getValidDestinations(
-        locKey,
-        playerID,
-        currentBoard,
-        currentComm,
-        numPlayers,
-        stagedMoves,
-        selectedTileId
-      );
-      setSelectedPieceLoc(locKey);
-      setValidDestinations(validTargets);
-    } else {
-      setSelectedPieceLoc('');
-      setValidDestinations([]);
-    }
-  };
-
-  // Click Pulsing Green Circle Handler -> Execute board move
-  const handleDestinationClick = (toLoc) => {
-    if (!selectedPieceLoc || !validDestinations.includes(toLoc)) return;
-
-    const currentBoard = JSON.parse(JSON.stringify(transientBoardState || G.boardState));
-    const currentComm = JSON.parse(JSON.stringify(transientCommunity || G.community));
-
-    const isReexecuting = G?.pendingPlay?.step === 'reexecute';
-    const tileContext = G?.pendingPlay ? (G.pendingPlay.reexecuteTileId || '') : selectedTileId;
-
-    const inferredType = inferMoveType(
-      selectedPieceLoc,
-      toLoc,
-      playerID,
-      currentBoard,
-      currentComm,
-      numPlayers,
-      stagedMoves,
-      tileContext,
-      isReexecuting
-    );
-
-    const normTo = toLoc.startsWith('community_') ? 'community' : toLoc;
-    const pieceObj = currentBoard[selectedPieceLoc];
-
-    const newMove = {
-      type: inferredType,
-      from: selectedPieceLoc,
-      to: normTo,
-      pieceId: pieceObj ? pieceObj.id : undefined
-    };
-
-    applyMoveToState(newMove, currentBoard, currentComm);
-
-    setTransientBoardState(currentBoard);
-    setTransientCommunity(currentComm);
-    setStagedMoves([...stagedMoves, newMove]);
-
-    setSelectedPieceLoc('');
-    setValidDestinations([]);
-  };
-
-  // Finish Turn Handler -> Submit to boardgame.io / Supabase Master State
-  const handleSubmitTurn = () => {
-    if (!selectedTileId || !selectedReceiverId) return;
-
-    if (isOnline) {
-      executeOnlineCampaignTurn(
-        G,
-        playerID,
-        { tileId: selectedTileId, receiverId: selectedReceiverId, moves: stagedMoves },
-        updateMasterGameState
-      );
-    } else if (moves?.submitTurnMovesAndTile) {
-      moves.submitTurnMovesAndTile({
-        tileId: selectedTileId,
-        receiverId: selectedReceiverId,
-        moves: stagedMoves
-      });
-    }
-
-    handleResetTurn();
-  };
-
-
   if (!G || !G.players || !ctx) {
     return <div className="kred-container">Loading game state...</div>;
   }
 
-  const boardImageMap = {
-    3: '/images/KREDonline_3P.png',
-    4: '/images/4player_board.png',
-    5: '/images/KREDonline_5P.png'
-  };
+  const boardImageMap = { 3: '/images/KREDonline_3P.png', 4: '/images/4player_board.png', 5: '/images/KREDonline_5P.png' };
   const activeBoardImage = boardImageMap[numPlayers] || boardImageMap[3];
   const getPlayerLabel = (pIdx) => {
     if (pIdx === undefined || pIdx === null) return '';
     const idx = parseInt(pIdx, 10);
-    if (Array.isArray(playerNames) && playerNames[idx]) {
-      return playerNames[idx];
-    }
-    if (G?.playerNames && G.playerNames[idx]) {
-      return G.playerNames[idx];
-    }
+    if (Array.isArray(playerNames) && playerNames[idx]) return playerNames[idx];
+    if (G?.playerNames && G.playerNames[idx]) return G.playerNames[idx];
     return `Player ${idx + 1}`;
   };
+
   const activePendingPlayer = getPendingPlayActivePlayer(G);
   const isPendingActiveMe = G?.pendingPlay && String(activePendingPlayer) === String(playerID);
   const pendingStep = G?.pendingPlay?.step;
@@ -469,7 +135,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   const isReexecutingMe = isPendingActiveMe && pendingStep === 'reexecute';
   const isPenaltyWithdrawMe = isPendingActiveMe && pendingStep === 'penaltyWithdraw';
   const isFreeAdvanceMe = isPendingActiveMe && pendingStep === 'freeAdvance';
-
   const showTurnBuilderForPending = isReexecutingMe || isPenaltyWithdrawMe || isFreeAdvanceMe;
 
   return (
@@ -490,75 +155,71 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
       )}
 
       <BoardCalibrationToolbar
-        calibrationMode={calibrationMode}
-        selectedCalibrateKeys={selectedCalibrateKeys}
-        setSelectedCalibrateKeys={setSelectedCalibrateKeys}
+        calibrationMode={calibration.calibrationMode}
+        selectedCalibrateKeys={calibration.selectedCalibrateKeys}
+        setSelectedCalibrateKeys={calibration.setSelectedCalibrateKeys}
         activeHotspots={activeHotspots}
-        setCalibratedPositions={setCalibratedPositions}
+        setCalibratedPositions={calibration.setCalibratedPositions}
         numPlayers={numPlayers}
         tilesPerPlayer={tilesPerPlayer}
         playerID={playerID}
-        perspectiveOffsets={perspectiveOffsets}
-        handleNudgePerspective={handleNudgePerspective}
-        handleRotatePerspective={handleRotatePerspective}
-        handleResetPerspectiveOffset={handleResetPerspectiveOffset}
-        handleSaveDraft={handleSaveDraft}
-        handleResetDraft={handleResetDraft}
-        handleCopyCoordinates={handleCopyCoordinates}
-        handleImportJson={handleImportJson}
-        handleRotateSelectedSpots={handleRotateSelectedSpots}
-        handleSetExactAngle={handleSetExactAngle}
-        handleScaleSelectedSpots={handleScaleSelectedSpots}
-        handleSetExactScale={handleSetExactScale}
-        angleInput={angleInput}
-        setAngleInput={setAngleInput}
-        scaleInput={scaleInput}
-        setScaleInput={setScaleInput}
-        draftSavedMsg={draftSavedMsg}
-        copiedJson={copiedJson}
-        showSpotLabels={showSpotLabels}
-        setShowSpotLabels={setShowSpotLabels}
-        handleNudgeSelectedSpotsPixels={handleNudgeSelectedSpotsPixels}
-        handleRotateSelectedSpotsAroundCenter={handleRotateSelectedSpotsAroundCenter}
+        perspectiveOffsets={calibration.perspectiveOffsets}
+        handleNudgePerspective={calibration.handleNudgePerspective}
+        handleRotatePerspective={calibration.handleRotatePerspective}
+        handleResetPerspectiveOffset={calibration.handleResetPerspectiveOffset}
+        handleSaveDraft={calibration.handleSaveDraft}
+        handleResetDraft={calibration.handleResetDraft}
+        handleCopyCoordinates={calibration.handleCopyCoordinates}
+        handleImportJson={calibration.handleImportJson}
+        handleRotateSelectedSpots={calibration.handleRotateSelectedSpots}
+        handleSetExactAngle={calibration.handleSetExactAngle}
+        handleScaleSelectedSpots={calibration.handleScaleSelectedSpots}
+        handleSetExactScale={calibration.handleSetExactScale}
+        angleInput={calibration.angleInput}
+        setAngleInput={calibration.setAngleInput}
+        scaleInput={calibration.scaleInput}
+        setScaleInput={calibration.setScaleInput}
+        draftSavedMsg={calibration.draftSavedMsg}
+        copiedJson={calibration.copiedJson}
+        showSpotLabels={calibration.showSpotLabels}
+        setShowSpotLabels={calibration.setShowSpotLabels}
+        handleNudgeSelectedSpotsPixels={calibration.handleNudgeSelectedSpotsPixels}
+        handleRotateSelectedSpotsAroundCenter={calibration.handleRotateSelectedSpotsAroundCenter}
       />
 
       <div className="kred-layout" style={{ zoom: zoomLevel }}>
         <div className="domains-section">
-          <BoardZoomControls
-            zoomLevel={zoomLevel}
-            setZoomLevel={setZoomLevel}
-            style={{ zoom: 1 / zoomLevel }}
-          />
+          <BoardZoomControls zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} style={{ zoom: 1 / zoomLevel }} />
           <div className="board-canvas-card">
             <SvgBoardCanvas
               activeBoardImage={activeBoardImage}
               numPlayers={numPlayers}
               activeHotspots={activeHotspots}
-              calibrationMode={calibrationMode}
-              selectedCalibrateKeys={selectedCalibrateKeys}
-              setSelectedCalibrateKeys={setSelectedCalibrateKeys}
-              handleBoardMouseMove={handleBoardMouseMove}
-              handleBoardMouseUp={handleBoardMouseUp}
-              handleBoardMouseDown={handleBoardMouseDown}
-              handleRotateSelectedSpots={handleRotateSelectedSpots}
+              calibrationMode={calibration.calibrationMode}
+              selectedCalibrateKeys={calibration.selectedCalibrateKeys}
+              setSelectedCalibrateKeys={calibration.setSelectedCalibrateKeys}
+              handleBoardMouseMove={calibration.handleBoardMouseMove}
+              handleBoardMouseUp={calibration.handleBoardMouseUp}
+              handleBoardMouseDown={calibration.handleBoardMouseDown}
+              handleRotateSelectedSpots={calibration.handleRotateSelectedSpots}
               G={G}
-              showSpotLabels={showSpotLabels}
+              showSpotLabels={calibration.showSpotLabels}
               perspectiveRotation={perspectiveRotation}
               playerID={playerID}
-              perspectiveOffsets={perspectiveOffsets}
-              selectedReceiverId={selectedReceiverId}
-              selectedTileId={selectedTileId}
-              onSelectReceiver={handleSelectReceiver}
-              canSelfPlay={canSelfPlay}
-              validDestinations={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.moveValidDestinations : validDestinations}
-              selectedPieceLoc={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.moveFromLoc : selectedPieceLoc}
-              stagedMoves={stagedMoves}
-              onPieceClick={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.handleBureaucracySpotClick : handlePieceClick}
-              onDestinationClick={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.handleBureaucracyDestinationClick : handleDestinationClick}
-              transientBoardState={transientBoardState}
+              perspectiveOffsets={calibration.perspectiveOffsets}
+              selectedReceiverId={staged.selectedReceiverId}
+              selectedTileId={staged.selectedTileId}
+              onSelectReceiver={staged.handleSelectReceiver}
+              canSelfPlay={staged.canSelfPlay}
+              validDestinations={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.moveValidDestinations : staged.validDestinations}
+              selectedPieceLoc={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.moveFromLoc : staged.selectedPieceLoc}
+              stagedMoves={staged.stagedMoves}
+              onPieceClick={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.handleBureaucracySpotClick : staged.handlePieceClick}
+              onDestinationClick={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.handleBureaucracyDestinationClick : staged.handleDestinationClick}
+              transientBoardState={staged.transientBoardState}
               zoomLevel={zoomLevel * autoScale}
-              peekPendingTile={peekPendingTile}
-              onTogglePeekTile={handleTogglePeekTile}
+              peekPendingTile={staged.peekPendingTile}
+              onTogglePeekTile={staged.handleTogglePeekTile}
               validPromotionSpots={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.validPromotionSpots : []}
               getPlayerLabel={getPlayerLabel}
             />
@@ -587,15 +248,14 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
             />
           ) : (
             <>
-              {/* Top of Sidebar: Pending Play modal for status/receipt/challenge */}
               {(G?.pendingPlay || G?.lastOutcomeNotice) && !showTurnBuilderForPending && (
                 <PendingPlayModal
                   G={G}
                   playerID={playerID}
                   moves={moves}
                   getPlayerLabel={getPlayerLabel}
-                  peekPendingTile={peekPendingTile}
-                  onTogglePeekTile={handleTogglePeekTile}
+                  peekPendingTile={staged.peekPendingTile}
+                  onTogglePeekTile={staged.handleTogglePeekTile}
                   isOnline={isOnline}
                   updateMasterGameState={updateMasterGameState}
                 />
@@ -622,20 +282,13 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                 />
               )}
 
-              {/* Opponent Hand Summary Module */}
-              <OpponentHandSummary
-                G={G}
-                playerID={playerID}
-                numPlayers={numPlayers}
-                getPlayerLabel={getPlayerLabel}
-              />
+              <OpponentHandSummary G={G} playerID={playerID} numPlayers={numPlayers} getPlayerLabel={getPlayerLabel} />
 
-              {/* Player Hand Drawer */}
               {(!G?.pendingPlay || showTurnBuilderForPending) && (
                 <PlayerHandDrawer
                   myPlayer={myPlayer}
-                  selectedTileId={selectedTileId}
-                  onSelectTile={handleSelectTile}
+                  selectedTileId={staged.selectedTileId}
+                  onSelectTile={staged.handleSelectTile}
                   disabled={!isMyTurn || currentPhase !== 'campaign' || Boolean(G?.pendingPlay)}
                 />
               )}
@@ -654,18 +307,18 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
               {currentPhase === 'campaign' && (!G?.pendingPlay || showTurnBuilderForPending) && (
                 <TurnBuilder
-                  selectedTileId={isReexecutingMe ? G.pendingPlay.reexecuteTileId : selectedTileId}
-                  selectedReceiverId={isReexecutingMe ? G.pendingPlay.receiverId : selectedReceiverId}
-                  stagedMoves={stagedMoves}
-                  handleResetTurn={handleResetTurn}
+                  selectedTileId={isReexecutingMe ? G.pendingPlay.reexecuteTileId : staged.selectedTileId}
+                  selectedReceiverId={isReexecutingMe ? G.pendingPlay.receiverId : staged.selectedReceiverId}
+                  stagedMoves={staged.stagedMoves}
+                  handleResetTurn={staged.handleResetTurn}
                   handleSubmitTurn={
                     isReexecutingMe
-                      ? () => isOnline ? executeOnlineReexecute(G, playerID, stagedMoves, updateMasterGameState) : moves?.reexecuteHonestly(stagedMoves)
+                      ? () => isOnline ? executeOnlineReexecute(G, playerID, staged.stagedMoves, updateMasterGameState) : moves?.reexecuteHonestly(staged.stagedMoves)
                       : isPenaltyWithdrawMe
-                      ? () => isOnline ? executeOnlinePenaltyWithdraw(G, playerID, stagedMoves[0], updateMasterGameState) : moves?.executePenaltyWithdraw(stagedMoves[0])
+                      ? () => isOnline ? executeOnlinePenaltyWithdraw(G, playerID, staged.stagedMoves[0], updateMasterGameState) : moves?.executePenaltyWithdraw(staged.stagedMoves[0])
                       : isFreeAdvanceMe
-                      ? () => isOnline ? executeOnlineFreeAdvance(G, playerID, stagedMoves[0], updateMasterGameState) : moves?.executeFreeAdvance(stagedMoves[0])
-                      : handleSubmitTurn
+                      ? () => isOnline ? executeOnlineFreeAdvance(G, playerID, staged.stagedMoves[0], updateMasterGameState) : moves?.executeFreeAdvance(staged.stagedMoves[0])
+                      : staged.handleSubmitTurn
                   }
                   isMyTurn={showTurnBuilderForPending || isMyTurn}
                   getPlayerLabel={getPlayerLabel}
@@ -673,8 +326,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                   isPenaltyWithdraw={isPenaltyWithdrawMe}
                   isFreeAdvance={isFreeAdvanceMe}
                   playerID={playerID}
-                  boardState={transientBoardState || G.boardState}
-                  community={transientCommunity || G.community}
+                  boardState={staged.transientBoardState || G.boardState}
+                  community={staged.transientCommunity || G.community}
                   numPlayers={numPlayers}
                 />
               )}
@@ -689,9 +342,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         moves={moves}
         isOpen={showSaveLoadModal}
         onClose={() => setShowSaveLoadModal(false)}
-        onResetTransientState={handleResetTurn}
+        onResetTransientState={staged.handleResetTurn}
       />
     </div>
   );
 }
-

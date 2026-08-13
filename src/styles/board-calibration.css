@@ -1,0 +1,66 @@
+/* Board Calibration Tool Styles */
+.calibration-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  cursor: grab;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
+  transition: none;
+}
+.calibration-dot:active { cursor: grabbing; }
+.calibration-dot.type-office { background: #FFD700; }
+.calibration-dot.type-rostrum { background: #8B4513; }
+.calibration-dot.type-seat { background: #00CC44; }
+.calibration-dot.type-bank { background: #2196F3; }
+.calibration-dot.type-dropTile { background: #FF6600; }
+.calibration-dot-label {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.75);
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.calibration-toolbar {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.calibration-toolbar .btn {
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+/* Translucent Placeholder Tile for Calibrate Mode */
+.domino-tile-placeholder {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px dashed #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
+  cursor: pointer;
+}
+
+.domino-tile-placeholder:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: #ff9800;
+}
+
+.domino-tile-placeholder.selected-tile {
+  border: 2px solid #ff9800;
+  box-shadow: 0 0 14px #ff9800;
+  background: rgba(255, 255, 255, 0.9);
+}

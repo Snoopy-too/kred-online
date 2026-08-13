@@ -1,0 +1,248 @@
+/* Control Cards, Draft Player List, Tile Cards, Animations & Hand Drawer */
+.control-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.phase-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.draft-player-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.draft-status-pill {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: #261f1a;
+  border: 1px solid var(--border-color);
+}
+
+.status-selected {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.status-pending {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.tile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  width: 100%;
+  transition: transform 0.2s ease;
+}
+
+.tile-card:hover {
+  transform: translateY(-3px);
+}
+
+.tile-card:hover .tile-svg {
+  filter: drop-shadow(0 8px 18px rgba(255, 255, 255, 0.28));
+}
+
+.tile-svg {
+  width: 100%;
+  max-width: 95px;
+  aspect-ratio: 2.5 / 5;
+  background-color: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 0;
+  filter: drop-shadow(0 4px 10px rgba(255, 255, 255, 0.15));
+  box-sizing: border-box;
+  object-fit: contain;
+  transition: all 0.2s ease;
+}
+
+@keyframes floatToHand {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-70px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-150px) scale(0.75);
+    opacity: 0.1;
+  }
+}
+
+.auto-float-to-hand {
+  animation: floatToHand 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+  pointer-events: none !important;
+  position: relative;
+  z-index: 100;
+}
+
+.auto-float-to-hand .tile-svg {
+  border-color: #22c55e !important;
+  box-shadow: 0 0 20px #22c55e, 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+  background-color: #f0fdf4 !important;
+}
+
+/* Re-execute Tile Banner in TurnBuilder */
+.reexecute-tile-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.tile-banner-svg {
+  width: 32px;
+  height: 64px;
+  object-fit: contain;
+  background: transparent;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.tile-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tile-banner-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ef4444;
+}
+
+.tile-banner-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.turn-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.builder-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.builder-step label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.hint-text {
+  font-size: 11px;
+  color: var(--accent-gold);
+}
+
+.move-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.move-inputs input {
+  padding: 6px 12px;
+  background: #261f1a;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 6px;
+}
+
+.submit-btn {
+  padding: 12px;
+  font-size: 16px;
+  margin-top: 12px;
+}
+
+.hand-drawer {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.tiles-flex {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 8px 4px;
+}
+
+.tile-thumb {
+  min-width: 45px;
+  width: 45px;
+  aspect-ratio: 2.5 / 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.tile-thumb:hover {
+  transform: translateY(-3px);
+}
+
+.tile-img {
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  border: 2px solid #d6c3af;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
+.tile-back,
+.tile-back-solid {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #0f172a;
+  font-weight: 700;
+  box-sizing: border-box;
+}
