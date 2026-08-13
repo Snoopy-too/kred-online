@@ -21,6 +21,7 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
   const [replayNoticeText, setReplayNoticeText] = useState('');
 
   const lastReplayedPlayKeyRef = useRef(null);
+  const lastTileAnimatedPlayKeyRef = useRef(null);
   const animationTimersRef = useRef([]);
 
   const clearTimers = () => {
@@ -226,12 +227,25 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
           animationTimersRef.current.push(tPause);
         } else {
           // All piece moves completed!
-          // 1 second pause after pieces finish their walks, then animate tile traveling outside board
-          setReplayNoticeText(`⏸️ 1 sec pause before tile play...`);
-          const tTileDelay = setTimeout(() => {
-            runTileTravelAnimation();
-          }, 1000);
-          animationTimersRef.current.push(tTileDelay);
+          const playBaseKey = `${moverId}_${tileIdPlayed}_${movesMade.length}_${pendingPlay.receiverId}_${JSON.stringify(movesMade)}`;
+          if (lastTileAnimatedPlayKeyRef.current === playBaseKey) {
+            // Tile travel animation already ran for this play! Finish replay without repeating tile travel.
+            const tFinish = setTimeout(() => {
+              setIsReplaying(false);
+              setOverrideBoardState(null);
+              setAnimatingPiece(null);
+              setReplayNoticeText('');
+            }, 350);
+            animationTimersRef.current.push(tFinish);
+          } else {
+            // First time replaying this play: record key and run tile travel animation 1s after piece walks.
+            lastTileAnimatedPlayKeyRef.current = playBaseKey;
+            setReplayNoticeText(`⏸️ 1 sec pause before tile play...`);
+            const tTileDelay = setTimeout(() => {
+              runTileTravelAnimation();
+            }, 1000);
+            animationTimersRef.current.push(tTileDelay);
+          }
         }
       }, 1650);
       animationTimersRef.current.push(tLand);
