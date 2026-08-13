@@ -7,6 +7,14 @@ import { TurnReplayOverlay } from './TurnReplayOverlay.jsx';
 import { CalibrationSpotOverlay } from './CalibrationSpotOverlay.jsx';
 
 
+const getTileSvgPath = (tileId) => {
+  if (!tileId) return '/images/tile_back.svg';
+  if (tileId === 'BLANK') return '/images/BLANK.svg';
+  const numStr = String(tileId).replace(/^0+/, '');
+  const paddedId = numStr.padStart(2, '0');
+  return `/images/${paddedId}.svg`;
+};
+
 export function SvgBoardCanvas({
   activeBoardImage,
   numPlayers,
@@ -171,13 +179,14 @@ export function SvgBoardCanvas({
           const isPendingActive = isPendingReceiver && G?.pendingPlay?.step === 'receipt';
           const isSelfReceiver = isPendingActive && isSelf;
           const isTargetable = Boolean(selectedTileId) && !selectedReceiverId && !isReceiverLocked;
+          const isPeekingTile = isSelfReceiver && peekPendingTile && Boolean(G?.pendingPlay?.tileIdPlayed);
 
           const pLabel = getPlayerLabel ? getPlayerLabel(targetPlayerId) : `Player ${domainNum}`;
 
           return (
             <div
               key={locKey}
-              className={`domino-tile-container drop-tile-box ${isDropActive ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked ? 'self-locked-drop-target' : ''}`}
+              className={`domino-tile-container ${isPeekingTile ? 'domino-tile-faceup peeked-tile-container' : 'drop-tile-box'} ${isDropActive && !isPeekingTile ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked ? 'self-locked-drop-target' : ''}`}
               style={{
                 left: coords.left,
                 top: coords.top,
@@ -204,32 +213,18 @@ export function SvgBoardCanvas({
               }
             >
                {isDropActive ? (
-                 (isSelfReceiver && peekPendingTile && G?.pendingPlay?.tileIdPlayed) ? (
+                 isPeekingTile ? (
                    <img
-                     src={`/images/${G.pendingPlay.tileIdPlayed}.svg`}
+                     src={getTileSvgPath(G.pendingPlay.tileIdPlayed)}
                      alt={G.pendingPlay.tileIdPlayed === 'BLANK' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
-                     style={{
-                       width: '100%',
-                       height: '100%',
-                       objectFit: 'contain',
-                       background: 'transparent',
-                       borderRadius: '4px',
-                       boxSizing: 'border-box'
-                     }}
+                     className="domino-tile-svg"
                    />
                  ) : (
                    <img
                      src="/images/tile_back.svg"
                      alt="Tile Played Face-Down"
                      title={isSelfReceiver ? "Click to flip & view tile privately" : "Tile Played Face-Down"}
-                     style={{
-                       width: '100%',
-                       height: '100%',
-                       objectFit: 'contain',
-                       background: 'transparent',
-                       borderRadius: '4px',
-                       boxSizing: 'border-box'
-                     }}
+                     className="domino-tile-svg"
                    />
                  )
               ) : (
@@ -282,7 +277,7 @@ export function SvgBoardCanvas({
                   title={`Bank Spot ${slotIdx + 1}: Tile ${bTile.tileId}`}
                 >
                   <img
-                    src={`/images/${bTile.tileId}.svg`}
+                    src={getTileSvgPath(bTile.tileId)}
                     alt={bTile.tileId === 'BLANK' ? '' : `Tile ${bTile.tileId}`}
                     className="domino-tile-svg"
                   />

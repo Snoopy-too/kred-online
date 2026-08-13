@@ -355,6 +355,13 @@
   object-fit: contain;
 }
 
+/* Flipped / Peeked Tile Container (No haze, full colors) */
+.peeked-tile-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
 /* Selectable Drop Target */
 .selectable-drop-target {
   border-color: #22c55e !important;

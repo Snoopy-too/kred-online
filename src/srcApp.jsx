@@ -27,6 +27,18 @@ export function KredApp() {
   const [currentGameState, setCurrentGameState] = useState(null);
   const [skipDraft, setSkipDraft] = useState(false);
   const [showBottomToolbar, setShowBottomToolbar] = useState(false);
+  const [pinBottomToolbar, setPinBottomToolbar] = useState(() => {
+    return localStorage.getItem('kred_pin_bottom_toolbar') === 'true';
+  });
+
+  const togglePinBottomToolbar = () => {
+    setPinBottomToolbar(prev => {
+      const next = !prev;
+      localStorage.setItem('kred_pin_bottom_toolbar', String(next));
+      if (next) setShowBottomToolbar(true);
+      return next;
+    });
+  };
 
   useEffect(() => {
     window.onKredStateUpdate = (state) => {
@@ -41,6 +53,7 @@ export function KredApp() {
 
   useEffect(() => {
     const handleMouseMove = (e) => {
+      if (pinBottomToolbar) return;
       const distFromBottom = window.innerHeight - e.clientY;
       const screenCenterX = window.innerWidth / 2;
       const distFromCenterX = Math.abs(e.clientX - screenCenterX);
@@ -53,7 +66,7 @@ export function KredApp() {
     };
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [pinBottomToolbar]);
 
 
 
@@ -355,16 +368,18 @@ export function KredApp() {
       </div>
 
       <div
-        className={`bottom-toolbar-tab ${showBottomToolbar ? 'hidden' : ''}`}
+        className={`bottom-toolbar-tab ${(showBottomToolbar || pinBottomToolbar) ? 'hidden' : ''}`}
         onMouseEnter={() => setShowBottomToolbar(true)}
       >
         ▲ Menu & Info
       </div>
 
       <div
-        className={`bottom-toolbar ${showBottomToolbar ? 'visible' : ''}`}
+        className={`bottom-toolbar ${(showBottomToolbar || pinBottomToolbar) ? 'visible' : ''}`}
         onMouseEnter={() => setShowBottomToolbar(true)}
-        onMouseLeave={() => setShowBottomToolbar(false)}
+        onMouseLeave={() => {
+          if (!pinBottomToolbar) setShowBottomToolbar(false);
+        }}
       >
         <div className="left-controls">
           <button className="btn btn-secondary" onClick={handleReturnToMenu}>
@@ -419,6 +434,14 @@ export function KredApp() {
         {/* Diagnostics, Reset, and Calibrate are hidden in Online mode */}
         {!isOnline && (
           <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              className={`btn ${pinBottomToolbar ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={togglePinBottomToolbar}
+              title={pinBottomToolbar ? "Unpin toolbar (Auto-hide on mouse leave)" : "Pin toolbar (Keep always visible in view)"}
+            >
+              {pinBottomToolbar ? '📌 Pinned' : '📌 Pin Bar'}
+            </button>
+
             <button
               className={`btn ${showDiagnostics ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setShowDiagnostics(!showDiagnostics)}
