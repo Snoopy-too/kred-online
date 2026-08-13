@@ -173,7 +173,7 @@ export function SvgBoardCanvas({
           const isSelf = targetPlayerId === String(playerID);
           const selfLocked = isSelf && !canSelfPlay;
           const isReceiverLocked = bankFull || selfLocked;
-          const isPendingReceiver = (G && G.pendingPlay && String(G.pendingPlay.receiverId) === String(targetPlayerId));
+          const isPendingReceiver = (!isReplaying && G && G.pendingPlay && String(G.pendingPlay.receiverId) === String(targetPlayerId));
           const isStagedReceiver = (selectedReceiverId === targetPlayerId);
           const isDropActive = isPendingReceiver || isStagedReceiver;
 
