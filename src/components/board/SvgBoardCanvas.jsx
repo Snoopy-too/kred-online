@@ -203,26 +203,35 @@ export function SvgBoardCanvas({
                 : `Drop Zone ${pLabel}`
               }
             >
-              {isDropActive ? (
-                (isSelfReceiver && peekPendingTile && G?.pendingPlay?.tileIdPlayed) ? (
-                  <img
-                    src={`/images/${G.pendingPlay.tileIdPlayed}.svg`}
-                    alt={G.pendingPlay.tileIdPlayed === 'BLANK' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      background: '#ffffff',
-                      borderRadius: '4px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="pending-drop-card-white"
-                    title={isSelfReceiver ? "Click to flip & view tile privately" : "Tile Played Face-Down"}
-                  />
-                )
+               {isDropActive ? (
+                 (isSelfReceiver && peekPendingTile && G?.pendingPlay?.tileIdPlayed) ? (
+                   <img
+                     src={`/images/${G.pendingPlay.tileIdPlayed}.svg`}
+                     alt={G.pendingPlay.tileIdPlayed === 'BLANK' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
+                     style={{
+                       width: '100%',
+                       height: '100%',
+                       objectFit: 'contain',
+                       background: 'transparent',
+                       borderRadius: '4px',
+                       boxSizing: 'border-box'
+                     }}
+                   />
+                 ) : (
+                   <img
+                     src="/images/tile_back.svg"
+                     alt="Tile Played Face-Down"
+                     title={isSelfReceiver ? "Click to flip & view tile privately" : "Tile Played Face-Down"}
+                     style={{
+                       width: '100%',
+                       height: '100%',
+                       objectFit: 'contain',
+                       background: 'transparent',
+                       borderRadius: '4px',
+                       boxSizing: 'border-box'
+                     }}
+                   />
+                 )
               ) : (
                 <span className="drop-tile-label">{pLabel}</span>
               )}
@@ -251,7 +260,13 @@ export function SvgBoardCanvas({
                     zIndex: 11
                   }}
                   title={`Bank Spot ${slotIdx + 1} (Face-Down)`}
-                />
+                >
+                  <img
+                    src="/images/tile_back.svg"
+                    alt="Tile Back"
+                    className="domino-tile-svg"
+                  />
+                </div>
               );
             } else {
               return (

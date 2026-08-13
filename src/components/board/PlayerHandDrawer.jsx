@@ -25,7 +25,7 @@ export function PlayerHandDrawer({ myPlayer, selectedTileId, onSelectTile, disab
                 title={tileId === 'BLANK' ? 'Click to play Blank Tile' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Click to play Tile ${tileId}`}
               >
                 {tileId === 'HIDDEN' ? (
-                  <div className="tile-back-solid" title="Tile Face-Down" />
+                  <img src="/images/tile_back.svg" alt="Opponent Tile" className="hand-tile-img" />
                 ) : (
                   <img src={`/images/${tileId}.svg`} alt={tileId === 'BLANK' ? '' : `Tile ${tileId}`} className="hand-tile-img" />
                 )}
