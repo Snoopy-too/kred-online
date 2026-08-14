@@ -179,7 +179,7 @@ export function SvgBoardCanvas({
 
           const isPendingActive = isPendingReceiver && G?.pendingPlay?.step === 'receipt';
           const isSelfReceiver = isPendingActive && isSelf;
-          const isTargetable = Boolean(selectedTileId) && !selectedReceiverId && !isReceiverLocked;
+          const isTargetable = Boolean(selectedTileId) && !isReceiverLocked;
           const isPeekingTile = isSelfReceiver && peekPendingTile && Boolean(G?.pendingPlay?.tileIdPlayed);
 
           const pLabel = getPlayerLabel ? getPlayerLabel(targetPlayerId) : `Player ${domainNum}`;
@@ -187,7 +187,7 @@ export function SvgBoardCanvas({
           return (
             <div
               key={locKey}
-              className={`domino-tile-container ${isPeekingTile || isStagedReceiver ? 'domino-tile-faceup peeked-tile-container' : 'drop-tile-box'} ${isDropActive && !isPeekingTile && !isStagedReceiver ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked && !isDropActive ? 'self-locked-drop-target' : ''}`}
+              className={`domino-tile-container ${isPeekingTile ? 'domino-tile-faceup peeked-tile-container' : isDropActive ? 'domino-tile-facedown' : 'drop-tile-box'} ${isDropActive && !isPeekingTile ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked && !isDropActive ? 'self-locked-drop-target' : ''}`}
               style={{
                 left: coords.left,
                 top: coords.top,
@@ -206,7 +206,7 @@ export function SvgBoardCanvas({
               }}
               title={
                 isSelfReceiver ? (peekPendingTile ? "Click to flip face-down" : "Click to flip & view tile privately")
-                : isStagedReceiver ? `Tile staged for ${pLabel}`
+                : isStagedReceiver ? `Tile staged face-down for ${pLabel} (click again to remove)`
                 : bankFull ? `${pLabel}'s bank is full (${targetBankLength}/${tilesPerPlayer} tiles)`
                 : selfLocked ? `Cannot play to yourself — opponents with empty bank slots still exist`
                 : isTargetable ? `Click to play tile face-down to ${pLabel}`
@@ -220,17 +220,11 @@ export function SvgBoardCanvas({
                      alt={G.pendingPlay.tileIdPlayed === 'BLANK' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
                      className="domino-tile-svg"
                    />
-                 ) : isStagedReceiver && selectedTileId ? (
-                   <img
-                     src={getTileSvgPath(selectedTileId)}
-                     alt={selectedTileId === 'BLANK' ? '' : `Tile ${selectedTileId}`}
-                     className="domino-tile-svg"
-                   />
                  ) : (
                    <img
                      src="/images/tile_back.svg"
                      alt="Tile Played Face-Down"
-                     title={isSelfReceiver ? "Click to flip & view tile privately" : "Tile Played Face-Down"}
+                     title={isSelfReceiver ? "Click to flip & view tile privately" : isStagedReceiver ? `Tile staged face-down for ${pLabel}` : "Tile Played Face-Down"}
                      className="domino-tile-svg"
                    />
                  )
