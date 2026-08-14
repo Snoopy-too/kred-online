@@ -177,8 +177,9 @@ export function SvgBoardCanvas({
           const isStagedReceiver = (selectedReceiverId === targetPlayerId);
           const isDropActive = isPendingReceiver || isStagedReceiver;
 
+          const isZeroCredibility = ((G?.players?.[targetPlayerId]?.credibilityNotchesLost || 0) >= 3);
           const isPendingActive = isPendingReceiver && G?.pendingPlay?.step === 'receipt';
-          const isSelfReceiver = isPendingActive && isSelf;
+          const isSelfReceiver = isPendingActive && isSelf && !isZeroCredibility;
           const isTargetable = Boolean(selectedTileId) && !isReceiverLocked;
           const isPeekingTile = isSelfReceiver && peekPendingTile && Boolean(G?.pendingPlay?.tileIdPlayed);
 
@@ -187,12 +188,12 @@ export function SvgBoardCanvas({
           return (
             <div
               key={locKey}
-              className={`domino-tile-container ${isPeekingTile ? 'domino-tile-faceup peeked-tile-container' : isDropActive ? 'domino-tile-facedown' : 'drop-tile-box'} ${isDropActive && !isPeekingTile ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked && !isDropActive ? 'self-locked-drop-target' : ''}`}
+              className={`domino-tile-container ${isPeekingTile ? 'domino-tile-faceup peeked-tile-container' : isDropActive ? 'domino-tile-facedown' : 'drop-tile-box'} ${isSelfReceiver ? 'peekable-drop-target' : ''} ${isDropActive && !isPeekingTile ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked && !isDropActive ? 'self-locked-drop-target' : ''}`}
               style={{
                 left: coords.left,
                 top: coords.top,
                 transform: currentTransform,
-                cursor: isReceiverLocked ? 'not-allowed' : (isSelfReceiver || isTargetable) ? 'pointer' : 'default',
+                cursor: isSelfReceiver ? 'pointer' : isReceiverLocked ? 'not-allowed' : isTargetable ? 'pointer' : 'default',
                 opacity: (isReceiverLocked && !isDropActive) ? 0.4 : 1
               }}
               onClick={() => {

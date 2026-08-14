@@ -308,6 +308,15 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
 }
 
+.peekable-drop-target {
+  cursor: pointer !important;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.peekable-drop-target:hover {
+  filter: brightness(1.15) drop-shadow(0 0 8px rgba(56, 189, 248, 0.7));
+}
+
 .replay-tile-container {
   position: absolute;
   width: 3.125cqw;
