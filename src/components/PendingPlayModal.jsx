@@ -14,6 +14,7 @@ export function PendingPlayModal({
 }) {
   const myPlayer = (G && G.players && G.players[playerID]) || {};
   const isZeroCredibility = (myPlayer.credibilityNotchesLost || 0) >= 3;
+  const isFullCredibility = (myPlayer.credibilityNotchesLost || 0) === 0;
 
   const [visibleNotice, setVisibleNotice] = useState(null);
   const [isFading, setIsFading] = useState(false);
@@ -228,9 +229,15 @@ export function PendingPlayModal({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button
                     className="btn btn-success"
+                    disabled={isFullCredibility}
                     onClick={() => handleAction(() => isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility())}
+                    style={{
+                      opacity: isFullCredibility ? 0.5 : 1,
+                      cursor: isFullCredibility ? 'not-allowed' : 'pointer'
+                    }}
+                    title={isFullCredibility ? 'Credibility is already at maximum (3/3)' : 'Restore 1 lost credibility notch'}
                   >
-                    🛡️ Restore 1 Credibility Notch
+                    🛡️ Restore 1 Credibility Notch {isFullCredibility ? '(Already at Max 3/3)' : ''}
                   </button>
                   <p style={{ fontSize: '12px', color: '#fbbf24', margin: '4px 0 0 0', textAlign: 'center' }}>
                     — OR — Use the Bureaucracy Panel in the sidebar to perform 1 Bureaucracy Action using tile funding.

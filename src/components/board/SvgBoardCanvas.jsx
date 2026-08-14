@@ -1,5 +1,5 @@
 import React from 'react';
-import { PIECE_TYPES, INITIAL_PIECE_COUNTS } from '../../domain/types.js';
+import { PIECE_TYPES, INITIAL_PIECE_COUNTS, TILES } from '../../domain/types.js';
 import { getPerspectiveTransform } from './perspectiveUtils.js';
 import { isCommunityPieceAvailable } from '../../domain/moves.js';
 import { useTurnReplayAnimation } from './useTurnReplayAnimation.js';
@@ -244,7 +244,35 @@ export function SvgBoardCanvas({
           const bTile = bankTiles[slotIdx];
 
           if (bTile) {
+            const isChallengerReward = G?.pendingPlay?.step === 'challengerReward';
+            const isRewardRecipient = isChallengerReward &&
+              String(G?.pendingPlay?.successfulChallengerId) === targetPlayerId &&
+              String(playerID) === targetPlayerId;
+
             if (bTile.faceDown) {
+              if (isRewardRecipient) {
+                const tileFunding = TILES[bTile.tileId]?.funding || 0;
+                return (
+                  <div
+                    key={locKey}
+                    className="domino-tile-container domino-tile-faceup domino-tile-reward-glow"
+                    style={{
+                      left: coords.left,
+                      top: coords.top,
+                      transform: currentTransform,
+                      zIndex: 15
+                    }}
+                    title={`Bank Spot ${slotIdx + 1}: Tile ${bTile.tileId} (${tileFunding}K Available Funding)`}
+                  >
+                    <img
+                      src={getTileSvgPath(bTile.tileId)}
+                      alt={`Tile ${bTile.tileId}`}
+                      className="domino-tile-svg"
+                    />
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={locKey}
@@ -275,7 +303,7 @@ export function SvgBoardCanvas({
                     transform: currentTransform,
                     zIndex: 11
                   }}
-                  title={`Bank Spot ${slotIdx + 1}: Tile ${bTile.tileId}`}
+                  title={`Bank Spot ${slotIdx + 1}: Tile ${bTile.tileId} (Already Face-Up / Spent)`}
                 >
                   <img
                     src={getTileSvgPath(bTile.tileId)}

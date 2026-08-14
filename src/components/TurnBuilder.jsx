@@ -20,6 +20,7 @@ export function TurnBuilder({
   numPlayers = 3
 }) {
   const [showNoMovesModal, setShowNoMovesModal] = useState(false);
+  const [showTileRequiredModal, setShowTileRequiredModal] = useState(false);
 
   if (!isMyTurn) return null;
 
@@ -46,9 +47,15 @@ export function TurnBuilder({
   }
 
   const handleFinishClick = () => {
-    if (!isReexecuting && !isPenaltyWithdraw && !isFreeAdvance && stagedMoves.length === 0) {
-      setShowNoMovesModal(true);
-      return;
+    if (!isReexecuting && !isPenaltyWithdraw && !isFreeAdvance) {
+      if (!isTileSelected || !isReceiverSelected) {
+        setShowTileRequiredModal(true);
+        return;
+      }
+      if (stagedMoves.length === 0) {
+        setShowNoMovesModal(true);
+        return;
+      }
     }
     handleSubmitTurn();
   };
@@ -134,11 +141,25 @@ export function TurnBuilder({
         <button
           className={`btn btn-primary finish-turn-btn ${canFinish ? 'active-finish' : 'disabled-finish'}`}
           onClick={handleFinishClick}
-          disabled={!canFinish}
+          disabled={isReexecuting || isPenaltyWithdraw || isFreeAdvance ? !canFinish : false}
         >
           {finishButtonLabel}
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={showTileRequiredModal}
+        title="Play Tile Required"
+        message={!isTileSelected 
+          ? "Please select a tile from your hand and choose a player to play it to before finishing your turn." 
+          : "Please select a player to play your tile to before finishing your turn."}
+        confirmText="Understood"
+        cancelText={null}
+        icon="🀄"
+        variant="info"
+        onConfirm={() => setShowTileRequiredModal(false)}
+        onCancel={() => setShowTileRequiredModal(false)}
+      />
 
       <ConfirmModal
         isOpen={showNoMovesModal}

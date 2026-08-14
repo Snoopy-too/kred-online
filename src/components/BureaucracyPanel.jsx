@@ -94,40 +94,37 @@ export function BureaucracyPanel({
             </div>
           )}
 
-          {/* Section 1: Restore Credibility */}
-          <div className="bazaar-section">
-            <h3 className="section-title">
-              <span>Credibility Restoration</span>
-            </h3>
-            <div className="store-grid single-col">
-              <div className={`store-item-card ${credibilityNotchesLost === 0 ? 'disabled' : ''}`}>
-                <div className="item-info">
-                  <span className="item-name">Restore 1 Credibility</span>
-                  <span className="item-desc">
-                    {credibilityNotchesLost > 0
-                      ? `Repair 1 lost credibility notch (Currently ${credibilityNotchesLost} lost)`
-                      : `Credibility at maximum (3/3)`}
-                  </span>
-                </div>
-                <button
-                  className="btn btn-purchase"
-                  disabled={isChallengerReward ? false : (funding < prices.RESTORE_CRED || credibilityNotchesLost === 0)}
-                  onClick={() => {
-                    if (isChallengerReward) {
-                      if (isOnline) executeOnlineChallengerCredibility(G, playerID, updateMasterGameState);
-                      else moves?.claimChallengerCredibility();
-                    } else {
+          {/* Section 1: Restore Credibility (Only during normal Bureaucracy phase; challenger reward uses pending play modal) */}
+          {!isChallengerReward && (
+            <div className="bazaar-section">
+              <h3 className="section-title">
+                <span>Credibility Restoration</span>
+              </h3>
+              <div className="store-grid single-col">
+                <div className={`store-item-card ${credibilityNotchesLost === 0 ? 'disabled' : ''}`}>
+                  <div className="item-info">
+                    <span className="item-name">Restore 1 Credibility</span>
+                    <span className="item-desc">
+                      {credibilityNotchesLost > 0
+                        ? `Repair 1 lost credibility notch (Currently ${credibilityNotchesLost} lost)`
+                        : `Credibility at maximum (3/3)`}
+                    </span>
+                  </div>
+                  <button
+                    className="btn btn-purchase"
+                    disabled={funding < prices.RESTORE_CRED || credibilityNotchesLost === 0}
+                    onClick={() => {
                       if (isOnline) executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState);
                       else moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' });
-                    }
-                  }}
-                >
-                  {!isChallengerReward && <span className="price-tag"><span className="k-strike">K</span> {prices.RESTORE_CRED}</span>}
-                  <span>Restore Notch</span>
-                </button>
+                    }}
+                  >
+                    <span className="price-tag"><span className="k-strike">K</span> {prices.RESTORE_CRED}</span>
+                    <span>Restore Notch</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Section 2: Piece Promotions */}
           <div className="bazaar-section">
@@ -265,24 +262,16 @@ export function BureaucracyPanel({
           </div>
 
           {/* Section 4: Footer */}
-          <div className="bazaar-footer" style={{ marginTop: 'auto', paddingTop: '16px' }}>
-            {isChallengerReward ? (
-              <button
-                className="btn btn-secondary"
-                style={{ width: '100%' }}
-                onClick={() => isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility()}
-              >
-                🛡️ Restore 1 Credibility Notch Instead
-              </button>
-            ) : (
+          {!isChallengerReward && (
+            <div className="bazaar-footer" style={{ marginTop: 'auto', paddingTop: '16px' }}>
               <button
                 className="btn btn-end-bureaucracy"
                 onClick={() => isOnline ? executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState) : moves?.endBureaucracyTurn()}
               >
                 Finish & End Bureaucracy Turn
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="bazaar-waiting-box">
