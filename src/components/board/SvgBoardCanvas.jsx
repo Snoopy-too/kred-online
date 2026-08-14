@@ -2,7 +2,6 @@ import React from 'react';
 import { PIECE_TYPES, INITIAL_PIECE_COUNTS, TILES } from '../../domain/types.js';
 import { getPerspectiveTransform } from './perspectiveUtils.js';
 import { isCommunityPieceAvailable } from '../../domain/moves.js';
-import { useTurnReplayAnimation } from './useTurnReplayAnimation.js';
 import { TurnReplayOverlay } from './TurnReplayOverlay.jsx';
 import { CalibrationSpotOverlay } from './CalibrationSpotOverlay.jsx';
 
@@ -51,14 +50,13 @@ export function SvgBoardCanvas({
   getPlayerLabel = null,
   replayAnimation = null
 }) {
-  const fallbackReplay = useTurnReplayAnimation(G, activeHotspots, getPlayerLabel);
   const {
-    isReplaying,
-    overrideBoardState,
-    animatingPiece,
-    animatingTile,
-    replayNoticeText
-  } = replayAnimation || fallbackReplay;
+    isReplaying = false,
+    overrideBoardState = null,
+    animatingPiece = null,
+    animatingTile = null,
+    replayNoticeText = ''
+  } = replayAnimation || {};
 
   const counterRotationStyle = perspectiveRotation ? { transform: `rotate(${-perspectiveRotation}deg)` } : {};
   const transformStyle = getPerspectiveTransform(numPlayers, playerID, perspectiveOffsets, 1);

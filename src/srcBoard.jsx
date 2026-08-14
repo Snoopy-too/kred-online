@@ -45,6 +45,14 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   const currentPhase = ctx?.phase || 'draft';
   const tilesPerPlayer = INITIAL_PIECE_COUNTS[numPlayers]?.TILES_PER_PLAYER || 8;
 
+  const getPlayerLabel = (pIdx) => {
+    if (pIdx === undefined || pIdx === null) return '';
+    const idx = parseInt(pIdx, 10);
+    if (Array.isArray(playerNames) && playerNames[idx]) return playerNames[idx];
+    if (G?.playerNames && G.playerNames[idx]) return G.playerNames[idx];
+    return `Player ${idx + 1}`;
+  };
+
   const staged = useStagedMoves({
     G, ctx, playerID, moves, isOnline, updateMasterGameState, numPlayers, tilesPerPlayer, currentPhase
   });
@@ -123,13 +131,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
   const boardImageMap = { 3: '/images/KREDonline_3P.png', 4: '/images/4player_board.png', 5: '/images/KREDonline_5P.png' };
   const activeBoardImage = boardImageMap[numPlayers] || boardImageMap[3];
-  const getPlayerLabel = (pIdx) => {
-    if (pIdx === undefined || pIdx === null) return '';
-    const idx = parseInt(pIdx, 10);
-    if (Array.isArray(playerNames) && playerNames[idx]) return playerNames[idx];
-    if (G?.playerNames && G.playerNames[idx]) return G.playerNames[idx];
-    return `Player ${idx + 1}`;
-  };
 
   const activePendingPlayer = getPendingPlayActivePlayer(G);
   const isPendingActiveMe = G?.pendingPlay && String(activePendingPlayer) === String(playerID);
