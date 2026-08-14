@@ -158,7 +158,6 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
     }
 
     if (!isMyTurn) return;
-    if (!selectedTileId) return;
     if (stagedMoves.length === 1 && stagedMoves[0].to === locKey) return;
 
     const currentBoard = transientBoardState || G.boardState;

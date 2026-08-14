@@ -87,7 +87,7 @@ export function TurnBuilder({
           </div>
         )}
 
-        <div className={`step-item ${(!isPenaltyWithdraw && !isFreeAdvance && !isTileSelected) ? 'disabled' : stagedMoves.length > 0 ? 'completed' : 'active'}`}>
+        <div className={`step-item ${stagedMoves.length > 0 ? 'completed' : 'active'}`}>
           <span className="step-num">{isPenaltyWithdraw || isFreeAdvance ? 1 : 2}</span>
           <span className="step-label">
             {stagedMoves.length > 0
