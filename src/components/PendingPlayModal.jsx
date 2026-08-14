@@ -10,7 +10,8 @@ import {
 
 export function PendingPlayModal({
   G, playerID, moves, getPlayerLabel, peekPendingTile = false, onTogglePeekTile,
-  isOnline = false, updateMasterGameState = null
+  isOnline = false, updateMasterGameState = null,
+  onReplayPieceMoves = null, isReplaying = false
 }) {
   const myPlayer = (G && G.players && G.players[playerID]) || {};
   const isZeroCredibility = (myPlayer.credibilityNotchesLost || 0) >= 3;
@@ -47,6 +48,7 @@ export function PendingPlayModal({
   const isReceiver = G.pendingPlay && String(playerID) === String(G.pendingPlay.receiverId);
   const activeChallenger = G.pendingPlay ? getActiveChallenger(G) : null;
   const isChallenger = G.pendingPlay && String(playerID) === String(activeChallenger);
+  const hasPieceMoves = Boolean(G?.pendingPlay?.movesMade && G.pendingPlay.movesMade.length > 0);
 
   return (
     <div className="pending-play-modal" style={{ position: 'relative' }}>
@@ -116,6 +118,16 @@ export function PendingPlayModal({
                       >
                         Accept (Place Face-Down in Bank)
                       </button>
+                      {hasPieceMoves && onReplayPieceMoves && (
+                        <button
+                          className="btn btn-secondary"
+                          onClick={onReplayPieceMoves}
+                          disabled={isReplaying}
+                          style={{ background: '#1e293b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                          🎬 {isReplaying ? 'Replaying Piece Moves...' : 'Replay Piece Moves'}
+                        </button>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -141,6 +153,16 @@ export function PendingPlayModal({
                       >
                         Expose / Whistle Blower (Place Face-Up in Bank)
                       </button>
+                      {hasPieceMoves && onReplayPieceMoves && (
+                        <button
+                          className="btn btn-secondary"
+                          onClick={onReplayPieceMoves}
+                          disabled={isReplaying}
+                          style={{ background: '#1e293b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                          🎬 {isReplaying ? 'Replaying Piece Moves...' : 'Replay Piece Moves'}
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
@@ -162,19 +184,33 @@ export function PendingPlayModal({
             isChallenger ? (
               <div className="challenge-actions">
                 <p>Tile accepted face-down. As a bystander, do you want to challenge the play?</p>
-                <div className="btn-group" style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    className="btn btn-warning"
-                    onClick={() => handleAction(() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile())}
-                  >
-                    Challenge Play
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => handleAction(() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge())}
-                  >
-                    Pass Challenge
-                  </button>
+                <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="btn btn-warning"
+                      style={{ flex: 1 }}
+                      onClick={() => handleAction(() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile())}
+                    >
+                      Challenge Play
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ flex: 1 }}
+                      onClick={() => handleAction(() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge())}
+                    >
+                      Pass Challenge
+                    </button>
+                  </div>
+                  {hasPieceMoves && onReplayPieceMoves && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={onReplayPieceMoves}
+                      disabled={isReplaying}
+                      style={{ background: '#1e293b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      🎬 {isReplaying ? 'Replaying Piece Moves...' : 'Replay Piece Moves'}
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (

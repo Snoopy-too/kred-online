@@ -48,15 +48,17 @@ export function SvgBoardCanvas({
   peekPendingTile = false,
   onTogglePeekTile = null,
   validPromotionSpots = [],
-  getPlayerLabel = null
+  getPlayerLabel = null,
+  replayAnimation = null
 }) {
+  const fallbackReplay = useTurnReplayAnimation(G, activeHotspots, getPlayerLabel);
   const {
     isReplaying,
     overrideBoardState,
     animatingPiece,
     animatingTile,
     replayNoticeText
-  } = useTurnReplayAnimation(G, activeHotspots, getPlayerLabel);
+  } = replayAnimation || fallbackReplay;
 
   const counterRotationStyle = perspectiveRotation ? { transform: `rotate(${-perspectiveRotation}deg)` } : {};
   const transformStyle = getPerspectiveTransform(numPlayers, playerID, perspectiveOffsets, 1);

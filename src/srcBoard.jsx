@@ -25,6 +25,7 @@ import {
 } from './domain/onlineEngine.js';
 import { useBoardScale } from './hooks/useBoardScale.js';
 import { useStagedMoves } from './hooks/useStagedMoves.js';
+import { useTurnReplayAnimation } from './components/board/useTurnReplayAnimation.js';
 
 export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline: propIsOnline = false, playerNames: propPlayerNames = [], dbMasterState: propDbMasterState = null, updateMasterGameState: propUpdateMasterGameState = null }) {
   const onlineCtx = useOnlineGame();
@@ -71,6 +72,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     merged.transform = `translate(-50%, -50%) rotate(${rotVal}deg) scale(${scaleVal})`;
     activeHotspots[k] = merged;
   }
+
+  const replayAnimation = useTurnReplayAnimation(G, activeHotspots, getPlayerLabel);
 
   const perspectiveRotation = getPerspectiveRotation(numPlayers, playerID);
   const isMyTurn = ctx && String(ctx.currentPlayer) === String(playerID);
@@ -222,6 +225,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
               onTogglePeekTile={staged.handleTogglePeekTile}
               validPromotionSpots={(currentPhase === 'bureaucracy' || (G?.pendingPlay?.step === 'challengerReward' && String(playerID) === String(G?.pendingPlay?.successfulChallengerId))) ? bureaucracyBoard.validPromotionSpots : []}
               getPlayerLabel={getPlayerLabel}
+              replayAnimation={replayAnimation}
             />
           </div>
         </div>
@@ -258,6 +262,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                   onTogglePeekTile={staged.handleTogglePeekTile}
                   isOnline={isOnline}
                   updateMasterGameState={updateMasterGameState}
+                  onReplayPieceMoves={replayAnimation.triggerPieceWalkReplay}
+                  isReplaying={replayAnimation.isReplaying}
                 />
               )}
 
