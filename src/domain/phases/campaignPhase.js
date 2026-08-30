@@ -1,9 +1,9 @@
-import { INVALID_MOVE } from 'boardgame.io/core';
+import { INVALID_MOVE } from 'boardgame.io/dist/esm/core.js';
 import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES } from '../types.js';
 import { enforceSupportRule, checkVictory, getNextPlayer, getOrderedChallengers } from '../board.js';
 import { validateMoveCombination, applyMoveToState, classifyPlay, validateSingleMove } from '../moves.js';
 import { handleLoadSaveState } from '../sharedMoves.js';
-import { executeBureaucracyActionPayload, selectBestBankTilesToPay } from '../bureaucracy.js';
+import { applyChallengerBureaucracyAction } from '../bureaucracy.js';
 
 export function finishPendingPlayOrReward(G) {
   const challengerId = G.pendingPlay?.successfulChallengerId;
@@ -78,7 +78,7 @@ export function createCampaignPhase() {
             if (G.pendingPlay.step === 'reexecute' || G.pendingPlay.step === 'penaltyWithdraw') {
               return parseInt(G.pendingPlay.moverId, 10);
             }
-            if (G.pendingPlay.step === 'freeAdvance') {
+            if (G.pendingPlay.step === 'receiverReward' || G.pendingPlay.step === 'freeAdvance') {
               return parseInt(G.pendingPlay.receiverId, 10);
             }
             if (G.pendingPlay.step === 'challengerReward') {
@@ -225,16 +225,9 @@ export function createCampaignPhase() {
             G.players[moverId].pendingPenaltyWithdraw = true;
           }
 
-          let receiverGotFreeAdvance = false;
-          if (G.players[receiverId].credibilityNotchesLost === 0) {
-            receiverGotFreeAdvance = true;
-          } else {
-            G.players[receiverId].credibilityNotchesLost = Math.max(0, G.players[receiverId].credibilityNotchesLost - 2);
-          }
-
           G.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: false });
 
-          G.pendingPlay.receiverFreeAdvance = receiverGotFreeAdvance;
+          G.pendingPlay.whistleblownByReceiver = true;
           G.pendingPlay.reexecuteTileId = tileIdPlayed;
           G.pendingPlay.nextMoverId = receiverId;
           G.pendingPlay.step = 'reexecute';
@@ -391,8 +384,8 @@ export function createCampaignPhase() {
 
         if (G.players[moverId].pendingPenaltyWithdraw) {
           G.pendingPlay.step = 'penaltyWithdraw';
-        } else if (G.pendingPlay.receiverFreeAdvance) {
-          G.pendingPlay.step = 'freeAdvance';
+        } else if (G.pendingPlay.whistleblownByReceiver) {
+          G.pendingPlay.step = 'receiverReward';
         } else {
           finishPendingPlayOrReward(G);
         }
@@ -412,11 +405,32 @@ export function createCampaignPhase() {
         G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
         G.players[moverId].pendingPenaltyWithdraw = false;
 
-        if (G.pendingPlay.receiverFreeAdvance) {
-          G.pendingPlay.step = 'freeAdvance';
+        if (G.pendingPlay.whistleblownByReceiver) {
+          G.pendingPlay.step = 'receiverReward';
         } else {
           finishPendingPlayOrReward(G);
         }
+        events.endTurn();
+      },
+
+      claimReceiverCredibilityReward: ({ G, ctx, playerID, events }) => {
+        const receiverId = String(playerID);
+        if (!G.pendingPlay || G.pendingPlay.step !== 'receiverReward' || G.pendingPlay.receiverId !== receiverId) {
+          return INVALID_MOVE;
+        }
+        if (G.players[receiverId].credibilityNotchesLost > 0) {
+          G.players[receiverId].credibilityNotchesLost = Math.max(0, G.players[receiverId].credibilityNotchesLost - 2);
+        }
+        finishPendingPlayOrReward(G);
+        events.endTurn();
+      },
+
+      chooseReceiverAdvanceReward: ({ G, ctx, playerID, events }) => {
+        const receiverId = String(playerID);
+        if (!G.pendingPlay || G.pendingPlay.step !== 'receiverReward' || G.pendingPlay.receiverId !== receiverId) {
+          return INVALID_MOVE;
+        }
+        G.pendingPlay.step = 'freeAdvance';
         events.endTurn();
       },
 
@@ -450,32 +464,13 @@ export function createCampaignPhase() {
         events.endTurn();
       },
 
-      buyChallengerBureaucracyAction: ({ G, ctx, playerID, events }, { actionType, targetLoc, subAction }) => {
+      buyChallengerBureaucracyAction: ({ G, ctx, playerID, events }, payload) => {
         const pId = String(playerID);
         if (!G.pendingPlay || G.pendingPlay.step !== 'challengerReward' || String(G.pendingPlay.successfulChallengerId) !== pId) {
           return INVALID_MOVE;
         }
-        const player = G.players[pId];
-        const facedownTiles = (player?.bank || []).filter(t => t.faceDown);
-
-        const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
-        let cost = 0;
-        if (actionType === 'RESTORE_CRED') cost = prices.RESTORE_CRED;
-        else if (actionType === 'PROMOTE_SEAT') cost = prices.PROMOTE_SEAT;
-        else if (actionType === 'PROMOTE_ROSTRUM') cost = prices.PROMOTE_ROSTRUM;
-        else if (actionType === 'PROMOTE_OFFICE') cost = prices.PROMOTE_OFFICE;
-        else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
-        else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
-
-        const tilesToPay = selectBestBankTilesToPay(facedownTiles, cost);
-        if (tilesToPay.length === 0) return INVALID_MOVE;
-
-        const success = executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction });
+        const success = applyChallengerBureaucracyAction(G, pId, payload);
         if (!success) return INVALID_MOVE;
-
-        tilesToPay.forEach(t => {
-          t.faceDown = false;
-        });
 
         const receiverId = G.pendingPlay.receiverId;
         G.pendingPlay = null;

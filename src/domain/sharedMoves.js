@@ -1,4 +1,4 @@
-import { INVALID_MOVE } from 'boardgame.io/core';
+import { INVALID_MOVE } from 'boardgame.io/dist/esm/core.js';
 import { TILES } from './types.js';
 
 export function sanitizeLoadedState(targetG) {

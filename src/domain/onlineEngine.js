@@ -151,16 +151,9 @@ export function executeOnlineRejectTile(effectiveG, playerID, updateMasterGameSt
       nextG.players[moverId].pendingPenaltyWithdraw = true;
     }
 
-    let receiverGotFreeAdvance = false;
-    if (nextG.players[receiverId].credibilityNotchesLost === 0) {
-      receiverGotFreeAdvance = true;
-    } else {
-      nextG.players[receiverId].credibilityNotchesLost = Math.max(0, nextG.players[receiverId].credibilityNotchesLost - 2);
-    }
-
     nextG.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: false });
 
-    nextG.pendingPlay.receiverFreeAdvance = receiverGotFreeAdvance;
+    nextG.pendingPlay.whistleblownByReceiver = true;
     nextG.pendingPlay.reexecuteTileId = tileIdPlayed;
     nextG.pendingPlay.nextMoverId = receiverId;
     nextG.pendingPlay.step = 'reexecute';
@@ -308,8 +301,8 @@ export function executeOnlineReexecute(effectiveG, playerID, stagedMoves, update
 
   if (nextG.players[moverId].pendingPenaltyWithdraw) {
     nextG.pendingPlay.step = 'penaltyWithdraw';
-  } else if (nextG.pendingPlay.receiverFreeAdvance) {
-    nextG.pendingPlay.step = 'freeAdvance';
+  } else if (nextG.pendingPlay.whistleblownByReceiver) {
+    nextG.pendingPlay.step = 'receiverReward';
   } else {
     finishOnlinePendingPlayOrReward(nextG);
   }
@@ -329,11 +322,36 @@ export function executeOnlinePenaltyWithdraw(effectiveG, playerID, stagedMove, u
 
   nextG.players[moverId].pendingPenaltyWithdraw = false;
 
-  if (nextG.pendingPlay.receiverFreeAdvance) {
-    nextG.pendingPlay.step = 'freeAdvance';
+  if (nextG.pendingPlay.whistleblownByReceiver) {
+    nextG.pendingPlay.step = 'receiverReward';
   } else {
     finishOnlinePendingPlayOrReward(nextG);
   }
+
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
+}
+
+export function executeOnlineReceiverCredibilityReward(effectiveG, playerID, updateMasterGameState) {
+  if (!effectiveG?.pendingPlay || !updateMasterGameState) return;
+  const pId = String(playerID);
+  if (effectiveG.pendingPlay.step !== 'receiverReward' || String(effectiveG.pendingPlay.receiverId) !== pId) return;
+
+  const nextG = JSON.parse(JSON.stringify(effectiveG));
+  if (nextG.players[pId].credibilityNotchesLost > 0) {
+    nextG.players[pId].credibilityNotchesLost = Math.max(0, nextG.players[pId].credibilityNotchesLost - 2);
+  }
+
+  finishOnlinePendingPlayOrReward(nextG);
+  advanceCampaignPhaseOnline(nextG, updateMasterGameState);
+}
+
+export function executeOnlineReceiverAdvanceReward(effectiveG, playerID, updateMasterGameState) {
+  if (!effectiveG?.pendingPlay || !updateMasterGameState) return;
+  const pId = String(playerID);
+  if (effectiveG.pendingPlay.step !== 'receiverReward' || String(effectiveG.pendingPlay.receiverId) !== pId) return;
+
+  const nextG = JSON.parse(JSON.stringify(effectiveG));
+  nextG.pendingPlay.step = 'freeAdvance';
 
   advanceCampaignPhaseOnline(nextG, updateMasterGameState);
 }

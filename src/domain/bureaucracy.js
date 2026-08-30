@@ -1,4 +1,4 @@
-import { INVALID_MOVE } from 'boardgame.io/core';
+import { INVALID_MOVE } from 'boardgame.io/dist/esm/core.js';
 import { TILES, PIECE_TYPES, BUREAUCRACY_PRICES } from './types.js';
 import { checkVictory, enforceSupportRule } from './board.js';
 import { applyMoveToState, validateSingleMove } from './moves.js';
@@ -114,6 +114,31 @@ export function cleanupBureaucracy(G) {
       G.winner = pId;
     }
   });
+}
+
+export function applyChallengerBureaucracyAction(G, pId, { actionType, targetLoc, subAction }) {
+  const player = G.players[pId];
+  const facedownTiles = (player?.bank || []).filter(t => t.faceDown);
+
+  const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
+  let cost = 0;
+  if (actionType === 'RESTORE_CRED') cost = prices.RESTORE_CRED;
+  else if (actionType === 'PROMOTE_SEAT') cost = prices.PROMOTE_SEAT;
+  else if (actionType === 'PROMOTE_ROSTRUM') cost = prices.PROMOTE_ROSTRUM;
+  else if (actionType === 'PROMOTE_OFFICE') cost = prices.PROMOTE_OFFICE;
+  else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
+  else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
+
+  const tilesToPay = selectBestBankTilesToPay(facedownTiles, cost);
+  if (tilesToPay.length === 0) return false;
+
+  const success = executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction });
+  if (!success) return false;
+
+  tilesToPay.forEach(t => {
+    t.faceDown = false;
+  });
+  return true;
 }
 
 export function executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction }) {

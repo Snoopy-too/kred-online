@@ -70,11 +70,12 @@ export function getActiveChallenger(G) {
 
 export function getPendingPlayActivePlayer(G) {
   if (!G || !G.pendingPlay) return null;
-  const { step, receiverId, moverId } = G.pendingPlay;
+  const { step, receiverId, moverId, successfulChallengerId } = G.pendingPlay;
   if (step === 'receipt') return receiverId;
   if (step === 'challenge') return getActiveChallenger(G);
   if (step === 'reexecute' || step === 'penaltyWithdraw') return moverId;
-  if (step === 'freeAdvance') return receiverId;
+  if (step === 'receiverReward' || step === 'freeAdvance') return receiverId;
+  if (step === 'challengerReward') return successfulChallengerId;
   return null;
 }
 

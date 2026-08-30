@@ -46,7 +46,7 @@ No piece may exist at a Rostrum if all 3 supporting Seats are empty. No piece ma
 
 ### Outcomes:
 - **Quiet Kept**: Tile face-down into Bank. No credibility change. Receiver becomes next Mover.
-- **Whistle Blown (Rejected)**: Mover resets board & loses 1 notch. Receiver restores credibility & keeps tile face-up in Bank.
+- **Whistle Blown (Rejected)**: Mover resets board & loses 1 notch (or withdraw penalty). Tile goes face-up into Receiver's Bank. After Mover rectifies moves to satisfy the tile, Receiver chooses either: (A) Restore up to 2 credibility notches, or (B) Take an "Advance" move.
 - **Smoking Gun (Challenged & Dishonest)**: Mover resets board & loses 1 notch. Receiver loses 1 notch. Challenger gains 1 notch.
 - **Witch Hunt (Challenged & Honest)**: Mover gains 1 notch. Challenger loses 1 notch. Tile face-down in Bank.
 

@@ -5,7 +5,9 @@ import {
   executeOnlineRejectTile,
   executeOnlineChallengeTile,
   executeOnlinePassChallenge,
-  executeOnlineChallengerCredibility
+  executeOnlineChallengerCredibility,
+  executeOnlineReceiverCredibilityReward,
+  executeOnlineReceiverAdvanceReward
 } from '../domain/onlineEngine.js';
 
 export function PendingPlayModal({
@@ -238,6 +240,49 @@ export function PendingPlayModal({
                 Waiting for <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong> to execute penalty Withdraw...
               </p>
             </div>
+          )}
+
+          {/* Receiver Whistleblower Reward Step */}
+          {G.pendingPlay.step === 'receiverReward' && (
+            isReceiver ? (
+              <div className="receiver-reward-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #eab308', borderRadius: '8px', padding: '12px' }}>
+                  <h4 style={{ margin: '0 0 6px 0', color: '#facc15', fontSize: '15px' }}>
+                    🚨 Whistleblower Reward!
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#f8fafc', lineHeight: 1.4 }}>
+                    Mover <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong> rectified their moves to satisfy the tile. As the whistle blower, choose your reward:
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    className="btn btn-success"
+                    disabled={isFullCredibility}
+                    onClick={() => handleAction(() => isOnline ? executeOnlineReceiverCredibilityReward(G, playerID, updateMasterGameState) : moves?.claimReceiverCredibilityReward())}
+                    style={{
+                      opacity: isFullCredibility ? 0.5 : 1,
+                      cursor: isFullCredibility ? 'not-allowed' : 'pointer'
+                    }}
+                    title={isFullCredibility ? 'Credibility is already at maximum (3/3)' : 'Restore up to 2 lost credibility notches'}
+                  >
+                    🛡️ Option A: Restore Credibility (Up to 2 Notches) {isFullCredibility ? '(Already at Max 3/3)' : ''}
+                  </button>
+                  <button
+                    className="btn btn-warning"
+                    onClick={() => handleAction(() => isOnline ? executeOnlineReceiverAdvanceReward(G, playerID, updateMasterGameState) : moves?.chooseReceiverAdvanceReward())}
+                  >
+                    ⚡ Option B: Take an "Advance" Move
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="receiver-reward-actions">
+                <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
+                  Waiting for Receiver <strong>{getPlayerLabel(G.pendingPlay.receiverId)}</strong> to select their whistleblower reward...
+                </p>
+              </div>
+            )
           )}
 
           {/* Free Advance Step for non-receivers */}
