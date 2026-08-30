@@ -17,6 +17,7 @@ import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
 import { DraftPhaseCard } from './components/board/DraftPhaseCard.jsx';
 import { executeOnlineDraftTileSelect } from './domain/phases/draftPhase.js';
 import { BoardHeaderControls } from './components/board/BoardHeaderControls.jsx';
+import { getBoardImageUrl } from './utils/assets.js';
 import { useOnlineGame } from './context/OnlineGameContext.jsx';
 import {
   executeOnlineReexecute,
@@ -129,8 +130,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     return <div className="kred-container">Loading game state...</div>;
   }
 
-  const boardImageMap = { 3: '/images/KREDonline_3P.png', 4: '/images/4player_board.png', 5: '/images/KREDonline_5P.png' };
-  const activeBoardImage = boardImageMap[numPlayers] || boardImageMap[3];
+  const activeBoardImage = getBoardImageUrl(numPlayers);
 
   const activePendingPlayer = getPendingPlayActivePlayer(G);
   const isPendingActiveMe = G?.pendingPlay && String(activePendingPlayer) === String(playerID);

@@ -1,0 +1,48 @@
+{
+  "id": "kred",
+  "name": "KRED",
+  "description": "Multiplayer board game of deception, political influence, and strategy.",
+  "playerCounts": [3, 4, 5],
+  "minPlayers": 3,
+  "maxPlayers": 5,
+  "version": "2.0.0",
+  "status": "active",
+  "author": "The Flying Dutchmen",
+  "tags": [
+    "strategy",
+    "bluffing",
+    "board",
+    "political"
+  ],
+  "modes": [
+    {
+      "id": "standard",
+      "name": "Standard",
+      "description": "Standard 3-5 player campaign with full drafting and bureaucracy phases.",
+      "isDefault": true
+    },
+    {
+      "id": "quick",
+      "name": "Quick (Skip Draft)",
+      "description": "Faster game with pre-dealt cards, skipping the draft phase."
+    }
+  ],
+  "devTools": [
+    {
+      "id": "kred-test-runner",
+      "name": "Standalone Pass & Play",
+      "icon": "bi-play-circle-fill",
+      "url": "/game_modules/kred/dist/index.html",
+      "description": "Local test mode with multi-perspective switcher & calibration",
+      "badge": "Test Mode"
+    },
+    {
+      "id": "kred-logs",
+      "name": "Webhook & Build Logs",
+      "icon": "bi-journal-code",
+      "url": "/api/webhooks/kred/logs",
+      "description": "View automated GitHub deployment logs and diagnostics",
+      "badge": "Logs"
+    }
+  ]
+}

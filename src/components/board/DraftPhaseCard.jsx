@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { executeOnlineDraftTileSelect, executeOnlineSkipDraft } from '../../domain/phases/draftPhase.js';
+import { getTileImageUrl } from '../../utils/assets.js';
 
 export function DraftPhaseCard({
   G,
@@ -103,7 +104,7 @@ export function DraftPhaseCard({
                   style={{ pointerEvents: isSubmitting ? 'none' : 'auto' }}
                 >
                   <img
-                    src={`/images/${tileId}.svg`}
+                    src={getTileImageUrl(tileId)}
                     alt={tileId === 'BLANK' ? '' : `Tile ${tileId}`}
                     className="tile-svg"
                   />

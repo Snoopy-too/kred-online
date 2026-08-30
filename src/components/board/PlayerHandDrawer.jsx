@@ -1,4 +1,5 @@
 import React from 'react';
+import { getTileImageUrl } from '../../utils/assets.js';
 
 export function PlayerHandDrawer({ myPlayer, selectedTileId, onSelectTile, disabled = false }) {
   const hand = (myPlayer && myPlayer.hand) || [];
@@ -25,9 +26,9 @@ export function PlayerHandDrawer({ myPlayer, selectedTileId, onSelectTile, disab
                 title={tileId === 'BLANK' ? 'Click to play Blank Tile' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Click to play Tile ${tileId}`}
               >
                 {tileId === 'HIDDEN' ? (
-                  <img src="/images/tile_back.svg" alt="Opponent Tile" className="hand-tile-img" />
+                  <img src={getTileImageUrl(null)} alt="Opponent Tile" className="hand-tile-img" />
                 ) : (
-                  <img src={`/images/${tileId}.svg`} alt={tileId === 'BLANK' ? '' : `Tile ${tileId}`} className="hand-tile-img" />
+                  <img src={getTileImageUrl(tileId)} alt={tileId === 'BLANK' ? '' : `Tile ${tileId}`} className="hand-tile-img" />
                 )}
                 {isSelected && (
                   <div className="tile-selected-badge-under">

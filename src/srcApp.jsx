@@ -10,6 +10,7 @@ import { OnlineGameContext } from './context/OnlineGameContext.jsx';
 import { supabase, ensureAnonymousAuth } from './lib/supabaseClient.js';
 import { GameLogger } from '../diagnostics/gameLogger.js';
 import { DiagnosticsPanel } from '../diagnostics/DiagnosticsPanel.jsx';
+import { getAssetUrl } from './utils/assets.js';
 import './styles/base.css';
 import './styles/board.css';
 import './styles/controls.css';
@@ -254,7 +255,7 @@ export function KredApp() {
       <div className="landing-screen">
         <div className="landing-card">
           <div className="landing-logo">
-            <img src="/images/logo.png" alt="KRED" className="landing-logo-img" />
+            <img src={getAssetUrl('images/logo.png')} alt="KRED" className="landing-logo-img" />
             <p className="landing-subtitle">Multiplayer Board Game of Deception & Strategy</p>
           </div>
 

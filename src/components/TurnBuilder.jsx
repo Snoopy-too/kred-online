@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TILES } from '../domain/types.js';
 import { classifyPlay } from '../domain/moves.js';
 import { ConfirmModal } from './board/ConfirmModal.jsx';
+import { getTileImageUrl } from '../utils/assets.js';
 
 export function TurnBuilder({
   selectedTileId,
@@ -76,7 +77,7 @@ export function TurnBuilder({
       {/* Tile Info Banner for Re-Execution */}
       {isReexecuting && tileData && (
         <div className="reexecute-tile-banner">
-          <img src={`/images/${selectedTileId}.svg`} alt={selectedTileId === 'BLANK' ? '' : `Tile ${selectedTileId}`} className="tile-banner-svg" />
+          <img src={getTileImageUrl(selectedTileId)} alt={selectedTileId === 'BLANK' ? '' : `Tile ${selectedTileId}`} className="tile-banner-svg" />
           <div className="tile-banner-info">
             <span className="tile-banner-title">Required Tile: {tileData.name} ({selectedTileId})</span>
             <span className="tile-banner-desc">Allowed Moves: {tileData.moves.join(', ')}</span>

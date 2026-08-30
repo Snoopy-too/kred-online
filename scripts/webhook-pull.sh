@@ -56,6 +56,10 @@ NODE_ENV=development npm install --include=dev --no-audit --no-fund --prefer-off
 export PATH="$REPO_DIR/node_modules/.bin:$PATH"
 
 log "🔨 Building KRED game module bundle..."
+if [ -f "$REPO_DIR/scripts/build-server-game.mjs" ]; then
+  node "$REPO_DIR/scripts/build-server-game.mjs"
+fi
+
 if [ -f "$REPO_DIR/scripts/build-module.mjs" ]; then
   node "$REPO_DIR/scripts/build-module.mjs"
 elif npm run | grep -q "build:module"; then

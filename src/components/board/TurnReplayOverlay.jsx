@@ -1,5 +1,6 @@
 import React from 'react';
 import { PIECE_TYPES } from '../../domain/types.js';
+import { getPieceIconUrl, getAssetUrl } from '../../utils/assets.js';
 
 export function TurnReplayOverlay({
   animatingPiece,
@@ -11,16 +12,8 @@ export function TurnReplayOverlay({
     ? { transform: `rotate(${-perspectiveRotation}deg)` }
     : {};
 
-  let iconSrc = '/images/mark-transparent_bg.png';
-  let isPawn = false;
-  if (animatingPiece) {
-    if (animatingPiece.pieceType === PIECE_TYPES.HEEL) {
-      iconSrc = '/images/heel-transparent_bg.png';
-    } else if (animatingPiece.pieceType === PIECE_TYPES.PAWN) {
-      iconSrc = '/images/pawn-transparent_bg.png';
-      isPawn = true;
-    }
-  }
+  const isPawn = animatingPiece?.pieceType === PIECE_TYPES.PAWN;
+  const iconSrc = animatingPiece ? getPieceIconUrl(animatingPiece.pieceType, isPawn) : getPieceIconUrl('Mark');
 
   const isPreGlow = animatingPiece?.phase === 'PRE_GLOW';
   const isWalking = animatingPiece?.phase === 'WALKING';
@@ -83,7 +76,7 @@ export function TurnReplayOverlay({
           }}
         >
           <img
-            src="/images/tile_back.svg"
+            src={getAssetUrl('images/tile_back.svg')}
             alt="Tile Traveling Face-Down"
             className="domino-tile-svg"
           />

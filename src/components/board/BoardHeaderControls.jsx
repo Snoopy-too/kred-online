@@ -1,4 +1,5 @@
 import React from 'react';
+import { getAssetUrl } from '../../utils/assets.js';
 
 export function BoardHeaderControls({
   currentPhase,
@@ -11,7 +12,7 @@ export function BoardHeaderControls({
   return (
     <header className="kred-header">
       <div className="logo-brand">
-        <img src="/images/logo.png" alt="KRED" className="logo-img" />
+        <img src={getAssetUrl('images/logo.png')} alt="KRED" className="logo-img" />
         <div className="brand-text">
           <span className="subtitle">Deception & Strategy</span>
         </div>

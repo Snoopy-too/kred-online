@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:server": "node scripts/build-server-game.mjs",
+    "build:all": "vite build && node scripts/build-server-game.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

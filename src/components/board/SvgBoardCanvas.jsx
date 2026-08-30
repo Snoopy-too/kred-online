@@ -4,15 +4,9 @@ import { getPerspectiveTransform } from './perspectiveUtils.js';
 import { isCommunityPieceAvailable } from '../../domain/moves.js';
 import { TurnReplayOverlay } from './TurnReplayOverlay.jsx';
 import { CalibrationSpotOverlay } from './CalibrationSpotOverlay.jsx';
+import { getAssetUrl, getTileImageUrl, getPieceIconUrl, getCredibilityIconUrl } from '../../utils/assets.js';
 
-
-const getTileSvgPath = (tileId) => {
-  if (!tileId) return '/images/tile_back.svg';
-  if (tileId === 'BLANK') return '/images/BLANK.svg';
-  const numStr = String(tileId).replace(/^0+/, '');
-  const paddedId = numStr.padStart(2, '0');
-  return `/images/${paddedId}.svg`;
-};
+const getTileSvgPath = (tileId) => getTileImageUrl(tileId);
 
 export function SvgBoardCanvas({
   activeBoardImage,
@@ -75,11 +69,8 @@ export function SvgBoardCanvas({
 
   const renderPiece = (piece) => {
     if (!piece) return null;
-    let iconSrc = '';
     const isPawn = piece.type === PIECE_TYPES.PAWN;
-    if (piece.type === PIECE_TYPES.MARK) iconSrc = '/images/mark-transparent_bg.png';
-    if (piece.type === PIECE_TYPES.HEEL) iconSrc = '/images/heel-transparent_bg.png';
-    if (isPawn) iconSrc = '/images/pawn-transparent_bg.png';
+    const iconSrc = getPieceIconUrl(piece.type, isPawn);
 
     return (
       <div className="piece-token-board" style={counterRotationStyle} title={`${piece.type}`}>
@@ -155,7 +146,7 @@ export function SvgBoardCanvas({
               title={`Player ${domainNum} Credibility: ${credScore}/3`}
             >
               <img
-                src={`/images/${credScore}_credibility.svg`}
+                src={getCredibilityIconUrl(credScore)}
                 alt={`Player ${domainNum} Credibility: ${credScore}`}
                 className="cred-token-img"
               />
@@ -223,7 +214,7 @@ export function SvgBoardCanvas({
                    />
                  ) : (
                    <img
-                     src="/images/tile_back.svg"
+                     src={getAssetUrl('images/tile_back.svg')}
                      alt="Tile Played Face-Down"
                      title={isSelfReceiver ? "Click to flip & view tile privately" : isStagedReceiver ? `Tile staged face-down for ${pLabel}` : "Tile Played Face-Down"}
                      className="domino-tile-svg"
@@ -287,7 +278,7 @@ export function SvgBoardCanvas({
                   title={`Bank Spot ${slotIdx + 1} (Face-Down)`}
                 >
                   <img
-                    src="/images/tile_back.svg"
+                    src={getAssetUrl('images/tile_back.svg')}
                     alt="Tile Back"
                     className="domino-tile-svg"
                   />

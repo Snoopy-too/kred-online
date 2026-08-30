@@ -1,4 +1,5 @@
 import React from 'react';
+import { getCredibilityIconUrl } from '../../utils/assets.js';
 
 export function CalibrationSpotOverlay({
   locKey,
@@ -74,7 +75,7 @@ export function CalibrationSpotOverlay({
           title={`${locKey} - Click to select, drag to move, scroll wheel to rotate`}
         >
           <img
-            src="/images/3_credibility.svg"
+            src={getCredibilityIconUrl(3)}
             alt="Cred Token Preview"
             className="cred-token-img"
             style={{ pointerEvents: 'none', userSelect: 'none' }}
