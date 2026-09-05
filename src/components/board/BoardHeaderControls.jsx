@@ -14,7 +14,7 @@ export function BoardHeaderControls({
       <div className="logo-brand">
         <img src={getAssetUrl('images/logo.png')} alt="KRED" className="logo-img" />
         <div className="brand-text">
-          <span className="subtitle">Strategy & Deception</span>
+          <span className="subtitle">Deception & Strategy</span>
         </div>
       </div>
 

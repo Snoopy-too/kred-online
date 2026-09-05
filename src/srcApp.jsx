@@ -256,7 +256,7 @@ export function KredApp() {
         <div className="landing-card">
           <div className="landing-logo">
             <img src={getAssetUrl('images/logo.png')} alt="KRED" className="landing-logo-img" />
-            <p className="landing-subtitle">Multiplayer Board Game of Strategy & Deception</p>
+            <p className="landing-subtitle">Multiplayer Board Game of Deception & Strategy</p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '24px' }}>
