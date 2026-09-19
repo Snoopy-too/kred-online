@@ -1,46 +1,120 @@
-import { generateCommunityHotspots } from './geometryUtils.js';
-
 export function get5PHotspots() {
-  const hotspots = {};
-  const cx = 48, cy = 48;
-  const angles = { p1: 342, p2: 270, p3: 198, p4: 126, p5: 54 };
-  const rSeat = 17, rRostrum = 23, rOffice = 32;
+  return {
+    "p1_office": { "left": "40.90%", "top": "13.58%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_rostrum1": { "left": "26.33%", "top": "35.18%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_rostrum2": { "left": "43.51%", "top": "21.91%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_seat1": { "left": "31.53%", "top": "38.37%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_seat2": { "left": "33.14%", "top": "35.41%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_seat3": { "left": "35.69%", "top": "31.53%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_seat4": { "left": "38.62%", "top": "29.20%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_seat5": { "left": "42.60%", "top": "28.05%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_seat6": { "left": "46.83%", "top": "27.72%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_bank1": { "left": "22.50%", "top": "25.05%", "rot": 303, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(303deg) scale(1.3)" },
+    "p1_bank2": { "left": "24.71%", "top": "21.44%", "rot": 303, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(303deg) scale(1.3)" },
+    "p1_bank3": { "left": "26.90%", "top": "18.01%", "rot": 303, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(303deg) scale(1.3)" },
+    "p1_bank4": { "left": "29.20%", "top": "14.60%", "rot": 303, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(303deg) scale(1.3)" },
+    "p1_bank5": { "left": "31.31%", "top": "11.05%", "rot": 303, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(303deg) scale(1.3)" },
+    "p1_dropTile": { "left": "45.81%", "top": "4.60%", "rot": 341, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(341deg) scale(1.5)" },
+    "p1_cred": { "left": "20.38%", "top": "10.63%", "rot": 128, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(128deg) scale(2.25)" },
 
-  Object.entries(angles).forEach(([pKey, baseAngle]) => {
-    const getPt = (r, degOffset) => {
-      const rad = (baseAngle + degOffset) * Math.PI / 180;
-      return {
-        left: `${(cx + r * Math.sin(rad)).toFixed(2)}%`,
-        top: `${(cy - r * Math.cos(rad)).toFixed(2)}%`
-      };
-    };
+    "p2_office": { "left": "15.87%", "top": "43.73%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_rostrum1": { "left": "31.56%", "top": "64.99%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_rostrum2": { "left": "24.72%", "top": "41.66%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_seat1": { "left": "36.22%", "top": "61.23%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_seat2": { "left": "33.50%", "top": "57.99%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_seat3": { "left": "31.02%", "top": "54.48%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_seat4": { "left": "29.80%", "top": "50.63%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_seat5": { "left": "29.44%", "top": "46.28%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_seat6": { "left": "30.08%", "top": "41.91%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_bank1": { "left": "20.36%", "top": "64.99%", "rot": 50, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(50deg) scale(1.3)" },
+    "p2_bank2": { "left": "17.94%", "top": "61.84%", "rot": 50, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(50deg) scale(1.3)" },
+    "p2_bank3": { "left": "15.54%", "top": "58.64%", "rot": 50, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(50deg) scale(1.3)" },
+    "p2_bank4": { "left": "13.10%", "top": "55.55%", "rot": 50, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(50deg) scale(1.3)" },
+    "p2_bank5": { "left": "10.55%", "top": "52.37%", "rot": 50, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(50deg) scale(1.3)" },
+    "p2_dropTile": { "left": "9.09%", "top": "36.16%", "rot": 268, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(268deg) scale(1.5)" },
+    "p2_cred": { "left": "7.22%", "top": "63.02%", "rot": 51, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(51deg) scale(2.25)" },
 
-    hotspots[`${pKey}_office`] = getPt(rOffice, 0);
-    hotspots[`${pKey}_rostrum1`] = getPt(rRostrum, -20);
-    hotspots[`${pKey}_rostrum2`] = getPt(rRostrum, 20);
+    "p3_office": { "left": "35.52%", "top": "77.49%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_rostrum1": { "left": "59.57%", "top": "68.77%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_rostrum2": { "left": "37.80%", "top": "69.25%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_seat1": { "left": "57.64%", "top": "63.12%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_seat2": { "left": "54.23%", "top": "64.63%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_seat3": { "left": "50.20%", "top": "65.54%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_seat4": { "left": "45.90%", "top": "65.55%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_seat5": { "left": "42.25%", "top": "64.82%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_seat6": { "left": "38.43%", "top": "63.13%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_bank1": { "left": "56.78%", "top": "79.74%", "rot": 340, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(340deg) scale(1.3)" },
+    "p3_bank2": { "left": "52.98%", "top": "81.12%", "rot": 340, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(340deg) scale(1.3)" },
+    "p3_bank3": { "left": "49.24%", "top": "82.59%", "rot": 340, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(340deg) scale(1.3)" },
+    "p3_bank4": { "left": "45.43%", "top": "84.05%", "rot": 340, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(340deg) scale(1.3)" },
+    "p3_bank5": { "left": "41.74%", "top": "85.62%", "rot": 340, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(340deg) scale(1.3)" },
+    "p3_dropTile": { "left": "26.57%", "top": "81.79%", "rot": 15, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(15deg) scale(1.5)" },
+    "p3_cred": { "left": "50.77%", "top": "92.26%", "rot": 343, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(343deg) scale(2.25)" },
 
-    const seatOffsets = [-36, -21.6, -7.2, 7.2, 21.6, 36];
-    seatOffsets.forEach((off, i) => {
-      hotspots[`${pKey}_seat${i + 1}`] = getPt(rSeat, off);
-    });
+    "p4_office": { "left": "72.82%", "top": "68.56%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_rostrum1": { "left": "72.27%", "top": "42.77%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_rostrum2": { "left": "65.59%", "top": "64.10%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_seat1": { "left": "66.38%", "top": "42.53%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_seat2": { "left": "66.70%", "top": "46.47%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_seat3": { "left": "66.39%", "top": "50.57%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_seat4": { "left": "64.97%", "top": "54.49%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_seat5": { "left": "63.15%", "top": "57.96%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_seat6": { "left": "60.33%", "top": "60.97%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_bank1": { "left": "81.55%", "top": "52.52%", "rot": 267, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(267deg) scale(1.3)" },
+    "p4_bank2": { "left": "81.64%", "top": "56.57%", "rot": 267, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(267deg) scale(1.3)" },
+    "p4_bank3": { "left": "81.87%", "top": "60.58%", "rot": 267, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(267deg) scale(1.3)" },
+    "p4_bank4": { "left": "82.13%", "top": "64.92%", "rot": 267, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(267deg) scale(1.3)" },
+    "p4_bank5": { "left": "82.33%", "top": "69.15%", "rot": 267, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(267deg) scale(1.3)" },
+    "p4_dropTile": { "left": "74.25%", "top": "78.82%", "rot": 125, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(125deg) scale(1.5)" },
+    "p4_cred": { "left": "91.44%", "top": "58.17%", "rot": 270, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(270deg) scale(2.25)" },
 
-    for (let b = 1; b <= 5; b++) {
-      const bankOffset = -10 + (b - 1) * 5;
-      hotspots[`${pKey}_bank${b}`] = getPt(rOffice + 5, bankOffset);
-    }
+    "p5_office": { "left": "76.08%", "top": "29.29%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_rostrum1": { "left": "52.14%", "top": "22.25%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_rostrum2": { "left": "70.03%", "top": "35.84%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_seat1": { "left": "49.99%", "top": "27.50%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_seat2": { "left": "53.82%", "top": "28.35%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_seat3": { "left": "57.60%", "top": "29.65%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_seat4": { "left": "60.72%", "top": "32.89%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_seat5": { "left": "63.23%", "top": "35.98%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_seat6": { "left": "65.02%", "top": "39.51%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_bank1": { "left": "60.28%", "top": "14.72%", "rot": 14, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(14deg) scale(1.3)" },
+    "p5_bank2": { "left": "64.26%", "top": "15.85%", "rot": 14, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(14deg) scale(1.3)" },
+    "p5_bank3": { "left": "68.00%", "top": "17.05%", "rot": 14, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(14deg) scale(1.3)" },
+    "p5_bank4": { "left": "71.74%", "top": "18.00%", "rot": 14, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(14deg) scale(1.3)" },
+    "p5_bank5": { "left": "75.48%", "top": "19.12%", "rot": 14, "scale": 1.3, "transform": "translate(-50%, -50%) rotate(14deg) scale(1.3)" },
+    "p5_dropTile": { "left": "86.21%", "top": "31.32%", "rot": 52, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(52deg) scale(1.5)" },
+    "p5_cred": { "left": "72.58%", "top": "7.99%", "rot": 195, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(195deg) scale(2.25)" },
 
-    const dt = getPt(rOffice + 10, 0);
-    dt.transform = `translate(-50%, -50%) rotate(${baseAngle}deg)`;
-    hotspots[`${pKey}_dropTile`] = dt;
-
-    const cred = getPt(rOffice + 8, -25);
-    cred.rot = 0;
-    cred.scale = 1.5;
-    cred.transform = `translate(-50%, -50%) rotate(0deg) scale(1.5)`;
-    hotspots[`${pKey}_cred`] = cred;
-  });
-
-  Object.assign(hotspots, generateCommunityHotspots(30, 48, 48));
-  hotspots["community_target"] = { "left": "48.00%", "top": "48.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" };
-  return hotspots;
+    "community_1": { "left": "48.00%", "top": "43.50%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_2": { "left": "51.90%", "top": "45.75%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_3": { "left": "49.31%", "top": "49.31%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_4": { "left": "48.00%", "top": "52.50%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_5": { "left": "44.10%", "top": "50.25%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_6": { "left": "44.10%", "top": "45.75%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_7": { "left": "48.00%", "top": "38.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_8": { "left": "51.57%", "top": "41.21%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_9": { "left": "56.66%", "top": "43.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_10": { "left": "58.00%", "top": "48.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_11": { "left": "56.66%", "top": "53.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_12": { "left": "53.00%", "top": "56.66%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_13": { "left": "48.00%", "top": "58.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_14": { "left": "43.00%", "top": "56.66%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_15": { "left": "40.48%", "top": "52.34%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_16": { "left": "40.11%", "top": "48.27%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_17": { "left": "39.34%", "top": "43.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_18": { "left": "43.72%", "top": "40.35%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_19": { "left": "48.31%", "top": "34.76%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_20": { "left": "53.50%", "top": "37.29%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_21": { "left": "57.40%", "top": "39.93%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_22": { "left": "60.00%", "top": "44.17%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_23": { "left": "51.37%", "top": "53.83%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_24": { "left": "54.47%", "top": "48.36%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_25": { "left": "44.91%", "top": "53.69%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_26": { "left": "39.96%", "top": "56.65%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_27": { "left": "36.48%", "top": "51.08%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_28": { "left": "36.21%", "top": "45.64%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_29": { "left": "39.21%", "top": "39.54%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_30": { "left": "42.64%", "top": "35.73%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_target": { "left": "48.25%", "top": "46.24%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" }
+  };
 }
