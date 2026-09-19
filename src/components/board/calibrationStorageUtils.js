@@ -19,7 +19,8 @@ export const isLocalEnvironment = () => {
 };
 
 // Helper to determine if Supabase database sync is enabled and credentials are configured
-export const isDbSyncEnabled = () => {
+export const isDbSyncEnabled = (numPlayers = null) => {
+  if (numPlayers === 3) return false;
   if (isLocalEnvironment()) return false;
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -52,8 +53,8 @@ export const loadLocalCalibrationCache = (localStorageKey, offsetStorageKey) => 
 };
 
 export const syncCalibrationFromDb = async (numPlayers, localStorageKey, offsetStorageKey) => {
-  if (!isDbSyncEnabled()) {
-    console.log(`ℹ️ Bypassing database calibration for ${numPlayers}P (Local or missing/placeholder credentials).`);
+  if (numPlayers === 3 || !isDbSyncEnabled(numPlayers)) {
+    console.log(`ℹ️ Bypassing database calibration for ${numPlayers}P (Hardcoded coordinates enforced or local/placeholder credentials).`);
     return null;
   }
 
@@ -79,7 +80,7 @@ export const persistDraft = async (numPlayers, calibratedPositions, perspectiveO
 
   const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  if (isDbSyncEnabled()) {
+  if (isDbSyncEnabled(numPlayers)) {
     await saveCalibrationToDb(numPlayers, calibratedPositions, perspectiveOffsets);
     return `💾 Saved to DB & Local Drafts at ${nowStr}!`;
   }
@@ -90,10 +91,10 @@ export const resetDraft = async (numPlayers, localStorageKey, offsetStorageKey) 
   localStorage.removeItem(localStorageKey);
   localStorage.removeItem(offsetStorageKey);
 
-  if (isDbSyncEnabled()) {
+  if (isDbSyncEnabled(numPlayers)) {
     await deleteCalibrationFromDb(numPlayers);
   }
-  return isDbSyncEnabled()
+  return isDbSyncEnabled(numPlayers)
     ? '🗑️ Calibration Reset to Master Defaults (DB cleared)!'
     : '🗑️ Calibration Reset to Master Defaults locally!';
 };
@@ -115,8 +116,8 @@ export const importCalibrationJson = async (jsonString, numPlayers, localStorage
     localStorage.setItem(offsetStorageKey, JSON.stringify(nextOffsets));
   }
 
-  if (isDbSyncEnabled()) {
+  if (isDbSyncEnabled(numPlayers)) {
     await saveCalibrationToDb(numPlayers, nextHotspots, nextOffsets);
   }
-  return { nextHotspots, nextOffsets, dbSynced: isDbSyncEnabled() };
+  return { nextHotspots, nextOffsets, dbSynced: isDbSyncEnabled(numPlayers) };
 };

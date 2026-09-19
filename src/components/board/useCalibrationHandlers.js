@@ -46,6 +46,17 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
   useEffect(() => {
     let active = true;
 
+    if (numPlayers === 3) {
+      // 3-player game coordinates are hardcoded and bypass database coordinates & stale local drafts
+      setCalibratedPositions({});
+      setPerspectiveOffsets(DEFAULT_PERSPECTIVE_OFFSETS[3] || { 0: { x: 15, y: -12 } });
+      try {
+        localStorage.removeItem(localStorageKey);
+        localStorage.removeItem(offsetStorageKey);
+      } catch (e) {}
+      return;
+    }
+
     const { hotspots, offsets } = loadLocalCalibrationCache(localStorageKey, offsetStorageKey);
     if (hotspots) setCalibratedPositions(hotspots);
     if (offsets) setPerspectiveOffsets(offsets);
@@ -66,7 +77,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
   }, [numPlayers]);
 
   useEffect(() => {
-    if (Object.keys(calibratedPositions).length > 0) {
+    if (numPlayers !== 3 && Object.keys(calibratedPositions).length > 0) {
       try {
         localStorage.setItem(localStorageKey, JSON.stringify(calibratedPositions));
       } catch (err) {
@@ -95,7 +106,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
       console.error('Failed to clear database calibration:', err);
     }
     setCalibratedPositions({});
-    setPerspectiveOffsets({});
+    setPerspectiveOffsets(numPlayers === 3 ? (DEFAULT_PERSPECTIVE_OFFSETS[3] || { 0: { x: 15, y: -12 } }) : {});
     setSelectedCalibrateKeys([]);
     setTimeout(() => setDraftSavedMsg(''), 3000);
   };

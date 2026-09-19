@@ -30,9 +30,7 @@ export function getPerspectiveRotation(numPlayers, playerID) {
 
 export const DEFAULT_PERSPECTIVE_OFFSETS = {
   3: {
-    0: { x: 15, y: -12 },
-    1: { x: 1, y: -1 },
-    2: { x: 17, y: 5 }
+    0: { x: 15, y: -12 }
   },
   4: {
     0: { x: 0, y: 0 },

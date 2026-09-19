@@ -7,6 +7,9 @@ import { CalibrationDataSchema } from './lobbySchemas.js';
  * @returns {Promise<{ hotspots: object, perspective_offsets: object }|null>}
  */
 export async function fetchCalibrationFromDb(numPlayers) {
+  if (numPlayers === 3) {
+    return null;
+  }
   try {
     const { data, error } = await supabase
       .from('kred_calibrations')
