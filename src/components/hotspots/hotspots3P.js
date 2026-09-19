@@ -17,7 +17,7 @@ export function get3PHotspots() {
     "p1_bank6": { "left": "37.17%", "top": "7.04%", "rot": 0, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(0deg) scale(1.87)" },
     "p1_bank7": { "left": "32.78%", "top": "7.14%", "rot": 0, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(0deg) scale(1.87)" },
     "p1_bank8": { "left": "41.49%", "top": "7.11%", "rot": 0, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(0deg) scale(1.87)" },
-    "p1_dropTile": { "left": "16.53%", "top": "43.58%", "rot": 348, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(348deg) scale(1.85)" },
+    "p1_dropTile": { "left": "3.86%", "top": "46.89%", "rot": 348, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(348deg) scale(1.85)" },
     "p1_cred": { "left": "15.00%", "top": "18.00%", "rot": 0, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(0deg) scale(1.5)" },
 
     "p2_office": { "left": "76.24%", "top": "34.16%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
