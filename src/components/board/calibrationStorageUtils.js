@@ -18,10 +18,7 @@ export const isLocalEnvironment = () => {
   );
 };
 
-// Helper to determine if Supabase database sync is enabled
-export const isDbSyncEnabled = () => {
-  return true;
-};
+export const isDbSyncEnabled = () => false;
 
 export const loadLocalCalibrationCache = (localStorageKey, offsetStorageKey) => {
   let hotspots = null;
@@ -43,36 +40,21 @@ export const loadLocalCalibrationCache = (localStorageKey, offsetStorageKey) => 
   return { hotspots, offsets };
 };
 
-export const syncCalibrationFromDb = async (numPlayers, localStorageKey, offsetStorageKey) => {
-  if (!isDbSyncEnabled()) return null;
-
-  const dbData = await fetchCalibrationFromDb(numPlayers);
-  if (!dbData) return null;
-
-  if (dbData.hotspots && Object.keys(dbData.hotspots).length > 0) {
-    try {
-      localStorage.setItem(localStorageKey, JSON.stringify(dbData.hotspots));
-    } catch (e) {}
-  }
-  if (dbData.perspective_offsets && Object.keys(dbData.perspective_offsets).length > 0) {
-    try {
-      localStorage.setItem(offsetStorageKey, JSON.stringify(dbData.perspective_offsets));
-    } catch (e) {}
-  }
-  return dbData;
+export const syncCalibrationFromDb = async () => {
+  // Remote database sync bypassed: private server is updated via git webhook
+  return null;
 };
 
 export const persistDraft = async (numPlayers, calibratedPositions, perspectiveOffsets, localStorageKey, offsetStorageKey) => {
-  localStorage.setItem(localStorageKey, JSON.stringify(calibratedPositions));
-  localStorage.setItem(offsetStorageKey, JSON.stringify(perspectiveOffsets));
+  try {
+    localStorage.setItem(localStorageKey, JSON.stringify(calibratedPositions));
+    localStorage.setItem(offsetStorageKey, JSON.stringify(perspectiveOffsets));
+  } catch (err) {
+    console.warn('Failed to save to localStorage:', err);
+  }
 
   const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  if (isDbSyncEnabled()) {
-    await saveCalibrationToDb(numPlayers, calibratedPositions, perspectiveOffsets);
-    return `💾 Saved directly to Database & Local Drafts at ${nowStr}!`;
-  }
-  return `💾 Saved to Local Drafts at ${nowStr}!`;
+  return `💾 Saved to Local Draft at ${nowStr}!`;
 };
 
 export const resetDraft = async (numPlayers, localStorageKey, offsetStorageKey) => {

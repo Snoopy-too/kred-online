@@ -92,7 +92,7 @@ export function BoardCalibrationToolbar({
           <button className="btn btn-sm btn-secondary" onClick={() => setShowSpotLabels && setShowSpotLabels(prev => !prev)}>
             {showSpotLabels ? '🏷 Hide Labels' : '🏷 Show Labels'}
           </button>
-          <button className="btn btn-sm btn-success" onClick={handleSaveDraft} title="Save coordinates directly to Supabase database">💾 Save to DB</button>
+          <button className="btn btn-sm btn-success" onClick={handleSaveDraft} title="Save draft in browser so you can adjust and copy all JSON">💾 Save Draft</button>
           <button className="btn btn-sm btn-danger" onClick={handleResetDraft}>🗑 Reset</button>
           <button className="btn btn-sm btn-secondary" onClick={handleCopyCoordinates}>
             {copiedJson ? '✓ Copied!' : '📋 Copy All JSON'}
