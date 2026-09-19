@@ -70,12 +70,13 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   const calibration = useCalibrationHandlers(numPlayers, propCalibrationMode, baseHotspots);
 
   const activeHotspots = {};
-  for (const k in baseHotspots) {
-    const base = baseHotspots[k];
+  const allSpotKeys = new Set([...Object.keys(baseHotspots || {}), ...Object.keys(calibration.calibratedPositions || {})]);
+  for (const k of allSpotKeys) {
+    const base = baseHotspots?.[k] || {};
     const cal = calibration.calibratedPositions[k] || {};
     const merged = { ...base, ...cal };
     let rotVal = merged.rot !== undefined ? Math.round((merged.rot + 360) % 360) : 0;
-    let scaleVal = merged.scale !== undefined ? parseFloat(merged.scale.toFixed(2)) : 1.0;
+    let scaleVal = merged.scale !== undefined ? parseFloat(Number(merged.scale).toFixed(2)) : 1.0;
     merged.rot = rotVal;
     merged.scale = scaleVal;
     merged.transform = `translate(-50%, -50%) rotate(${rotVal}deg) scale(${scaleVal})`;

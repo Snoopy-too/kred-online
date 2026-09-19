@@ -16,7 +16,7 @@ import {
   calculateRotatedSpotsAroundCenter
 } from './calibrationTransformUtils.js';
 
-export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHotspots) {
+export function useCalibrationHandlers(numPlayers, propCalibrationMode, baseHotspots) {
   const [calibrationMode, setCalibrationMode] = useState(window.KRED_CALIBRATION_MODE || propCalibrationMode || false);
   const [showSpotLabels, setShowSpotLabels] = useState(true);
   const [calibratedPositions, setCalibratedPositions] = useState({});
@@ -31,6 +31,23 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
   const localStorageKey = `kred_calibration_draft_${numPlayers}P`;
   const offsetStorageKey = `kred_perspective_offsets_${numPlayers}P`;
 
+  const getCurrentHotspots = () => {
+    const merged = {};
+    const allKeys = new Set([...Object.keys(baseHotspots || {}), ...Object.keys(calibratedPositions || {})]);
+    for (const k of allKeys) {
+      const base = (baseHotspots && baseHotspots[k]) || {};
+      const cal = calibratedPositions[k] || {};
+      const spot = { ...base, ...cal };
+      let rotVal = spot.rot !== undefined ? Math.round((spot.rot + 360) % 360) : 0;
+      let scaleVal = spot.scale !== undefined ? parseFloat(Number(spot.scale).toFixed(2)) : 1.0;
+      spot.rot = rotVal;
+      spot.scale = scaleVal;
+      spot.transform = `translate(-50%, -50%) rotate(${rotVal}deg) scale(${scaleVal})`;
+      merged[k] = spot;
+    }
+    return merged;
+  };
+
   useEffect(() => {
     if (propCalibrationMode !== undefined) {
       setCalibrationMode(propCalibrationMode);
@@ -42,27 +59,11 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     window.setCalibrationMode = setCalibrationMode;
   }, [calibrationMode]);
 
-  // Consolidated Initial Load: Load local storage first, then fetch/sync from database (if online)
+  // Consolidated Initial Load: Load local storage first
   useEffect(() => {
-    let active = true;
-
     const { hotspots, offsets } = loadLocalCalibrationCache(localStorageKey, offsetStorageKey);
-    if (hotspots) setCalibratedPositions(hotspots);
-    if (offsets) setPerspectiveOffsets(offsets);
-
-    async function syncDb() {
-      const dbData = await syncCalibrationFromDb(numPlayers, localStorageKey, offsetStorageKey);
-      if (!active || !dbData) return;
-      if (dbData.hotspots && Object.keys(dbData.hotspots).length > 0) {
-        setCalibratedPositions(dbData.hotspots);
-      }
-      if (dbData.perspective_offsets && Object.keys(dbData.perspective_offsets).length > 0) {
-        setPerspectiveOffsets(dbData.perspective_offsets);
-      }
-    }
-
-    syncDb();
-    return () => { active = false; };
+    if (hotspots && Object.keys(hotspots).length > 0) setCalibratedPositions(hotspots);
+    if (offsets && Object.keys(offsets).length > 0) setPerspectiveOffsets(offsets);
   }, [numPlayers]);
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
 
   const handleSaveDraft = async () => {
     try {
-      const msg = await persistDraft(numPlayers, activeHotspots, perspectiveOffsets, localStorageKey, offsetStorageKey);
+      const msg = await persistDraft(numPlayers, calibratedPositions, perspectiveOffsets, localStorageKey, offsetStorageKey);
       setDraftSavedMsg(msg);
       setTimeout(() => setDraftSavedMsg(''), 3500);
     } catch (err) {
@@ -101,7 +102,8 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
   };
 
   const handleCopyCoordinates = () => {
-    const exportPayload = { hotspots: activeHotspots, perspectiveOffsets };
+    const currentHotspots = getCurrentHotspots();
+    const exportPayload = { hotspots: currentHotspots, perspectiveOffsets };
     navigator.clipboard.writeText(JSON.stringify(exportPayload, null, 2));
     setCopiedJson(true);
     setTimeout(() => setCopiedJson(false), 3000);
@@ -126,7 +128,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
   useEffect(() => {
     if (selectedCalibrateKeys && selectedCalibrateKeys.length > 0) {
       const key = selectedCalibrateKeys[0];
-      const base = (activeHotspots && activeHotspots[key]) || {};
+      const base = (baseHotspots && baseHotspots[key]) || {};
       const cal = calibratedPositions[key] || {};
       const spot = { ...base, ...cal };
       let rotVal = spot.rot;
@@ -148,7 +150,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
     const targetKeys = customKeys || selectedCalibrateKeys;
     if (!targetKeys || targetKeys.length === 0) return;
     setCalibratedPositions(prev => {
-      const { nextCal, lastRot } = calculateRotatedSpots(prev, activeHotspots, targetKeys, deltaAngle);
+      const { nextCal, lastRot } = calculateRotatedSpots(prev, baseHotspots, targetKeys, deltaAngle);
       if (lastRot !== null) setAngleInput(String(lastRot));
       return nextCal;
     });
@@ -156,13 +158,13 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
 
   const handleSetExactAngle = (angleVal) => {
     if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
-    setCalibratedPositions(prev => calculateExactAngleSpots(prev, activeHotspots, selectedCalibrateKeys, angleVal));
+    setCalibratedPositions(prev => calculateExactAngleSpots(prev, baseHotspots, selectedCalibrateKeys, angleVal));
   };
 
   const handleScaleSelectedSpots = (deltaScale) => {
     if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
     setCalibratedPositions(prev => {
-      const { nextCal, lastScale } = calculateScaledSpots(prev, activeHotspots, selectedCalibrateKeys, deltaScale);
+      const { nextCal, lastScale } = calculateScaledSpots(prev, baseHotspots, selectedCalibrateKeys, deltaScale);
       if (lastScale !== null) setScaleInput(String(lastScale));
       return nextCal;
     });
@@ -170,7 +172,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
 
   const handleSetExactScale = (scaleVal) => {
     if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
-    setCalibratedPositions(prev => calculateExactScaleSpots(prev, activeHotspots, selectedCalibrateKeys, scaleVal));
+    setCalibratedPositions(prev => calculateExactScaleSpots(prev, baseHotspots, selectedCalibrateKeys, scaleVal));
   };
 
   const handleBoardMouseDown = (e, locKey, leftStr, topStr, perspectiveRotation = 0, zoomLevel = 1) => {
@@ -194,7 +196,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
 
     const startPositions = {};
     targetKeys.forEach(k => {
-      const base = (activeHotspots && activeHotspots[k]) || {};
+      const base = (baseHotspots && baseHotspots[k]) || {};
       const cal = calibratedPositions[k] || {};
       const currentSpot = { ...base, ...cal };
       const startLeft = (k === locKey && leftStr) ? leftStr : (currentSpot.left || '50');
@@ -244,7 +246,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
         dragState.keys.forEach(k => {
           const start = dragState.startPositions[k];
           if (start) {
-            const initial = start.initialSpot || activeHotspots[k] || {};
+            const initial = start.initialSpot || (baseHotspots && baseHotspots[k]) || {};
             nextCal[k] = {
               ...initial,
               ...(prev[k] || {}),
@@ -266,7 +268,7 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [dragState, activeHotspots]);
+  }, [dragState, baseHotspots]);
 
   const handleBoardMouseMove = () => {};
   const handleBoardMouseUp = () => {};
@@ -314,12 +316,12 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, activeHo
 
   const handleNudgeSelectedSpotsPixels = (dxPx, dyPx) => {
     if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
-    setCalibratedPositions(prev => calculateNudgedSpotsPixels(prev, activeHotspots, selectedCalibrateKeys, dxPx, dyPx));
+    setCalibratedPositions(prev => calculateNudgedSpotsPixels(prev, baseHotspots, selectedCalibrateKeys, dxPx, dyPx));
   };
 
   const handleRotateSelectedSpotsAroundCenter = (deltaAngle) => {
     if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
-    setCalibratedPositions(prev => calculateRotatedSpotsAroundCenter(prev, activeHotspots, selectedCalibrateKeys, deltaAngle));
+    setCalibratedPositions(prev => calculateRotatedSpotsAroundCenter(prev, baseHotspots, selectedCalibrateKeys, deltaAngle));
   };
 
   return {
