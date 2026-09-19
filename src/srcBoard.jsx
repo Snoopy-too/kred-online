@@ -188,6 +188,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         copiedJson={calibration.copiedJson}
         showSpotLabels={calibration.showSpotLabels}
         setShowSpotLabels={calibration.setShowSpotLabels}
+        showTileFaces={calibration.showTileFaces}
+        setShowTileFaces={calibration.setShowTileFaces}
         handleNudgeSelectedSpotsPixels={calibration.handleNudgeSelectedSpotsPixels}
         handleRotateSelectedSpotsAroundCenter={calibration.handleRotateSelectedSpotsAroundCenter}
       />
@@ -209,6 +211,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
               handleRotateSelectedSpots={calibration.handleRotateSelectedSpots}
               G={G}
               showSpotLabels={calibration.showSpotLabels}
+              showTileFaces={calibration.showTileFaces}
               perspectiveRotation={perspectiveRotation}
               playerID={playerID}
               perspectiveOffsets={calibration.perspectiveOffsets}

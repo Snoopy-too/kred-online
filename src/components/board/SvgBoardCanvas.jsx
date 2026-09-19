@@ -24,6 +24,7 @@ export function SvgBoardCanvas({
   selectedTo,
   G,
   showSpotLabels = true,
+  showTileFaces = true,
   perspectiveRotation = 0,
   playerID = 0,
   perspectiveOffsets = {},
@@ -118,6 +119,7 @@ export function SvgBoardCanvas({
               perspectiveRotation={perspectiveRotation}
               zoomLevel={zoomLevel}
               showSpotLabels={showSpotLabels}
+              showTileFaces={showTileFaces}
               counterRotationStyle={counterRotationStyle}
               getShortLabel={getShortLabel}
             />

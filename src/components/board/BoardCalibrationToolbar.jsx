@@ -30,6 +30,8 @@ export function BoardCalibrationToolbar({
   copiedJson,
   showSpotLabels,
   setShowSpotLabels,
+  showTileFaces,
+  setShowTileFaces,
   handleNudgeSelectedSpotsPixels,
   handleRotateSelectedSpotsAroundCenter
 }) {
@@ -91,6 +93,13 @@ export function BoardCalibrationToolbar({
         <div className="cal-top-actions">
           <button className="btn btn-sm btn-secondary" onClick={() => setShowSpotLabels && setShowSpotLabels(prev => !prev)}>
             {showSpotLabels ? '🏷 Hide Labels' : '🏷 Show Labels'}
+          </button>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => setShowTileFaces && setShowTileFaces(prev => !prev)}
+            title="Toggle Tile Art Preview vs Schematic Top/Bottom indicators"
+          >
+            {showTileFaces ? '🎴 Tile Art: ON' : '📐 Tile Art: OFF'}
           </button>
           <button className="btn btn-sm btn-success" onClick={handleSaveDraft} title="Save draft in browser so you can adjust and copy all JSON">💾 Save Draft</button>
           <button className="btn btn-sm btn-danger" onClick={handleResetDraft}>🗑 Reset</button>
@@ -242,6 +251,14 @@ export function BoardCalibrationToolbar({
             <button className="btn btn-xs" onClick={() => handleRotateSelectedSpots(1)}>+1°</button>
             <button className="btn btn-xs" onClick={() => handleRotateSelectedSpots(5)}>+5°</button>
             <button className="btn btn-xs" onClick={() => handleRotateSelectedSpots(45)}>+45°</button>
+            <button
+              className="btn btn-xs btn-primary"
+              onClick={() => handleRotateSelectedSpots(180)}
+              title="Flip selected tile(s) 180°"
+              style={{ fontWeight: 'bold' }}
+            >
+              🔄 Flip 180°
+            </button>
             <input
               type="number"
               placeholder="deg"

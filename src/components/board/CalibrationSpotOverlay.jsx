@@ -1,5 +1,5 @@
 import React from 'react';
-import { getCredibilityIconUrl } from '../../utils/assets.js';
+import { getCredibilityIconUrl, getTileImageUrl } from '../../utils/assets.js';
 
 export function CalibrationSpotOverlay({
   locKey,
@@ -12,6 +12,7 @@ export function CalibrationSpotOverlay({
   perspectiveRotation,
   zoomLevel,
   showSpotLabels,
+  showTileFaces = true,
   counterRotationStyle,
   getShortLabel
 }) {
@@ -57,7 +58,30 @@ export function CalibrationSpotOverlay({
           onMouseDown={(e) => handleBoardMouseDown(e, locKey, coords.left, coords.top, perspectiveRotation, zoomLevel)}
           onWheel={handleWheel}
           title={`${locKey} - Click to select, drag to move, scroll wheel to rotate`}
-        />
+        >
+          <div className="tile-placeholder-content">
+            {showTileFaces ? (
+              <React.Fragment>
+                <img
+                  src={getTileImageUrl('01')}
+                  alt="Tile Face Preview"
+                  className="tile-placeholder-img"
+                  draggable={false}
+                />
+                <div className="tile-orientation-top-badge">▲ TOP</div>
+              </React.Fragment>
+            ) : (
+              <div className="tile-orientation-schematic">
+                <div className="tile-orientation-half-top">
+                  <span className="tile-top-text">▲ TOP</span>
+                </div>
+                <div className="tile-orientation-half-bot">
+                  <span className="tile-bot-text">▼ BOT</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {isCredSpot && (

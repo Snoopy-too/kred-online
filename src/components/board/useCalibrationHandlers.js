@@ -19,6 +19,7 @@ import {
 export function useCalibrationHandlers(numPlayers, propCalibrationMode, baseHotspots) {
   const [calibrationMode, setCalibrationMode] = useState(window.KRED_CALIBRATION_MODE || propCalibrationMode || false);
   const [showSpotLabels, setShowSpotLabels] = useState(true);
+  const [showTileFaces, setShowTileFaces] = useState(true);
   const [calibratedPositions, setCalibratedPositions] = useState({});
   const [selectedCalibrateKeys, setSelectedCalibrateKeys] = useState([]);
   const [angleInput, setAngleInput] = useState('');
@@ -329,6 +330,8 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, baseHots
     setCalibrationMode,
     showSpotLabels,
     setShowSpotLabels,
+    showTileFaces,
+    setShowTileFaces,
     calibratedPositions,
     setCalibratedPositions,
     selectedCalibrateKeys,
