@@ -101,6 +101,11 @@ export function initBureaucracy(G) {
 
 export function cleanupBureaucracy(G) {
   if (!G || !G.players) return;
+  // Bureaucracy-scoped turn state dies here: the phase guard in
+  // executeOnlineBureaucracyAction/EndBureaucracyTurn keys off these markers,
+  // so a stale order must never survive into the next campaign.
+  delete G.bureaucracyTurnOrder;
+  delete G.bureaucracyTurnIndex;
   // Return bank tiles to hands for next campaign
   Object.keys(G.players).forEach(pId => {
     if (G.players[pId].bank) {
