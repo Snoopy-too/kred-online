@@ -9,7 +9,8 @@
     "build:server": "node scripts/build-server-game.mjs",
     "build:all": "vite build && node scripts/build-server-game.mjs",
     "preview": "vite preview",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "arena": "node test/jev-arena/cli.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
