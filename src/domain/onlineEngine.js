@@ -57,6 +57,12 @@ export function executeOnlineCampaignTurn(effectiveG, playerID, payload, updateM
 
   if (!effectiveG.players[moverId] || !effectiveG.players[moverId].hand.includes(tileId)) return;
 
+  // TURN GUARD (ported from Apr Exp 2 on branch-de-escalante): only the current
+  // mover may submit a campaign turn. nextMoverId is unset before the first
+  // turn — skip the check then rather than blocking the game open.
+  if (effectiveG.nextMoverId !== undefined && effectiveG.nextMoverId !== null &&
+      String(effectiveG.nextMoverId) !== moverId) return;
+
   const nextG = JSON.parse(JSON.stringify(effectiveG));
   const tilesPerPlayer = (INITIAL_PIECE_COUNTS[nextG.numPlayers] || INITIAL_PIECE_COUNTS[3]).TILES_PER_PLAYER;
   const receiverBank = nextG.players[receiverId]?.bank || [];
@@ -433,7 +439,21 @@ export function executeOnlineBureaucracyAction(effectiveG, playerID, actionPaylo
   const pData = nextG.players[pId];
   if (!pData) return;
 
+  // PHASE GUARD (ported from Apr Exp 2): bureaucracy actions only run while a
+  // bureaucracy is open. cleanupBureaucracy deletes the markers, so a stale
+  // order array can never satisfy this.
+  if (!Array.isArray(nextG.bureaucracyTurnOrder)) return;
+
   const { actionType, fromLoc, toLoc, shopCost = 0 } = actionPayload;
+
+  // OWNERSHIP GUARD: a player may only promote their own pieces. Piece keys
+  // are prefixed pN_ where N is the 1-based player number. Refuse before any
+  // mutation so a rejected move can never cost funding.
+  if (actionType === 'PROMOTE_SEAT_TO_ROSTRUM' && fromLoc && toLoc) {
+    const piece = nextG.boardState[fromLoc];
+    const ownerPrefix = `p${parseInt(pId, 10) + 1}_`;
+    if (!piece || !fromLoc.startsWith(ownerPrefix)) return;
+  }
 
   if (shopCost > 0) {
     pData.funding = Math.max(0, (pData.funding || 0) - shopCost);
@@ -443,11 +463,9 @@ export function executeOnlineBureaucracyAction(effectiveG, playerID, actionPaylo
     pData.credibilityNotchesLost = Math.max(0, (pData.credibilityNotchesLost || 0) - 1);
   } else if (actionType === 'PROMOTE_SEAT_TO_ROSTRUM' && fromLoc && toLoc) {
     const piece = nextG.boardState[fromLoc];
-    if (piece) {
-      nextG.boardState[toLoc] = piece;
-      nextG.boardState[fromLoc] = null;
-      nextG.boardState = enforceSupportRule(nextG.boardState, nextG.numPlayers);
-    }
+    nextG.boardState[toLoc] = piece;
+    nextG.boardState[fromLoc] = null;
+    nextG.boardState = enforceSupportRule(nextG.boardState, nextG.numPlayers);
   }
 
   updateMasterGameState(nextG, 'bureaucracy');
@@ -457,6 +475,12 @@ export function executeOnlineEndBureaucracyTurn(effectiveG, playerID, updateMast
   if (!effectiveG || !updateMasterGameState) return;
   const pId = String(playerID);
   const nextG = JSON.parse(JSON.stringify(effectiveG));
+
+  // PHASE + ACTOR GUARD: only during an open bureaucracy, and only the player
+  // whose turn it is may end it — otherwise one client can skip others ahead.
+  if (!Array.isArray(nextG.bureaucracyTurnOrder)) return;
+  const current = nextG.bureaucracyTurnOrder[nextG.bureaucracyTurnIndex || 0];
+  if (String(current) !== pId) return;
 
   const np = nextG.numPlayers || 3;
   const nextP = getNextPlayer(pId, np);
