@@ -16,7 +16,7 @@ export function get4PHotspots() {
     "p1_bank5": { "left": "61.68%", "top": "21.25%", "rot": 203, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(203deg) scale(1.35)" },
     "p1_bank6": { "left": "65.34%", "top": "22.80%", "rot": 203, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(203deg) scale(1.35)" },
     "p1_dropTile": { "left": "31.56%", "top": "23.65%", "rot": 217, "scale": 1.6, "transform": "translate(-50%, -50%) rotate(217deg) scale(1.6)" },
-    "p1_cred": { "left": "59.81%", "top": "10.30%", "rot": 200, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(200deg) scale(2.2)" },
+    "p1_cred": { "left": "59.81%", "top": "10.30%", "rot": 20, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(20deg) scale(2.2)" },
 
     "p2_office": { "left": "76.10%", "top": "41.12%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p2_rostrum1": { "left": "68.22%", "top": "35.33%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -34,7 +34,7 @@ export function get4PHotspots() {
     "p2_bank5": { "left": "78.55%", "top": "61.70%", "rot": 292, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(292deg) scale(1.35)" },
     "p2_bank6": { "left": "77.11%", "top": "65.37%", "rot": 292, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(292deg) scale(1.35)" },
     "p2_dropTile": { "left": "75.44%", "top": "31.09%", "rot": 307, "scale": 1.6, "transform": "translate(-50%, -50%) rotate(307deg) scale(1.6)" },
-    "p2_cred": { "left": "89.44%", "top": "60.04%", "rot": 290, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(290deg) scale(2.2)" },
+    "p2_cred": { "left": "89.44%", "top": "60.04%", "rot": 110, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(110deg) scale(2.2)" },
 
     "p3_office": { "left": "58.89%", "top": "76.56%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p3_rostrum1": { "left": "64.56%", "top": "68.22%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -52,7 +52,7 @@ export function get4PHotspots() {
     "p3_bank5": { "left": "38.44%", "top": "79.26%", "rot": 20, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(20deg) scale(1.35)" },
     "p3_bank6": { "left": "34.69%", "top": "77.80%", "rot": 20, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(20deg) scale(1.35)" },
     "p3_dropTile": { "left": "68.43%", "top": "76.69%", "rot": 37, "scale": 1.6, "transform": "translate(-50%, -50%) rotate(37deg) scale(1.6)" },
-    "p3_cred": { "left": "40.42%", "top": "90.16%", "rot": 17, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(17deg) scale(2.2)" },
+    "p3_cred": { "left": "40.42%", "top": "90.16%", "rot": 197, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(197deg) scale(2.2)" },
 
     "p4_office": { "left": "23.78%", "top": "59.12%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p4_rostrum1": { "left": "31.56%", "top": "64.44%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -70,7 +70,7 @@ export function get4PHotspots() {
     "p4_bank5": { "left": "21.57%", "top": "38.60%", "rot": 112, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(112deg) scale(1.35)" },
     "p4_bank6": { "left": "22.89%", "top": "34.84%", "rot": 112, "scale": 1.35, "transform": "translate(-50%, -50%) rotate(112deg) scale(1.35)" },
     "p4_dropTile": { "left": "24.11%", "top": "69.01%", "rot": 127, "scale": 1.6, "transform": "translate(-50%, -50%) rotate(127deg) scale(1.6)" },
-    "p4_cred": { "left": "11.23%", "top": "40.51%", "rot": 115, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(115deg) scale(2.2)" },
+    "p4_cred": { "left": "11.23%", "top": "40.51%", "rot": 295, "scale": 2.2, "transform": "translate(-50%, -50%) rotate(295deg) scale(2.2)" },
 
     "community_1": { "left": "46.78%", "top": "46.83%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_2": { "left": "53.01%", "top": "47.42%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },

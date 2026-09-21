@@ -17,7 +17,7 @@ export function get3PHotspots() {
     "p1_bank6": { "left": "27.57%", "top": "5.91%", "rot": 180, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(180deg) scale(1.87)" },
     "p1_bank7": { "left": "22.15%", "top": "6.01%", "rot": 180, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(180deg) scale(1.87)" },
     "p1_bank8": { "left": "32.93%", "top": "5.99%", "rot": 180, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(180deg) scale(1.87)" },
-    "p1_dropTile": { "left": "3.80%", "top": "47.00%", "rot": 168, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(168deg) scale(1.85)" },
+    "p1_dropTile": { "left": "16.53%", "top": "43.58%", "rot": 354, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(354deg) scale(1.85)" },
     "p1_cred": { "left": "9.12%", "top": "5.50%", "rot": 312, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(312deg) scale(2.25)" },
 
     "p2_office": { "left": "75.26%", "top": "33.27%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -38,7 +38,7 @@ export function get3PHotspots() {
     "p2_bank7": { "left": "82.54%", "top": "45.73%", "rot": 300, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(300deg) scale(1.85)" },
     "p2_bank8": { "left": "79.66%", "top": "50.56%", "rot": 300, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(300deg) scale(1.85)" },
     "p2_dropTile": { "left": "60.55%", "top": "4.23%", "rot": 288, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(288deg) scale(1.85)" },
-    "p2_cred": { "left": "92.91%", "top": "28.31%", "rot": 254, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(254deg) scale(2.25)" },
+    "p2_cred": { "left": "93.47%", "top": "28.20%", "rot": 70, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(70deg) scale(2.25)" },
 
     "p3_office": { "left": "36.06%", "top": "74.45%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p3_rostrum1": { "left": "64.54%", "top": "60.38%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -58,7 +58,7 @@ export function get3PHotspots() {
     "p3_bank7": { "left": "21.84%", "top": "75.02%", "rot": 60, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(60deg) scale(1.85)" },
     "p3_bank8": { "left": "19.19%", "top": "70.27%", "rot": 60, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(60deg) scale(1.85)" },
     "p3_dropTile": { "left": "67.63%", "top": "76.13%", "rot": 48, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(48deg) scale(1.85)" },
-    "p3_cred": { "left": "31.00%", "top": "92.45%", "rot": 12, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(12deg) scale(2.25)" },
+    "p3_cred": { "left": "31.00%", "top": "92.45%", "rot": 192, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(192deg) scale(2.25)" },
 
     "community_1": { "left": "44.31%", "top": "44.39%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_2": { "left": "42.53%", "top": "38.53%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
