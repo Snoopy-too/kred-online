@@ -33,6 +33,12 @@ cd "$REPO_DIR"
 # Ensure safe git directory
 git config --global --add safe.directory "$REPO_DIR" 2>/dev/null || true
 
+# Auto-stash any dirty working tree so local changes are never lost or block updates
+if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+  log "⚠️ Uncommitted local changes detected. Auto-stashing before sync..."
+  git stash push -u -m "Auto-stashed before deploy on $(date '+%Y-%m-%d %H:%M:%S')" || true
+fi
+
 log "📥 Fetching latest commits from origin..."
 git fetch origin "$TARGET_BRANCH" || git fetch origin
 
