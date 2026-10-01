@@ -5644,6 +5644,8 @@ function initBureaucracy(G2) {
 }
 function cleanupBureaucracy(G2) {
   if (!G2 || !G2.players) return;
+  delete G2.bureaucracyTurnOrder;
+  delete G2.bureaucracyTurnIndex;
   Object.keys(G2.players).forEach((pId) => {
     if (G2.players[pId].bank) {
       G2.players[pId].hand = G2.players[pId].bank.map((b2) => b2.tileId);
