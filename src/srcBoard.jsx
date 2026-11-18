@@ -28,7 +28,7 @@ import { useBoardScale } from './hooks/useBoardScale.js';
 import { useStagedMoves } from './hooks/useStagedMoves.js';
 import { useTurnReplayAnimation } from './components/board/useTurnReplayAnimation.js';
 
-export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline: propIsOnline = false, playerNames: propPlayerNames = [], dbMasterState: propDbMasterState = null, updateMasterGameState: propUpdateMasterGameState = null }) {
+export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline: propIsOnline = false, isSolo = false, botStatus = null, playerNames: propPlayerNames = [], dbMasterState: propDbMasterState = null, updateMasterGameState: propUpdateMasterGameState = null }) {
   const onlineCtx = useOnlineGame();
   const isOnline = onlineCtx.isOnline || propIsOnline;
   const dbMasterState = onlineCtx.dbMasterState || propDbMasterState;
@@ -150,12 +150,13 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         playerID={playerID}
         getPlayerLabel={getPlayerLabel}
         isOnline={isOnline}
+        isSolo={isSolo}
         setShowSaveLoadModal={setShowSaveLoadModal}
       />
 
       {G.winner && (
         <div className="winner-banner">
-          🎉 {getPlayerLabel(G.winner).toUpperCase()} HAS WON THE GAME! 🎉
+          🎉 {G.winner === 'draw' ? 'MATCH ENDED IN A DRAW!' : `${getPlayerLabel(G.winner).toUpperCase()} HAS WON THE GAME!`} 🎉
         </div>
       )}
 
@@ -236,6 +237,13 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         </div>
 
         <div className="controls-sidebar">
+          {isSolo && botStatus?.text && !G.winner && (
+            <div className="ai-thinking-banner" role="status" aria-live="polite">
+              <span className="ai-thinking-dot" />
+              <span>🤖 {botStatus.text}</span>
+            </div>
+          )}
+
           {currentPhase === 'bureaucracy' ? (
             <BureaucracyPanel
               myPlayer={myPlayer}
@@ -293,7 +301,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                 />
               )}
 
-              <OpponentHandSummary G={G} playerID={playerID} numPlayers={numPlayers} getPlayerLabel={getPlayerLabel} />
+              <OpponentHandSummary G={G} playerID={playerID} numPlayers={numPlayers} getPlayerLabel={getPlayerLabel} isSolo={isSolo} />
 
               {(!G?.pendingPlay || showTurnBuilderForPending) && (
                 <PlayerHandDrawer

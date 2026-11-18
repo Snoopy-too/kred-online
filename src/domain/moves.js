@@ -387,21 +387,52 @@ export function applyMoveToState(move, boardState, community) {
 }
 
 // Helper to check if a specific move type is legally possible on the board for a player
-export function isMoveTypePossible(moveType, moverId, boardState, community, numPlayers) {
+export function isMoveTypePossible(
+  moveType,
+  moverId,
+  boardState,
+  community,
+  numPlayers,
+  priorMoves = [],
+  preMoveBoard = null
+) {
   if (!boardState) return true;
 
+  const hasPrior = priorMoves.length === 1 && preMoveBoard;
+  let priorFrom = null;
+  let priorNormTo = null;
+  let priorPieceId = null;
+  if (hasPrior) {
+    const m1 = priorMoves[0];
+    const selfMoves = [MOVE_TYPES.WITHDRAW, MOVE_TYPES.ADVANCE, MOVE_TYPES.ORGANIZE];
+    if (selfMoves.includes(m1.type) === selfMoves.includes(moveType)) {
+      return false;
+    }
+    priorFrom = m1.from;
+    priorNormTo = typeof m1.to === 'string' && m1.to.startsWith('community_') ? 'community' : m1.to;
+    priorPieceId = preMoveBoard[priorFrom]?.id || null;
+  }
+
   const candidateKeys = Object.keys(boardState);
+  const hasExplicitComm = candidateKeys.some(k => k.startsWith('community_'));
   const fromCandidates = candidateKeys.filter(k => !k.startsWith('community_') || boardState[k] !== null);
-  if (!fromCandidates.includes('community')) fromCandidates.push('community');
+  if (!hasExplicitComm && !fromCandidates.includes('community')) fromCandidates.push('community');
 
   const toCandidates = candidateKeys.filter(k => !k.startsWith('community_'));
   if (!toCandidates.includes('community')) toCandidates.push('community');
 
   for (const fromLoc of fromCandidates) {
+    if (hasPrior) {
+      const normFrom2 = fromLoc.startsWith('community_') ? 'community' : fromLoc;
+      if (priorNormTo !== 'community' && priorNormTo === normFrom2) continue;
+      if (priorFrom === fromLoc && priorFrom !== 'community') continue;
+      const piece2Id = boardState[fromLoc]?.id || null;
+      if (priorPieceId && piece2Id && priorPieceId === piece2Id) continue;
+    }
     for (const toLoc of toCandidates) {
       if (fromLoc === toLoc) continue;
       const moveCandidate = { type: moveType, from: fromLoc, to: toLoc };
-      const val = validateSingleMove(moveCandidate, moverId, boardState, community, numPlayers);
+      const val = validateSingleMove(moveCandidate, moverId, boardState, community, numPlayers, priorMoves);
       if (val.valid) return true;
     }
   }
@@ -426,19 +457,35 @@ export function classifyPlay(movesMade, tileIdPlayed, moverId = '0', boardState 
 
   if (isMatchWithPlayedTile) return 'Honest';
 
-  // If boardState is provided, check if all unperformed required moves were IMPOSSIBLE to perform
+  // If boardState is provided, check if all unperformed required moves are IMPOSSIBLE after applying movesMade
   if (boardState) {
     const unperformedMoves = [...playedTile.moves];
+    let hasUnmatchedMove = false;
     for (const m of movesMade || []) {
       const idx = unperformedMoves.indexOf(m.type);
       if (idx !== -1) unperformedMoves.splice(idx, 1);
+      else hasUnmatchedMove = true;
     }
+
+    if (hasUnmatchedMove) return 'Dishonest';
 
     const tempBoard = JSON.parse(JSON.stringify(boardState));
     const tempComm = community ? JSON.parse(JSON.stringify(community)) : null;
 
+    for (const m of movesMade || []) {
+      applyMoveToState(m, tempBoard, tempComm);
+    }
+
     const allUnperformedImpossible = unperformedMoves.every(reqType => {
-      return !isMoveTypePossible(reqType, moverId, tempBoard, tempComm, numPlayers);
+      return !isMoveTypePossible(
+        reqType,
+        moverId,
+        tempBoard,
+        tempComm,
+        numPlayers,
+        movesMade || [],
+        boardState
+      );
     });
 
     if (allUnperformedImpossible) {

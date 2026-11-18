@@ -1,20 +1,17 @@
 import { INVALID_MOVE } from 'boardgame.io/dist/esm/core.js';
-import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES } from '../types.js';
-import { enforceSupportRule, checkVictory, getNextPlayer, getOrderedChallengers } from '../board.js';
-import { validateMoveCombination, applyMoveToState, classifyPlay, validateSingleMove } from '../moves.js';
+import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, MOVE_TYPES } from '../types.js';
+import { enforceSupportRule, getOrderedChallengers } from '../board.js';
+import { validateMoveCombination, applyMoveToState, classifyPlay, validateSingleMove, isMoveTypePossible } from '../moves.js';
 import { handleLoadSaveState } from '../sharedMoves.js';
 import { applyChallengerBureaucracyAction } from '../bureaucracy.js';
+import { applyVictoryCheck, resolvePlayToBank, findNextPlayerWithTiles } from './campaignResolution.js';
 
 export function finishPendingPlayOrReward(G) {
   const challengerId = G.pendingPlay?.successfulChallengerId;
   const receiverId = G.pendingPlay?.receiverId || G.nextMoverId;
   const tileId = G.pendingPlay?.reexecuteTileId || G.pendingPlay?.tileIdPlayed;
 
-  if (tileId && tileId !== 'BLANK') {
-    const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-    if (winners.length > 1) G.winner = 'draw';
-    else if (winners.length === 1) G.winner = winners[0];
-  }
+  applyVictoryCheck(G, tileId);
 
   if (challengerId && G.players[challengerId]) {
     const hasFacedownTiles = (G.players[challengerId].bank || []).some(t => t.faceDown);
@@ -52,13 +49,13 @@ export function createCampaignPhase() {
         first: ({ G }) => {
           if (!G || !G.players) return 0;
           if (G.nextMoverId !== undefined && G.nextMoverId !== null) {
-            return parseInt(G.nextMoverId, 10);
+            return findNextPlayerWithTiles(G, G.nextMoverId);
           }
           let startP = '0';
           Object.keys(G.players).forEach(pId => {
             if (G.players[pId].hand && G.players[pId].hand.includes('03')) startP = pId;
           });
-          return parseInt(startP, 10);
+          return findNextPlayerWithTiles(G, startP);
         },
         next: ({ G, ctx }) => {
           if (G && G.pendingPlay) {
@@ -88,17 +85,10 @@ export function createCampaignPhase() {
               return parseInt(G.pendingPlay.nextMoverId, 10);
             }
           }
-          const np = G ? G.numPlayers : 3;
-          let targetId = G && G.nextMoverId !== undefined && G.nextMoverId !== null
+          const targetId = G && G.nextMoverId !== undefined && G.nextMoverId !== null
             ? String(G.nextMoverId)
             : String(ctx.currentPlayer);
-
-          let searchCount = 0;
-          while (G && G.players && G.players[targetId] && G.players[targetId].hand.length === 0 && searchCount < np) {
-            targetId = getNextPlayer(targetId, np);
-            searchCount++;
-          }
-          return parseInt(targetId, 10);
+          return findNextPlayerWithTiles(G, targetId);
         }
       }
     },
@@ -170,7 +160,11 @@ export function createCampaignPhase() {
         G.lastOutcomeNotice = null;
 
         if (G.players[receiverId].credibilityNotchesLost >= 3 || tileId === 'BLANK') {
-          G.pendingPlay.step = 'challenge';
+          if (getOrderedChallengers(G).length === 0) {
+            resolvePlayToBank(G);
+          } else {
+            G.pendingPlay.step = 'challenge';
+          }
         }
 
         events.endTurn();
@@ -185,16 +179,7 @@ export function createCampaignPhase() {
         const eligibleChallengers = getOrderedChallengers(G);
 
         if (eligibleChallengers.length === 0) {
-          const { receiverId, tileIdPlayed } = G.pendingPlay;
-          G.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
-          G.nextMoverId = receiverId;
-          G.pendingPlay = null;
-
-          if (tileIdPlayed !== 'BLANK') {
-            const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-            if (winners.length > 1) G.winner = 'draw';
-            else if (winners.length === 1) G.winner = winners[0];
-          }
+          resolvePlayToBank(G);
         } else {
           G.pendingPlay.step = 'challenge';
         }
@@ -251,11 +236,7 @@ export function createCampaignPhase() {
             text: `Receiver Player ${receiverId} inspected Player ${moverId}'s play and it was HONEST!`
           };
 
-          if (tileIdPlayed !== 'BLANK') {
-            const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-            if (winners.length > 1) G.winner = 'draw';
-            else if (winners.length === 1) G.winner = winners[0];
-          }
+          applyVictoryCheck(G, tileIdPlayed);
         }
 
         events.endTurn();
@@ -327,11 +308,7 @@ export function createCampaignPhase() {
             text: `Player ${challengerId} challenged Player ${moverId}, but the play with Tile ${tileIdPlayed} was HONEST! Player ${challengerId} lost 1 credibility notch.`
           };
 
-          if (tileIdPlayed !== 'BLANK') {
-            const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-            if (winners.length > 1) G.winner = 'draw';
-            else if (winners.length === 1) G.winner = winners[0];
-          }
+          applyVictoryCheck(G, tileIdPlayed);
         }
 
         events.endTurn();
@@ -350,17 +327,7 @@ export function createCampaignPhase() {
         G.pendingPlay.challengesPassed.push(pId);
 
         if (G.pendingPlay.challengesPassed.length >= eligibleChallengers.length) {
-          const { receiverId, tileIdPlayed } = G.pendingPlay;
-          G.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
-
-          G.nextMoverId = receiverId;
-          G.pendingPlay = null;
-
-          if (tileIdPlayed !== 'BLANK') {
-            const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
-            if (winners.length > 1) G.winner = 'draw';
-            else if (winners.length === 1) G.winner = winners[0];
-          }
+          resolvePlayToBank(G);
         }
 
         events.endTurn();
@@ -396,13 +363,16 @@ export function createCampaignPhase() {
         const moverId = String(playerID);
         if (!G.pendingPlay || G.pendingPlay.step !== 'penaltyWithdraw' || G.pendingPlay.moverId !== moverId) return INVALID_MOVE;
 
-        if (moveAction.type !== 'Withdraw') return INVALID_MOVE;
-        
-        const val = validateSingleMove(moveAction, moverId, G.boardState, G.community, G.numPlayers);
-        if (!val.valid) return INVALID_MOVE;
+        if (moveAction) {
+          if (moveAction.type !== MOVE_TYPES.WITHDRAW) return INVALID_MOVE;
+          const val = validateSingleMove(moveAction, moverId, G.boardState, G.community, G.numPlayers);
+          if (!val.valid) return INVALID_MOVE;
+          applyMoveToState(moveAction, G.boardState, G.community);
+          G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
+        } else if (isMoveTypePossible(MOVE_TYPES.WITHDRAW, moverId, G.boardState, G.community, G.numPlayers)) {
+          return INVALID_MOVE;
+        }
 
-        applyMoveToState(moveAction, G.boardState, G.community);
-        G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
         G.players[moverId].pendingPenaltyWithdraw = false;
 
         if (G.pendingPlay.whistleblownByReceiver) {
@@ -438,13 +408,15 @@ export function createCampaignPhase() {
         const receiverId = String(playerID);
         if (!G.pendingPlay || G.pendingPlay.step !== 'freeAdvance' || G.pendingPlay.receiverId !== receiverId) return INVALID_MOVE;
 
-        if (moveAction.type !== 'Advance') return INVALID_MOVE;
-        
-        const val = validateSingleMove(moveAction, receiverId, G.boardState, G.community, G.numPlayers);
-        if (!val.valid) return INVALID_MOVE;
-
-        applyMoveToState(moveAction, G.boardState, G.community);
-        G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
+        if (moveAction) {
+          if (moveAction.type !== MOVE_TYPES.ADVANCE) return INVALID_MOVE;
+          const val = validateSingleMove(moveAction, receiverId, G.boardState, G.community, G.numPlayers);
+          if (!val.valid) return INVALID_MOVE;
+          applyMoveToState(moveAction, G.boardState, G.community);
+          G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
+        } else if (isMoveTypePossible(MOVE_TYPES.ADVANCE, receiverId, G.boardState, G.community, G.numPlayers)) {
+          return INVALID_MOVE;
+        }
 
         finishPendingPlayOrReward(G);
         events.endTurn();
@@ -472,9 +444,11 @@ export function createCampaignPhase() {
         const success = applyChallengerBureaucracyAction(G, pId, payload);
         if (!success) return INVALID_MOVE;
 
+        const tileId = G.pendingPlay.reexecuteTileId || G.pendingPlay.tileIdPlayed;
         const receiverId = G.pendingPlay.receiverId;
         G.pendingPlay = null;
         if (receiverId !== undefined && receiverId !== null) G.nextMoverId = receiverId;
+        applyVictoryCheck(G, tileId);
         events.endTurn();
       }
     },

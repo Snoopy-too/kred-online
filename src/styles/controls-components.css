@@ -246,3 +246,44 @@
   font-weight: 700;
   box-sizing: border-box;
 }
+
+.ai-thinking-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: rgba(200, 155, 60, 0.14);
+  border: 1px solid rgba(200, 155, 60, 0.5);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-gold);
+}
+
+.ai-thinking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  animation: aiPulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes aiPulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.ai-bot-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(200, 155, 60, 0.22);
+  border: 1px solid rgba(200, 155, 60, 0.6);
+  color: var(--accent-gold);
+  vertical-align: middle;
+}

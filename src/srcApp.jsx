@@ -1,16 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Client } from 'boardgame.io/react';
+import { Client } from 'boardgame.io/dist/esm/react.js';
+import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame } from './srcGame.js';
 import { KredBoard } from './srcBoard.jsx';
 import { isPlayerActionRequired } from './domain/board.js';
+import { createSoloController } from './ai/index.js';
+import { LandingScreen } from './components/lobby/LandingScreen.jsx';
 import { LobbyView } from './components/lobby/LobbyView.jsx';
 import { useSupabaseGameSync } from './hooks/useSupabaseGameSync.js';
 import { OnlineGameContext } from './context/OnlineGameContext.jsx';
 import { supabase, ensureAnonymousAuth } from './lib/supabaseClient.js';
 import { GameLogger } from '../diagnostics/gameLogger.js';
 import { DiagnosticsPanel } from '../diagnostics/DiagnosticsPanel.jsx';
-import { getAssetUrl } from './utils/assets.js';
 import './styles/base.css';
 import './styles/board.css';
 import './styles/controls.css';
@@ -19,7 +21,8 @@ import './styles/zoom.css';
 import './index.css';
 
 export function KredApp() {
-  const [gameMode, setGameMode] = useState(null); // null | 'local' | 'online_lobby' | 'online_playing'
+  const [gameMode, setGameMode] = useState(null); // null | 'solo' | 'local' | 'online_lobby' | 'online_playing'
+  const [botStatus, setBotStatus] = useState(null);
   const [selectedNumPlayers, setSelectedNumPlayers] = useState(3);
   const [activePerspective, setActivePerspective] = useState('0');
   const [gameKey, setGameKey] = useState(Date.now());
@@ -97,21 +100,64 @@ export function KredApp() {
     return Array.from({ length: selectedNumPlayers }).map((_, i) => `Player ${i + 1}`);
   }, [onlineContext.playerNames, dbPlayerNames, selectedNumPlayers]);
 
+  const isSolo = gameMode === 'solo';
+  const matchID = onlineContext.lobbyId || `${isSolo ? 'solo' : 'local'}-match-${selectedNumPlayers}p-${gameKey}`;
+
+  const soloMultiplayer = useMemo(() => {
+    if (!isSolo) return undefined;
+    return Local();
+  }, [isSolo, gameKey]);
+
+  const kredGame = useMemo(() => {
+    if (!selectedNumPlayers) return null;
+    return createKredGame(selectedNumPlayers, skipDraft, { hideOpponentHands: isSolo });
+  }, [selectedNumPlayers, skipDraft, isSolo, gameKey]);
+
   // Create boardgame.io Client with factory-bound game engine
   const KredClient = useMemo(() => {
-    if (!selectedNumPlayers) return null;
+    if (!selectedNumPlayers || !kredGame) return null;
     return Client({
-      game: createKredGame(selectedNumPlayers, skipDraft),
+      game: kredGame,
       board: KredBoard,
       numPlayers: selectedNumPlayers,
+      multiplayer: soloMultiplayer,
       debug: false
     });
-  }, [selectedNumPlayers, skipDraft, gameKey]);
+  }, [kredGame, selectedNumPlayers, soloMultiplayer]);
 
-  const matchID = onlineContext.lobbyId || `local-match-${selectedNumPlayers}p-${gameKey}`;
   const gameLogger = useMemo(() => {
     return new GameLogger(matchID, selectedNumPlayers);
   }, [matchID, selectedNumPlayers]);
+
+  useEffect(() => {
+    if (!isSolo || !kredGame || !soloMultiplayer) {
+      setBotStatus(null);
+      return undefined;
+    }
+    const controller = createSoloController({
+      game: kredGame,
+      matchID,
+      multiplayer: soloMultiplayer,
+      onStatusChange: setBotStatus
+    });
+    return () => {
+      controller.stop();
+    };
+  }, [isSolo, kredGame, matchID, soloMultiplayer]);
+
+  const handleStartSoloGame = () => {
+    setSelectedNumPlayers(3);
+    setActivePerspective('0');
+    setBotStatus(null);
+    setOnlineContext({
+      lobbyId: null,
+      playerIndex: 0,
+      userId: null,
+      playerNames: ['You', 'Baron Vance', 'Inspector Vale']
+    });
+    setGameKey(Date.now());
+    setGameMode('solo');
+  };
 
 
   // Handlers for Local Test Mode (Auto-creates Supabase Room if Supabase is connected)
@@ -184,6 +230,7 @@ export function KredApp() {
   };
 
   const handleReturnToMenu = () => {
+    setBotStatus(null);
     setGameMode(null);
     setOnlineContext({ lobbyId: null, playerIndex: 0, userId: null, playerNames: [] });
   };
@@ -248,86 +295,15 @@ export function KredApp() {
 
   // 2. Main Landing Screen / Mode Selector
   if (!gameMode) {
-    const lastLocal = JSON.parse(localStorage.getItem('kred_last_local') || 'null');
-    const lastOnline = JSON.parse(localStorage.getItem('kred_last_online') || 'null');
-
     return (
-      <div className="landing-screen">
-        <div className="landing-card">
-          <div className="landing-logo">
-            <img src={getAssetUrl('images/logo.png')} alt="KRED" className="landing-logo-img" />
-            <p className="landing-subtitle">Multiplayer Board Game of Deception & Strategy</p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '24px' }}>
-            {/* Option A: Local Pass-and-Play / Test Mode */}
-            <div style={{ background: '#261f1a', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
-              <h2 style={{ color: 'var(--accent-gold)', marginBottom: '8px' }}>🎮 Local Pass & Play / Test Mode</h2>
-              <p className="landing-subtitle" style={{ marginBottom: '16px' }}>
-                Control all 3, 4, or 5 players on one computer. Test rules and switch player perspectives freely.
-              </p>
-
-              <div style={{ background: '#1a1411', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <label style={{ color: '#e2e8f0', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
-                  <input
-                    type="checkbox"
-                    checked={skipDraft}
-                    onChange={(e) => setSkipDraft(e.target.checked)}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-gold)' }}
-                  />
-                  <strong>⚡ Skip Draft Phase</strong> (Auto-deal tiles & start in Campaign)
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button className="btn btn-primary mode-btn" onClick={() => handleStartLocalGame(3)}>
-                  Start 3-Player Test Game {skipDraft ? '(No Draft)' : ''}
-                </button>
-                <button className="btn btn-primary mode-btn" onClick={() => handleStartLocalGame(4)}>
-                  Start 4-Player Test Game {skipDraft ? '(No Draft)' : ''}
-                </button>
-                <button className="btn btn-primary mode-btn" onClick={() => handleStartLocalGame(5)}>
-                  Start 5-Player Test Game {skipDraft ? '(No Draft)' : ''}
-                </button>
-                {lastLocal && (
-                  <button className="btn btn-secondary mode-btn" style={{ marginTop: '12px', border: '1px solid var(--accent-gold)' }} onClick={() => {
-                    setSkipDraft(lastLocal.skipDraft || false);
-                    handleStartLocalGame(lastLocal.numPlayers);
-                  }}>
-                    🔄 Resume Last Local Session ({lastLocal.numPlayers}P)
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Option B: Online Supabase Multiplayer Mode */}
-            <div style={{ background: '#261f1a', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <h2 style={{ color: 'var(--accent-gold)', marginBottom: '8px' }}>🌐 Online Supabase Multiplayer</h2>
-                <p className="landing-subtitle" style={{ marginBottom: '20px' }}>
-                  Play with friends across the internet using 6-digit room PINs powered by Supabase Realtime DB Master State.
-                </p>
-              </div>
-              <button
-                className="btn btn-warning"
-                style={{ padding: '16px', fontSize: '18px', fontWeight: '800' }}
-                onClick={() => setGameMode('online_lobby')}
-              >
-                Enter Online Lobby & Room PINs →
-              </button>
-              {lastOnline && (
-                <button
-                  className="btn btn-secondary"
-                  style={{ marginTop: '12px', padding: '12px', border: '1px solid var(--accent-gold)' }}
-                  onClick={() => handleQuickRejoinOnline(lastOnline.pin)}
-                >
-                  🔄 Quick Rejoin PIN: {lastOnline.pin}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <LandingScreen
+        skipDraft={skipDraft}
+        setSkipDraft={setSkipDraft}
+        onStartSoloGame={handleStartSoloGame}
+        onStartLocalGame={handleStartLocalGame}
+        onEnterOnlineLobby={() => setGameMode('online_lobby')}
+        onQuickRejoinOnline={handleQuickRejoinOnline}
+      />
     );
   }
 
@@ -349,9 +325,11 @@ export function KredApp() {
         >
           <KredClient
             matchID={matchID}
-            key={`${selectedNumPlayers}-${gameKey}`}
+            key={`${gameMode}-${selectedNumPlayers}-${gameKey}`}
             playerID={activePerspective}
             isOnline={isOnline}
+            isSolo={isSolo}
+            botStatus={botStatus}
             playerNames={effectivePlayerNames}
             dbMasterState={dbMasterState}
             updateMasterGameState={updateMasterGameState}
@@ -359,7 +337,7 @@ export function KredApp() {
               if (state) {
                 setCurrentGameState(state);
                 gameLogger.handleStateChange(state);
-                if (onlineContext.lobbyId && state.G) {
+                if (onlineContext.lobbyId && !isSolo && state.G) {
                   updateMasterGameState(state.G, state.ctx?.phase);
                 }
               }
@@ -389,14 +367,16 @@ export function KredApp() {
           <span className="mode-tag">
             {isOnline
               ? `🌐 Online Room (${selectedNumPlayers}P)`
-              : onlineContext.lobbyId
-                ? `🎮 Local Test (${selectedNumPlayers}P • Supabase Live)`
-                : `🎮 Local Test (${selectedNumPlayers}P • Local Memory)`}
+              : isSolo
+                ? `🤖 Solo Mode (3P • vs. 2 AI)`
+                : onlineContext.lobbyId
+                  ? `🎮 Local Test (${selectedNumPlayers}P • Supabase Live)`
+                  : `🎮 Local Test (${selectedNumPlayers}P • Local Memory)`}
           </span>
         </div>
 
-        {/* Perspective selector is ONLY shown in Local Test mode; in Online play, seat is fixed */}
-        {!isOnline ? (
+        {/* Perspective selector is ONLY shown in Local Pass & Play; in Online and Solo play, seat is fixed */}
+        {!isOnline && !isSolo ? (
           <div className="perspective-selector">
             <label>View Perspective:</label>
             <div className="btn-group">
@@ -428,7 +408,9 @@ export function KredApp() {
               padding: '6px 14px'
             }}
           >
-            👤 Playing as: {effectivePlayerNames[onlineContext.playerIndex] || `Player ${onlineContext.playerIndex + 1}`} (Seat {onlineContext.playerIndex + 1})
+            {isSolo
+              ? '👤 Playing as: You (Seat 1 vs. Baron Vance & Inspector Vale)'
+              : `👤 Playing as: ${effectivePlayerNames[onlineContext.playerIndex] || `Player ${onlineContext.playerIndex + 1}`} (Seat ${onlineContext.playerIndex + 1})`}
           </span>
         )}
 

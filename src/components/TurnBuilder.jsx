@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { TILES } from '../domain/types.js';
-import { classifyPlay } from '../domain/moves.js';
+import { TILES, MOVE_TYPES } from '../domain/types.js';
+import { classifyPlay, isMoveTypePossible } from '../domain/moves.js';
 import { ConfirmModal } from './board/ConfirmModal.jsx';
 import { getTileImageUrl } from '../utils/assets.js';
 
@@ -39,12 +39,14 @@ export function TurnBuilder({
     finishButtonLabel = isHonest ? 'Submit Honest Moves' : 'Honest Moves Required';
   } else if (isPenaltyWithdraw) {
     titleText = 'Penalty Withdraw Action';
-    canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Withdraw';
-    finishButtonLabel = canFinish ? 'Submit Penalty Withdraw' : 'Withdraw Move Required';
+    const hasLegalWithdraw = !boardState || isMoveTypePossible(MOVE_TYPES.WITHDRAW, playerID, boardState, community, numPlayers);
+    canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Withdraw' || (!hasLegalWithdraw && stagedMoves.length === 0);
+    finishButtonLabel = canFinish ? (hasLegalWithdraw ? 'Submit Penalty Withdraw' : 'Skip (No Legal Withdraw)') : 'Withdraw Move Required';
   } else if (isFreeAdvance) {
     titleText = 'Free Advance Bonus Action';
-    canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Advance';
-    finishButtonLabel = canFinish ? 'Submit Free Advance' : 'Advance Move Required';
+    const hasLegalAdvance = !boardState || isMoveTypePossible(MOVE_TYPES.ADVANCE, playerID, boardState, community, numPlayers);
+    canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Advance' || (!hasLegalAdvance && stagedMoves.length === 0);
+    finishButtonLabel = canFinish ? (hasLegalAdvance ? 'Submit Free Advance' : 'Skip (No Legal Advance)') : 'Advance Move Required';
   }
 
   const handleFinishClick = () => {

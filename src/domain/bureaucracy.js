@@ -114,11 +114,9 @@ export function cleanupBureaucracy(G) {
     }
   });
 
-  Object.keys(G.players).forEach(pId => {
-    if (checkVictory(G.boardState, pId)) {
-      G.winner = pId;
-    }
-  });
+  const winners = Object.keys(G.players).filter(pId => checkVictory(G.boardState, pId));
+  if (winners.length > 1) G.winner = 'draw';
+  else if (winners.length === 1) G.winner = winners[0];
 }
 
 export function applyChallengerBureaucracyAction(G, pId, { actionType, targetLoc, subAction }) {

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel }) {
+export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel, isSolo = false }) {
   if (!G || !G.players) return null;
 
   const opponentIds = Object.keys(G.players)
@@ -10,7 +10,7 @@ export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel })
   return (
     <div className="opponent-hand-sidebar-card">
       <div className="hand-card-header" style={{ marginBottom: '8px' }}>
-        <h3>Opponent Hands</h3>
+        <h3>{isSolo ? 'AI Opponents' : 'Opponent Hands'}</h3>
       </div>
 
       <div className="opponent-rows-container">
@@ -21,7 +21,10 @@ export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel })
 
           return (
             <div key={opId} className="opponent-hand-row">
-              <span className="opponent-hand-label">{label}</span>
+              <span className="opponent-hand-label">
+                {label}
+                {isSolo && <span className="ai-bot-badge">AI</span>}
+              </span>
               <div className="mini-tiles-flex">
                 {count > 0 ? (
                   Array.from({ length: count }).map((_, idx) => (

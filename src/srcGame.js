@@ -3,12 +3,54 @@ import { createDraftPhase } from './domain/phases/draftPhase.js';
 import { createCampaignPhase } from './domain/phases/campaignPhase.js';
 import { createBureaucracyPhase } from './domain/bureaucracy.js';
 
+export function filterSoloPlayerView(G, playerID) {
+  if (!G || playerID === null || playerID === undefined) return G;
+  const pId = String(playerID);
+  const nextG = JSON.parse(JSON.stringify(G));
+
+  if (nextG.players) {
+    Object.keys(nextG.players).forEach((id) => {
+      if (id !== pId) {
+        const p = nextG.players[id];
+        if (Array.isArray(p.hand)) p.hand = p.hand.map(() => 'HIDDEN');
+        if (Array.isArray(p.bank)) {
+          p.bank = p.bank.map((item) => (item.faceDown ? { ...item, tileId: 'HIDDEN' } : item));
+        }
+      }
+    });
+  }
+
+  if (nextG.draftPacks) {
+    Object.keys(nextG.draftPacks).forEach((id) => {
+      if (id !== pId && Array.isArray(nextG.draftPacks[id])) {
+        nextG.draftPacks[id] = nextG.draftPacks[id].map(() => 'HIDDEN');
+      }
+    });
+  }
+
+  if (nextG.pendingPlay && (nextG.pendingPlay.step === 'receipt' || nextG.pendingPlay.step === 'challenge')) {
+    const pp = nextG.pendingPlay;
+    const isMover = String(pp.moverId) === pId;
+    const isInspectingReceiver =
+      pp.step === 'receipt' &&
+      String(pp.receiverId) === pId &&
+      (G.players?.[pId]?.credibilityNotchesLost || 0) < 3;
+    if (!isMover && !isInspectingReceiver) {
+      pp.tileIdPlayed = 'HIDDEN';
+      pp.playType = 'HIDDEN';
+    }
+  }
+
+  return nextG;
+}
+
 /**
  * Factory: creates a KredGame config bound to numPlayers.
  * boardgame.io 0.50 local Client does NOT support setupData,
  * so we inject numPlayers via a closure at Client-creation time.
  */
-export function createKredGame(numPlayers, skipDraft = false) {
+export function createKredGame(numPlayers, skipDraft = false, options = {}) {
+  const { hideOpponentHands = false } = options;
   return {
     name: 'kred',
     minPlayers: 3,
@@ -116,8 +158,15 @@ export function createKredGame(numPlayers, skipDraft = false) {
       };
     },
 
-    playerView: ({ G }) => {
-      return G;
+    playerView: ({ G, playerID }) => {
+      return hideOpponentHands ? filterSoloPlayerView(G, playerID) : G;
+    },
+
+    endIf: ({ G }) => {
+      if (G && G.winner) {
+        return { winner: G.winner };
+      }
+      return undefined;
     },
 
     phases: {

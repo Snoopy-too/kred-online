@@ -7,6 +7,7 @@ export function BoardHeaderControls({
   playerID,
   getPlayerLabel,
   isOnline,
+  isSolo = false,
   setShowSaveLoadModal
 }) {
   return (
@@ -21,10 +22,10 @@ export function BoardHeaderControls({
       <div className="header-controls">
         <div className="status-badge phase-badge">Phase: <strong>{currentPhase.toUpperCase()}</strong></div>
         <div className="status-badge turn-badge">Current Turn: <strong>{getPlayerLabel(ctx.currentPlayer)}</strong></div>
-        {!isOnline && (
+        {!isOnline && !isSolo && (
           <div className="status-badge perspective-badge">Viewing As: <strong>{getPlayerLabel(playerID)}</strong></div>
         )}
-        {!isOnline && (
+        {!isOnline && !isSolo && (
           <button
             className="btn btn-secondary"
             style={{ fontSize: '11px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', background: '#26201b', color: 'var(--accent-gold)', border: '1px solid var(--accent-gold)' }}
