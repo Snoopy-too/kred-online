@@ -56,10 +56,11 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
     minPlayers: 3,
     maxPlayers: 5,
 
-    setup: ({ ctx, random }) => {
+    setup: ({ ctx, random }, setupData) => {
       // Use the factory-injected numPlayers (ctx.numPlayers defaults to 2 in local mode)
       const np = numPlayers || ctx.numPlayers || 3;
-      console.log('[KredGame Setup] numPlayers:', np, 'skipDraft:', skipDraft, 'ctx.numPlayers:', ctx.numPlayers);
+      const effectiveSkipDraft = Boolean(skipDraft || setupData?.skipDraft || setupData?.mode === 'quick');
+      console.log('[KredGame Setup] numPlayers:', np, 'skipDraft:', effectiveSkipDraft, 'ctx.numPlayers:', ctx.numPlayers);
 
       const config = INITIAL_PIECE_COUNTS[np] || INITIAL_PIECE_COUNTS[3];
 
@@ -121,7 +122,7 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
         const pId = String(p);
         const dealtTiles = shuffledDeck.slice(p * config.TILES_PER_PLAYER, (p + 1) * config.TILES_PER_PLAYER);
 
-        if (skipDraft) {
+        if (effectiveSkipDraft) {
           draftPacks[pId] = [];
           players[pId] = {
             credibilityNotchesLost: 0,

@@ -6253,9 +6253,10 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
     name: "kred",
     minPlayers: 3,
     maxPlayers: 5,
-    setup: ({ ctx, random }) => {
+    setup: ({ ctx, random }, setupData) => {
       const np = numPlayers || ctx.numPlayers || 3;
-      console.log("[KredGame Setup] numPlayers:", np, "skipDraft:", skipDraft, "ctx.numPlayers:", ctx.numPlayers);
+      const effectiveSkipDraft = Boolean(skipDraft || setupData?.skipDraft || setupData?.mode === "quick");
+      console.log("[KredGame Setup] numPlayers:", np, "skipDraft:", effectiveSkipDraft, "ctx.numPlayers:", ctx.numPlayers);
       const config = INITIAL_PIECE_COUNTS[np] || INITIAL_PIECE_COUNTS[3];
       const boardState = {};
       for (let p2 = 0; p2 < np; p2++) {
@@ -6303,7 +6304,7 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
       for (let p2 = 0; p2 < np; p2++) {
         const pId = String(p2);
         const dealtTiles = shuffledDeck.slice(p2 * config.TILES_PER_PLAYER, (p2 + 1) * config.TILES_PER_PLAYER);
-        if (skipDraft) {
+        if (effectiveSkipDraft) {
           draftPacks[pId] = [];
           players[pId] = {
             credibilityNotchesLost: 0,

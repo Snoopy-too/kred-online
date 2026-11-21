@@ -1,4 +1,4 @@
-:root {
+:root, :host {
   --bg-dark: #120e0c;
   --bg-card: rgba(36, 28, 24, 0.88);
   --bg-surface: #261f1a;
@@ -27,7 +27,7 @@ html, body, #root {
   padding: 0;
 }
 
-body {
+body, .kred-lobby-wrapper {
   font-family: 'Outfit', sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-main);

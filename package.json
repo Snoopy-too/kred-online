@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:module": "node scripts/build-module.mjs",
     "build:server": "node scripts/build-server-game.mjs",
-    "build:all": "vite build && node scripts/build-server-game.mjs",
+    "build:all": "node scripts/build-server-game.mjs && node scripts/build-module.mjs",
     "preview": "vite preview",
     "test": "node --test \"test/**/*.test.js\"",
     "arena": "node test/jev-arena/cli.js"
