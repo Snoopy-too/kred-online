@@ -6358,7 +6358,7 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
 var KredGame = createKredGame(3);
 
 // .temp-server-entry.js
-var kredGame = createKredGame();
+var kredGame = createKredGame(void 0, false, { hideOpponentHands: true });
 module.exports = kredGame;
 module.exports.default = kredGame;
 module.exports.KredGame = kredGame;

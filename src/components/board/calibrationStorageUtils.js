@@ -1,9 +1,3 @@
-import {
-  fetchCalibrationFromDb,
-  saveCalibrationToDb,
-  deleteCalibrationFromDb
-} from '../../lib/calibrationRepository.js';
-
 // Helper to determine if we are in local development / local testing environment
 export const isLocalEnvironment = () => {
   if (typeof window === 'undefined') return false;
@@ -60,13 +54,7 @@ export const persistDraft = async (numPlayers, calibratedPositions, perspectiveO
 export const resetDraft = async (numPlayers, localStorageKey, offsetStorageKey) => {
   localStorage.removeItem(localStorageKey);
   localStorage.removeItem(offsetStorageKey);
-
-  if (isDbSyncEnabled(numPlayers)) {
-    await deleteCalibrationFromDb(numPlayers);
-  }
-  return isDbSyncEnabled(numPlayers)
-    ? '🗑️ Calibration Reset to Master Defaults (DB cleared)!'
-    : '🗑️ Calibration Reset to Master Defaults locally!';
+  return '🗑️ Calibration Reset to Master Defaults locally!';
 };
 
 export const importCalibrationJson = async (jsonString, numPlayers, localStorageKey, offsetStorageKey) => {
@@ -86,8 +74,5 @@ export const importCalibrationJson = async (jsonString, numPlayers, localStorage
     localStorage.setItem(offsetStorageKey, JSON.stringify(nextOffsets));
   }
 
-  if (isDbSyncEnabled(numPlayers)) {
-    await saveCalibrationToDb(numPlayers, nextHotspots, nextOffsets);
-  }
-  return { nextHotspots, nextOffsets, dbSynced: isDbSyncEnabled(numPlayers) };
+  return { nextHotspots, nextOffsets, dbSynced: false };
 };

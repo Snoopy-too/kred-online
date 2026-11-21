@@ -29,14 +29,6 @@
   ],
   "devTools": [
     {
-      "id": "kred-test-runner",
-      "name": "Standalone Pass & Play",
-      "icon": "bi-play-circle-fill",
-      "url": "/game_modules/kred/dist/index.html",
-      "description": "Local test mode with multi-perspective switcher & calibration",
-      "badge": "Test Mode"
-    },
-    {
       "id": "kred-logs",
       "name": "Webhook & Build Logs",
       "icon": "bi-journal-code",

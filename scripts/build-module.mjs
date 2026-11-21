@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const kredDir = path.resolve(__dirname, '..');
 const distClient = path.join(kredDir, 'dist-client');
 
-execSync('npx vite build --mode client', { stdio: 'inherit', cwd: kredDir });
+execSync('npx vite build', { stdio: 'inherit', cwd: kredDir });
 
 for (const file of ['client.js', 'style.css']) {
   const src = path.join(distClient, file);
@@ -18,5 +18,3 @@ for (const file of ['client.js', 'style.css']) {
 }
 
 fs.rmSync(distClient, { recursive: true, force: true });
-
-execSync('npx vite build', { stdio: 'inherit', cwd: kredDir });

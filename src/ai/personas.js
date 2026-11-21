@@ -49,6 +49,38 @@ export const BOT_PERSONAS = Object.freeze({
     firstPlayerBonus: 12,
     paranoiaWeight: 1.0,
     thinkingDelayMs: [600, 1200]
+  },
+  '3': {
+    id: '3',
+    name: 'Magistrate Thorne',
+    title: 'The Strategist',
+    archetype: 'Calculated Tactician',
+    bluffThreshold: 0.55,
+    bribeGenerosity: 1.1,
+    greedWeight: 1.15,
+    integrityWeight: 1.2,
+    challengeThreshold: 48,
+    aggressionWeight: 1.25,
+    draftFundingWeight: 1.05,
+    firstPlayerBonus: 13,
+    paranoiaWeight: 1.1,
+    thinkingDelayMs: [800, 1700]
+  },
+  '4': {
+    id: '4',
+    name: 'Councilor Mire',
+    title: 'The Schemer',
+    archetype: 'High-Risk Bluffer',
+    bluffThreshold: 0.30,
+    bribeGenerosity: 1.35,
+    greedWeight: 1.45,
+    integrityWeight: 0.8,
+    challengeThreshold: 64,
+    aggressionWeight: 1.35,
+    draftFundingWeight: 1.1,
+    firstPlayerBonus: 11,
+    paranoiaWeight: 0.75,
+    thinkingDelayMs: [900, 1900]
   }
 });
 

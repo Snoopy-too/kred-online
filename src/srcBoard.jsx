@@ -6,7 +6,6 @@ import { BureaucracyPanel } from './components/BureaucracyPanel.jsx';
 import { PendingPlayModal } from './components/PendingPlayModal.jsx';
 import { BoardCalibrationToolbar } from './components/board/BoardCalibrationToolbar.jsx';
 import { SvgBoardCanvas } from './components/board/SvgBoardCanvas.jsx';
-import { BoardZoomControls } from './components/board/BoardZoomControls.jsx';
 import { PlayerHandDrawer } from './components/board/PlayerHandDrawer.jsx';
 import { OpponentHandSummary } from './components/board/OpponentHandSummary.jsx';
 import { useCalibrationHandlers } from './components/board/useCalibrationHandlers.js';
@@ -18,7 +17,6 @@ import { DraftPhaseCard } from './components/board/DraftPhaseCard.jsx';
 import { executeOnlineDraftTileSelect } from './domain/phases/draftPhase.js';
 import { BoardHeaderControls } from './components/board/BoardHeaderControls.jsx';
 import { getBoardImageUrl } from './utils/assets.js';
-import { useOnlineGame } from './context/OnlineGameContext.jsx';
 import {
   executeOnlineReexecute,
   executeOnlinePenaltyWithdraw,
@@ -28,17 +26,11 @@ import { useBoardScale } from './hooks/useBoardScale.js';
 import { useStagedMoves } from './hooks/useStagedMoves.js';
 import { useTurnReplayAnimation } from './components/board/useTurnReplayAnimation.js';
 
-export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline: propIsOnline = false, isSolo = false, botStatus = null, playerNames: propPlayerNames = [], dbMasterState: propDbMasterState = null, updateMasterGameState: propUpdateMasterGameState = null }) {
-  const onlineCtx = useOnlineGame();
-  const isOnline = onlineCtx.isOnline || propIsOnline;
-  const dbMasterState = onlineCtx.dbMasterState || propDbMasterState;
-  const updateMasterGameState = onlineCtx.updateMasterGameState || propUpdateMasterGameState;
-  const playerNames = (onlineCtx.playerNames && onlineCtx.playerNames.length > 0) ? onlineCtx.playerNames : propPlayerNames;
-
+export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, isSolo = false, isLobby = false, botIds = [], botStatus = null, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
   const G = (isOnline && dbMasterState) ? (dbMasterState.G || dbMasterState) : rawG;
   const ctx = (isOnline && dbMasterState) ? (dbMasterState.ctx || rawCtx) : rawCtx;
 
-  const { zoomLevel, setZoomLevel, autoScale } = useBoardScale();
+  const { zoomLevel, autoScale } = useBoardScale();
   const [autoDraftTileId, setAutoDraftTileId] = useState(null);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
 
@@ -151,6 +143,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         getPlayerLabel={getPlayerLabel}
         isOnline={isOnline}
         isSolo={isSolo}
+        isLobby={isLobby}
         setShowSaveLoadModal={setShowSaveLoadModal}
       />
 
@@ -197,7 +190,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
       <div className="kred-layout" style={{ zoom: zoomLevel }}>
         <div className="domains-section">
-          <BoardZoomControls zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} style={{ zoom: 1 / zoomLevel }} />
           <div className="board-canvas-card">
             <SvgBoardCanvas
               activeBoardImage={activeBoardImage}
@@ -237,7 +229,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         </div>
 
         <div className="controls-sidebar">
-          {isSolo && botStatus?.text && !G.winner && (
+          {botStatus?.text && !G.winner && (
             <div className="ai-thinking-banner" role="status" aria-live="polite">
               <span className="ai-thinking-dot" />
               <span>🤖 {botStatus.text}</span>
@@ -301,7 +293,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                 />
               )}
 
-              <OpponentHandSummary G={G} playerID={playerID} numPlayers={numPlayers} getPlayerLabel={getPlayerLabel} isSolo={isSolo} />
+              <OpponentHandSummary G={G} playerID={playerID} numPlayers={numPlayers} getPlayerLabel={getPlayerLabel} isSolo={isSolo} botIds={botIds} />
 
               {(!G?.pendingPlay || showTurnBuilderForPending) && (
                 <PlayerHandDrawer

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 
 export function useBoardScale() {
-  const [zoomLevel, setZoomLevel] = useState(0.75);
   const [autoScale, setAutoScale] = useState(1);
 
   useEffect(() => {
@@ -15,5 +14,5 @@ export function useBoardScale() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  return { zoomLevel, setZoomLevel, autoScale };
+  return { zoomLevel: 0.75, autoScale };
 }

@@ -58,8 +58,10 @@ function computeActionKey(matchID, state, obs, botId) {
 export function createSoloController({
   game,
   matchID,
+  numPlayers = 3,
   multiplayer = Local(),
   botIds = ['1', '2'],
+  credentialsByBot = {},
   personaOverrides = {},
   onStatusChange = null,
   onBotError = null,
@@ -157,13 +159,18 @@ export function createSoloController({
   };
 
   for (const botId of botIds) {
-    const client = Client({
+    const botKey = String(botId);
+    const clientOpts = {
       game,
-      numPlayers: 3,
+      numPlayers,
       matchID,
-      playerID: String(botId),
+      playerID: botKey,
       multiplayer
-    });
+    };
+    if (credentialsByBot && credentialsByBot[botKey]) {
+      clientOpts.credentials = credentialsByBot[botKey];
+    }
+    const client = Client(clientOpts);
     clients[botId] = client;
     const unsub = client.subscribe(() => evaluateBot(botId));
     unsubs.push(unsub);

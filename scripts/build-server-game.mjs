@@ -8,7 +8,7 @@ const kredDir = path.resolve(__dirname, '..');
 
 const entryContent = `
 import { createKredGame } from './src/srcGame.js';
-const kredGame = createKredGame();
+const kredGame = createKredGame(undefined, false, { hideOpponentHands: true });
 module.exports = kredGame;
 module.exports.default = kredGame;
 module.exports.KredGame = kredGame;

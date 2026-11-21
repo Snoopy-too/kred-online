@@ -1,8 +1,9 @@
 import React from 'react';
 
-export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel, isSolo = false }) {
+export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel, isSolo = false, botIds = [] }) {
   if (!G || !G.players) return null;
 
+  const botSet = new Set(botIds.map(String));
   const opponentIds = Object.keys(G.players)
     .filter(pId => String(pId) !== String(playerID))
     .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
@@ -10,7 +11,7 @@ export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel, i
   return (
     <div className="opponent-hand-sidebar-card">
       <div className="hand-card-header" style={{ marginBottom: '8px' }}>
-        <h3>{isSolo ? 'AI Opponents' : 'Opponent Hands'}</h3>
+        <h3>{isSolo ? 'AI Opponents' : 'Opponents'}</h3>
       </div>
 
       <div className="opponent-rows-container">
@@ -18,12 +19,13 @@ export function OpponentHandSummary({ G, playerID, numPlayers, getPlayerLabel, i
           const hand = G.players[opId]?.hand || [];
           const count = hand.length;
           const label = getPlayerLabel ? getPlayerLabel(opId) : `Player ${parseInt(opId, 10) + 1}`;
+          const isBot = isSolo || botSet.has(String(opId));
 
           return (
             <div key={opId} className="opponent-hand-row">
               <span className="opponent-hand-label">
                 {label}
-                {isSolo && <span className="ai-bot-badge">AI</span>}
+                {isBot && <span className="ai-bot-badge">AI</span>}
               </span>
               <div className="mini-tiles-flex">
                 {count > 0 ? (

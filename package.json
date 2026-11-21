@@ -4,17 +4,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/build-module.mjs",
     "build:module": "node scripts/build-module.mjs",
     "build:server": "node scripts/build-server-game.mjs",
     "build:all": "node scripts/build-server-game.mjs && node scripts/build-module.mjs",
-    "preview": "vite preview",
     "test": "node --test \"test/**/*.test.js\"",
     "arena": "node test/jev-arena/cli.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.2",
     "boardgame.io": "^0.50.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

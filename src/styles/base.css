@@ -31,7 +31,7 @@ body, .kred-lobby-wrapper {
   font-family: 'Outfit', sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-main);
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .app-shell {
