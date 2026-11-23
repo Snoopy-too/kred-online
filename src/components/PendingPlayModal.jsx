@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getActiveChallenger } from '../domain/board.js';
+import { getActiveChallenger, getPendingPlayActivePlayer } from '../domain/board.js';
+import { OutcomeNoticeCard, isSupportedOutcomeNotice } from './board/OutcomeNoticeCard.jsx';
 import {
   executeOnlineAcceptTile,
   executeOnlineRejectTile,
@@ -11,16 +12,15 @@ import {
 } from '../domain/onlineEngine.js';
 
 export function PendingPlayModal({
-  G, playerID, moves, getPlayerLabel, peekPendingTile = false, onTogglePeekTile,
+  G, playerID, moves, peekPendingTile = false, onTogglePeekTile,
   isOnline = false, updateMasterGameState = null,
-  onReplayPieceMoves = null, isReplaying = false
+  onReplayPieceMoves = null, isReplaying = false,
+  getPlayerLabel = null
 }) {
   const myPlayer = (G && G.players && G.players[playerID]) || {};
   const isZeroCredibility = (myPlayer.credibilityNotchesLost || 0) >= 3;
   const isFullCredibility = (myPlayer.credibilityNotchesLost || 0) === 0;
 
-  const [visibleNotice, setVisibleNotice] = useState(null);
-  const [isFading, setIsFading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -32,309 +32,158 @@ export function PendingPlayModal({
     actionFn();
   };
 
-  useEffect(() => {
-    if (G?.lastOutcomeNotice) {
-      setVisibleNotice(G.lastOutcomeNotice);
-      setIsFading(false);
-      const fadeTimer = setTimeout(() => setIsFading(true), 4500);
-      const removeTimer = setTimeout(() => setVisibleNotice(null), 5000);
-      return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer); };
-    } else {
-      setVisibleNotice(null);
-      setIsFading(false);
-    }
-  }, [G?.lastOutcomeNotice]);
+  if (!G || !G.pendingPlay) return null;
 
-  if (!G || (!G.pendingPlay && !visibleNotice)) return null;
+  const pp = G.pendingPlay;
+  const isReceiver = String(playerID) === String(pp.receiverId);
+  const activeChallenger = getActiveChallenger(G);
+  const isChallenger = String(playerID) === String(activeChallenger);
+  const isRewardChallenger = String(playerID) === String(pp.successfulChallengerId);
+  const hasPieceMoves = Boolean(pp.movesMade && pp.movesMade.length > 0);
 
-  const isReceiver = G.pendingPlay && String(playerID) === String(G.pendingPlay.receiverId);
-  const activeChallenger = G.pendingPlay ? getActiveChallenger(G) : null;
-  const isChallenger = G.pendingPlay && String(playerID) === String(activeChallenger);
-  const hasPieceMoves = Boolean(G?.pendingPlay?.movesMade && G.pendingPlay.movesMade.length > 0);
+  const replayBtn = hasPieceMoves && onReplayPieceMoves && (
+    <button
+      className="btn btn-secondary"
+      onClick={onReplayPieceMoves}
+      disabled={isReplaying}
+      style={{ border: '1px solid rgba(200, 155, 60, 0.45)', color: 'var(--accent-gold)' }}
+    >
+      {isReplaying ? 'Replaying...' : 'Replay Moves'}
+    </button>
+  );
 
   return (
-    <div className="pending-play-modal" style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 }}>
       {isProcessing && (
         <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0, 0, 0, 0.6)', zIndex: 10,
+          position: 'absolute', inset: 0,
+          background: 'rgba(0, 0, 0, 0.55)', zIndex: 10,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          borderRadius: '8px', color: '#fff', fontWeight: 'bold',
-          backdropFilter: 'blur(2px)'
+          borderRadius: '8px', color: '#fff', fontWeight: 'bold'
         }}>
-          Updating Database...
-        </div>
-      )}
-      <div style={{ opacity: isProcessing ? 0.4 : 1, pointerEvents: isProcessing ? 'none' : 'auto' }}>
-      {/* Challenge / Resolution Outcome Modal Notice */}
-      {visibleNotice && (
-        <div className="outcome-notice-banner" style={{ marginBottom: G.pendingPlay ? '16px' : '0', padding: '12px', borderRadius: '8px', background: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)', border: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? '1px solid #ef4444' : '1px solid #22c55e', transition: 'opacity 0.5s ease', opacity: isFading ? 0 : 1 }}>
-          <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', color: visibleNotice.type === 'challengeSuccess' || visibleNotice.type === 'reject' ? '#f87171' : '#4ade80' }}>
-            {visibleNotice.title}
-          </h4>
-          <p style={{ margin: 0, fontSize: '13px', color: '#f8fafc' }}>
-            {visibleNotice.text}
-          </p>
+          Updating...
         </div>
       )}
 
-      {G.pendingPlay && (
-        <>
-          <h3>
-            <span className="modal-icon">⚖️</span> Pending Play Action
-          </h3>
-          <p>
-            Mover <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong> played face-down to <strong>{getPlayerLabel(G.pendingPlay.receiverId)}</strong>
-          </p>
-
-          {/* Receiver Step */}
-          {G.pendingPlay.step === 'receipt' && (
-            isReceiver ? (
-              <div className="receipt-actions">
-                {isZeroCredibility && (
-                  <div className="zero-credibility-notice" style={{ background: 'rgba(245, 158, 11, 0.18)', border: '1px solid #f59e0b', borderRadius: '8px', padding: '10px', marginBottom: '12px' }}>
-                    <p style={{ color: '#fbbf24', fontWeight: 800, margin: '0 0 4px 0', fontSize: '13px' }}>
-                      ⚠️ Zero Credibility Rule Notice
-                    </p>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#f8fafc', lineHeight: 1.4 }}>
-                      You have 0 credibility remaining (all 3 notches lost). According to KRED rules, players with 0 credibility cannot inspect face-down tiles passed to them, nor challenge plays. This tile is accepted directly.
-                    </p>
-                  </div>
-                )}
-                {G.pendingPlay.playType === 'Honest' || isZeroCredibility ? (
-                  <>
-                    {!isZeroCredibility && <p>You received a tile face-down at your <strong>Drop Tile</strong> spot! This tile was played <strong>honestly</strong>.</p>}
-                    <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {!isZeroCredibility && (
-                        <button
-                          className="btn btn-secondary"
-                          onClick={onTogglePeekTile}
-                          style={{ background: '#26201b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                        >
-                          👁️ {peekPendingTile ? 'Hide Tile (Flip Face-Down)' : 'Peek / Flip Tile Privately'}
-                        </button>
-                      )}
-                      <button
-                        className="btn btn-success"
-                        onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
-                      >
-                        Accept (Place Face-Down in Bank)
-                      </button>
-                      {hasPieceMoves && onReplayPieceMoves && (
-                        <button
-                          className="btn btn-secondary"
-                          onClick={onReplayPieceMoves}
-                          disabled={isReplaying}
-                          style={{ background: '#1e293b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                        >
-                          🎬 {isReplaying ? 'Replaying Piece Moves...' : 'Replay Piece Moves'}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p>You received a tile face-down at your <strong>Drop Tile</strong> spot! Do you accept or expose?</p>
-                    <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <button
-                        className="btn btn-secondary"
-                        onClick={onTogglePeekTile}
-                        style={{ background: '#26201b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                      >
-                        👁️ {peekPendingTile ? 'Hide Tile (Flip Face-Down)' : 'Peek / Flip Tile Privately'}
-                      </button>
-                      <button
-                        className="btn btn-success"
-                        onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
-                      >
-                        Accept (Place Face-Down in Bank)
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => handleAction(() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile())}
-                      >
-                        Expose / Whistle Blower (Place Face-Up in Bank)
-                      </button>
-                      {hasPieceMoves && onReplayPieceMoves && (
-                        <button
-                          className="btn btn-secondary"
-                          onClick={onReplayPieceMoves}
-                          disabled={isReplaying}
-                          style={{ background: '#1e293b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                        >
-                          🎬 {isReplaying ? 'Replaying Piece Moves...' : 'Replay Piece Moves'}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
+      <div style={{ opacity: isProcessing ? 0.4 : 1, pointerEvents: isProcessing ? 'none' : 'auto', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {pp.step === 'receipt' && isReceiver ? (
+          <>
+            <div className="turn-card-header">
+              <h3>Receive Tile</h3>
+            </div>
+            <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+              {!isZeroCredibility && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={onTogglePeekTile}
+                  style={{ border: '1px solid rgba(200, 155, 60, 0.45)', color: 'var(--accent-gold)' }}
+                >
+                  {peekPendingTile ? 'Hide Tile' : 'Peek Tile'}
+                </button>
+              )}
+              {replayBtn}
+              <button
+                className="btn btn-primary"
+                onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
+              >
+                Accept
+              </button>
+              {pp.playType !== 'Honest' && !isZeroCredibility && (
+                <button
+                  className="btn btn-danger"
+                  onClick={() => handleAction(() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile())}
+                >
+                  Expose
+                </button>
+              )}
+            </div>
+          </>
+        ) : pp.step === 'challenge' && isChallenger ? (
+          <>
+            <div className="turn-card-header">
+              <h3>Challenge?</h3>
+            </div>
+            <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+              {replayBtn}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className="btn btn-warning"
+                  style={{ flex: 1 }}
+                  onClick={() => handleAction(() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile())}
+                >
+                  Challenge
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => handleAction(() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge())}
+                >
+                  Pass
+                </button>
               </div>
-            ) : (
-              <div className="receipt-actions">
-                <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-                  {G.pendingPlay.playType === 'Honest'
-                    ? <>Waiting for <strong>{getPlayerLabel(G.pendingPlay.receiverId)}</strong> to Accept the face-down tile...</>
-                    : <>Waiting for <strong>{getPlayerLabel(G.pendingPlay.receiverId)}</strong> to Accept or Expose the face-down tile...</>
-                  }
-                </p>
-              </div>
-            )
-          )}
-
-          {/* Bystander Challenge Step */}
-          {G.pendingPlay.step === 'challenge' && (
-            isChallenger ? (
-              <div className="challenge-actions">
-                <p>Tile accepted face-down. As a bystander, do you want to challenge the play?</p>
-                <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="btn btn-warning"
-                      style={{ flex: 1 }}
-                      onClick={() => handleAction(() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile())}
-                    >
-                      Challenge Play
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      style={{ flex: 1 }}
-                      onClick={() => handleAction(() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge())}
-                    >
-                      Pass Challenge
-                    </button>
-                  </div>
-                  {hasPieceMoves && onReplayPieceMoves && (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={onReplayPieceMoves}
-                      disabled={isReplaying}
-                      style={{ background: '#1e293b', color: '#38bdf8', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      🎬 {isReplaying ? 'Replaying Piece Moves...' : 'Replay Piece Moves'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="challenge-actions">
-                <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-                  Waiting for <strong>{activeChallenger !== null ? getPlayerLabel(activeChallenger) : 'challenger'}</strong> to Challenge or Pass...
-                </p>
-              </div>
-            )
-          )}
-
-          {/* Re-execute Step for non-movers */}
-          {G.pendingPlay.step === 'reexecute' && (
-            <div className="reexecute-actions">
-              <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-                <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong>'s dishonest play was exposed! Waiting for them to re-execute honest moves...
+            </div>
+          </>
+        ) : pp.step === 'receiverReward' && isReceiver ? (
+          <>
+            <div className="turn-card-header">
+              <h3>Choose Reward</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+              <button
+                className="btn btn-success"
+                disabled={isFullCredibility}
+                onClick={() => handleAction(() => isOnline ? executeOnlineReceiverCredibilityReward(G, playerID, updateMasterGameState) : moves?.claimReceiverCredibilityReward())}
+                style={{ opacity: isFullCredibility ? 0.5 : 1, cursor: isFullCredibility ? 'not-allowed' : 'pointer' }}
+              >
+                Restore Credibility {isFullCredibility ? '(Max)' : '(+2)'}
+              </button>
+              <button
+                className="btn btn-warning"
+                onClick={() => handleAction(() => isOnline ? executeOnlineReceiverAdvanceReward(G, playerID, updateMasterGameState) : moves?.chooseReceiverAdvanceReward())}
+              >
+                Take Free Advance
+              </button>
+            </div>
+          </>
+        ) : pp.step === 'challengerReward' && isRewardChallenger ? (
+          <>
+            <div className="turn-card-header">
+              <h3>Choose Reward</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+              <button
+                className={isFullCredibility ? 'btn btn-secondary' : 'btn btn-success'}
+                onClick={() => handleAction(() => isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility())}
+              >
+                {isFullCredibility ? 'Continue (Skip Reward)' : 'Restore Credibility (+1)'}
+              </button>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>
+                Or use the Bureaucracy panel below.
               </p>
             </div>
-          )}
-
-          {/* Penalty Withdraw Step for non-movers */}
-          {G.pendingPlay.step === 'penaltyWithdraw' && (
-            <div className="penalty-actions">
-              <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-                Waiting for <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong> to execute penalty Withdraw...
-              </p>
+          </>
+        ) : isSupportedOutcomeNotice(G?.lastOutcomeNotice) ? (
+          <OutcomeNoticeCard
+            notice={G.lastOutcomeNotice}
+            getPlayerLabel={getPlayerLabel}
+            waitingLabel={(() => {
+              const activeId = getPendingPlayActivePlayer(G);
+              const name = activeId !== null && getPlayerLabel ? getPlayerLabel(activeId) : null;
+              return name ? `Waiting for ${name}...` : 'Waiting...';
+            })()}
+          />
+        ) : (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '13px' }}>
+            <div>
+              {(() => {
+                const activeId = getPendingPlayActivePlayer(G);
+                const name = activeId !== null && getPlayerLabel ? getPlayerLabel(activeId) : null;
+                return name ? `Waiting for ${name}...` : 'Waiting...';
+              })()}
             </div>
-          )}
-
-          {/* Receiver Whistleblower Reward Step */}
-          {G.pendingPlay.step === 'receiverReward' && (
-            isReceiver ? (
-              <div className="receiver-reward-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #eab308', borderRadius: '8px', padding: '12px' }}>
-                  <h4 style={{ margin: '0 0 6px 0', color: '#facc15', fontSize: '15px' }}>
-                    🚨 Whistleblower Reward!
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#f8fafc', lineHeight: 1.4 }}>
-                    Mover <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong> rectified their moves to satisfy the tile. As the whistle blower, choose your reward:
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button
-                    className="btn btn-success"
-                    disabled={isFullCredibility}
-                    onClick={() => handleAction(() => isOnline ? executeOnlineReceiverCredibilityReward(G, playerID, updateMasterGameState) : moves?.claimReceiverCredibilityReward())}
-                    style={{
-                      opacity: isFullCredibility ? 0.5 : 1,
-                      cursor: isFullCredibility ? 'not-allowed' : 'pointer'
-                    }}
-                    title={isFullCredibility ? 'Credibility is already at maximum (3/3)' : 'Restore up to 2 lost credibility notches'}
-                  >
-                    🛡️ Option A: Restore Credibility (Up to 2 Notches) {isFullCredibility ? '(Already at Max 3/3)' : ''}
-                  </button>
-                  <button
-                    className="btn btn-warning"
-                    onClick={() => handleAction(() => isOnline ? executeOnlineReceiverAdvanceReward(G, playerID, updateMasterGameState) : moves?.chooseReceiverAdvanceReward())}
-                  >
-                    ⚡ Option B: Take an "Advance" Move
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="receiver-reward-actions">
-                <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-                  Waiting for Receiver <strong>{getPlayerLabel(G.pendingPlay.receiverId)}</strong> to select their whistleblower reward...
-                </p>
-              </div>
-            )
-          )}
-
-          {/* Free Advance Step for non-receivers */}
-          {G.pendingPlay.step === 'freeAdvance' && (
-            <div className="free-advance-actions">
-              <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-                Waiting for <strong>{getPlayerLabel(G.pendingPlay.receiverId)}</strong> to execute free Advance...
-              </p>
-            </div>
-          )}
-
-          {/* Challenger Reward Step */}
-          {G.pendingPlay.step === 'challengerReward' && (
-            String(playerID) === String(G.pendingPlay.successfulChallengerId) ? (
-              <div className="challenger-reward-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #eab308', borderRadius: '8px', padding: '12px' }}>
-                  <h4 style={{ margin: '0 0 6px 0', color: '#facc15', fontSize: '15px' }}>
-                    🎯 Successful Challenge Reward!
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#f8fafc', lineHeight: 1.4 }}>
-                    You successfully exposed Player <strong>{getPlayerLabel(G.pendingPlay.moverId)}</strong>'s dishonest play! As per KRED rules, choose your reward:
-                  </p>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button
-                    className="btn btn-success"
-                    disabled={isFullCredibility}
-                    onClick={() => handleAction(() => isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility())}
-                    style={{
-                      opacity: isFullCredibility ? 0.5 : 1,
-                      cursor: isFullCredibility ? 'not-allowed' : 'pointer'
-                    }}
-                    title={isFullCredibility ? 'Credibility is already at maximum (3/3)' : 'Restore 1 lost credibility notch'}
-                  >
-                    🛡️ Restore 1 Credibility Notch {isFullCredibility ? '(Already at Max 3/3)' : ''}
-                  </button>
-                  <p style={{ fontSize: '12px', color: '#fbbf24', margin: '4px 0 0 0', textAlign: 'center' }}>
-                    — OR — Use the Bureaucracy Panel in the sidebar to perform 1 Bureaucracy Action using tile funding.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="challenger-reward-actions">
-                <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-                  Waiting for Challenger <strong>{getPlayerLabel(G.pendingPlay.successfulChallengerId)}</strong> to select their challenge reward...
-                </p>
-              </div>
-            )
-          )}
-        </>
-      )}
+            {(pp.step === 'receipt' || pp.step === 'challenge') && replayBtn}
+          </div>
+        )}
       </div>
     </div>
   );

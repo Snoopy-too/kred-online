@@ -4161,8 +4161,8 @@ var INITIAL_PIECE_COUNTS = {
 };
 var BUREAUCRACY_PRICES = {
   3: { PROMOTE_OFFICE: 18, EXTRA_ACTION: 15, PROMOTE_ROSTRUM: 12, BASIC_ACTION: 9, PROMOTE_SEAT: 6, RESTORE_CRED: 3 },
-  4: { PROMOTE_OFFICE: 18, EXTRA_ACTION: 15, PROMOTE_ROSTRUM: 12, BASIC_ACTION: 9, PROMOTE_SEAT: 6, RESTORE_CRED: 3 },
-  5: { PROMOTE_OFFICE: 12, EXTRA_ACTION: 10, PROMOTE_ROSTRUM: 8, BASIC_ACTION: 6, PROMOTE_SEAT: 4, RESTORE_CRED: 2 }
+  4: { PROMOTE_OFFICE: 12, EXTRA_ACTION: 10, PROMOTE_ROSTRUM: 8, BASIC_ACTION: 6, PROMOTE_SEAT: 4, RESTORE_CRED: 2 },
+  5: { PROMOTE_OFFICE: 6, EXTRA_ACTION: 5, PROMOTE_ROSTRUM: 4, BASIC_ACTION: 3, PROMOTE_SEAT: 2, RESTORE_CRED: 1 }
 };
 var MoveActionSchema = external_exports.object({
   type: external_exports.enum([
@@ -4987,6 +4987,32 @@ var ActivePlayers = {
 var import_lodash2 = __toESM(require_lodash());
 
 // src/domain/board.js
+function getValidReceivers(G2, moverId) {
+  if (!G2 || !G2.players) return [];
+  const mId = String(moverId);
+  const allIds = Object.keys(G2.players);
+  const np = G2.numPlayers || allIds.length || 3;
+  const tilesPerPlayer = (INITIAL_PIECE_COUNTS[np] || INITIAL_PIECE_COUNTS[3]).TILES_PER_PLAYER;
+  const bankLen = (p2) => {
+    const pl = G2.players[p2];
+    return typeof pl?.bankCount === "number" ? pl.bankCount : (pl?.bank || []).length;
+  };
+  const handLen = (p2) => {
+    const pl = G2.players[p2];
+    return typeof pl?.handCount === "number" ? pl.handCount : (pl?.hand || []).length;
+  };
+  const hasOpenSlot = (p2) => bankLen(p2) < tilesPerPlayer;
+  const totalRemainingTiles = allIds.reduce((sum, p2) => sum + handLen(p2), 0);
+  const isLastTileOfCampaign = totalRemainingTiles <= 1;
+  if (!isLastTileOfCampaign) {
+    const oppWithTiles = allIds.filter((p2) => p2 !== mId && hasOpenSlot(p2) && handLen(p2) > 0);
+    if (oppWithTiles.length > 0) return oppWithTiles;
+    if (hasOpenSlot(mId) && handLen(mId) > 1) return [mId];
+  }
+  const openOpps = allIds.filter((p2) => p2 !== mId && hasOpenSlot(p2));
+  if (openOpps.length > 0) return openOpps;
+  return hasOpenSlot(mId) ? [mId] : [];
+}
 function parseLocation(loc) {
   if (!loc) return null;
   if (loc === "community" || loc.startsWith("community_")) return { type: "community" };
@@ -5056,36 +5082,27 @@ function areRostrumsAdjacent(locA, locB, numPlayers) {
   if (pB.playerId === prevP && pA.index === 1 && pB.index === 2) return true;
   return false;
 }
-function enforceSupportRule(boardState, numPlayers) {
-  let changed = false;
-  const newBoard = JSON.parse(JSON.stringify(boardState));
+function findUnsupportedPiece(boardState, numPlayers) {
+  if (!boardState) return null;
   for (let p2 = 0; p2 < numPlayers; p2++) {
     const domainKey = `p${p2 + 1}`;
+    const ownerId = String(p2);
     const officeLoc = `${domainKey}_office`;
     const r1Loc = `${domainKey}_rostrum1`;
     const r2Loc = `${domainKey}_rostrum2`;
-    if (newBoard[officeLoc] && !newBoard[r1Loc] && !newBoard[r2Loc]) {
-      newBoard[r1Loc] = newBoard[officeLoc];
-      newBoard[officeLoc] = null;
-      changed = true;
+    if (boardState[officeLoc] && !boardState[r1Loc] && !boardState[r2Loc]) {
+      return { ownerId, from: officeLoc, validDestinations: [r1Loc, r2Loc] };
     }
-    const f1Seats = [`${domainKey}_seat1`, `${domainKey}_seat2`, `${domainKey}_seat3`].map((s2) => newBoard[s2]);
-    if (newBoard[r1Loc] && f1Seats.every((s2) => s2 === null)) {
-      newBoard[`${domainKey}_seat1`] = newBoard[r1Loc];
-      newBoard[r1Loc] = null;
-      changed = true;
+    const r1Seats = [`${domainKey}_seat1`, `${domainKey}_seat2`, `${domainKey}_seat3`];
+    if (boardState[r1Loc] && r1Seats.every((s2) => !boardState[s2])) {
+      return { ownerId, from: r1Loc, validDestinations: r1Seats };
     }
-    const f2Seats = [`${domainKey}_seat4`, `${domainKey}_seat5`, `${domainKey}_seat6`].map((s2) => newBoard[s2]);
-    if (newBoard[r2Loc] && f2Seats.every((s2) => s2 === null)) {
-      newBoard[`${domainKey}_seat4`] = newBoard[r2Loc];
-      newBoard[r2Loc] = null;
-      changed = true;
+    const r2Seats = [`${domainKey}_seat4`, `${domainKey}_seat5`, `${domainKey}_seat6`];
+    if (boardState[r2Loc] && r2Seats.every((s2) => !boardState[s2])) {
+      return { ownerId, from: r2Loc, validDestinations: r2Seats };
     }
   }
-  if (changed) {
-    return enforceSupportRule(newBoard, numPlayers);
-  }
-  return newBoard;
+  return null;
 }
 function checkVictory(boardState, pId) {
   const domainKey = `p${parseInt(pId, 10) + 1}`;
@@ -5099,7 +5116,8 @@ function checkVictory(boardState, pId) {
 // src/domain/sharedMoves.js
 function sanitizeLoadedState(targetG) {
   if (!targetG || !targetG.players) return;
-  const ALL_TILE_IDS = Object.keys(TILES).filter((k2) => k2 !== "BLANK");
+  const hasBlank = targetG.numPlayers === 5;
+  const ALL_TILE_IDS = Object.keys(TILES).filter((k2) => k2 !== "BLANK" || hasBlank);
   const usedTileIds = /* @__PURE__ */ new Set();
   Object.values(targetG.players).forEach((p2) => {
     (p2.hand || []).forEach((t2) => {
@@ -5109,25 +5127,31 @@ function sanitizeLoadedState(targetG) {
       if (b2 && b2.tileId && b2.tileId !== "HIDDEN") usedTileIds.add(b2.tileId);
     });
   });
+  if (targetG.draftPacks) {
+    Object.values(targetG.draftPacks).forEach((pack) => {
+      (pack || []).forEach((t2) => {
+        if (t2 && t2 !== "HIDDEN") usedTileIds.add(t2);
+      });
+    });
+  }
   const unusedTiles = ALL_TILE_IDS.filter((id) => !usedTileIds.has(id));
   Object.values(targetG.players).forEach((p2) => {
     if (p2.hand) {
-      p2.hand = p2.hand.map((t2) => {
-        if (t2 === "HIDDEN" || !t2) {
-          return unusedTiles.pop() || "01";
-        }
-        return t2;
-      });
+      p2.hand = p2.hand.map((t2) => t2 === "HIDDEN" || !t2 ? unusedTiles.pop() || "01" : t2);
     }
     if (p2.bank) {
-      p2.bank = p2.bank.map((b2) => {
-        if (b2 && b2.tileId === "HIDDEN") {
-          return { ...b2, tileId: unusedTiles.pop() || "01" };
-        }
-        return b2;
-      });
+      p2.bank = p2.bank.map((b2) => b2 && b2.tileId === "HIDDEN" ? { ...b2, tileId: unusedTiles.pop() || "01" } : b2);
     }
   });
+  if (targetG.draftPacks) {
+    Object.keys(targetG.draftPacks).forEach((pId) => {
+      if (Array.isArray(targetG.draftPacks[pId])) {
+        targetG.draftPacks[pId] = targetG.draftPacks[pId].map(
+          (t2) => t2 === "HIDDEN" || !t2 ? unusedTiles.pop() || "01" : t2
+        );
+      }
+    });
+  }
 }
 function handleLoadSaveState({ G: G2, ctx, events }, savedSnapshot) {
   if (!savedSnapshot || typeof savedSnapshot !== "object") return INVALID_MOVE;
@@ -5141,6 +5165,7 @@ function handleLoadSaveState({ G: G2, ctx, events }, savedSnapshot) {
   if (targetG.draftSelectionsThisRound) G2.draftSelectionsThisRound = JSON.parse(JSON.stringify(targetG.draftSelectionsThisRound));
   if (targetG.numPlayers) G2.numPlayers = targetG.numPlayers;
   G2.pendingPlay = targetG.pendingPlay ? JSON.parse(JSON.stringify(targetG.pendingPlay)) : null;
+  G2.pendingSupport = targetG.pendingSupport ? JSON.parse(JSON.stringify(targetG.pendingSupport)) : null;
   G2.nextMoverId = targetG.nextMoverId !== void 0 ? targetG.nextMoverId : null;
   G2.winner = targetG.winner || null;
   if (targetG.history) G2.history = JSON.parse(JSON.stringify(targetG.history));
@@ -5156,20 +5181,52 @@ function handleLoadSaveState({ G: G2, ctx, events }, savedSnapshot) {
 
 // src/domain/phases/draftPhase.js
 function createDraftPhase() {
-  const handleSkipDraft = ({ G: G2, events }) => {
-    const np = G2.numPlayers || 3;
-    const order = getClockwiseOrder(np);
-    order.forEach((pId) => {
-      const pack = G2.draftPacks ? G2.draftPacks[pId] || [] : [];
-      G2.players[pId].hand = [...G2.players[pId].hand || [], ...pack];
-      if (G2.draftPacks) G2.draftPacks[pId] = [];
-    });
-    G2.draftSelectionsThisRound = {};
-    if (events && events.setPhase) {
-      events.setPhase("campaign");
+  const autoPickForSkippedPlayers = (G2, random) => {
+    const skipped = G2.draftSkippedPlayers || {};
+    for (const pId of Object.keys(G2.players || {})) {
+      if (!skipped[pId] || G2.draftSelectionsThisRound?.[pId]) continue;
+      const pack = G2.draftPacks?.[pId] || [];
+      if (pack.length === 0) continue;
+      const randVal = random && typeof random.Number === "function" ? random.Number() : Math.random();
+      const idx = Math.floor(randVal * pack.length);
+      const tileId = pack[idx];
+      G2.players[pId].hand.push(tileId);
+      G2.draftPacks[pId] = pack.filter((t2) => t2 !== tileId);
+      G2.draftSelectionsThisRound[pId] = true;
     }
   };
-  const handleSelectDraftTile = ({ G: G2, ctx, playerID, events }, tileId) => {
+  const advanceDraftRounds = (G2, random, events) => {
+    for (let guard = 0; guard < 12; guard++) {
+      autoPickForSkippedPlayers(G2, random);
+      const playerIds = Object.keys(G2.players || {});
+      const allSelected = playerIds.length > 0 && playerIds.every((id) => G2.draftSelectionsThisRound?.[id]);
+      if (!allSelected) break;
+      const order = getClockwiseOrder(G2.numPlayers);
+      const newPacks = {};
+      for (let i2 = 0; i2 < order.length; i2++) {
+        const currentP = order[i2];
+        const nextP = order[(i2 + 1) % order.length];
+        newPacks[nextP] = G2.draftPacks[currentP];
+      }
+      G2.draftPacks = newPacks;
+      G2.draftSelectionsThisRound = {};
+      const hasMoreTiles = Object.values(G2.draftPacks).some((p2) => p2 && p2.length > 0);
+      if (!hasMoreTiles) {
+        if (events && events.setPhase) {
+          events.setPhase("campaign");
+        }
+        break;
+      }
+    }
+  };
+  const handleSkipDraft = ({ G: G2, playerID, random, events }) => {
+    const pId = String(playerID);
+    if (!G2.players?.[pId]) return INVALID_MOVE;
+    if (!G2.draftSkippedPlayers) G2.draftSkippedPlayers = {};
+    G2.draftSkippedPlayers[pId] = true;
+    advanceDraftRounds(G2, random, events);
+  };
+  const handleSelectDraftTile = ({ G: G2, ctx, playerID, random, events }, tileId) => {
     const pId = String(playerID);
     if (G2.draftSelectionsThisRound && G2.draftSelectionsThisRound[pId]) {
       console.log("[selectDraftTile] INVALID: player", pId, "already selected this round");
@@ -5184,36 +5241,21 @@ function createDraftPhase() {
     G2.draftPacks[pId] = pack.filter((t2) => t2 !== tileId);
     G2.draftSelectionsThisRound[pId] = true;
     console.log("[selectDraftTile] Player", pId, "picked", tileId);
-    const allSelected = Object.keys(G2.players).every((id) => G2.draftSelectionsThisRound[id]);
-    if (allSelected) {
-      const order = getClockwiseOrder(G2.numPlayers);
-      const newPacks = {};
-      for (let i2 = 0; i2 < order.length; i2++) {
-        const currentP = order[i2];
-        const nextP = order[(i2 + 1) % order.length];
-        newPacks[nextP] = G2.draftPacks[currentP];
-      }
-      G2.draftPacks = newPacks;
-      G2.draftSelectionsThisRound = {};
-      const hasMoreTiles = Object.values(G2.draftPacks).some((p2) => p2 && p2.length > 0);
-      if (!hasMoreTiles && events && events.setPhase) {
-        events.setPhase("campaign");
-      }
-    }
+    advanceDraftRounds(G2, random, events);
   };
   return {
     start: true,
     moves: {
-      skipDraftPhase: handleSkipDraft,
+      skipDraftPhase: { move: handleSkipDraft, client: false },
       loadSaveState: handleLoadSaveState,
-      selectDraftTile: handleSelectDraftTile
+      selectDraftTile: { move: handleSelectDraftTile, client: false }
     },
     turn: {
       activePlayers: { all: "drafting" },
       moves: {
-        skipDraftPhase: handleSkipDraft,
+        skipDraftPhase: { move: handleSkipDraft, client: false },
         loadSaveState: handleLoadSaveState,
-        selectDraftTile: handleSelectDraftTile
+        selectDraftTile: { move: handleSelectDraftTile, client: false }
       }
     },
     next: "campaign",
@@ -5605,6 +5647,228 @@ function classifyPlay(movesMade, tileIdPlayed, moverId = "0", boardState = null,
   return "Dishonest";
 }
 
+// src/domain/gameLog.js
+function appendGameLog(G2, text, tone = "info") {
+  if (!G2 || !text) return;
+  if (!Array.isArray(G2.history)) G2.history = [];
+  const nextId = G2.history.length > 0 ? (G2.history[G2.history.length - 1].id || G2.history.length) + 1 : 1;
+  G2.history.push({ id: nextId, text, tone });
+  if (G2.history.length > 150) {
+    G2.history.splice(0, G2.history.length - 150);
+  }
+}
+function ownerFromLoc(loc) {
+  if (typeof loc !== "string") return null;
+  const m = loc.match(/^p(\d+)_/);
+  return m ? String(parseInt(m[1], 10) - 1) : null;
+}
+function formatMovePastClause(move) {
+  if (!move || !move.type) return "";
+  switch (move.type) {
+    case "Advance":
+      return "Advanced";
+    case "Withdraw":
+      return "Withdrew";
+    case "Organize":
+      return "Organized";
+    case "Assist": {
+      const target = ownerFromLoc(move.to);
+      return target !== null ? `Assisted Player ${target}` : "Assisted";
+    }
+    case "Remove": {
+      const target = ownerFromLoc(move.from);
+      return target !== null ? `Removed Player ${target}` : "Removed";
+    }
+    case "Influence": {
+      const target = ownerFromLoc(move.from) ?? ownerFromLoc(move.to);
+      return target !== null ? `Influenced Player ${target}` : "Influenced";
+    }
+    default:
+      return move.type;
+  }
+}
+function formatMoveInfinitive(move) {
+  if (!move || !move.type) return "move a piece";
+  switch (move.type) {
+    case "Advance":
+      return "Advance";
+    case "Withdraw":
+      return "Withdraw";
+    case "Organize":
+      return "Organize";
+    case "Assist": {
+      const target = ownerFromLoc(move.to);
+      return target !== null ? `Assist Player ${target}` : "Assist";
+    }
+    case "Remove": {
+      const target = ownerFromLoc(move.from);
+      return target !== null ? `Remove Player ${target}` : "Remove";
+    }
+    case "Influence": {
+      const target = ownerFromLoc(move.from) ?? ownerFromLoc(move.to);
+      return target !== null ? `Influence Player ${target}` : "Influence";
+    }
+    default:
+      return move.type;
+  }
+}
+function formatTurnMovesLog(moverId, moveActions = []) {
+  const clauses = (moveActions || []).map(formatMovePastClause).filter(Boolean);
+  if (clauses.length === 0) return "";
+  return `Player ${moverId} ${clauses.join(" and ")}.`;
+}
+function createEmptyPlayerStats() {
+  return {
+    whistlesBlown: 0,
+    challengesMade: 0,
+    tilesPlayedToSelf: 0,
+    bureaucracyFunding: []
+  };
+}
+function recordPlayerStat(G2, playerID, key, delta = 1) {
+  if (!G2 || playerID === void 0 || playerID === null) return;
+  if (!G2.matchStats) G2.matchStats = {};
+  const id = String(playerID);
+  if (!G2.matchStats[id]) G2.matchStats[id] = createEmptyPlayerStats();
+  G2.matchStats[id][key] = (G2.matchStats[id][key] || 0) + delta;
+}
+function recordBureaucracyFunding(G2) {
+  if (!G2 || !G2.players) return;
+  if (!G2.matchStats) G2.matchStats = {};
+  for (const pId of Object.keys(G2.players)) {
+    if (!G2.matchStats[pId]) G2.matchStats[pId] = createEmptyPlayerStats();
+    G2.matchStats[pId].bureaucracyFunding.push(G2.players[pId]?.funding || 0);
+  }
+}
+
+// src/domain/phases/campaignResolution.js
+function applyVictoryCheck(G2, tileId) {
+  if (!G2 || !G2.players || tileId === "BLANK") return;
+  const prevWinner = G2.winner;
+  const winners = Object.keys(G2.players).filter((p2) => checkVictory(G2.boardState, p2));
+  if (winners.length > 1) G2.winner = "draw";
+  else if (winners.length === 1) G2.winner = winners[0];
+  if (G2.winner && G2.winner !== prevWinner) {
+    appendGameLog(G2, G2.winner === "draw" ? "Match ended in a draw." : `Player ${G2.winner} won the game!`, "win");
+  }
+}
+function resolvePlayToBank(G2) {
+  if (!G2 || !G2.pendingPlay) return;
+  const { moverId, receiverId, tileIdPlayed } = G2.pendingPlay;
+  G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
+  G2.nextMoverId = receiverId;
+  G2.pendingPlay = null;
+  G2.lastOutcomeNotice = {
+    title: "Quiet is Kept!",
+    type: "quiet",
+    moverId,
+    receiverId,
+    tileIdPlayed,
+    text: `Player ${receiverId} banked Player ${moverId}'s tile.`
+  };
+  appendGameLog(G2, "Quiet is Kept!", "accept");
+  if (!findUnsupportedPiece(G2.boardState, G2.numPlayers)) {
+    applyVictoryCheck(G2, tileIdPlayed);
+  }
+}
+function finishPendingPlayOrReward(G2) {
+  const challengerId = G2.pendingPlay?.successfulChallengerId;
+  const receiverId = G2.pendingPlay?.receiverId || G2.nextMoverId;
+  const tileId = G2.pendingPlay?.reexecuteTileId || G2.pendingPlay?.tileIdPlayed;
+  applyVictoryCheck(G2, tileId);
+  if (challengerId && G2.players[challengerId]) {
+    const hasFacedownTiles = (G2.players[challengerId].bank || []).some((t2) => t2.faceDown);
+    if (hasFacedownTiles) {
+      G2.pendingPlay.step = "challengerReward";
+      return;
+    } else {
+      if (G2.players[challengerId].credibilityNotchesLost > 0) {
+        G2.players[challengerId].credibilityNotchesLost--;
+      }
+    }
+  }
+  G2.pendingPlay = null;
+  if (receiverId !== void 0 && receiverId !== null) {
+    G2.nextMoverId = receiverId;
+  }
+}
+function findNextPlayerWithTiles(G2, startId) {
+  const np = G2 && G2.numPlayers || 3;
+  let targetId = String(startId ?? "0");
+  let searchCount = 0;
+  while (G2 && G2.players && G2.players[targetId] && (G2.players[targetId].hand || []).length === 0 && searchCount < np) {
+    targetId = getNextPlayer(targetId, np);
+    searchCount++;
+  }
+  return parseInt(targetId, 10);
+}
+
+// src/domain/supportRule.js
+function formatSupportSpot(loc) {
+  const p2 = parseLocation(loc);
+  if (!p2) return loc;
+  if (p2.type === "office") return "Office";
+  if (p2.type === "rostrum") return `Rostrum ${p2.index}`;
+  if (p2.type === "seat") return `Seat ${p2.index}`;
+  return loc;
+}
+function queuePendingSupport(G2, options = {}) {
+  const unsupported = findUnsupportedPiece(G2.boardState, G2.numPlayers);
+  if (!unsupported) return false;
+  G2.pendingSupport = {
+    ...unsupported,
+    phase: options.phase || "campaign",
+    afterResolve: options.afterResolve || null,
+    returnToPlayerId: options.returnToPlayerId ?? null,
+    tileId: options.tileId || null
+  };
+  return true;
+}
+function handleResolveSupportDrop({ G: G2, playerID, events }, toLoc) {
+  const ps = G2?.pendingSupport;
+  const pId = String(playerID);
+  if (!ps || String(ps.ownerId) !== pId) return INVALID_MOVE;
+  if (!ps.validDestinations.includes(toLoc)) return INVALID_MOVE;
+  if (!G2.boardState[ps.from] || G2.boardState[toLoc] !== null) return INVALID_MOVE;
+  G2.boardState[toLoc] = G2.boardState[ps.from];
+  G2.boardState[ps.from] = null;
+  appendGameLog(G2, `Player ${pId} moved unsupported piece to ${formatSupportSpot(toLoc)}.`, "info");
+  const nextUnsupported = findUnsupportedPiece(G2.boardState, G2.numPlayers);
+  if (nextUnsupported) {
+    G2.pendingSupport = {
+      ...nextUnsupported,
+      phase: ps.phase,
+      afterResolve: ps.afterResolve,
+      returnToPlayerId: ps.returnToPlayerId,
+      tileId: ps.tileId
+    };
+    if (String(nextUnsupported.ownerId) !== pId) {
+      events.endTurn();
+    }
+    return;
+  }
+  G2.pendingSupport = null;
+  if (ps.afterResolve === "resolvePlayToBank") {
+    resolvePlayToBank(G2);
+  } else if (ps.afterResolve === "finishPendingPlayOrReward") {
+    finishPendingPlayOrReward(G2);
+  } else if (ps.afterResolve === "finishChallengerReward") {
+    const receiverId = G2.pendingPlay?.receiverId;
+    G2.pendingPlay = null;
+    if (receiverId !== void 0 && receiverId !== null) G2.nextMoverId = receiverId;
+    applyVictoryCheck(G2, ps.tileId);
+  } else if (ps.afterResolve === "victoryCheck") {
+    applyVictoryCheck(G2, ps.tileId);
+  }
+  if (ps.phase === "bureaucracy") {
+    if (ps.returnToPlayerId !== null && String(ps.returnToPlayerId) !== pId) {
+      events.endTurn();
+    }
+  } else {
+    events.endTurn();
+  }
+}
+
 // src/domain/bureaucracy.js
 function selectBestBankTilesToPay(facedownBankTiles, cost) {
   if (!facedownBankTiles || facedownBankTiles.length === 0 || cost <= 0) return [];
@@ -5710,6 +5974,15 @@ function applyChallengerBureaucracyAction(G2, pId, { actionType, targetLoc, subA
   tilesToPay.forEach((t2) => {
     t2.faceDown = false;
   });
+  if (actionType === "RESTORE_CRED") {
+    appendGameLog(G2, `Player ${pId} spent K${cost} to restore credibility.`, "info");
+  } else if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
+    const pieceType = G2.boardState[targetLoc]?.type || "piece";
+    const spotWord = actionType === "PROMOTE_SEAT" ? "seat" : actionType === "PROMOTE_ROSTRUM" ? "rostrum" : "office";
+    appendGameLog(G2, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, "info");
+  } else if (subAction) {
+    appendGameLog(G2, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, "info");
+  }
   return true;
 }
 function executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAction }) {
@@ -5741,7 +6014,6 @@ function executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAc
     const val = validateSingleMove(subAction, pId, G2.boardState, G2.community, G2.numPlayers);
     if (!val.valid) return false;
     applyMoveToState(subAction, G2.boardState, G2.community);
-    G2.boardState = enforceSupportRule(G2.boardState, G2.numPlayers);
     return true;
   }
   return false;
@@ -5750,11 +6022,14 @@ function createBureaucracyPhase() {
   return {
     onBegin: ({ G: G2 }) => {
       initBureaucracy(G2);
+      recordBureaucracyFunding(G2);
+      appendGameLog(G2, "BUREAUCRACY", "phase");
     },
     turn: {
       order: {
         first: ({ G: G2 }) => G2 && G2.bureaucracyTurnOrder && G2.bureaucracyTurnOrder.length > 0 ? parseInt(G2.bureaucracyTurnOrder[0], 10) : 0,
         next: ({ G: G2 }) => {
+          if (G2 && G2.pendingSupport) return parseInt(G2.pendingSupport.ownerId, 10);
           if (!G2 || !G2.bureaucracyTurnOrder || G2.bureaucracyTurnIndex === void 0) return void 0;
           if (G2.bureaucracyTurnIndex < G2.bureaucracyTurnOrder.length) {
             return parseInt(G2.bureaucracyTurnOrder[G2.bureaucracyTurnIndex], 10);
@@ -5765,7 +6040,9 @@ function createBureaucracyPhase() {
     },
     moves: {
       loadSaveState: handleLoadSaveState,
-      buyBureaucracyAction: ({ G: G2, ctx, playerID }, { actionType, targetLoc, subAction }) => {
+      resolveSupportDrop: handleResolveSupportDrop,
+      buyBureaucracyAction: ({ G: G2, ctx, playerID, events }, { actionType, targetLoc, subAction }) => {
+        if (G2.pendingSupport) return INVALID_MOVE;
         const pId = String(playerID);
         const prices = BUREAUCRACY_PRICES[G2.numPlayers] || BUREAUCRACY_PRICES[3];
         const player = G2.players[pId];
@@ -5780,16 +6057,34 @@ function createBureaucracyPhase() {
         const success = executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAction });
         if (!success) return INVALID_MOVE;
         player.funding -= cost;
+        if (actionType === "RESTORE_CRED") {
+          appendGameLog(G2, `Player ${pId} spent K${cost} to restore credibility.`, "info");
+        } else if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
+          const pieceType = G2.boardState[targetLoc]?.type || "piece";
+          const spotWord = actionType === "PROMOTE_SEAT" ? "seat" : actionType === "PROMOTE_ROSTRUM" ? "rostrum" : "office";
+          appendGameLog(G2, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, "info");
+        } else {
+          appendGameLog(G2, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, "info");
+        }
+        if (queuePendingSupport(G2, { phase: "bureaucracy", returnToPlayerId: pId })) {
+          if (String(G2.pendingSupport.ownerId) !== pId) {
+            events.endTurn();
+          }
+        }
       },
-      endBureaucracyTurn: ({ G: G2, events }) => {
+      endBureaucracyTurn: ({ G: G2, playerID, events }) => {
+        if (G2?.pendingSupport) return INVALID_MOVE;
         if (G2) {
+          if (playerID !== void 0 && playerID !== null) {
+            appendGameLog(G2, `Player ${playerID} ended their Bureaucracy turn.`, "info");
+          }
           G2.bureaucracyTurnIndex = (G2.bureaucracyTurnIndex || 0) + 1;
         }
         events.endTurn();
       }
     },
     endIf: ({ G: G2 }) => {
-      if (!G2 || G2.bureaucracyTurnIndex === void 0 || !G2.bureaucracyTurnOrder) return false;
+      if (!G2 || G2.pendingSupport || G2.bureaucracyTurnIndex === void 0 || !G2.bureaucracyTurnOrder) return false;
       return G2.bureaucracyTurnIndex >= G2.bureaucracyTurnOrder.length;
     },
     next: ({ G: G2 }) => {
@@ -5802,58 +6097,12 @@ function createBureaucracyPhase() {
   };
 }
 
-// src/domain/phases/campaignResolution.js
-function applyVictoryCheck(G2, tileId) {
-  if (!G2 || !G2.players || tileId === "BLANK") return;
-  const winners = Object.keys(G2.players).filter((p2) => checkVictory(G2.boardState, p2));
-  if (winners.length > 1) G2.winner = "draw";
-  else if (winners.length === 1) G2.winner = winners[0];
-}
-function resolvePlayToBank(G2) {
-  if (!G2 || !G2.pendingPlay) return;
-  const { receiverId, tileIdPlayed } = G2.pendingPlay;
-  G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
-  G2.nextMoverId = receiverId;
-  G2.pendingPlay = null;
-  applyVictoryCheck(G2, tileIdPlayed);
-}
-function findNextPlayerWithTiles(G2, startId) {
-  const np = G2 && G2.numPlayers || 3;
-  let targetId = String(startId ?? "0");
-  let searchCount = 0;
-  while (G2 && G2.players && G2.players[targetId] && (G2.players[targetId].hand || []).length === 0 && searchCount < np) {
-    targetId = getNextPlayer(targetId, np);
-    searchCount++;
-  }
-  return parseInt(targetId, 10);
-}
-
 // src/domain/phases/campaignPhase.js
-function finishPendingPlayOrReward(G2) {
-  const challengerId = G2.pendingPlay?.successfulChallengerId;
-  const receiverId = G2.pendingPlay?.receiverId || G2.nextMoverId;
-  const tileId = G2.pendingPlay?.reexecuteTileId || G2.pendingPlay?.tileIdPlayed;
-  applyVictoryCheck(G2, tileId);
-  if (challengerId && G2.players[challengerId]) {
-    const hasFacedownTiles = (G2.players[challengerId].bank || []).some((t2) => t2.faceDown);
-    if (hasFacedownTiles) {
-      G2.pendingPlay.step = "challengerReward";
-      return;
-    } else {
-      if (G2.players[challengerId].credibilityNotchesLost > 0) {
-        G2.players[challengerId].credibilityNotchesLost--;
-      }
-    }
-  }
-  G2.pendingPlay = null;
-  if (receiverId !== void 0 && receiverId !== null) {
-    G2.nextMoverId = receiverId;
-  }
-}
 function createCampaignPhase() {
   return {
     onBegin: ({ G: G2 }) => {
       if (!G2 || !G2.players) return;
+      appendGameLog(G2, "CAMPAIGN", "phase");
       if (G2.nextMoverId === void 0 || G2.nextMoverId === null) {
         let startP = "0";
         Object.keys(G2.players).forEach((pId) => {
@@ -5876,6 +6125,9 @@ function createCampaignPhase() {
           return findNextPlayerWithTiles(G2, startP);
         },
         next: ({ G: G2, ctx }) => {
+          if (G2 && G2.pendingSupport) {
+            return parseInt(G2.pendingSupport.ownerId, 10);
+          }
           if (G2 && G2.pendingPlay) {
             if (G2.pendingPlay.step === "receipt") {
               return parseInt(G2.pendingPlay.receiverId, 10);
@@ -5910,7 +6162,9 @@ function createCampaignPhase() {
     },
     moves: {
       loadSaveState: handleLoadSaveState,
+      resolveSupportDrop: handleResolveSupportDrop,
       submitTurnMovesAndTile: ({ G: G2, ctx, playerID, events }, payload) => {
+        if (G2.pendingSupport) return INVALID_MOVE;
         const parsed = TurnSubmissionSchema.safeParse(payload);
         if (!parsed.success) {
           console.warn("[submitTurnMovesAndTile] Invalid payload schema:", parsed.error);
@@ -5922,20 +6176,10 @@ function createCampaignPhase() {
           console.warn(`[submitTurnMovesAndTile] Tile ${tileId} not in player ${moverId} hand:`, G2.players[moverId]?.hand);
           return INVALID_MOVE;
         }
-        const tilesPerPlayer = (INITIAL_PIECE_COUNTS[G2.numPlayers] || INITIAL_PIECE_COUNTS[3]).TILES_PER_PLAYER;
-        const receiverBank = G2.players[receiverId]?.bank || [];
-        if (receiverBank.length >= tilesPerPlayer) {
-          console.warn(`[submitTurnMovesAndTile] Receiver ${receiverId} bank is already full (${receiverBank.length}/${tilesPerPlayer}).`);
+        const validReceivers = getValidReceivers(G2, moverId);
+        if (!validReceivers.includes(receiverId)) {
+          console.warn(`[submitTurnMovesAndTile] Receiver ${receiverId} is not a valid receiver:`, validReceivers);
           return INVALID_MOVE;
-        }
-        if (receiverId === moverId) {
-          const hasValidOpponentTarget = Object.keys(G2.players).some(
-            (p2) => p2 !== moverId && (G2.players[p2].bank || []).length < tilesPerPlayer
-          );
-          if (hasValidOpponentTarget) {
-            console.warn("[submitTurnMovesAndTile] Self-play disallowed because valid opponents with empty bank slots exist.");
-            return INVALID_MOVE;
-          }
         }
         const val = validateMoveCombination(moveActions, moverId, G2.boardState, G2.community, G2.numPlayers);
         if (!val.valid) {
@@ -5945,7 +6189,6 @@ function createCampaignPhase() {
         const backupBoard = JSON.parse(JSON.stringify(G2.boardState));
         const backupCommunity = JSON.parse(JSON.stringify(G2.community));
         moveActions.forEach((m) => applyMoveToState(m, G2.boardState, G2.community));
-        G2.boardState = enforceSupportRule(G2.boardState, G2.numPlayers);
         const playType = classifyPlay(moveActions, tileId, moverId, backupBoard, backupCommunity, G2.numPlayers);
         G2.players[moverId].hand = G2.players[moverId].hand.filter((t2) => t2 !== tileId);
         G2.nextMoverId = receiverId;
@@ -5962,9 +6205,16 @@ function createCampaignPhase() {
           challengesPassed: []
         };
         G2.lastOutcomeNotice = null;
-        if (G2.players[receiverId].credibilityNotchesLost >= 3 || tileId === "BLANK") {
+        if (receiverId === moverId) {
+          recordPlayerStat(G2, moverId, "tilesPlayedToSelf");
+        }
+        const movesLog = formatTurnMovesLog(moverId, moveActions);
+        if (movesLog) appendGameLog(G2, movesLog, "info");
+        appendGameLog(G2, `Player ${moverId} played a tile to Player ${receiverId}.`, "play");
+        if (G2.players[receiverId].credibilityNotchesLost >= 3) {
           if (getOrderedChallengers(G2).length === 0) {
             resolvePlayToBank(G2);
+            queuePendingSupport(G2, { phase: "campaign", afterResolve: "victoryCheck", tileId });
           } else {
             G2.pendingPlay.step = "challenge";
           }
@@ -5973,12 +6223,15 @@ function createCampaignPhase() {
       },
       acceptTile: ({ G: G2, ctx, playerID, events }) => {
         const pId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "receipt" || G2.pendingPlay.receiverId !== pId) {
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "receipt" || G2.pendingPlay.receiverId !== pId) {
           return INVALID_MOVE;
         }
         const eligibleChallengers = getOrderedChallengers(G2);
+        const tileId = G2.pendingPlay.tileIdPlayed;
+        appendGameLog(G2, `Player ${pId} accepted Player ${G2.pendingPlay.moverId}'s tile.`, "info");
         if (eligibleChallengers.length === 0) {
           resolvePlayToBank(G2);
+          queuePendingSupport(G2, { phase: "campaign", afterResolve: "victoryCheck", tileId });
         } else {
           G2.pendingPlay.step = "challenge";
         }
@@ -5986,7 +6239,7 @@ function createCampaignPhase() {
       },
       rejectTile: ({ G: G2, ctx, playerID, events }) => {
         const pId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "receipt" || G2.pendingPlay.receiverId !== pId) {
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "receipt" || G2.pendingPlay.receiverId !== pId) {
           return INVALID_MOVE;
         }
         if (G2.pendingPlay.playType === "Honest") {
@@ -6015,6 +6268,8 @@ function createCampaignPhase() {
             tileIdPlayed,
             text: `Player ${receiverId} exposed Player ${moverId}'s dishonest play with Tile ${tileIdPlayed}! Board moves were reset.`
           };
+          recordPlayerStat(G2, receiverId, "whistlesBlown");
+          appendGameLog(G2, `Whistle Blown! Player ${receiverId} exposed Player ${moverId}.`, "alert");
         } else {
           G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
           G2.pendingPlay = null;
@@ -6030,82 +6285,98 @@ function createCampaignPhase() {
         }
         events.endTurn();
       },
-      challengeTile: ({ G: G2, ctx, playerID, events }) => {
-        const pId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "challenge") return INVALID_MOVE;
-        if (G2.players[pId].credibilityNotchesLost >= 3) return INVALID_MOVE;
-        const eligibleChallengers = getOrderedChallengers(G2);
-        const remaining = eligibleChallengers.filter(
-          (id) => !G2.pendingPlay.challengesPassed.includes(id)
-        );
-        if (remaining.length === 0 || remaining[0] !== pId) return INVALID_MOVE;
-        const challengerId = pId;
-        const { moverId, receiverId, tileIdPlayed, playType, backupBoard, backupCommunity, moverStartCredNotches } = G2.pendingPlay;
-        G2.nextMoverId = receiverId;
-        if (playType === "Dishonest" || playType === "Illegal") {
-          G2.boardState = backupBoard;
-          G2.community = backupCommunity;
-          if (G2.players[moverId].credibilityNotchesLost < 3) {
-            G2.players[moverId].credibilityNotchesLost++;
+      challengeTile: {
+        client: false,
+        move: ({ G: G2, ctx, playerID, events }) => {
+          const pId = String(playerID);
+          if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "challenge") return INVALID_MOVE;
+          if (G2.players[pId].credibilityNotchesLost >= 3) return INVALID_MOVE;
+          const eligibleChallengers = getOrderedChallengers(G2);
+          const remaining = eligibleChallengers.filter(
+            (id) => !G2.pendingPlay.challengesPassed.includes(id)
+          );
+          if (remaining.length === 0 || remaining[0] !== pId) return INVALID_MOVE;
+          const challengerId = pId;
+          recordPlayerStat(G2, challengerId, "challengesMade");
+          const { moverId, receiverId, tileIdPlayed, playType, backupBoard, backupCommunity, moverStartCredNotches } = G2.pendingPlay;
+          G2.nextMoverId = receiverId;
+          if (playType === "Dishonest" || playType === "Illegal") {
+            G2.boardState = backupBoard;
+            G2.community = backupCommunity;
+            const isSelfPlay = String(receiverId) === String(moverId);
+            const receiverHadNoWhistle = !isSelfPlay && (G2.players[receiverId]?.credibilityNotchesLost || 0) >= 3;
+            if (G2.players[moverId].credibilityNotchesLost < 3) {
+              G2.players[moverId].credibilityNotchesLost++;
+            } else {
+              G2.players[moverId].pendingPenaltyWithdraw = true;
+            }
+            G2.pendingPlay.successfulChallengerId = challengerId;
+            if (!isSelfPlay && G2.players[receiverId].credibilityNotchesLost < 3) {
+              G2.players[receiverId].credibilityNotchesLost++;
+            }
+            G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: receiverHadNoWhistle });
+            G2.pendingPlay.reexecuteTileId = tileIdPlayed;
+            G2.pendingPlay.nextMoverId = receiverId;
+            G2.pendingPlay.step = "reexecute";
+            G2.lastOutcomeNotice = {
+              title: "\u{1F525} Challenge Succeeded! (Smoking Gun)",
+              type: "challengeSuccess",
+              challengerId,
+              moverId,
+              receiverId,
+              tileIdPlayed,
+              text: `Challenger Player ${challengerId} exposed Player ${moverId}'s dishonest play! Player ${moverId} lost 1 credibility notch and board moves were reset.`
+            };
+            appendGameLog(G2, `Smoking Gun! Player ${challengerId} exposed Player ${moverId}.`, "alert");
           } else {
-            G2.players[moverId].pendingPenaltyWithdraw = true;
+            if (moverStartCredNotches < 3 && G2.players[moverId].credibilityNotchesLost > 0) {
+              G2.players[moverId].credibilityNotchesLost--;
+            }
+            if (G2.players[challengerId].credibilityNotchesLost < 3) {
+              G2.players[challengerId].credibilityNotchesLost++;
+            }
+            G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
+            G2.pendingPlay = null;
+            G2.lastOutcomeNotice = {
+              title: "\u274C Challenge Failed! (Witch Hunt)",
+              type: "challengeFailed",
+              challengerId,
+              moverId,
+              receiverId,
+              tileIdPlayed,
+              text: `Player ${challengerId} challenged Player ${moverId}, but the play with Tile ${tileIdPlayed} was HONEST! Player ${challengerId} lost 1 credibility notch.`
+            };
+            appendGameLog(G2, `Witch Hunt! Player ${challengerId} challenged an honest play.`, "warn");
+            if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "victoryCheck", tileId: tileIdPlayed })) {
+              applyVictoryCheck(G2, tileIdPlayed);
+            }
           }
-          G2.pendingPlay.successfulChallengerId = challengerId;
-          if (G2.players[receiverId].credibilityNotchesLost < 3) {
-            G2.players[receiverId].credibilityNotchesLost++;
-          }
-          G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: false });
-          G2.pendingPlay.reexecuteTileId = tileIdPlayed;
-          G2.pendingPlay.nextMoverId = receiverId;
-          G2.pendingPlay.step = "reexecute";
-          G2.lastOutcomeNotice = {
-            title: "\u{1F525} Challenge Succeeded! (Smoking Gun)",
-            type: "challengeSuccess",
-            challengerId,
-            moverId,
-            receiverId,
-            tileIdPlayed,
-            text: `Challenger Player ${challengerId} exposed Player ${moverId}'s dishonest play! Player ${moverId} lost 1 credibility notch and board moves were reset.`
-          };
-        } else {
-          if (moverStartCredNotches < 3 && G2.players[moverId].credibilityNotchesLost > 0) {
-            G2.players[moverId].credibilityNotchesLost--;
-          }
-          if (G2.players[challengerId].credibilityNotchesLost < 3) {
-            G2.players[challengerId].credibilityNotchesLost++;
-          }
-          G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
-          G2.pendingPlay = null;
-          G2.lastOutcomeNotice = {
-            title: "\u274C Challenge Failed! (Witch Hunt)",
-            type: "challengeFailed",
-            challengerId,
-            moverId,
-            receiverId,
-            tileIdPlayed,
-            text: `Player ${challengerId} challenged Player ${moverId}, but the play with Tile ${tileIdPlayed} was HONEST! Player ${challengerId} lost 1 credibility notch.`
-          };
-          applyVictoryCheck(G2, tileIdPlayed);
+          events.endTurn();
         }
-        events.endTurn();
       },
-      passChallenge: ({ G: G2, ctx, playerID, events }) => {
-        const pId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "challenge") return INVALID_MOVE;
-        const eligibleChallengers = getOrderedChallengers(G2);
-        const remaining = eligibleChallengers.filter(
-          (id) => !G2.pendingPlay.challengesPassed.includes(id)
-        );
-        if (remaining.length === 0 || remaining[0] !== pId) return INVALID_MOVE;
-        G2.pendingPlay.challengesPassed.push(pId);
-        if (G2.pendingPlay.challengesPassed.length >= eligibleChallengers.length) {
-          resolvePlayToBank(G2);
+      passChallenge: {
+        client: false,
+        move: ({ G: G2, ctx, playerID, events }) => {
+          const pId = String(playerID);
+          if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "challenge") return INVALID_MOVE;
+          const eligibleChallengers = getOrderedChallengers(G2);
+          const remaining = eligibleChallengers.filter(
+            (id) => !G2.pendingPlay.challengesPassed.includes(id)
+          );
+          if (remaining.length === 0 || remaining[0] !== pId) return INVALID_MOVE;
+          const tileId = G2.pendingPlay.tileIdPlayed;
+          G2.pendingPlay.challengesPassed.push(pId);
+          appendGameLog(G2, `Player ${pId} passed on challenging.`, "info");
+          if (G2.pendingPlay.challengesPassed.length >= eligibleChallengers.length) {
+            resolvePlayToBank(G2);
+            queuePendingSupport(G2, { phase: "campaign", afterResolve: "victoryCheck", tileId });
+          }
+          events.endTurn();
         }
-        events.endTurn();
       },
       reexecuteHonestly: ({ G: G2, ctx, playerID, events }, payload) => {
         const moverId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "reexecute" || G2.pendingPlay.moverId !== moverId) return INVALID_MOVE;
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "reexecute" || G2.pendingPlay.moverId !== moverId) return INVALID_MOVE;
         const moveActions = payload;
         const tileId = G2.pendingPlay.reexecuteTileId;
         const val = validateMoveCombination(moveActions, moverId, G2.boardState, G2.community, G2.numPlayers);
@@ -6113,39 +6384,42 @@ function createCampaignPhase() {
         const playType = classifyPlay(moveActions, tileId, moverId, G2.boardState, G2.community, G2.numPlayers);
         if (playType !== "Honest") return INVALID_MOVE;
         moveActions.forEach((m) => applyMoveToState(m, G2.boardState, G2.community));
-        G2.boardState = enforceSupportRule(G2.boardState, G2.numPlayers);
+        const reexecLog = formatTurnMovesLog(moverId, moveActions);
+        appendGameLog(G2, reexecLog || `Player ${moverId} re-executed honestly.`, "info");
         if (G2.players[moverId].pendingPenaltyWithdraw) {
           G2.pendingPlay.step = "penaltyWithdraw";
+          queuePendingSupport(G2, { phase: "campaign" });
         } else if (G2.pendingPlay.whistleblownByReceiver) {
           G2.pendingPlay.step = "receiverReward";
-        } else {
+          queuePendingSupport(G2, { phase: "campaign" });
+        } else if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "finishPendingPlayOrReward" })) {
           finishPendingPlayOrReward(G2);
         }
         events.endTurn();
       },
       executePenaltyWithdraw: ({ G: G2, ctx, playerID, events }, moveAction) => {
         const moverId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "penaltyWithdraw" || G2.pendingPlay.moverId !== moverId) return INVALID_MOVE;
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "penaltyWithdraw" || G2.pendingPlay.moverId !== moverId) return INVALID_MOVE;
         if (moveAction) {
           if (moveAction.type !== MOVE_TYPES.WITHDRAW) return INVALID_MOVE;
           const val = validateSingleMove(moveAction, moverId, G2.boardState, G2.community, G2.numPlayers);
           if (!val.valid) return INVALID_MOVE;
           applyMoveToState(moveAction, G2.boardState, G2.community);
-          G2.boardState = enforceSupportRule(G2.boardState, G2.numPlayers);
         } else if (isMoveTypePossible(MOVE_TYPES.WITHDRAW, moverId, G2.boardState, G2.community, G2.numPlayers)) {
           return INVALID_MOVE;
         }
         G2.players[moverId].pendingPenaltyWithdraw = false;
         if (G2.pendingPlay.whistleblownByReceiver) {
           G2.pendingPlay.step = "receiverReward";
-        } else {
+          queuePendingSupport(G2, { phase: "campaign" });
+        } else if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "finishPendingPlayOrReward" })) {
           finishPendingPlayOrReward(G2);
         }
         events.endTurn();
       },
       claimReceiverCredibilityReward: ({ G: G2, ctx, playerID, events }) => {
         const receiverId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "receiverReward" || G2.pendingPlay.receiverId !== receiverId) {
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "receiverReward" || G2.pendingPlay.receiverId !== receiverId) {
           return INVALID_MOVE;
         }
         if (G2.players[receiverId].credibilityNotchesLost > 0) {
@@ -6156,7 +6430,7 @@ function createCampaignPhase() {
       },
       chooseReceiverAdvanceReward: ({ G: G2, ctx, playerID, events }) => {
         const receiverId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "receiverReward" || G2.pendingPlay.receiverId !== receiverId) {
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "receiverReward" || G2.pendingPlay.receiverId !== receiverId) {
           return INVALID_MOVE;
         }
         G2.pendingPlay.step = "freeAdvance";
@@ -6164,22 +6438,23 @@ function createCampaignPhase() {
       },
       executeFreeAdvance: ({ G: G2, ctx, playerID, events }, moveAction) => {
         const receiverId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "freeAdvance" || G2.pendingPlay.receiverId !== receiverId) return INVALID_MOVE;
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "freeAdvance" || G2.pendingPlay.receiverId !== receiverId) return INVALID_MOVE;
         if (moveAction) {
           if (moveAction.type !== MOVE_TYPES.ADVANCE) return INVALID_MOVE;
           const val = validateSingleMove(moveAction, receiverId, G2.boardState, G2.community, G2.numPlayers);
           if (!val.valid) return INVALID_MOVE;
           applyMoveToState(moveAction, G2.boardState, G2.community);
-          G2.boardState = enforceSupportRule(G2.boardState, G2.numPlayers);
         } else if (isMoveTypePossible(MOVE_TYPES.ADVANCE, receiverId, G2.boardState, G2.community, G2.numPlayers)) {
           return INVALID_MOVE;
         }
-        finishPendingPlayOrReward(G2);
+        if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "finishPendingPlayOrReward" })) {
+          finishPendingPlayOrReward(G2);
+        }
         events.endTurn();
       },
       claimChallengerCredibility: ({ G: G2, ctx, playerID, events }) => {
         const pId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "challengerReward" || String(G2.pendingPlay.successfulChallengerId) !== pId) {
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "challengerReward" || String(G2.pendingPlay.successfulChallengerId) !== pId) {
           return INVALID_MOVE;
         }
         if (G2.players[pId].credibilityNotchesLost > 0) {
@@ -6192,23 +6467,25 @@ function createCampaignPhase() {
       },
       buyChallengerBureaucracyAction: ({ G: G2, ctx, playerID, events }, payload) => {
         const pId = String(playerID);
-        if (!G2.pendingPlay || G2.pendingPlay.step !== "challengerReward" || String(G2.pendingPlay.successfulChallengerId) !== pId) {
+        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "challengerReward" || String(G2.pendingPlay.successfulChallengerId) !== pId) {
           return INVALID_MOVE;
         }
         const success = applyChallengerBureaucracyAction(G2, pId, payload);
         if (!success) return INVALID_MOVE;
         const tileId = G2.pendingPlay.reexecuteTileId || G2.pendingPlay.tileIdPlayed;
-        const receiverId = G2.pendingPlay.receiverId;
-        G2.pendingPlay = null;
-        if (receiverId !== void 0 && receiverId !== null) G2.nextMoverId = receiverId;
-        applyVictoryCheck(G2, tileId);
+        if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "finishChallengerReward", tileId })) {
+          const receiverId = G2.pendingPlay.receiverId;
+          G2.pendingPlay = null;
+          if (receiverId !== void 0 && receiverId !== null) G2.nextMoverId = receiverId;
+          applyVictoryCheck(G2, tileId);
+        }
         events.endTurn();
       }
     },
     next: "bureaucracy",
     endIf: ({ G: G2 }) => {
       if (!G2 || !G2.players) return false;
-      return Object.values(G2.players).every((p2) => p2 && p2.hand && p2.hand.length === 0) && !G2.pendingPlay;
+      return Object.values(G2.players).every((p2) => p2 && p2.hand && p2.hand.length === 0) && !G2.pendingPlay && !G2.pendingSupport;
     }
   };
 }
@@ -6326,6 +6603,10 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
           };
         }
       }
+      const matchStats = {};
+      for (let p2 = 0; p2 < np; p2++) {
+        matchStats[String(p2)] = createEmptyPlayerStats();
+      }
       return {
         numPlayers: np,
         boardState,
@@ -6333,10 +6614,13 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
         players,
         draftPacks,
         draftSelectionsThisRound: {},
+        draftSkippedPlayers: {},
         pendingPlay: null,
+        pendingSupport: null,
         nextMoverId: null,
         winner: null,
-        history: []
+        history: effectiveSkipDraft ? [] : [{ id: 1, text: "DRAFT", tone: "phase" }],
+        matchStats
       };
     },
     playerView: ({ G: G2, playerID }) => {

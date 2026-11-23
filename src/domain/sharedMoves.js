@@ -4,34 +4,40 @@ import { TILES } from './types.js';
 export function sanitizeLoadedState(targetG) {
   if (!targetG || !targetG.players) return;
 
-  const ALL_TILE_IDS = Object.keys(TILES).filter(k => k !== 'BLANK');
+  const hasBlank = targetG.numPlayers === 5;
+  const ALL_TILE_IDS = Object.keys(TILES).filter(k => k !== 'BLANK' || hasBlank);
   const usedTileIds = new Set();
 
   Object.values(targetG.players).forEach(p => {
     (p.hand || []).forEach(t => { if (t && t !== 'HIDDEN') usedTileIds.add(t); });
     (p.bank || []).forEach(b => { if (b && b.tileId && b.tileId !== 'HIDDEN') usedTileIds.add(b.tileId); });
   });
+  if (targetG.draftPacks) {
+    Object.values(targetG.draftPacks).forEach(pack => {
+      (pack || []).forEach(t => { if (t && t !== 'HIDDEN') usedTileIds.add(t); });
+    });
+  }
 
   const unusedTiles = ALL_TILE_IDS.filter(id => !usedTileIds.has(id));
 
   Object.values(targetG.players).forEach(p => {
     if (p.hand) {
-      p.hand = p.hand.map(t => {
-        if (t === 'HIDDEN' || !t) {
-          return unusedTiles.pop() || '01';
-        }
-        return t;
-      });
+      p.hand = p.hand.map(t => (t === 'HIDDEN' || !t) ? (unusedTiles.pop() || '01') : t);
     }
     if (p.bank) {
-      p.bank = p.bank.map(b => {
-        if (b && b.tileId === 'HIDDEN') {
-          return { ...b, tileId: unusedTiles.pop() || '01' };
-        }
-        return b;
-      });
+      p.bank = p.bank.map(b => (b && b.tileId === 'HIDDEN') ? { ...b, tileId: unusedTiles.pop() || '01' } : b);
     }
   });
+
+  if (targetG.draftPacks) {
+    Object.keys(targetG.draftPacks).forEach(pId => {
+      if (Array.isArray(targetG.draftPacks[pId])) {
+        targetG.draftPacks[pId] = targetG.draftPacks[pId].map(t =>
+          (t === 'HIDDEN' || !t) ? (unusedTiles.pop() || '01') : t
+        );
+      }
+    });
+  }
 }
 
 export function handleLoadSaveState({ G, ctx, events }, savedSnapshot) {
@@ -49,6 +55,7 @@ export function handleLoadSaveState({ G, ctx, events }, savedSnapshot) {
   if (targetG.draftSelectionsThisRound) G.draftSelectionsThisRound = JSON.parse(JSON.stringify(targetG.draftSelectionsThisRound));
   if (targetG.numPlayers) G.numPlayers = targetG.numPlayers;
   G.pendingPlay = targetG.pendingPlay ? JSON.parse(JSON.stringify(targetG.pendingPlay)) : null;
+  G.pendingSupport = targetG.pendingSupport ? JSON.parse(JSON.stringify(targetG.pendingSupport)) : null;
   G.nextMoverId = targetG.nextMoverId !== undefined ? targetG.nextMoverId : null;
   G.winner = targetG.winner || null;
   if (targetG.history) G.history = JSON.parse(JSON.stringify(targetG.history));

@@ -6,6 +6,9 @@ import { decideAction } from './decisions.js';
 
 export function formatBotStatus(obs, persona) {
   const name = persona?.name || `Bot ${obs.botId}`;
+  if (obs.pendingSupport) {
+    return `${name} is moving an unsupported piece...`;
+  }
   if (obs.pendingPlay) {
     switch (obs.pendingPlay.step) {
       case 'receipt':
@@ -35,15 +38,22 @@ function computeDelayMs(obs, persona, delayOverrideMs, rng) {
   if (typeof delayOverrideMs === 'number') return Math.max(0, delayOverrideMs);
   const [minMs, maxMs] = persona?.thinkingDelayMs || [800, 1600];
   let delay = minMs + Math.floor(rng() * Math.max(1, maxMs - minMs));
-  if (obs.phase === 'bureaucracy') {
-    delay = Math.round(delay * 0.65);
-  } else if (obs.pendingPlay && (obs.pendingPlay.step === 'receipt' || obs.pendingPlay.step === 'challenge')) {
-    delay = Math.max(delay, 1200);
+  if (obs.phase === 'draft') {
+    return delay;
   }
-  return delay;
+  if (obs.phase === 'bureaucracy') {
+    return Math.max(1800, Math.round(delay * 1.6));
+  }
+  if (obs.pendingPlay && (obs.pendingPlay.step === 'receipt' || obs.pendingPlay.step === 'challenge')) {
+    return Math.max(2600, Math.round(delay * 2.0));
+  }
+  return Math.max(2200, Math.round(delay * 1.9));
 }
 
 function computeActionKey(matchID, state, obs, botId) {
+  if (obs.pendingSupport) {
+    return `${matchID}:support:${obs.pendingSupport.from}:${obs.pendingSupport.ownerId}:${state._stateID}`;
+  }
   if (obs.phase === 'draft') {
     return `${matchID}:draft:${obs.draftPack.length}:${obs.hasDraftedThisRound}:${botId}`;
   }
@@ -71,6 +81,7 @@ export function createSoloController({
   let destroyed = false;
   const timers = new Map();
   const scheduledKeys = new Map();
+  const lastDispatched = new Map();
   const activeStatuses = new Map();
   const personas = {};
   const clients = {};
@@ -116,12 +127,17 @@ export function createSoloController({
     if (!previewDecision) {
       if (obs.phase !== 'draft' || obs.hasDraftedThisRound) {
         clearBotTimer(botId);
+        scheduledKeys.delete(botId);
       }
       return;
     }
 
     const key = computeActionKey(matchID, state, obs, botId);
     if (scheduledKeys.get(botId) === key && timers.has(botId)) return;
+    const prev = lastDispatched.get(botId);
+    if (prev && prev.stateID === state._stateID && (prev.count >= 3 || Date.now() - prev.at < 4000)) {
+      return;
+    }
 
     clearBotTimer(botId);
     scheduledKeys.set(botId, key);
@@ -141,6 +157,7 @@ export function createSoloController({
         const freshState = client.getState();
         if (!freshState || !freshState.G || !freshState.ctx) return;
         if (freshState.G.winner || freshState.ctx.gameover) return;
+        if (freshState.isConnected === false) return;
 
         const freshObs = buildBotObservation(freshState.G, freshState.ctx, botId);
         const decision = decideAction(freshObs, personas[botId], rng);
@@ -148,6 +165,9 @@ export function createSoloController({
 
         const moveFn = client.moves?.[decision.move];
         if (typeof moveFn === 'function') {
+          const cur = lastDispatched.get(botId);
+          const count = cur && cur.stateID === freshState._stateID ? cur.count + 1 : 1;
+          lastDispatched.set(botId, { stateID: freshState._stateID, at: Date.now(), count });
           moveFn(...(decision.args || []));
         }
       } catch (err) {

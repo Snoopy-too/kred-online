@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { MOVE_TYPES } from '../domain/types.js';
 import { getValidDestinations, inferMoveType } from '../domain/moveRulesUtils.js';
 import { applyMoveToState, isCommunityPieceAvailable } from '../domain/moves.js';
-import { getPendingPlayActivePlayer } from '../domain/board.js';
+import { getPendingPlayActivePlayer, getValidReceivers } from '../domain/board.js';
 import { executeOnlineCampaignTurn } from '../domain/onlineEngine.js';
 
 export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMasterGameState, numPlayers, tilesPerPlayer, currentPhase }) {
@@ -48,10 +48,9 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
     setValidDestinations([]);
   }, [G?.boardState, G?.pendingPlay, ctx?.phase, ctx?.currentPlayer]);
 
-  // Self-play rule: allowed ONLY if all opponents have full banks
-  const canSelfPlay = G && G.players
-    ? !Object.keys(G.players).some(p => String(p) !== String(playerID) && (G.players[p].bank || []).length < tilesPerPlayer)
-    : false;
+  // Valid receivers per rule: must have a tile to continue with unless it's the last tile of the campaign
+  const validReceivers = getValidReceivers(G, playerID);
+  const canSelfPlay = validReceivers.includes(String(playerID));
 
   const handleSelectTile = (tileId) => {
     if (!isMyTurn || currentPhase !== 'campaign') return;
@@ -64,9 +63,7 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
 
   const handleSelectReceiver = (receiverId) => {
     if (!isMyTurn || currentPhase !== 'campaign' || !selectedTileId) return;
-    const receiverBankLength = (G?.players?.[receiverId]?.bank || []).length;
-    if (receiverBankLength >= tilesPerPlayer) return;
-    if (String(receiverId) === String(playerID) && !canSelfPlay) return;
+    if (!validReceivers.includes(String(receiverId))) return;
     if (selectedReceiverId === String(receiverId)) {
       setSelectedReceiverId('');
     } else {
@@ -271,6 +268,7 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
     peekPendingTile,
     handleTogglePeekTile,
     canSelfPlay,
+    validReceivers,
     handleSelectTile,
     handleSelectReceiver,
     handleResetTurn,

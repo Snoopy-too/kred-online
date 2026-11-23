@@ -60,22 +60,11 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, baseHots
     window.setCalibrationMode = setCalibrationMode;
   }, [calibrationMode]);
 
-  // Consolidated Initial Load: Load local storage first
+  // Reset in-memory calibration overrides whenever player count changes
   useEffect(() => {
-    const { hotspots, offsets } = loadLocalCalibrationCache(localStorageKey, offsetStorageKey);
-    if (hotspots && Object.keys(hotspots).length > 0) setCalibratedPositions(hotspots);
-    if (offsets && Object.keys(offsets).length > 0) setPerspectiveOffsets(offsets);
+    setCalibratedPositions({});
+    setPerspectiveOffsets({});
   }, [numPlayers]);
-
-  useEffect(() => {
-    if (Object.keys(calibratedPositions).length > 0) {
-      try {
-        localStorage.setItem(localStorageKey, JSON.stringify(calibratedPositions));
-      } catch (err) {
-        console.warn('Failed to save calibration draft to localStorage:', err);
-      }
-    }
-  }, [calibratedPositions, numPlayers]);
 
   const handleSaveDraft = async () => {
     try {

@@ -1,4 +1,5 @@
 import { INITIAL_PIECE_COUNTS, MOVE_TYPES, TILES } from '../domain/types.js';
+import { getValidReceivers as getValidReceiversShared } from '../domain/board.js';
 import { checkVictory } from '../domain/board.js';
 import { validateMoveCombination } from '../domain/moves.js';
 import { STANDARD_TILE_IDS } from './observation.js';
@@ -50,14 +51,7 @@ export function decideDraftPick(obs, persona, rng = Math.random) {
 }
 
 function getValidReceivers(obs) {
-  const tilesPerPlayer =
-    (INITIAL_PIECE_COUNTS[obs.numPlayers] || INITIAL_PIECE_COUNTS[3]).TILES_PER_PLAYER;
-  const oppReceivers = Object.keys(obs.players).filter(
-    (id) => id !== obs.botId && (obs.players[id].bankCount || 0) < tilesPerPlayer
-  );
-  if (oppReceivers.length > 0) return oppReceivers;
-  if ((obs.players[obs.botId]?.bankCount || 0) < tilesPerPlayer) return [obs.botId];
-  return [];
+  return getValidReceiversShared(obs, obs.botId);
 }
 
 /**

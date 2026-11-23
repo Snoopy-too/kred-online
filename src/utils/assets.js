@@ -11,7 +11,7 @@ export function getAssetUrl(path) {
 }
 
 export function getTileImageUrl(tileId) {
-  if (!tileId) return getAssetUrl('images/tile_back.svg');
+  if (!tileId || tileId === 'HIDDEN') return getAssetUrl('images/tile_back.svg');
   if (tileId === 'BLANK') return getAssetUrl('images/BLANK.svg');
   const padded = String(tileId).padStart(2, '0');
   return getAssetUrl(`images/${padded}.svg`);
@@ -20,7 +20,7 @@ export function getTileImageUrl(tileId) {
 export function getBoardImageUrl(numPlayers) {
   const map = {
     3: getAssetUrl('images/KREDonline_3P.png'),
-    4: getAssetUrl('images/4player_board.png'),
+    4: getAssetUrl('images/KREDonline_4P.png'),
     5: getAssetUrl('images/KREDonline_5P.png')
   };
   return map[numPlayers] || map[3];

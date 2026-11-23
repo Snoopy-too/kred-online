@@ -42,8 +42,8 @@
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px 6px;
   justify-content: center;
   margin-top: 12px;
 }

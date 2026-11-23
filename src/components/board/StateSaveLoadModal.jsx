@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AdminModal } from './AdminModal.jsx';
 
 export function StateSaveLoadModal({ G, ctx, moves, isOpen, onClose, onResetTransientState }) {
   const [snapshotName, setSnapshotName] = useState('');
@@ -133,13 +134,8 @@ export function StateSaveLoadModal({ G, ctx, moves, isOpen, onClose, onResetTran
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose} style={backdropStyle}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={modalStyle}>
-        <div style={headerStyle}>
-          <h3 style={{ margin: 0, color: 'var(--accent-gold)' }}>💾 Save & Load Game State</h3>
-          <button onClick={onClose} style={closeBtnStyle}>✕</button>
-        </div>
-
+    <AdminModal isOpen={isOpen} onClose={onClose} title="Save / Load State">
+      <div style={{ padding: '16px' }}>
         {statusMsg && (
           <div style={statusBannerStyle}>
             {statusMsg}
@@ -235,7 +231,7 @@ export function StateSaveLoadModal({ G, ctx, moves, isOpen, onClose, onResetTran
           )}
         </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 

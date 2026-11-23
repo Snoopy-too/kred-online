@@ -21,7 +21,6 @@ export function TurnBuilder({
   numPlayers = 3
 }) {
   const [showNoMovesModal, setShowNoMovesModal] = useState(false);
-  const [showTileRequiredModal, setShowTileRequiredModal] = useState(false);
 
   if (!isMyTurn) return null;
 
@@ -33,10 +32,10 @@ export function TurnBuilder({
   let finishButtonLabel = 'Finish Turn';
 
   if (isReexecuting) {
-    titleText = 'Re-Executing Turn (Whistleblown!)';
+    titleText = 'Whistle Blown!';
     const isHonest = selectedTileId ? classifyPlay(stagedMoves, selectedTileId, playerID, boardState, community, numPlayers) === 'Honest' : false;
     canFinish = isHonest;
-    finishButtonLabel = isHonest ? 'Submit Honest Moves' : 'Honest Moves Required';
+    finishButtonLabel = 'Finish Turn';
   } else if (isPenaltyWithdraw) {
     titleText = 'Penalty Withdraw Action';
     const hasLegalWithdraw = !boardState || isMoveTypePossible(MOVE_TYPES.WITHDRAW, playerID, boardState, community, numPlayers);
@@ -50,15 +49,10 @@ export function TurnBuilder({
   }
 
   const handleFinishClick = () => {
-    if (!isReexecuting && !isPenaltyWithdraw && !isFreeAdvance) {
-      if (!isTileSelected || !isReceiverSelected) {
-        setShowTileRequiredModal(true);
-        return;
-      }
-      if (stagedMoves.length === 0) {
-        setShowNoMovesModal(true);
-        return;
-      }
+    if (!canFinish) return;
+    if (!isReexecuting && !isPenaltyWithdraw && !isFreeAdvance && stagedMoves.length === 0) {
+      setShowNoMovesModal(true);
+      return;
     }
     handleSubmitTurn();
   };
@@ -66,68 +60,42 @@ export function TurnBuilder({
   const tileData = selectedTileId ? TILES[selectedTileId] : null;
 
   return (
-    <div className="turn-builder-card">
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <div className="turn-card-header">
         <h3>{titleText}</h3>
-        {isReexecuting && (
-          <span className="badge badge-danger" style={{ fontSize: '11px' }}>
-            Lying Caught
-          </span>
-        )}
       </div>
 
-      {/* Tile Info Banner for Re-Execution */}
-      {isReexecuting && tileData && (
-        <div className="reexecute-tile-banner">
-          <img src={getTileImageUrl(selectedTileId)} alt={selectedTileId === 'BLANK' ? '' : `Tile ${selectedTileId}`} className="tile-banner-svg" />
-          <div className="tile-banner-info">
-            <span className="tile-banner-title">Required Tile: {tileData.name} ({selectedTileId})</span>
-            <span className="tile-banner-desc">Allowed Moves: {tileData.moves.join(', ')}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="turn-steps-container">
-        {!isPenaltyWithdraw && !isFreeAdvance && (
-          <div className={`step-item ${isTileSelected ? 'completed' : 'active'}`}>
-            <span className="step-num">1</span>
-            <span className="step-label">
-              {isTileSelected ? 'Tile Selected' : 'Select a tile from your hand'}
-            </span>
-          </div>
-        )}
-
-        <div className={`step-item ${stagedMoves.length > 0 ? 'completed' : 'active'}`}>
-          <span className="step-num">{isPenaltyWithdraw || isFreeAdvance ? 1 : 2}</span>
-          <span className="step-label">
-            {stagedMoves.length > 0
-              ? `Moves Staged: ${stagedMoves.length} / ${isPenaltyWithdraw || isFreeAdvance ? 1 : 2}`
-              : isPenaltyWithdraw
-              ? 'Click a piece on board to Withdraw'
-              : isFreeAdvance
-              ? 'Click a piece on board to Advance'
-              : 'Click a piece on board to stage move'}
-          </span>
-        </div>
-
-        {!isPenaltyWithdraw && !isFreeAdvance && (
-          <div className={`step-item ${!isTileSelected ? 'disabled' : isReceiverSelected ? 'completed' : 'active'}`}>
-            <span className="step-num">3</span>
-            <span className="step-label">
-              {isReceiverSelected ? `Tile Played to ${getPlayerLabel(selectedReceiverId)}` : 'Select a player to play your tile to'}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {stagedMoves.length > 0 && (
-        <div className="staged-moves-summary">
-          {stagedMoves.map((m, idx) => (
-            <div key={idx} className="staged-move-badge">
-              Move {idx + 1}: {m.type} [{m.from} → {m.to}]
+      {isReexecuting ? (
+        tileData && (
+          <div className="reexecute-tile-banner" style={{ margin: '6px 0 12px', alignItems: 'center' }}>
+            <img
+              src={getTileImageUrl(selectedTileId)}
+              alt={selectedTileId === 'BLANK' ? '' : `Tile ${selectedTileId}`}
+              style={{ width: '53px', height: 'auto', aspectRatio: '2.5 / 5', objectFit: 'contain', flexShrink: 0 }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                You must make the following move(s).
+              </span>
+              <span style={{ color: '#f87171', fontWeight: 500, fontSize: '15px' }}>
+                {tileData.moves?.length ? tileData.moves.join(', ') : tileData.name}
+              </span>
             </div>
-          ))}
-        </div>
+          </div>
+        )
+      ) : (
+        <ul style={{ margin: '6px 0 12px 18px', padding: 0, fontSize: '13px', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: 1.4 }}>
+          {isPenaltyWithdraw ? (
+            <li>Click a piece on the board to Withdraw.</li>
+          ) : isFreeAdvance ? (
+            <li>Click a piece on the board to Advance.</li>
+          ) : (
+            <>
+              <li>Select 1 or more pieces to move and places to move them.</li>
+              <li>Select a tile from your hand and a player to give it to.</li>
+            </>
+          )}
+        </ul>
       )}
 
       <div className="turn-actions-row">
@@ -144,25 +112,11 @@ export function TurnBuilder({
         <button
           className={`btn btn-primary finish-turn-btn ${canFinish ? 'active-finish' : 'disabled-finish'}`}
           onClick={handleFinishClick}
-          disabled={isReexecuting || isPenaltyWithdraw || isFreeAdvance ? !canFinish : false}
+          disabled={!canFinish}
         >
           {finishButtonLabel}
         </button>
       </div>
-
-      <ConfirmModal
-        isOpen={showTileRequiredModal}
-        title="Play Tile Required"
-        message={!isTileSelected 
-          ? "Please select a tile from your hand and choose a player to play it to before finishing your turn." 
-          : "Please select a player to play your tile to before finishing your turn."}
-        confirmText="Understood"
-        cancelText={null}
-        icon="🀄"
-        variant="info"
-        onConfirm={() => setShowTileRequiredModal(false)}
-        onCancel={() => setShowTileRequiredModal(false)}
-      />
 
       <ConfirmModal
         isOpen={showNoMovesModal}

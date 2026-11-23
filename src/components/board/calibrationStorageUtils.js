@@ -14,50 +14,23 @@ export const isLocalEnvironment = () => {
 
 export const isDbSyncEnabled = () => false;
 
-export const loadLocalCalibrationCache = (localStorageKey, offsetStorageKey) => {
-  let hotspots = null;
-  let offsets = null;
-  try {
-    const saved = localStorage.getItem(localStorageKey);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === 'object') hotspots = parsed;
-    }
-    const savedOffsets = localStorage.getItem(offsetStorageKey);
-    if (savedOffsets) {
-      const parsed = JSON.parse(savedOffsets);
-      if (parsed && typeof parsed === 'object') offsets = parsed;
-    }
-  } catch (err) {
-    console.warn('Failed to load local calibration cache:', err);
-  }
-  return { hotspots, offsets };
-};
+export const loadLocalCalibrationCache = () => ({ hotspots: null, offsets: null });
 
-export const syncCalibrationFromDb = async () => {
-  // Remote database sync bypassed: private server is updated via git webhook
-  return null;
-};
+export const syncCalibrationFromDb = async () => null;
 
-export const persistDraft = async (numPlayers, calibratedPositions, perspectiveOffsets, localStorageKey, offsetStorageKey) => {
-  try {
-    localStorage.setItem(localStorageKey, JSON.stringify(calibratedPositions));
-    localStorage.setItem(offsetStorageKey, JSON.stringify(perspectiveOffsets));
-  } catch (err) {
-    console.warn('Failed to save to localStorage:', err);
-  }
-
-  const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return `💾 Saved to Local Draft at ${nowStr}!`;
+export const persistDraft = async () => {
+  return 'Use Copy JSON to export calibration coordinates.';
 };
 
 export const resetDraft = async (numPlayers, localStorageKey, offsetStorageKey) => {
-  localStorage.removeItem(localStorageKey);
-  localStorage.removeItem(offsetStorageKey);
-  return '🗑️ Calibration Reset to Master Defaults locally!';
+  try {
+    localStorage.removeItem(localStorageKey);
+    localStorage.removeItem(offsetStorageKey);
+  } catch {}
+  return '🗑️ Calibration Reset to Master Defaults!';
 };
 
-export const importCalibrationJson = async (jsonString, numPlayers, localStorageKey, offsetStorageKey) => {
+export const importCalibrationJson = async (jsonString) => {
   const parsed = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
   if (!parsed || typeof parsed !== 'object') throw new Error('Invalid JSON object');
 
@@ -66,13 +39,6 @@ export const importCalibrationJson = async (jsonString, numPlayers, localStorage
 
   const nextHotspots = (importedHotspots && Object.keys(importedHotspots).length > 0) ? importedHotspots : {};
   const nextOffsets = (importedOffsets && Object.keys(importedOffsets).length > 0) ? importedOffsets : {};
-
-  if (Object.keys(nextHotspots).length > 0) {
-    localStorage.setItem(localStorageKey, JSON.stringify(nextHotspots));
-  }
-  if (Object.keys(nextOffsets).length > 0) {
-    localStorage.setItem(offsetStorageKey, JSON.stringify(nextOffsets));
-  }
 
   return { nextHotspots, nextOffsets, dbSynced: false };
 };

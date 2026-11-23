@@ -5,8 +5,8 @@ import { getPieceIconUrl, getAssetUrl } from '../../utils/assets.js';
 export function TurnReplayOverlay({
   animatingPiece,
   animatingTile,
-  perspectiveRotation = 0,
-  replayNoticeText = ''
+  draggedPiece = null,
+  perspectiveRotation = 0
 }) {
   const counterRotationStyle = perspectiveRotation
     ? { transform: `rotate(${-perspectiveRotation}deg)` }
@@ -20,16 +20,6 @@ export function TurnReplayOverlay({
 
   return (
     <>
-      {replayNoticeText && (
-        <div
-          className="replay-notice-banner"
-          style={counterRotationStyle}
-        >
-          {replayNoticeText}
-        </div>
-      )}
-
-      {/* Phase 1: 750ms Attention-getting pre-glow ring over static piece at start spot */}
       {isPreGlow && (
         <div
           className="replay-piece-container"
@@ -43,7 +33,6 @@ export function TurnReplayOverlay({
         </div>
       )}
 
-      {/* Phase 2: Piece takes its walk across the board without any glow */}
       {isWalking && (
         <div
           className="replay-piece-container"
@@ -51,7 +40,7 @@ export function TurnReplayOverlay({
             left: animatingPiece.left,
             top: animatingPiece.top,
             transition: animatingPiece.isMoving
-              ? 'left 0.85s cubic-bezier(0.35, 1.15, 0.6, 1), top 0.85s cubic-bezier(0.35, 1.15, 0.6, 1)'
+              ? 'left 0.55s cubic-bezier(0.22, 1, 0.36, 1), top 0.55s cubic-bezier(0.22, 1, 0.36, 1)'
               : 'none'
           }}
         >
@@ -59,13 +48,12 @@ export function TurnReplayOverlay({
             <img
               src={iconSrc}
               alt={animatingPiece.pieceType}
-              className={`piece-img-board ${isPawn ? 'piece-pawn-img' : ''}`}
+              className={`piece-img-board replay-piece-img-lifted ${isPawn ? 'piece-pawn-img' : ''}`}
             />
           </div>
         </div>
       )}
 
-      {/* Phase 3: Tile traveling outside the board from Mover to Receiver */}
       {animatingTile && animatingTile.visible && (
         <div
           className="replay-tile-container replay-tile-traveling"
@@ -80,6 +68,21 @@ export function TurnReplayOverlay({
             alt="Tile Traveling Face-Down"
             className="domino-tile-svg"
           />
+        </div>
+      )}
+      {draggedPiece && (
+        <div
+          className="drag-ghost-piece"
+          style={{ left: draggedPiece.left, top: draggedPiece.top }}
+        >
+          <div className="piece-token-board" style={counterRotationStyle}>
+            <img
+              src={getPieceIconUrl(draggedPiece.piece.type, draggedPiece.piece.type === PIECE_TYPES.PAWN)}
+              alt={draggedPiece.piece.type}
+              draggable={false}
+              className={`piece-img-board replay-piece-img-lifted ${draggedPiece.piece.type === PIECE_TYPES.PAWN ? 'piece-pawn-img' : ''}`}
+            />
+          </div>
         </div>
       )}
     </>

@@ -2,6 +2,7 @@ import { TILES, INITIAL_PIECE_COUNTS, PIECE_TYPES } from './domain/types.js';
 import { createDraftPhase } from './domain/phases/draftPhase.js';
 import { createCampaignPhase } from './domain/phases/campaignPhase.js';
 import { createBureaucracyPhase } from './domain/bureaucracy.js';
+import { createEmptyPlayerStats } from './domain/gameLog.js';
 
 export function filterSoloPlayerView(G, playerID) {
   if (!G || playerID === null || playerID === undefined) return G;
@@ -145,6 +146,11 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
         }
       }
 
+      const matchStats = {};
+      for (let p = 0; p < np; p++) {
+        matchStats[String(p)] = createEmptyPlayerStats();
+      }
+
       return {
         numPlayers: np,
         boardState,
@@ -152,10 +158,13 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
         players,
         draftPacks,
         draftSelectionsThisRound: {},
+        draftSkippedPlayers: {},
         pendingPlay: null,
+        pendingSupport: null,
         nextMoverId: null,
         winner: null,
-        history: []
+        history: effectiveSkipDraft ? [] : [{ id: 1, text: 'DRAFT', tone: 'phase' }],
+        matchStats
       };
     },
 

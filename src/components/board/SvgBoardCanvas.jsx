@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { PIECE_TYPES, INITIAL_PIECE_COUNTS, TILES } from '../../domain/types.js';
 import { getPerspectiveTransform } from './perspectiveUtils.js';
 import { isCommunityPieceAvailable } from '../../domain/moves.js';
 import { TurnReplayOverlay } from './TurnReplayOverlay.jsx';
 import { CalibrationSpotOverlay } from './CalibrationSpotOverlay.jsx';
+import { usePieceDrag } from './usePieceDrag.js';
 import { getAssetUrl, getTileImageUrl, getPieceIconUrl, getCredibilityIconUrl } from '../../utils/assets.js';
-
-const getTileSvgPath = (tileId) => getTileImageUrl(tileId);
 
 export function SvgBoardCanvas({
   activeBoardImage,
@@ -19,9 +18,6 @@ export function SvgBoardCanvas({
   handleBoardMouseUp,
   handleBoardMouseDown,
   handleRotateSelectedSpots,
-  handleSpaceClick,
-  selectedFrom,
-  selectedTo,
   G,
   showSpotLabels = true,
   showTileFaces = true,
@@ -31,7 +27,7 @@ export function SvgBoardCanvas({
   selectedReceiverId = '',
   selectedTileId = '',
   onSelectReceiver = null,
-  canSelfPlay = true,
+  validReceivers = [],
   validDestinations = [],
   selectedPieceLoc = '',
   stagedMoves = [],
@@ -49,13 +45,45 @@ export function SvgBoardCanvas({
     isReplaying = false,
     overrideBoardState = null,
     animatingPiece = null,
-    animatingTile = null,
-    replayNoticeText = ''
+    animatingTile = null
   } = replayAnimation || {};
+
+  const boardRef = useRef(null);
+  const { draggedPiece, startPieceDrag, shouldSuppressClick } = usePieceDrag({
+    boardRef,
+    perspectiveRotation,
+    zoomLevel,
+    selectedPieceLoc,
+    validDestinations,
+    onPieceClick,
+    onDestinationClick,
+    disabled: calibrationMode || isReplaying
+  });
 
   const counterRotationStyle = perspectiveRotation ? { transform: `rotate(${-perspectiveRotation}deg)` } : {};
   const transformStyle = getPerspectiveTransform(numPlayers, playerID, perspectiveOffsets, 1);
   const currentBoardState = (isReplaying && overrideBoardState) || transientBoardState || (G && G.boardState) || {};
+
+  const getMoveHighlightColor = (moveType) => {
+    if (moveType === 'Withdraw' || moveType === 'Remove') return 'red';
+    if (moveType === 'Organize' || moveType === 'Influence') return 'blue';
+    return 'green';
+  };
+
+  const playedPieceIdColors = new Map();
+  const playedPieceLocColors = new Map();
+  if (!isReplaying) {
+    const activeMoves = (G?.pendingPlay?.movesMade?.length ? G.pendingPlay.movesMade : stagedMoves) || [];
+    const backupBoard = G?.pendingPlay?.backupBoard;
+    for (const m of activeMoves) {
+      const color = getMoveHighlightColor(m?.type);
+      if (m?.to && m.to !== 'community') playedPieceLocColors.set(m.to, color);
+      if (m?.pieceId) playedPieceIdColors.set(m.pieceId, color);
+      if (backupBoard && m?.from && backupBoard[m.from]?.id) {
+        playedPieceIdColors.set(backupBoard[m.from].id, color);
+      }
+    }
+  }
 
 
   const getShortLabel = (locKey) => {
@@ -75,13 +103,14 @@ export function SvgBoardCanvas({
 
     return (
       <div className="piece-token-board" style={counterRotationStyle} title={`${piece.type}`}>
-        <img src={iconSrc} alt={piece.type} className={`piece-img-board ${isPawn ? 'piece-pawn-img' : ''}`} />
+        <img src={iconSrc} alt={piece.type} draggable={false} className={`piece-img-board ${isPawn ? 'piece-pawn-img' : ''}`} />
       </div>
     );
   };
 
   return (
     <div
+      ref={boardRef}
       className="board-image-overlay-container"
       style={{
         transform: transformStyle,
@@ -96,7 +125,7 @@ export function SvgBoardCanvas({
         }
       }}
     >
-      <img src={activeBoardImage} alt={`${numPlayers}-Player Board`} className="main-board-graphic" />
+      <img src={activeBoardImage} alt={`${numPlayers}-Player Board`} draggable={false} className="main-board-graphic" />
 
       {Object.entries(activeHotspots).map(([locKey, coords]) => {
         const currentTransform =
@@ -164,9 +193,10 @@ export function SvgBoardCanvas({
           const targetBankLength = (G?.players?.[targetPlayerId]?.bank || []).length;
           const bankFull = targetBankLength >= tilesPerPlayer;
           const isSelf = targetPlayerId === String(playerID);
-          const selfLocked = isSelf && !canSelfPlay;
-          const isReceiverLocked = bankFull || selfLocked;
-          const isPendingReceiver = (!isReplaying && G && G.pendingPlay && String(G.pendingPlay.receiverId) === String(targetPlayerId));
+          const isReceiverLocked = !validReceivers.includes(targetPlayerId);
+          const noTilesLocked = !bankFull && !isSelf && isReceiverLocked;
+          const isPendingInDropZone = G?.pendingPlay?.step === 'receipt' || G?.pendingPlay?.step === 'challenge';
+          const isPendingReceiver = (!isReplaying && isPendingInDropZone && String(G.pendingPlay.receiverId) === String(targetPlayerId));
           const isStagedReceiver = (selectedReceiverId === targetPlayerId);
           const isDropActive = isPendingReceiver || isStagedReceiver;
 
@@ -186,8 +216,8 @@ export function SvgBoardCanvas({
                 left: coords.left,
                 top: coords.top,
                 transform: currentTransform,
-                cursor: isSelfReceiver ? 'pointer' : isReceiverLocked ? 'not-allowed' : isTargetable ? 'pointer' : 'default',
-                opacity: (isReceiverLocked && !isDropActive) ? 0.4 : 1
+                zIndex: 25,
+                cursor: isSelfReceiver ? 'pointer' : isReceiverLocked ? 'not-allowed' : isTargetable ? 'pointer' : 'default'
               }}
               onClick={() => {
                 if (isSelfReceiver && onTogglePeekTile) {
@@ -202,7 +232,8 @@ export function SvgBoardCanvas({
                 isSelfReceiver ? (peekPendingTile ? "Click to flip face-down" : "Click to flip & view tile privately")
                 : isStagedReceiver ? `Tile staged face-down for ${pLabel} (click again to remove)`
                 : bankFull ? `${pLabel}'s bank is full (${targetBankLength}/${tilesPerPlayer} tiles)`
-                : selfLocked ? `Cannot play to yourself — opponents with empty bank slots still exist`
+                : noTilesLocked ? `${pLabel} has no tiles left to continue with`
+                : isReceiverLocked ? `Cannot play to yourself while an opponent with tiles can receive`
                 : isTargetable ? `Click to play tile face-down to ${pLabel}`
                 : `Drop Zone ${pLabel}`
               }
@@ -210,7 +241,7 @@ export function SvgBoardCanvas({
                {isDropActive ? (
                  isPeekingTile ? (
                    <img
-                     src={getTileSvgPath(G.pendingPlay.tileIdPlayed)}
+                     src={getTileImageUrl(G.pendingPlay.tileIdPlayed)}
                      alt={G.pendingPlay.tileIdPlayed === 'BLANK' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
                      className="domino-tile-svg"
                    />
@@ -223,7 +254,7 @@ export function SvgBoardCanvas({
                    />
                  )
               ) : (
-                <span className="drop-tile-label">{pLabel}</span>
+                <span className="drop-tile-label" style={{ transform: `rotate(90deg) scale(${Math.min(1, 6.8 / Math.max(1, pLabel.length))})` }}>{pLabel}</span>
               )}
             </div>
           );
@@ -259,7 +290,7 @@ export function SvgBoardCanvas({
                     title={`Bank Spot ${slotIdx + 1}: Tile ${bTile.tileId} (${tileFunding}K Available Funding)`}
                   >
                     <img
-                      src={getTileSvgPath(bTile.tileId)}
+                      src={getTileImageUrl(bTile.tileId)}
                       alt={`Tile ${bTile.tileId}`}
                       className="domino-tile-svg"
                     />
@@ -300,7 +331,7 @@ export function SvgBoardCanvas({
                   title={`Bank Spot ${slotIdx + 1}: Tile ${bTile.tileId} (Already Face-Up / Spent)`}
                 >
                   <img
-                    src={getTileSvgPath(bTile.tileId)}
+                    src={getTileImageUrl(bTile.tileId)}
                     alt={bTile.tileId === 'BLANK' ? '' : `Tile ${bTile.tileId}`}
                     className="domino-tile-svg"
                   />
@@ -341,6 +372,11 @@ export function SvgBoardCanvas({
            (piece && stagedMoves[0]?.pieceId && piece.id === stagedMoves[0].pieceId))
         );
         const isPromotionTarget = validPromotionSpots.includes(locKey);
+        const playedPieceColor = (
+          piece && !isSelectedPiece && !isValidTarget && !isPromotionTarget
+            ? (playedPieceLocColors.get(locKey) || (piece.id ? playedPieceIdColors.get(piece.id) : null))
+            : null
+        );
         const isUnclickableOtherPiece = Boolean(
           !isPromotionTarget && (
             isLockedCommunityPiece ||
@@ -350,7 +386,7 @@ export function SvgBoardCanvas({
         );
 
         const handleHotspotClick = () => {
-          if (isUnclickableOtherPiece) return;
+          if (shouldSuppressClick() || isUnclickableOtherPiece) return;
           if (isValidTarget && onDestinationClick) {
             onDestinationClick(locKey);
           } else if (onPieceClick) {
@@ -358,15 +394,25 @@ export function SvgBoardCanvas({
           }
         };
 
+        const isBeingDragged = draggedPiece && draggedPiece.locKey === locKey;
+
         return (
           <div
             key={locKey}
-            className={`board-hotspot ${isSelectedPiece ? 'hotspot-selected-piece' : ''} ${isValidTarget ? 'hotspot-valid-target' : ''} ${isPromotionTarget ? 'hotspot-promotion-target' : ''}`}
+            data-drop-loc={locKey}
+            className={`board-hotspot ${playedPieceColor ? `hotspot-played-${playedPieceColor}` : ''} ${isSelectedPiece ? 'hotspot-selected-piece' : ''} ${isValidTarget ? 'hotspot-valid-target' : ''} ${isPromotionTarget ? 'hotspot-promotion-target' : ''}`}
             style={{
               left: coords.left,
               top: coords.top,
               pointerEvents: isUnclickableOtherPiece ? 'none' : 'auto',
-              opacity: isLockedCommunityPiece ? 0.65 : 1
+              opacity: isBeingDragged ? 0.25 : isLockedCommunityPiece ? 0.65 : 1,
+              touchAction: piece && !isUnclickableOtherPiece ? 'none' : 'auto',
+              userSelect: 'none'
+            }}
+            onPointerDown={(e) => {
+              if (piece && !isUnclickableOtherPiece && !isValidTarget && !isPromotionTarget) {
+                startPieceDrag(e, locKey, piece);
+              }
             }}
             onClick={handleHotspotClick}
             title={
@@ -423,6 +469,7 @@ export function SvgBoardCanvas({
 
         return (
           <div
+            data-drop-loc={commTargetSpot}
             className="large-community-target"
             style={{
               left: commTargetCoords.left,
@@ -442,8 +489,8 @@ export function SvgBoardCanvas({
       <TurnReplayOverlay
         animatingPiece={animatingPiece}
         animatingTile={animatingTile}
+        draggedPiece={draggedPiece}
         perspectiveRotation={perspectiveRotation}
-        replayNoticeText={replayNoticeText}
       />
     </div>
   );

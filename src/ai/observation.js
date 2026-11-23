@@ -124,6 +124,9 @@ export function buildBotObservation(G, ctx, botId) {
     bank: ownBank,
     facedownBankTiles,
     unseenTileIds: computeUnseenTileIds(ownHand, ownBank, allFaceUpTiles),
-    pendingPlay: sanitizePendingPlay(G?.pendingPlay, G, pId, me)
+    pendingPlay: sanitizePendingPlay(G?.pendingPlay, G, pId, me),
+    pendingSupport: G?.pendingSupport
+      ? { ...G.pendingSupport, validDestinations: [...(G.pendingSupport.validDestinations || [])] }
+      : null
   };
 }

@@ -14,12 +14,12 @@ export function DraftPhaseCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTileId, setSelectedTileId] = useState(null);
 
+  const hasSkippedDraft = Boolean(G?.draftSkippedPlayers?.[String(playerID)]);
+  const myPackKey = (G?.draftPacks?.[playerID] || []).join(',');
   useEffect(() => {
-    if (hasDraftedThisRound) {
-      setIsSubmitting(false);
-      setSelectedTileId(null);
-    }
-  }, [hasDraftedThisRound, G?.draftPacks?.[playerID]]);
+    setIsSubmitting(false);
+    setSelectedTileId(null);
+  }, [hasDraftedThisRound, hasSkippedDraft, myPackKey]);
 
   const handleSelectTile = (tileId) => {
     if (isSubmitting || hasDraftedThisRound) return;
@@ -38,7 +38,7 @@ export function DraftPhaseCard({
   };
 
   const handleSkip = () => {
-    if (isSubmitting || hasDraftedThisRound) return;
+    if (isSubmitting || hasSkippedDraft) return;
     setIsSubmitting(true);
 
     if (isOnline) {
@@ -53,52 +53,45 @@ export function DraftPhaseCard({
   };
 
   return (
-    <div className={`control-card ${isSubmitting ? 'draft-modal-submitting' : ''}`}>
+    <div className={`turn-builder-card ${isSubmitting ? 'draft-modal-submitting' : ''}`} style={{ position: 'relative' }}>
       {isSubmitting && (
         <div className="draft-submitting-overlay">
           <div className="draft-spinner"></div>
           <div className="draft-submitting-text">
-            <strong>Saving selection to database...</strong>
+            <strong>Submitting selection...</strong>
             <span>Processing your draft tile pick</span>
           </div>
         </div>
       )}
 
       <div className={isSubmitting ? 'draft-card-disabled-content' : ''}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <h2 className="phase-title" style={{ margin: 0 }}>Draft Phase: Choose a Tile</h2>
-          {!isOnline && (
-            <button
-              className="btn btn-warning"
-              style={{ fontSize: '12px', padding: '6px 12px' }}
-              onClick={handleSkip}
-              disabled={isSubmitting || hasDraftedThisRound}
-              title="Auto-deal remaining tiles to all players & jump to Campaign phase"
-            >
-              ⚡ Skip Draft
-            </button>
-          )}
+        <div className="turn-card-header">
+          <h3>Draft</h3>
         </div>
-        <p className="phase-desc">
-          {autoDraftTileId
-            ? <span style={{ color: '#22c55e', fontWeight: '700' }}>✨ Final tile auto-floating into your hand...</span>
-            : 'Select 1 tile to add to your hand. Remaining tiles will pass clockwise.'
-          }
-        </p>
 
-        {hasDraftedThisRound ? (
+        <ul style={{ margin: '6px 0 12px 18px', padding: 0, fontSize: '13px', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: 1.4 }}>
+          <li>Choose 1 tile to keep.</li>
+          <li>Others are passed left.</li>
+        </ul>
+
+        {hasSkippedDraft ? (
+          <div className="draft-confirmed-box">
+            <h3>⚡ Skip Draft Active</h3>
+            <p>You will automatically receive a random tile from each pack passed to you.</p>
+          </div>
+        ) : hasDraftedThisRound ? (
           <div className="draft-confirmed-box">
             <h3>✓ Tile Selection Confirmed</h3>
             <p>Waiting for other players to complete their draft pick...</p>
           </div>
         ) : (
-          <div className="cards-grid">
-            {(G.draftPacks?.[playerID] || []).map((tileId) => {
+          <div className="cards-grid" style={{ marginBottom: '12px' }}>
+            {(G.draftPacks?.[playerID] || []).map((tileId, idx) => {
               const isAutoFloating = tileId === autoDraftTileId;
               const isSelectedForSubmission = tileId === selectedTileId && isSubmitting;
               return (
                 <div
-                  key={tileId}
+                  key={`${tileId}-${idx}`}
                   className={`tile-card ${isAutoFloating ? 'auto-float-to-hand' : ''} ${isSelectedForSubmission ? 'tile-card-submitting' : ''}`}
                   onClick={() => handleSelectTile(tileId)}
                   style={{ pointerEvents: isSubmitting ? 'none' : 'auto' }}
@@ -113,8 +106,20 @@ export function DraftPhaseCard({
             })}
           </div>
         )}
+
+        {!hasSkippedDraft && (
+          <div className="turn-actions-row">
+            <button
+              className="btn btn-primary finish-turn-btn active-finish"
+              onClick={handleSkip}
+              disabled={isSubmitting}
+              title="Automatically receive a random tile from each pack passed to you"
+            >
+              Skip Draft
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

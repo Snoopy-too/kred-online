@@ -147,16 +147,8 @@ export function inferMoveType(
   const allowedMoveTypes = getRemainingAllowedMoveTypes(selectedTileId, stagedMoves, requireHonestTile);
 
   for (const type of allowedMoveTypes) {
-    const moveCandidate = { type, from: normFrom, to: normTo };
-    let isValid = false;
-
-    if (stagedMoves.length === 0) {
-      isValid = validateSingleMove(moveCandidate, moverId, boardState, community, numPlayers).valid;
-    } else {
-      // boardState is already transient (move 1 applied); validate move 2 directly
-      isValid = validateSingleMove(moveCandidate, moverId, boardState, community, numPlayers).valid;
-    }
-
+    const moveCandidate = { type, from: fromLoc, to: normTo };
+    const isValid = validateSingleMove(moveCandidate, moverId, boardState, community, numPlayers).valid;
     if (isValid) return type;
   }
 

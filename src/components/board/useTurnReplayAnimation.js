@@ -4,73 +4,62 @@ import { applyMoveToState } from '../../domain/moves.js';
 function getSpotCoords(spotKey, activeHotspots) {
   if (!spotKey) return { left: '50%', top: '50%' };
   if (activeHotspots[spotKey]) return activeHotspots[spotKey];
-  if (spotKey === 'community' && activeHotspots['community_target']) {
-    return activeHotspots['community_target'];
-  }
   if (spotKey.startsWith('community') && activeHotspots['community_target']) {
     return activeHotspots['community_target'];
   }
   return { left: '50%', top: '50%' };
 }
 
-export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
+export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel, playerID = null) {
   const [isReplaying, setIsReplaying] = useState(false);
   const [overrideBoardState, setOverrideBoardState] = useState(null);
   const [animatingPiece, setAnimatingPiece] = useState(null);
   const [animatingTile, setAnimatingTile] = useState(null);
-  const [replayNoticeText, setReplayNoticeText] = useState('');
 
   const lastReplayedPlayKeyRef = useRef(null);
-  const lastTileAnimatedPlayKeyRef = useRef(null);
   const animationTimersRef = useRef([]);
 
   const clearTimers = () => {
-    animationTimersRef.current.forEach(t => typeof t === 'function' ? t() : clearTimeout(t));
+    animationTimersRef.current.forEach((t) => (typeof t === 'function' ? t() : clearTimeout(t)));
     animationTimersRef.current = [];
   };
 
-  useEffect(() => {
-    return () => clearTimers();
-  }, []);
+  useEffect(() => () => clearTimers(), []);
 
-  const runTileTravelAnimation = (pendingPlay, moverName) => {
+  const finishReplay = () => {
+    setAnimatingTile(null);
+    setAnimatingPiece(null);
+    setOverrideBoardState(null);
+    setIsReplaying(false);
+  };
+
+  const runTileTravelAnimation = (pendingPlay) => {
     const moverDomainNum = parseInt(pendingPlay.moverId, 10) + 1;
-    const receiverId = String(pendingPlay.receiverId);
-    const receiverDomainNum = parseInt(receiverId, 10) + 1;
-    const receiverName = getPlayerLabel ? getPlayerLabel(receiverId) : `Player ${receiverDomainNum}`;
+    const receiverDomainNum = parseInt(String(pendingPlay.receiverId), 10) + 1;
 
-    setReplayNoticeText(`🎴 ${moverName} playing tile to ${receiverName}...`);
+    const startCoords = getSpotCoords(`p${moverDomainNum}_dropTile`, activeHotspots);
+    const endCoords = getSpotCoords(`p${receiverDomainNum}_dropTile`, activeHotspots);
 
-    const startSpotKey = `p${moverDomainNum}_dropTile`;
-    const endSpotKey = `p${receiverDomainNum}_dropTile`;
-
-    const startCoords = getSpotCoords(startSpotKey, activeHotspots);
-    const endCoords = getSpotCoords(endSpotKey, activeHotspots);
-
-    const parsePct = (val) => typeof val === 'number' ? val : parseFloat(String(val).replace('%', '')) || 50;
-
+    const parsePct = (val) => (typeof val === 'number' ? val : parseFloat(String(val).replace('%', '')) || 50);
     const p0 = { x: parsePct(startCoords.left), y: parsePct(startCoords.top) };
     const p2 = { x: parsePct(endCoords.left), y: parsePct(endCoords.top) };
 
-    // Calculate control point P1 pushed OUTWARD away from center (50, 50)
     const pMid = { x: (p0.x + p2.x) / 2, y: (p0.y + p2.y) / 2 };
-    let dirX = pMid.x - 50;
-    let dirY = pMid.y - 50;
+    const dirX = pMid.x - 50;
+    const dirY = pMid.y - 50;
     const dist = Math.hypot(dirX, dirY) || 1;
-    const pushDist = Math.max(24, dist * 0.75);
+    const pushDist = Math.max(20, dist * 0.65);
     const p1 = {
       x: pMid.x + (dirX / dist) * pushDist,
       y: pMid.y + (dirY / dist) * pushDist
     };
 
-    const duration = 1100;
+    const duration = 650;
     const startTime = performance.now();
-
     let animFrameId = null;
 
     const animateStep = (now) => {
-      const elapsed = now - startTime;
-      const rawT = Math.min(1, elapsed / duration);
+      const rawT = Math.min(1, (now - startTime) / duration);
       const t = rawT < 0.5 ? 2 * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
 
       const curX = (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * p1.x + t * t * p2.x;
@@ -91,14 +80,8 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
       if (rawT < 1) {
         animFrameId = requestAnimationFrame(animateStep);
       } else {
-        const tFinish = setTimeout(() => {
-          setAnimatingTile(null);
-          setIsReplaying(false);
-          setOverrideBoardState(null);
-          setAnimatingPiece(null);
-          setReplayNoticeText('');
-        }, 350);
-        animationTimersRef.current.push(tFinish);
+        const tDone = setTimeout(finishReplay, 120);
+        animationTimersRef.current.push(tDone);
       }
     };
 
@@ -107,9 +90,10 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
   };
 
   const runPieceMoveSequence = (pendingPlay, includeTileTravel) => {
-    const { moverId, tileIdPlayed, movesMade, backupBoard } = pendingPlay;
-    const moverName = getPlayerLabel ? getPlayerLabel(moverId) : `Player ${parseInt(moverId, 10) + 1}`;
-    const initialBoard = backupBoard ? JSON.parse(JSON.stringify(backupBoard)) : JSON.parse(JSON.stringify(G.boardState || {}));
+    const { movesMade, backupBoard } = pendingPlay;
+    const initialBoard = backupBoard
+      ? JSON.parse(JSON.stringify(backupBoard))
+      : JSON.parse(JSON.stringify(G.boardState || {}));
 
     setIsReplaying(true);
     setOverrideBoardState(initialBoard);
@@ -121,11 +105,7 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
     const runMoveStep = (moveIndex) => {
       const move = movesMade[moveIndex];
       if (!move) {
-        setIsReplaying(false);
-        setOverrideBoardState(null);
-        setAnimatingPiece(null);
-        setAnimatingTile(null);
-        setReplayNoticeText('');
+        finishReplay();
         return;
       }
 
@@ -133,18 +113,16 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
       const toSpot = move.to;
 
       let pieceObj = currentBoard[fromSpot];
-      if (!pieceObj && fromSpot.startsWith('community')) {
-        pieceObj = Object.values(currentBoard).find(p => p && p.id === move.pieceId) || { type: 'Mark' };
+      if (!pieceObj && fromSpot?.startsWith('community')) {
+        pieceObj = Object.values(currentBoard).find((p) => p && p.id === move.pieceId) || { type: 'Mark' };
       }
 
       const pieceType = pieceObj?.type || 'Mark';
       const startCoords = getSpotCoords(fromSpot, activeHotspots);
       const endCoords = getSpotCoords(toSpot, activeHotspots);
 
-      // Phase 1 (0ms - 750ms): Glow on start spot
+      // Brief highlight on origin spot
       setOverrideBoardState(currentBoard);
-      setReplayNoticeText(`👀 Watch ${moverName}'s move ${moveIndex + 1} of ${totalMoves}...`);
-
       setAnimatingPiece({
         pieceType,
         left: startCoords.left,
@@ -153,15 +131,12 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
         isMoving: false
       });
 
-      // Phase 2 (750ms): Walk
-      const tGlowFinish = setTimeout(() => {
+      const tGlow = setTimeout(() => {
         const boardDuringMove = JSON.parse(JSON.stringify(currentBoard));
         if (fromSpot && boardDuringMove[fromSpot]) {
           boardDuringMove[fromSpot] = null;
         }
         setOverrideBoardState(boardDuringMove);
-
-        setReplayNoticeText(`🚶 ${moverName} move ${moveIndex + 1} of ${totalMoves}`);
 
         setAnimatingPiece({
           pieceType,
@@ -171,21 +146,25 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
           isMoving: false
         });
 
-        const tWalkStart = setTimeout(() => {
-          setAnimatingPiece({
-            pieceType,
-            left: endCoords.left,
-            top: endCoords.top,
-            phase: 'WALKING',
-            isMoving: true
+        let raf2 = null;
+        const raf1 = requestAnimationFrame(() => {
+          raf2 = requestAnimationFrame(() => {
+            setAnimatingPiece({
+              pieceType,
+              left: endCoords.left,
+              top: endCoords.top,
+              phase: 'WALKING',
+              isMoving: true
+            });
           });
-        }, 50);
-        animationTimersRef.current.push(tWalkStart);
+        });
+        animationTimersRef.current.push(() => {
+          cancelAnimationFrame(raf1);
+          if (raf2) cancelAnimationFrame(raf2);
+        });
+      }, 180);
+      animationTimersRef.current.push(tGlow);
 
-      }, 750);
-      animationTimersRef.current.push(tGlowFinish);
-
-      // Phase 3 (1650ms): Land
       const tLand = setTimeout(() => {
         const nextBoard = JSON.parse(JSON.stringify(currentBoard));
         applyMoveToState(move, nextBoard, G?.community || {});
@@ -195,43 +174,16 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
         setAnimatingPiece(null);
 
         if (moveIndex + 1 < totalMoves) {
-          setReplayNoticeText(`⏸️ 1 sec pause before move ${moveIndex + 2}...`);
-          const tPause = setTimeout(() => {
-            runMoveStep(moveIndex + 1);
-          }, 1000);
-          animationTimersRef.current.push(tPause);
+          const tNext = setTimeout(() => runMoveStep(moveIndex + 1), 180);
+          animationTimersRef.current.push(tNext);
+        } else if (includeTileTravel) {
+          const tTile = setTimeout(() => runTileTravelAnimation(pendingPlay), 150);
+          animationTimersRef.current.push(tTile);
         } else {
-          // All piece moves completed!
-          if (includeTileTravel) {
-            const playBaseKey = `${moverId}_${tileIdPlayed}_${movesMade.length}_${pendingPlay.receiverId}_${JSON.stringify(movesMade)}`;
-            if (lastTileAnimatedPlayKeyRef.current === playBaseKey) {
-              const tFinish = setTimeout(() => {
-                setIsReplaying(false);
-                setOverrideBoardState(null);
-                setAnimatingPiece(null);
-                setReplayNoticeText('');
-              }, 350);
-              animationTimersRef.current.push(tFinish);
-            } else {
-              lastTileAnimatedPlayKeyRef.current = playBaseKey;
-              setReplayNoticeText(`⏸️ 1 sec pause before tile play...`);
-              const tTileDelay = setTimeout(() => {
-                runTileTravelAnimation(pendingPlay, moverName);
-              }, 1000);
-              animationTimersRef.current.push(tTileDelay);
-            }
-          } else {
-            // Manual piece replay: finish replay cleanly without repeating tile travel
-            const tFinish = setTimeout(() => {
-              setIsReplaying(false);
-              setOverrideBoardState(null);
-              setAnimatingPiece(null);
-              setReplayNoticeText('');
-            }, 350);
-            animationTimersRef.current.push(tFinish);
-          }
+          const tDone = setTimeout(finishReplay, 120);
+          animationTimersRef.current.push(tDone);
         }
-      }, 1650);
+      }, 780);
       animationTimersRef.current.push(tLand);
     };
 
@@ -244,17 +196,24 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
       return;
     }
 
-    const { moverId, tileIdPlayed, movesMade } = pendingPlay;
-    const playKey = `${moverId}_${tileIdPlayed}_${movesMade.length}_${pendingPlay.step}_${JSON.stringify(movesMade)}`;
-
+    // Only auto-replay once per unique play (never repeat when step changes receipt -> challenge -> reexecute)
+    const playKey = `${pendingPlay.moverId}_${pendingPlay.receiverId}_${JSON.stringify(pendingPlay.movesMade)}`;
     if (lastReplayedPlayKeyRef.current === playKey) {
       return;
     }
-
     lastReplayedPlayKeyRef.current = playKey;
+
+    // Only auto-animate on initial play steps, and skip piece-walk replay for the mover who just moved them
+    if (pendingPlay.step !== 'receipt' && pendingPlay.step !== 'challenge') {
+      return;
+    }
+    if (playerID !== null && String(pendingPlay.moverId) === String(playerID)) {
+      return;
+    }
+
     clearTimers();
     runPieceMoveSequence(pendingPlay, true);
-  }, [G?.pendingPlay, activeHotspots, getPlayerLabel]);
+  }, [G?.pendingPlay, playerID]);
 
   const triggerPieceWalkReplay = () => {
     const pendingPlay = G?.pendingPlay;
@@ -270,7 +229,7 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel) {
     overrideBoardState,
     animatingPiece,
     animatingTile,
-    replayNoticeText,
+    replayNoticeText: '',
     triggerPieceWalkReplay
   };
 }

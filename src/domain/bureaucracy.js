@@ -1,8 +1,10 @@
 import { INVALID_MOVE } from 'boardgame.io/dist/esm/core.js';
 import { TILES, PIECE_TYPES, BUREAUCRACY_PRICES } from './types.js';
-import { checkVictory, enforceSupportRule } from './board.js';
+import { checkVictory } from './board.js';
 import { applyMoveToState, validateSingleMove } from './moves.js';
 import { handleLoadSaveState } from './sharedMoves.js';
+import { queuePendingSupport, handleResolveSupportDrop } from './supportRule.js';
+import { appendGameLog, recordBureaucracyFunding, formatMoveInfinitive } from './gameLog.js';
 
 export function selectBestBankTilesToPay(facedownBankTiles, cost) {
   if (!facedownBankTiles || facedownBankTiles.length === 0 || cost <= 0) return [];
@@ -141,6 +143,16 @@ export function applyChallengerBureaucracyAction(G, pId, { actionType, targetLoc
   tilesToPay.forEach(t => {
     t.faceDown = false;
   });
+
+  if (actionType === 'RESTORE_CRED') {
+    appendGameLog(G, `Player ${pId} spent K${cost} to restore credibility.`, 'info');
+  } else if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
+    const pieceType = G.boardState[targetLoc]?.type || 'piece';
+    const spotWord = actionType === 'PROMOTE_SEAT' ? 'seat' : actionType === 'PROMOTE_ROSTRUM' ? 'rostrum' : 'office';
+    appendGameLog(G, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, 'info');
+  } else if (subAction) {
+    appendGameLog(G, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, 'info');
+  }
   return true;
 }
 
@@ -180,7 +192,6 @@ export function executeBureaucracyActionPayload(G, pId, { actionType, targetLoc,
     if (!val.valid) return false;
 
     applyMoveToState(subAction, G.boardState, G.community);
-    G.boardState = enforceSupportRule(G.boardState, G.numPlayers);
     return true;
   }
 
@@ -191,12 +202,15 @@ export function createBureaucracyPhase() {
   return {
     onBegin: ({ G }) => {
       initBureaucracy(G);
+      recordBureaucracyFunding(G);
+      appendGameLog(G, 'BUREAUCRACY', 'phase');
     },
 
     turn: {
       order: {
         first: ({ G }) => (G && G.bureaucracyTurnOrder && G.bureaucracyTurnOrder.length > 0) ? parseInt(G.bureaucracyTurnOrder[0], 10) : 0,
         next: ({ G }) => {
+          if (G && G.pendingSupport) return parseInt(G.pendingSupport.ownerId, 10);
           if (!G || !G.bureaucracyTurnOrder || G.bureaucracyTurnIndex === undefined) return undefined;
           if (G.bureaucracyTurnIndex < G.bureaucracyTurnOrder.length) {
             return parseInt(G.bureaucracyTurnOrder[G.bureaucracyTurnIndex], 10);
@@ -208,7 +222,9 @@ export function createBureaucracyPhase() {
 
     moves: {
       loadSaveState: handleLoadSaveState,
-      buyBureaucracyAction: ({ G, ctx, playerID }, { actionType, targetLoc, subAction }) => {
+      resolveSupportDrop: handleResolveSupportDrop,
+      buyBureaucracyAction: ({ G, ctx, playerID, events }, { actionType, targetLoc, subAction }) => {
+        if (G.pendingSupport) return INVALID_MOVE;
         const pId = String(playerID);
         const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
         const player = G.players[pId];
@@ -227,10 +243,29 @@ export function createBureaucracyPhase() {
         if (!success) return INVALID_MOVE;
 
         player.funding -= cost;
+        if (actionType === 'RESTORE_CRED') {
+          appendGameLog(G, `Player ${pId} spent K${cost} to restore credibility.`, 'info');
+        } else if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
+          const pieceType = G.boardState[targetLoc]?.type || 'piece';
+          const spotWord = actionType === 'PROMOTE_SEAT' ? 'seat' : actionType === 'PROMOTE_ROSTRUM' ? 'rostrum' : 'office';
+          appendGameLog(G, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, 'info');
+        } else {
+          appendGameLog(G, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, 'info');
+        }
+
+        if (queuePendingSupport(G, { phase: 'bureaucracy', returnToPlayerId: pId })) {
+          if (String(G.pendingSupport.ownerId) !== pId) {
+            events.endTurn();
+          }
+        }
       },
 
-      endBureaucracyTurn: ({ G, events }) => {
+      endBureaucracyTurn: ({ G, playerID, events }) => {
+        if (G?.pendingSupport) return INVALID_MOVE;
         if (G) {
+          if (playerID !== undefined && playerID !== null) {
+            appendGameLog(G, `Player ${playerID} ended their Bureaucracy turn.`, 'info');
+          }
           G.bureaucracyTurnIndex = (G.bureaucracyTurnIndex || 0) + 1;
         }
         events.endTurn();
@@ -238,7 +273,7 @@ export function createBureaucracyPhase() {
     },
 
     endIf: ({ G }) => {
-      if (!G || G.bureaucracyTurnIndex === undefined || !G.bureaucracyTurnOrder) return false;
+      if (!G || G.pendingSupport || G.bureaucracyTurnIndex === undefined || !G.bureaucracyTurnOrder) return false;
       return G.bureaucracyTurnIndex >= G.bureaucracyTurnOrder.length;
     },
 

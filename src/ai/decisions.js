@@ -6,7 +6,8 @@ import {
   decidePenaltyWithdraw,
   decideReceiverReward,
   decideFreeAdvance,
-  decideChallengerReward
+  decideChallengerReward,
+  decideSupportDrop
 } from './pendingDecisions.js';
 import { decideBureaucracyAction } from './bureaucracyDecisions.js';
 
@@ -20,6 +21,7 @@ export {
   decideReceiverReward,
   decideFreeAdvance,
   decideChallengerReward,
+  decideSupportDrop,
   decideBureaucracyAction
 };
 
@@ -29,6 +31,16 @@ export {
  */
 export function decideAction(obs, persona, rng = Math.random) {
   if (!obs || obs.winner) return null;
+
+  // Outside simultaneous draft, boardgame.io only allows ctx.currentPlayer to move.
+  if (obs.phase !== 'draft' && obs.currentPlayer !== null && obs.currentPlayer !== obs.botId) {
+    return null;
+  }
+
+  if (obs.pendingSupport) {
+    if (String(obs.pendingSupport.ownerId) !== obs.botId) return null;
+    return decideSupportDrop(obs);
+  }
 
   if (obs.pendingPlay) {
     const pp = obs.pendingPlay;

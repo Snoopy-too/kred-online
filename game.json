@@ -26,15 +26,5 @@
       "name": "Quick (Skip Draft)",
       "description": "Faster game with pre-dealt cards, skipping the draft phase."
     }
-  ],
-  "devTools": [
-    {
-      "id": "kred-logs",
-      "name": "Webhook & Build Logs",
-      "icon": "bi-journal-code",
-      "url": "/api/webhooks/kred/logs",
-      "description": "View automated GitHub deployment logs and diagnostics",
-      "badge": "Logs"
-    }
   ]
 }

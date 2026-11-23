@@ -1,6 +1,39 @@
 /**
  * Spatial Domain Graph & Support Rule Enforcer for KRED
  */
+import { INITIAL_PIECE_COUNTS } from './types.js';
+
+// Returns valid receiver playerIDs for moverId's tile play:
+// Must target someone who will still have a tile to continue with, unless it's the last tile of the campaign.
+export function getValidReceivers(G, moverId) {
+  if (!G || !G.players) return [];
+  const mId = String(moverId);
+  const allIds = Object.keys(G.players);
+  const np = G.numPlayers || allIds.length || 3;
+  const tilesPerPlayer = (INITIAL_PIECE_COUNTS[np] || INITIAL_PIECE_COUNTS[3]).TILES_PER_PLAYER;
+
+  const bankLen = (p) => {
+    const pl = G.players[p];
+    return typeof pl?.bankCount === 'number' ? pl.bankCount : (pl?.bank || []).length;
+  };
+  const handLen = (p) => {
+    const pl = G.players[p];
+    return typeof pl?.handCount === 'number' ? pl.handCount : (pl?.hand || []).length;
+  };
+  const hasOpenSlot = (p) => bankLen(p) < tilesPerPlayer;
+  const totalRemainingTiles = allIds.reduce((sum, p) => sum + handLen(p), 0);
+  const isLastTileOfCampaign = totalRemainingTiles <= 1;
+
+  if (!isLastTileOfCampaign) {
+    const oppWithTiles = allIds.filter((p) => p !== mId && hasOpenSlot(p) && handLen(p) > 0);
+    if (oppWithTiles.length > 0) return oppWithTiles;
+    if (hasOpenSlot(mId) && handLen(mId) > 1) return [mId];
+  }
+
+  const openOpps = allIds.filter((p) => p !== mId && hasOpenSlot(p));
+  if (openOpps.length > 0) return openOpps;
+  return hasOpenSlot(mId) ? [mId] : [];
+}
 
 // Helper to extract player ID from location string like "p1_seat1", "p2_rostrum1", "p3_office"
 export function parseLocation(loc) {
@@ -118,7 +151,34 @@ export function areRostrumsAdjacent(locA, locB, numPlayers) {
   return false;
 }
 
-// Automatic Support Rule Enforcement
+// Interactive Support Rule Detector — returns first unsupported piece & its legal drop spots
+export function findUnsupportedPiece(boardState, numPlayers) {
+  if (!boardState) return null;
+  for (let p = 0; p < numPlayers; p++) {
+    const domainKey = `p${p + 1}`;
+    const ownerId = String(p);
+    const officeLoc = `${domainKey}_office`;
+    const r1Loc = `${domainKey}_rostrum1`;
+    const r2Loc = `${domainKey}_rostrum2`;
+
+    if (boardState[officeLoc] && !boardState[r1Loc] && !boardState[r2Loc]) {
+      return { ownerId, from: officeLoc, validDestinations: [r1Loc, r2Loc] };
+    }
+
+    const r1Seats = [`${domainKey}_seat1`, `${domainKey}_seat2`, `${domainKey}_seat3`];
+    if (boardState[r1Loc] && r1Seats.every(s => !boardState[s])) {
+      return { ownerId, from: r1Loc, validDestinations: r1Seats };
+    }
+
+    const r2Seats = [`${domainKey}_seat4`, `${domainKey}_seat5`, `${domainKey}_seat6`];
+    if (boardState[r2Loc] && r2Seats.every(s => !boardState[s])) {
+      return { ownerId, from: r2Loc, validDestinations: r2Seats };
+    }
+  }
+  return null;
+}
+
+// Automatic Support Rule Enforcement (used by AI board simulation)
 export function enforceSupportRule(boardState, numPlayers) {
   let changed = false;
   const newBoard = JSON.parse(JSON.stringify(boardState));
@@ -177,6 +237,11 @@ export function isPlayerActionRequired(pId, gameState) {
 
   const { G, ctx } = gameState;
   const pStr = String(pId);
+
+  // 0. Pending Support Drop (owner must move unsupported Office/Rostrum piece down)
+  if (G.pendingSupport) {
+    return String(G.pendingSupport.ownerId) === pStr;
+  }
 
   // 1. Pending Play Action (Receipt accept/expose, Challenge/pass, Re-execute honest, Penalty withdraw, Free advance)
   if (G.pendingPlay) {

@@ -145,17 +145,18 @@ button.flashing-green-tab {
   max-width: 1800px;
   margin: 0 auto;
   width: 100%;
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .kred-header {
   position: relative;
   z-index: 100;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 12px;
@@ -178,6 +179,7 @@ button.flashing-green-tab {
 
 .logo-img {
   height: 38px;
+  filter: invert(1) brightness(0.95) sepia(0.12);
 }
 
 .brand-text h1 {
@@ -188,7 +190,7 @@ button.flashing-green-tab {
 
 .subtitle {
   font-size: 11px;
-  color: #120e0c;
+  color: var(--text-muted);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -205,8 +207,9 @@ button.flashing-green-tab {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
   gap: 16px;
-  flex: 1;
-  overflow: visible;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .domains-section {
@@ -215,15 +218,27 @@ button.flashing-green-tab {
   justify-content: flex-start;
   align-items: center;
   width: 100%;
-  overflow: visible;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .controls-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding-right: 6px;
-  overflow: visible;
+  padding-bottom: 12px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.controls-sidebar > * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  flex-shrink: 0;
 }
 
 .controls-sidebar::-webkit-scrollbar {

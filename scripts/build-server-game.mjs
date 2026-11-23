@@ -29,6 +29,17 @@ try {
     logLevel: 'info',
   });
   console.log('[BUILD] Successfully generated game_modules/KRED/game.cjs');
+
+  await esbuild.build({
+    entryPoints: [path.join(kredDir, 'src/ai/serverBotRunner.js')],
+    bundle: true,
+    platform: 'node',
+    target: 'node18',
+    format: 'cjs',
+    outfile: path.join(kredDir, 'bot-runner.cjs'),
+    logLevel: 'info',
+  });
+  console.log('[BUILD] Successfully generated game_modules/KRED/bot-runner.cjs');
 } finally {
   if (fs.existsSync(tempEntry)) {
     fs.unlinkSync(tempEntry);

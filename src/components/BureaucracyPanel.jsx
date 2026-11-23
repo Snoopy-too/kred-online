@@ -1,24 +1,33 @@
 import React from 'react';
-import { MOVE_TYPES, BUREAUCRACY_PRICES, TILES } from '../domain/types.js';
+import { BUREAUCRACY_PRICES, TILES } from '../domain/types.js';
 import {
   executeOnlineBureaucracyAction,
-  executeOnlineEndBureaucracyTurn,
-  executeOnlineChallengerCredibility
+  executeOnlineEndBureaucracyTurn
 } from '../domain/onlineEngine.js';
+
+function KPrice({ amount, highlighted = false }) {
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'baseline',
+      gap: '2px',
+      fontWeight: 700,
+      color: highlighted ? '#facc15' : 'var(--accent-gold)'
+    }}>
+      <span className="k-strike" style={{ fontSize: '18px', fontWeight: 800, lineHeight: 1 }}>K</span>
+      <span>{amount}</span>
+    </span>
+  );
+}
 
 export function BureaucracyPanel({
   myPlayer,
   isMyTurn,
   moves,
   numPlayers,
-  getPlayerLabel,
-  ctx,
-  selectedShopItem,
-  handleSelectShopItem,
-  selectedActionType,
-  setSelectedActionType,
-  moveFromLoc,
-  validPromotionSpots,
+  selectedPromotion = null,
+  highlightedMoveTiers = new Set(),
+  handlePromoteSelected = null,
   G,
   playerID,
   isOnline = false,
@@ -31,254 +40,148 @@ export function BureaucracyPanel({
   const facedownFunding = (myPlayer.bank || []).reduce((sum, item) => item.faceDown ? sum + (TILES[item.tileId]?.funding || 0) : sum, 0);
   const funding = isChallengerReward ? facedownFunding : (myPlayer.funding || 0);
   const credibilityNotchesLost = myPlayer.credibilityNotchesLost || 0;
+  const currentCred = Math.max(0, 3 - credibilityNotchesLost);
 
-  const basicActions = [MOVE_TYPES.ADVANCE, MOVE_TYPES.WITHDRAW, MOVE_TYPES.ORGANIZE];
-  const extraActions = [MOVE_TYPES.ASSIST, MOVE_TYPES.REMOVE, MOVE_TYPES.INFLUENCE];
+  const rowStyle = (highlighted = false) => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    padding: '5px 8px',
+    margin: '0 -8px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    color: highlighted ? '#ffffff' : 'var(--text-main)',
+    background: highlighted ? 'rgba(200, 155, 60, 0.22)' : 'transparent',
+    transition: 'background 0.15s ease',
+    lineHeight: 1.35
+  });
 
-  const isBasicSelected = basicActions.includes(selectedActionType);
-  const selectedMovePrice = isBasicSelected ? prices.BASIC_ACTION : prices.EXTRA_ACTION;
+  const sectionHeadingStyle = {
+    fontSize: '12px',
+    fontWeight: 700,
+    color: 'var(--accent-gold)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
+    margin: '12px 0 4px'
+  };
+
+  const actionBtnStyle = {
+    fontSize: '12px',
+    padding: '4px 10px',
+    whiteSpace: 'nowrap',
+    flexShrink: 0
+  };
 
   return (
-    <div className="control-card bureaucracy-bazaar-card">
-      <div className="bazaar-header">
-        <div className="bazaar-title-group">
-          <span className="bazaar-icon">🏛️</span>
-          <div>
-            <h2 className="bazaar-title">
-              {isChallengerReward ? 'Challenge Bureaucracy Reward' : 'Bureaucracy Phase'}
-            </h2>
-            <p className="bazaar-subtitle">
-              {isChallengerReward
-                ? 'Spend face-down bank tile funding on 1 action'
-                : 'Spend your campaign funding on upgrades & actions'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bazaar-funding-badge">
-          <span className="coin-icon">🪙</span>
-          <div className="funding-amount-group">
-            <span className="funding-label">{isChallengerReward ? 'Tile Bank Funding' : 'Funding Total'}</span>
-            <span className="funding-val">{funding} <small><span className="k-strike">K</span>redcoin</small></span>
-          </div>
-        </div>
+    <div className="turn-builder-card">
+      <div className="turn-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3>{isChallengerReward ? 'Challenge Reward' : 'Bureaucracy'}</h3>
+        <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '5px', fontSize: '15px', fontWeight: 700, color: 'var(--accent-gold)' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Funding</span>
+          <span className="k-strike" style={{ fontSize: '22px', fontWeight: 900, lineHeight: 1 }}>K</span>
+          <span style={{ fontSize: '18px', fontWeight: 800 }}>{funding}</span>
+        </span>
       </div>
 
-      {isMyTurn || isChallengerReward ? (
-        <div className="bazaar-body">
-          {/* Active Guidance Banner when an item is selected */}
-          {selectedShopItem && (
-            <div className="bazaar-instruction-banner">
-              <div className="instruction-content">
-                <span className="pulse-dot"></span>
-                <span>
-                  {['PROMOTE_SEAT', 'PROMOTE_ROSTRUM', 'PROMOTE_OFFICE'].includes(selectedShopItem) && (
-                    validPromotionSpots.length > 0
-                      ? `🎯 Click a glowing piece on your board to promote it (${validPromotionSpots.length} available)`
-                      : `⚠️ No eligible pieces or insufficient funding to promote right now`
-                  )}
-                  {selectedShopItem === 'MOVE_ACTION' && (
-                    !moveFromLoc
-                      ? `🎯 Click a piece on the board to perform a ${selectedActionType} move`
-                      : `🟢 Click a green throbbing circle on the board as destination`
-                  )}
-                </span>
-              </div>
-              <button
-                className="btn-cancel-selection"
-                onClick={() => handleSelectShopItem(selectedShopItem)}
-                title="Cancel active selection"
-              >
-                ✕ Cancel
-              </button>
-            </div>
-          )}
+      {(() => {
+        const canAct = Boolean(isMyTurn || isChallengerReward);
+        return (
+        <div>
+          <p style={{ margin: '2px 0 8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            {!canAct
+              ? 'Waiting for your Bureaucracy turn...'
+              : isChallengerReward
+              ? 'Select a piece on the board to spend your face-down tile funding on 1 action.'
+              : 'Click or drag any piece on the board to promote or move it.'}
+          </p>
 
-          {/* Section 1: Restore Credibility (Only during normal Bureaucracy phase; challenger reward uses pending play modal) */}
           {!isChallengerReward && (
-            <div className="bazaar-section">
-              <h3 className="section-title">
-                <span>Credibility Restoration</span>
-              </h3>
-              <div className="store-grid single-col">
-                <div className={`store-item-card ${credibilityNotchesLost === 0 ? 'disabled' : ''}`}>
-                  <div className="item-info">
-                    <span className="item-name">Restore 1 Credibility</span>
-                    <span className="item-desc">
-                      {credibilityNotchesLost > 0
-                        ? `Repair 1 lost credibility notch (Currently ${credibilityNotchesLost} lost)`
-                        : `Credibility at maximum (3/3)`}
-                    </span>
-                  </div>
-                  <button
-                    className="btn btn-purchase"
-                    disabled={funding < prices.RESTORE_CRED || credibilityNotchesLost === 0}
-                    onClick={() => {
-                      if (isOnline) executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState);
-                      else moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' });
-                    }}
-                  >
-                    <span className="price-tag"><span className="k-strike">K</span> {prices.RESTORE_CRED}</span>
-                    <span>Restore Notch</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Section 2: Piece Promotions */}
-          <div className="bazaar-section">
-            <h3 className="section-title">
-              <span>Piece Promotions</span>
-            </h3>
-            <div className="store-grid">
-              {/* Promote Seat */}
-              <div className={`store-item-card ${selectedShopItem === 'PROMOTE_SEAT' ? 'active-store-selection' : ''}`}>
-                <div className="item-info">
-                  <span className="item-name">Promote Seat Piece</span>
-                  <span className="item-desc">Upgrade Mark ➔ Heel or Heel ➔ Pawn in Seat</span>
-                </div>
+            <>
+              <div style={{ ...sectionHeadingStyle, marginTop: '4px' }}>Restore Credibility</div>
+              <div style={rowStyle(false)}>
+                <span>
+                  <KPrice amount={prices.RESTORE_CRED} /> to restore 1 notch{' '}
+                  <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>({currentCred}/3)</span>
+                </span>
                 <button
-                  className={`btn ${selectedShopItem === 'PROMOTE_SEAT' ? 'btn-active-select' : 'btn-purchase'}`}
-                  disabled={funding < prices.PROMOTE_SEAT}
-                  onClick={() => handleSelectShopItem('PROMOTE_SEAT')}
-                >
-                  {selectedShopItem === 'PROMOTE_SEAT' ? (
-                    <span>Selecting...</span>
-                  ) : (
-                    <>
-                      <span className="price-tag"><span className="k-strike">K</span> {prices.PROMOTE_SEAT}</span>
-                      <span>Select Target</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Promote Rostrum */}
-              <div className={`store-item-card ${selectedShopItem === 'PROMOTE_ROSTRUM' ? 'active-store-selection' : ''}`}>
-                <div className="item-info">
-                  <span className="item-name">Promote Rostrum Piece</span>
-                  <span className="item-desc">Upgrade Mark ➔ Heel or Heel ➔ Pawn in Rostrum</span>
-                </div>
-                <button
-                  className={`btn ${selectedShopItem === 'PROMOTE_ROSTRUM' ? 'btn-active-select' : 'btn-purchase'}`}
-                  disabled={funding < prices.PROMOTE_ROSTRUM}
-                  onClick={() => handleSelectShopItem('PROMOTE_ROSTRUM')}
-                >
-                  {selectedShopItem === 'PROMOTE_ROSTRUM' ? (
-                    <span>Selecting...</span>
-                  ) : (
-                    <>
-                      <span className="price-tag"><span className="k-strike">K</span> {prices.PROMOTE_ROSTRUM}</span>
-                      <span>Select Target</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Promote Office */}
-              <div className={`store-item-card ${selectedShopItem === 'PROMOTE_OFFICE' ? 'active-store-selection' : ''}`}>
-                <div className="item-info">
-                  <span className="item-name">Promote Office Piece</span>
-                  <span className="item-desc">Upgrade Mark ➔ Heel or Heel ➔ Pawn in Office</span>
-                </div>
-                <button
-                  className={`btn ${selectedShopItem === 'PROMOTE_OFFICE' ? 'btn-active-select' : 'btn-purchase'}`}
-                  disabled={funding < prices.PROMOTE_OFFICE}
-                  onClick={() => handleSelectShopItem('PROMOTE_OFFICE')}
-                >
-                  {selectedShopItem === 'PROMOTE_OFFICE' ? (
-                    <span>Selecting...</span>
-                  ) : (
-                    <>
-                      <span className="price-tag"><span className="k-strike">K</span> {prices.PROMOTE_OFFICE}</span>
-                      <span>Select Target</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Purchase Move Actions */}
-          <div className="bazaar-section">
-            <h3 className="section-title">
-              <span>Purchase Board Moves</span>
-            </h3>
-
-            <div className="move-action-bazaar-box">
-              <div className="move-type-selector">
-                <span className="label">Select Action:</span>
-                <select
-                  className="bazaar-select"
-                  value={selectedActionType}
-                  onChange={(e) => {
-                    setSelectedActionType(e.target.value);
-                    if (selectedShopItem === 'MOVE_ACTION') {
-                      handleSelectShopItem('MOVE_ACTION'); // reset target on type change
-                    }
+                  className="btn btn-primary"
+                  style={actionBtnStyle}
+                  disabled={!canAct || funding < prices.RESTORE_CRED || credibilityNotchesLost === 0}
+                  onClick={() => {
+                    if (isOnline) executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState);
+                    else moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' });
                   }}
                 >
-                  <optgroup label="Basic Actions (9 Kredcoin)">
-                    {basicActions.map(mt => (
-                      <option key={mt} value={mt}>{mt}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Extra Actions (15 Kredcoin)">
-                    {extraActions.map(mt => (
-                      <option key={mt} value={mt}>{mt}</option>
-                    ))}
-                  </optgroup>
-                </select>
-              </div>
-
-              <div className={`store-item-card move-purchase-card ${selectedShopItem === 'MOVE_ACTION' ? 'active-store-selection' : ''}`}>
-                <div className="item-info">
-                  <span className="item-name">
-                    {selectedActionType} Move
-                  </span>
-                  <span className="item-desc">
-                    {isBasicSelected
-                      ? 'Basic Move Action: Select piece on board to move'
-                      : 'Extra Move Action: Select piece on board to move'}
-                  </span>
-                </div>
-                <button
-                  className={`btn ${selectedShopItem === 'MOVE_ACTION' ? 'btn-active-select' : 'btn-purchase'}`}
-                  disabled={funding < selectedMovePrice}
-                  onClick={() => handleSelectShopItem('MOVE_ACTION')}
-                >
-                  {selectedShopItem === 'MOVE_ACTION' ? (
-                    <span>Moving...</span>
-                  ) : (
-                    <>
-                      <span className="price-tag"><span className="k-strike">K</span> {selectedMovePrice}</span>
-                      <span>Target on Board</span>
-                    </>
-                  )}
+                  Restore
                 </button>
               </div>
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* Section 4: Footer */}
+          <div style={sectionHeadingStyle}>
+            Select a Piece to Promote{' '}
+            <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--text-muted)', fontSize: '11px' }}>
+              (Mark → Heel, Heel → Pawn)
+            </span>
+          </div>
+          {[
+            { key: 'PROMOTE_SEAT', label: 'Seat', price: prices.PROMOTE_SEAT },
+            { key: 'PROMOTE_ROSTRUM', label: 'Rostrum', price: prices.PROMOTE_ROSTRUM },
+            { key: 'PROMOTE_OFFICE', label: 'Office', price: prices.PROMOTE_OFFICE }
+          ].map((item) => {
+            const isHighlighted = canAct && selectedPromotion?.actionType === item.key;
+            return (
+              <div key={item.key} style={rowStyle(isHighlighted)}>
+                <span><KPrice amount={item.price} highlighted={isHighlighted} /> — {item.label}</span>
+                {isHighlighted && (
+                  <button
+                    className="btn btn-primary"
+                    style={actionBtnStyle}
+                    disabled={!selectedPromotion.canPromote}
+                    onClick={handlePromoteSelected}
+                    title={
+                      !selectedPromotion.canAfford
+                        ? 'Insufficient funding'
+                        : !selectedPromotion.canUpgradeType
+                        ? 'Piece cannot be promoted further or none left in Community'
+                        : `Promote this ${item.label} piece`
+                    }
+                  >
+                    Promote
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          <div style={sectionHeadingStyle}>Select a Piece to Move</div>
+          {[
+            { key: 'BASIC_ACTION', label: 'to Advance, Withdraw or Organize', price: prices.BASIC_ACTION },
+            { key: 'EXTRA_ACTION', label: 'to Assist, Remove or Influence', price: prices.EXTRA_ACTION }
+          ].map((item) => {
+            const isHighlighted = canAct && highlightedMoveTiers?.has?.(item.key);
+            return (
+              <div key={item.key} style={rowStyle(isHighlighted)}>
+                <span><KPrice amount={item.price} highlighted={isHighlighted} /> {item.label}</span>
+              </div>
+            );
+          })}
+
           {!isChallengerReward && (
-            <div className="bazaar-footer" style={{ marginTop: 'auto', paddingTop: '16px' }}>
+            <div className="turn-actions-row" style={{ marginTop: '14px' }}>
               <button
-                className="btn btn-end-bureaucracy"
+                className={`btn btn-primary finish-turn-btn ${canAct ? 'active-finish' : ''}`}
+                disabled={!canAct}
                 onClick={() => isOnline ? executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState) : moves?.endBureaucracyTurn()}
               >
-                Finish & End Bureaucracy Turn
+                Finish Turn
               </button>
             </div>
           )}
         </div>
-      ) : (
-        <div className="bazaar-waiting-box">
-          <div className="spinner-icon">⏳</div>
-          <p>Waiting for <strong>{getPlayerLabel(ctx.currentPlayer)}</strong> to complete their Bureaucracy turn...</p>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

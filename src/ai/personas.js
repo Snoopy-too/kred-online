@@ -4,7 +4,7 @@
 export const BOT_PERSONAS = Object.freeze({
   '1': {
     id: '1',
-    name: 'Baron Vance',
+    name: 'Vance',
     title: 'The Corrupt Baron',
     archetype: 'Opportunistic Deceiver',
     bluffThreshold: 0.35,
@@ -20,7 +20,7 @@ export const BOT_PERSONAS = Object.freeze({
   },
   '2': {
     id: '2',
-    name: 'Inspector Vale',
+    name: 'Vale',
     title: 'The Watchdog',
     archetype: 'Rule-Enforcing Watchdog',
     bluffThreshold: 0.80,
@@ -36,7 +36,7 @@ export const BOT_PERSONAS = Object.freeze({
   },
   '0': {
     id: '0',
-    name: 'Bot Zero',
+    name: 'Zero',
     title: 'The Pragmatist',
     archetype: 'Balanced Strategist',
     bluffThreshold: 0.58,
@@ -52,7 +52,7 @@ export const BOT_PERSONAS = Object.freeze({
   },
   '3': {
     id: '3',
-    name: 'Magistrate Thorne',
+    name: 'Thorne',
     title: 'The Strategist',
     archetype: 'Calculated Tactician',
     bluffThreshold: 0.55,
@@ -68,7 +68,7 @@ export const BOT_PERSONAS = Object.freeze({
   },
   '4': {
     id: '4',
-    name: 'Councilor Mire',
+    name: 'Mire',
     title: 'The Schemer',
     archetype: 'High-Risk Bluffer',
     bluffThreshold: 0.30,

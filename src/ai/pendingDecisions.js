@@ -1,5 +1,5 @@
 import { MOVE_TYPES, TILES } from '../domain/types.js';
-import { checkVictory } from '../domain/board.js';
+import { checkVictory, enforceSupportRule } from '../domain/board.js';
 import {
   classifyPlay,
   isMoveTypePossible,
@@ -335,4 +335,31 @@ export function decideChallengerReward(obs, persona, rng = Math.random) {
   } catch {
     return { move: 'claimChallengerCredibility', args: [] };
   }
+}
+
+/**
+ * Picks the best legal destination when the bot owns an unsupported Office/Rostrum piece.
+ * Simulates cascading support so choosing a supported Rostrum beats an unsupported one.
+ */
+export function decideSupportDrop(obs) {
+  const ps = obs.pendingSupport;
+  const targets = ps?.validDestinations || [];
+  if (!ps || targets.length === 0) return null;
+
+  let bestLoc = targets[0];
+  let bestScore = -Infinity;
+
+  for (const toLoc of targets) {
+    const simBoard = JSON.parse(JSON.stringify(obs.boardState || {}));
+    simBoard[toLoc] = simBoard[ps.from];
+    simBoard[ps.from] = null;
+    const afterCascade = enforceSupportRule(simBoard, obs.numPlayers || 3);
+    const sc = evaluateDomain(afterCascade, obs.botId);
+    if (sc > bestScore) {
+      bestScore = sc;
+      bestLoc = toLoc;
+    }
+  }
+
+  return { move: 'resolveSupportDrop', args: [bestLoc] };
 }

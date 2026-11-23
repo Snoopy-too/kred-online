@@ -1,7 +1,7 @@
 import React from 'react';
 import { getBotPersona } from '../ai/personas.js';
 
-export function LobbyWaitingOverlay({
+export function TableStagingOverlay({
   seats,
   openCount,
   isHost,
