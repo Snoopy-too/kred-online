@@ -134,6 +134,7 @@ export function BoardHeaderControls({
   currentPhase,
   G,
   ctx,
+  moves = null,
   playerID,
   getPlayerLabel,
   boardZoom = 1,
@@ -144,38 +145,41 @@ export function BoardHeaderControls({
   showDiagnostics = false,
   onToggleCalibration = null,
   onToggleDiagnostics = null,
-  setShowSaveLoadModal
+  setShowSaveLoadModal,
+  onResetTransientState = null
 }) {
   const [showManual, setShowManual] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
-  const [showWebhookLogs, setShowWebhookLogs] = useState(false);
-  const [webhookLogsText, setWebhookLogsText] = useState('');
-  const [loadingWebhookLogs, setLoadingWebhookLogs] = useState(false);
 
-  const lobbyNavbar =
+  const lobbyToolbar =
     typeof window !== 'undefined' &&
-    window.tfdMatchNavbar &&
-    typeof window.tfdMatchNavbar.configure === 'function'
-      ? window.tfdMatchNavbar
+    window.tfdMatchToolbar &&
+    typeof window.tfdMatchToolbar.configure === 'function'
+      ? window.tfdMatchToolbar
       : null;
 
   const zoomRef = React.useRef(boardZoom);
   zoomRef.current = boardZoom;
+  const latestStateRef = React.useRef({ G, ctx });
+  latestStateRef.current = { G, ctx };
   const callbacksRef = React.useRef({});
   callbacksRef.current = {
     onToggleCalibration,
     onToggleDiagnostics,
     setBoardZoom,
     onResetBoardView,
-    setShowSaveLoadModal
+    setShowSaveLoadModal,
+    onResetTransientState,
+    moves
   };
 
   const hasZoom = Boolean(setBoardZoom);
   const hasCal = Boolean(onToggleCalibration);
   const hasDiag = Boolean(onToggleDiagnostics);
+  const hasSaveLoad = Boolean(moves && typeof moves.loadSaveState === 'function');
 
   useEffect(() => {
-    if (!lobbyNavbar) return;
+    if (!lobbyToolbar) return;
     const devTools = isAdmin
       ? [
           hasCal && {
@@ -184,27 +188,16 @@ export function BoardHeaderControls({
             active: calibrationMode,
             onClick: () => callbacksRef.current.onToggleCalibration?.()
           },
-          {
-            label: 'Save / Load State',
-            icon: 'bi-floppy',
-            onClick: () => callbacksRef.current.setShowSaveLoadModal?.(true)
-          },
           hasDiag && {
             label: showDiagnostics ? 'Hide Diagnostics' : 'Diagnostics Log',
             icon: 'bi-terminal',
             active: showDiagnostics,
             onClick: () => callbacksRef.current.onToggleDiagnostics?.()
-          },
-          {
-            label: 'Webhook Logs',
-            icon: 'bi-journal-code',
-            divider: true,
-            onClick: () => setShowWebhookLogs(true)
           }
         ].filter(Boolean)
       : [];
 
-    lobbyNavbar.configure({
+    lobbyToolbar.configure({
       logo: {
         src: getAssetUrl('images/logo.png'),
         alt: 'KRED',
@@ -229,33 +222,35 @@ export function BoardHeaderControls({
             }
           }
         : null,
+      saveLoad: isAdmin && hasSaveLoad
+        ? {
+            storageKey: 'kred',
+            getState: () => {
+              const { G: curG, ctx: curCtx } = latestStateRef.current;
+              return {
+                numPlayers: curG?.numPlayers || curCtx?.numPlayers || 3,
+                phase: curCtx?.phase || 'campaign',
+                currentPlayer: curCtx?.currentPlayer || '0',
+                turn: curCtx?.turn || 1,
+                G: curG
+              };
+            },
+            loadState: (snap) => {
+              callbacksRef.current.onResetTransientState?.();
+              callbacksRef.current.moves?.loadSaveState?.(snap);
+            }
+          }
+        : null,
       devTools,
       forceDevTools: isAdmin
     });
-  }, [lobbyNavbar, isAdmin, calibrationMode, showDiagnostics, hasZoom, hasCal, hasDiag]);
+  }, [lobbyToolbar, isAdmin, calibrationMode, showDiagnostics, hasZoom, hasCal, hasDiag, hasSaveLoad]);
 
   useEffect(() => {
-    if (lobbyNavbar && typeof lobbyNavbar.updateZoom === 'function') {
-      lobbyNavbar.updateZoom(boardZoom);
+    if (lobbyToolbar && typeof lobbyToolbar.updateZoom === 'function') {
+      lobbyToolbar.updateZoom(boardZoom);
     }
-  }, [lobbyNavbar, boardZoom]);
-
-  const loadWebhookLogs = async () => {
-    setLoadingWebhookLogs(true);
-    try {
-      const res = await fetch('/api/webhooks/kred/logs');
-      const data = await res.json();
-      setWebhookLogsText(data?.logs || 'No webhook logs available.');
-    } catch (err) {
-      setWebhookLogsText(`Failed to load webhook logs: ${err.message}`);
-    } finally {
-      setLoadingWebhookLogs(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showWebhookLogs) loadWebhookLogs();
-  }, [showWebhookLogs]);
+  }, [lobbyToolbar, boardZoom]);
 
   const menuItemStyle = {
     width: '100%',
@@ -277,7 +272,7 @@ export function BoardHeaderControls({
 
   return (
     <header className="kred-header">
-      {!lobbyNavbar && (
+      {!lobbyToolbar && (
       <div className="logo-brand">
         <img src={getAssetUrl('images/logo.png')} alt="KRED" className="logo-img" />
         <button
@@ -367,14 +362,6 @@ export function BoardHeaderControls({
                       <i className="bi bi-terminal" />
                     </button>
                   )}
-                  <button
-                    type="button"
-                    style={{ ...menuItemStyle, borderTop: '1px solid var(--border-color)' }}
-                    onClick={() => { setShowAdminMenu(false); setShowWebhookLogs(true); }}
-                  >
-                    <span>Webhook Logs</span>
-                    <i className="bi bi-journal-code" />
-                  </button>
                 </div>
               </>
             )}
@@ -458,35 +445,6 @@ export function BoardHeaderControls({
           title="KRED Manual"
           style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }}
         />
-      </AdminModal>
-
-      <AdminModal
-        isOpen={showWebhookLogs}
-        onClose={() => setShowWebhookLogs(false)}
-        title="Webhook & Deploy Logs"
-        headerActions={
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ padding: '4px 10px', fontSize: '12px' }}
-            onClick={loadWebhookLogs}
-            disabled={loadingWebhookLogs}
-          >
-            {loadingWebhookLogs ? 'Loading...' : 'Refresh'}
-          </button>
-        }
-      >
-        <pre style={{
-          margin: 0,
-          padding: '14px 16px',
-          fontSize: '12px',
-          lineHeight: 1.45,
-          color: '#e2d6ca',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word'
-        }}>
-          {loadingWebhookLogs && !webhookLogsText ? 'Loading logs...' : webhookLogsText}
-        </pre>
       </AdminModal>
     </header>
   );

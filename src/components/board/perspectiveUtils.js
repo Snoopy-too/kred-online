@@ -21,7 +21,7 @@ export function getPerspectiveRotation(numPlayers, playerID) {
   }
 
   if (numPlayers === 5) {
-    const map = { '0': 198, '1': 126, '2': 54, '3': 342, '4': 270 };
+    const map = { '0': 216, '1': 144, '2': 72, '3': 0, '4': 288 };
     return map[pStr] ?? 0;
   }
 

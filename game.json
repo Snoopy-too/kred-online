@@ -8,6 +8,28 @@
   "version": "2.0.0",
   "status": "active",
   "author": "The Flying Dutchmen",
+  "toolbar": {
+    "logo": {
+      "src": "images/logo.png",
+      "alt": "KRED",
+      "invert": true
+    },
+    "manual": {
+      "label": "Manual",
+      "url": "https://theflyingdutchmen.games/KRED/manual?standalone=1",
+      "modal": true,
+      "title": "KRED Manual"
+    },
+    "zoom": {
+      "min": 0.5,
+      "max": 2,
+      "default": 1
+    },
+    "audio": false,
+    "language": false,
+    "saveLoad": true,
+    "newGame": false
+  },
   "tags": [
     "strategy",
     "bluffing",

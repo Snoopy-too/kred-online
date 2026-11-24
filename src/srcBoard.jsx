@@ -215,6 +215,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         currentPhase={currentPhase}
         G={G}
         ctx={ctx}
+        moves={moves}
         playerID={playerID}
         getPlayerLabel={getPlayerLabel}
         boardZoom={boardZoom}
@@ -226,6 +227,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         onToggleDiagnostics={onToggleDiagnostics}
         onToggleCalibration={onToggleCalibration}
         setShowSaveLoadModal={setShowSaveLoadModal}
+        onResetTransientState={staged.handleResetTurn}
       />
 
       {G.winner && (
@@ -236,6 +238,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
 
       <BoardCalibrationToolbar
         calibrationMode={calibration.calibrationMode}
+        onClose={onToggleCalibration}
         selectedCalibrateKeys={calibration.selectedCalibrateKeys}
         setSelectedCalibrateKeys={calibration.setSelectedCalibrateKeys}
         activeHotspots={activeHotspots}
