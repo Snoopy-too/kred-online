@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame, filterSoloPlayerView } from '../src/srcGame.js';
-import { classifyPlay } from '../src/domain/moves.js';
+import { classifyPlay, validateSingleMove } from '../src/domain/moves.js';
+import { initBureaucracy } from '../src/domain/bureaucracy.js';
 
 function makeLocalClients(game, matchID) {
   const multiplayer = Local();
@@ -206,5 +207,31 @@ describe('campaign edge cases & solo playerView hardening', () => {
     assert.equal(classifyPlay(assistOnly, '13', '1', boardState, community, 3), 'Honest');
     assert.equal(classifyPlay([], '13', '1', boardState, community, 3), 'Dishonest');
     assert.equal(classifyPlay([{ type: 'Withdraw', from: 'p2_seat1', to: 'community' }], '13', '1', boardState, community, 3), 'Dishonest');
+  });
+
+  it('allows Advance to gain a Pawn from community only when no Marks or Heels remain (and respects Max 1 Pawn)', () => {
+    const board = { p1_seat1: null, p1_office: null, community_1: { id: 'cp1', type: 'Pawn' }, community_2: { id: 'ch1', type: 'Heel' } };
+    // Heel still in community -> Pawn blocked
+    assert.equal(validateSingleMove({ type: 'Advance', from: 'community_1', to: 'p1_seat1' }, '0', board, { marks: 0, heels: 1, pawns: 1 }, 3).valid, false);
+    // Remove Heel (no Marks or Heels left) -> Pawn allowed
+    board.community_2 = null;
+    assert.equal(validateSingleMove({ type: 'Advance', from: 'community_1', to: 'p1_seat1' }, '0', board, { marks: 0, heels: 0, pawns: 1 }, 3).valid, true);
+    // Already owns a Pawn -> blocked by Max 1 Pawn rule
+    board.p1_office = { id: 'existing_pawn', type: 'Pawn' };
+    assert.equal(validateSingleMove({ type: 'Advance', from: 'community_1', to: 'p1_seat1' }, '0', board, { marks: 0, heels: 0, pawns: 1 }, 3).valid, false);
+  });
+
+  it('initBureaucracy records bureaucracyInitialFunding for all players', () => {
+    const G = {
+      boardState: {},
+      players: {
+        '0': { bank: [{ tileId: '01', faceDown: true }, { tileId: '02', faceDown: false }], credibilityNotchesLost: 0 },
+        '1': { bank: [{ tileId: '18', faceDown: true }], credibilityNotchesLost: 0 }
+      }
+    };
+    initBureaucracy(G);
+    assert.equal(G.players['0'].bureaucracyInitialFunding, G.players['0'].funding);
+    assert.equal(G.players['1'].bureaucracyInitialFunding, G.players['1'].funding);
+    assert.ok(G.players['1'].bureaucracyInitialFunding > 0);
   });
 });

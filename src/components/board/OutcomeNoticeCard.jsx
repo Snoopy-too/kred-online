@@ -1,20 +1,26 @@
 import React from 'react';
+import { getTileImageUrl } from '../../utils/assets.js';
+import { formatSupportSpot } from '../../domain/supportRule.js';
 
 const OUTCOME_META = {
-  reject: { heading: 'Whistle Blown!', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)', border: 'rgba(239, 68, 68, 0.5)' },
-  challengeSuccess: { heading: 'Smoking Gun!', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)', border: 'rgba(239, 68, 68, 0.5)' },
-  challengeFailed: { heading: 'Witch Hunt!', color: '#facc15', bg: 'rgba(250, 204, 21, 0.14)', border: 'rgba(250, 204, 21, 0.5)' },
-  quiet: { heading: 'Quiet is Kept!', color: '#4ade80', bg: 'rgba(74, 222, 128, 0.14)', border: 'rgba(74, 222, 128, 0.5)' }
+  reject: { heading: 'Whistle Blown!', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)', border: 'rgba(239, 68, 68, 0.5)', showTile: true },
+  challengeSuccess: { heading: 'Smoking Gun!', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)', border: 'rgba(239, 68, 68, 0.5)', showTile: true },
+  challengeFailed: { heading: 'Witch Hunt!', color: '#facc15', bg: 'rgba(250, 204, 21, 0.14)', border: 'rgba(250, 204, 21, 0.5)', showTile: true },
+  quiet: { heading: 'Quiet is Kept!', color: '#4ade80', bg: 'rgba(74, 222, 128, 0.14)', border: 'rgba(74, 222, 128, 0.5)', showTile: false }
 };
 
 export function isSupportedOutcomeNotice(notice) {
   return Boolean(notice && OUTCOME_META[notice.type]);
 }
 
-export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null, onDismiss = null }) {
+export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null, onDismiss = null, pendingSupport = null, playerID = null }) {
   if (!isSupportedOutcomeNotice(notice)) return null;
   const meta = OUTCOME_META[notice.type];
   const label = (id) => (getPlayerLabel ? getPlayerLabel(id) : `Player ${parseInt(id, 10) + 1}`);
+  const showTile = Boolean(meta.showTile && notice.tileIdPlayed && notice.tileIdPlayed !== 'HIDDEN');
+  const isSupportOwnerMe = Boolean(pendingSupport && String(pendingSupport.ownerId) === String(playerID));
+  const supportFromLabel = pendingSupport ? formatSupportSpot(pendingSupport.from) : '';
+  const supportIsOffice = Boolean(pendingSupport?.from?.endsWith('_office'));
 
   let detail = '';
   if (notice.type === 'reject') {
@@ -33,12 +39,12 @@ export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null,
       style={{
         flex: 1,
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: showTile ? 'row' : 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        textAlign: 'center',
-        gap: '8px',
-        padding: '14px 12px',
+        textAlign: showTile ? 'left' : 'center',
+        gap: showTile ? '14px' : '8px',
+        padding: '12px',
         borderRadius: '8px',
         background: meta.bg,
         border: `1px solid ${meta.border}`,
@@ -46,29 +52,52 @@ export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null,
       }}
       title={onDismiss ? 'Click to continue' : undefined}
     >
-      <div style={{
-        fontSize: '24px',
-        fontWeight: 900,
-        letterSpacing: '0.6px',
-        color: meta.color,
-        lineHeight: 1.15,
-        textTransform: 'uppercase'
-      }}>
-        {meta.heading}
-      </div>
-      <div style={{ fontSize: '13px', fontWeight: 600, color: '#f5ece3', lineHeight: 1.35 }}>
-        {detail}
-      </div>
-      {waitingLabel && (
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-          {waitingLabel}
-        </div>
+      {showTile && (
+        <img
+          src={getTileImageUrl(notice.tileIdPlayed)}
+          alt={notice.tileIdPlayed === 'BLANK' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
+          title={notice.tileIdPlayed === 'BLANK' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
+          style={{
+            width: '62px',
+            height: 'auto',
+            aspectRatio: '2.5 / 5',
+            objectFit: 'contain',
+            flexShrink: 0,
+            filter: 'drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55))'
+          }}
+        />
       )}
-      {onDismiss && (
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-          Click to continue
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+        <div style={{
+          fontSize: showTile ? '20px' : '24px',
+          fontWeight: 900,
+          letterSpacing: '0.6px',
+          color: meta.color,
+          lineHeight: 1.15,
+          textTransform: 'uppercase'
+        }}>
+          {meta.heading}
         </div>
-      )}
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#f5ece3', lineHeight: 1.35 }}>
+          {detail}
+        </div>
+        {isSupportOwnerMe && (
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#fbbf24', lineHeight: 1.35, marginTop: '2px' }}>
+            Your piece in <strong>{supportFromLabel}</strong> has no piece in{' '}
+            {supportIsOffice ? 'either rostrum' : 'any supporting seat'} to support it. Click a highlighted {supportIsOffice ? 'rostrum' : 'seat'} on the board.
+          </div>
+        )}
+        {waitingLabel && (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            {waitingLabel}
+          </div>
+        )}
+        {onDismiss && (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Click to continue
+          </div>
+        )}
+      </div>
     </div>
   );
 }

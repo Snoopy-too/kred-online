@@ -28,3 +28,43 @@ export function generateCommunityHotspots(count, cx = 49, cy = 49) {
   }
   return comm;
 }
+
+export function getCommunityAreaDiameterPct(activeHotspots) {
+  const ct = activeHotspots?.community_target || { left: '50%', top: '50%' };
+  const cx = parseFloat(ct.left) || 50;
+  const cy = parseFloat(ct.top) || 50;
+  let maxCommR = 0;
+  let minSeatR = Infinity;
+
+  for (const [k, v] of Object.entries(activeHotspots || {})) {
+    const x = parseFloat(v.left);
+    const y = parseFloat(v.top);
+    if (Number.isNaN(x) || Number.isNaN(y)) continue;
+    const d = Math.hypot(x - cx, y - cy);
+    if (/^community_\d+$/.test(k)) maxCommR = Math.max(maxCommR, d);
+    else if (/_seat\d+$/.test(k)) minSeatR = Math.min(minSeatR, d);
+  }
+
+  const padR = maxCommR > 0 ? maxCommR + 2.5 : 12;
+  const cappedR = minSeatR < Infinity ? Math.min(padR, minSeatR - 3) : padR;
+  return Math.max(18, cappedR * 2);
+}
+
+export function findNearestEmptyCommunitySpot(dropX, dropY, activeHotspots, boardState) {
+  let bestKey = null;
+  let bestDist = Infinity;
+
+  for (const [k, v] of Object.entries(activeHotspots || {})) {
+    if (!/^community_\d+$/.test(k)) continue;
+    if (boardState && boardState[k] != null) continue;
+    const x = parseFloat(v.left);
+    const y = parseFloat(v.top);
+    if (Number.isNaN(x) || Number.isNaN(y)) continue;
+    const d = Math.hypot(x - dropX, y - dropY);
+    if (d < bestDist) {
+      bestDist = d;
+      bestKey = k;
+    }
+  }
+  return bestKey;
+}

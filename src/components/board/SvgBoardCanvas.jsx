@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { PIECE_TYPES, INITIAL_PIECE_COUNTS } from '../../domain/types.js';
 import { getPerspectiveTransform } from './perspectiveUtils.js';
 import { isCommunityPieceAvailable } from '../../domain/moves.js';
 import { TurnReplayOverlay } from './TurnReplayOverlay.jsx';
 import { CalibrationSpotOverlay } from './CalibrationSpotOverlay.jsx';
 import { usePieceDrag } from './usePieceDrag.js';
+import { getCommunityAreaDiameterPct, findNearestEmptyCommunitySpot } from '../hotspots/geometryUtils.js';
 import { getAssetUrl, getTileImageUrl, getPieceIconUrl, getCredibilityIconUrl } from '../../utils/assets.js';
 
 export function SvgBoardCanvas({
@@ -48,13 +49,23 @@ export function SvgBoardCanvas({
     animatingTile = null
   } = replayAnimation || {};
 
+  const currentBoardState = (isReplaying && overrideBoardState) || transientBoardState || (G && G.boardState) || {};
   const boardRef = useRef(null);
-  const { draggedPiece, startPieceDrag, shouldSuppressClick } = usePieceDrag({
+  const boardImgRef = useRef(null);
+  const [boardImgLoaded, setBoardImgLoaded] = useState(false);
+
+  useEffect(() => {
+    const img = boardImgRef.current;
+    setBoardImgLoaded(Boolean(img && img.complete && img.naturalWidth > 0));
+  }, [activeBoardImage]);
+  const { draggedPiece, startPieceDrag, shouldSuppressClick, clientToBoardPct } = usePieceDrag({
     boardRef,
     perspectiveRotation,
     zoomLevel,
     selectedPieceLoc,
     validDestinations,
+    activeHotspots,
+    currentBoardState,
     onPieceClick,
     onDestinationClick,
     disabled: calibrationMode || isReplaying
@@ -62,7 +73,6 @@ export function SvgBoardCanvas({
 
   const counterRotationStyle = perspectiveRotation ? { transform: `rotate(${-perspectiveRotation}deg)` } : {};
   const transformStyle = getPerspectiveTransform(numPlayers, playerID, perspectiveOffsets, 1);
-  const currentBoardState = (isReplaying && overrideBoardState) || transientBoardState || (G && G.boardState) || {};
 
   const getMoveHighlightColor = (moveType) => {
     if (moveType === 'Withdraw' || moveType === 'Remove') return 'red';
@@ -125,7 +135,15 @@ export function SvgBoardCanvas({
         }
       }}
     >
-      <img src={activeBoardImage} alt={`${numPlayers}-Player Board`} draggable={false} className="main-board-graphic" />
+      <img ref={boardImgRef} src={activeBoardImage} alt={`${numPlayers}-Player Board`} draggable={false} className="main-board-graphic" onLoad={() => setBoardImgLoaded(true)} onError={() => setBoardImgLoaded(true)} />
+      {!boardImgLoaded && (
+        <div className="kred-board-loading-overlay">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', ...counterRotationStyle }}>
+            <div className="kred-spinner" />
+            <span>Loading board...</span>
+          </div>
+        </div>
+      )}
 
       {Object.entries(activeHotspots).map(([locKey, coords]) => {
         const currentTransform =
@@ -436,8 +454,7 @@ export function SvgBoardCanvas({
         if (!commTargetSpot) return null;
 
         const commTargetCoords = activeHotspots['community_target'] || { left: '50%', top: '50%' };
-        const scaleVal = commTargetCoords.scale || 1.0;
-        const rotVal = commTargetCoords.rot || 0;
+        const diameterPct = getCommunityAreaDiameterPct(activeHotspots);
 
         return (
           <div
@@ -446,10 +463,16 @@ export function SvgBoardCanvas({
             style={{
               left: commTargetCoords.left,
               top: commTargetCoords.top,
-              transform: `translate(-50%, -50%) rotate(${rotVal}deg) scale(${scaleVal})`
+              width: `${diameterPct}%`,
+              height: `${diameterPct}%`
             }}
-            onClick={() => onDestinationClick && onDestinationClick(commTargetSpot)}
-            title="Click to move piece to Community"
+            onClick={(e) => {
+              if (!onDestinationClick) return;
+              const pos = clientToBoardPct(e.clientX, e.clientY);
+              const nearest = findNearestEmptyCommunitySpot(parseFloat(pos.left), parseFloat(pos.top), activeHotspots, currentBoardState);
+              onDestinationClick(nearest || commTargetSpot);
+            }}
+            title="Click or drop anywhere in Community"
           >
             <span className="large-community-target-text" style={counterRotationStyle}>
               Move to<br />Community

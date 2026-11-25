@@ -29,6 +29,15 @@ function isBotSeat(playerMeta) {
   return Boolean(playerMeta?.data?.isBot || (playerMeta?.name && playerMeta.name.endsWith('(Bot)')));
 }
 
+function KredConnectingScreen() {
+  return (
+    <div className="kred-loading-screen" style={{ minHeight: '60vh' }}>
+      <div className="kred-spinner" />
+      <span>Connecting to match...</span>
+    </div>
+  );
+}
+
 function GameBoardWrapper(props) {
   const notifiedRef = useRef(false);
   const isOver = Boolean(props.ctx?.gameover || props.G?.winner);
@@ -193,6 +202,7 @@ function KredGameClient({ config }) {
     return Client({
       game: kredGame,
       board: GameBoardWrapper,
+      loading: KredConnectingScreen,
       multiplayer: SocketIO({ server: window.location.origin, socketOpts: { forceNew: true } }),
       debug: false
     });

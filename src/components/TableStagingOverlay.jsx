@@ -87,7 +87,7 @@ export function TableStagingOverlay({
             }}
           >
             {isStarting
-              ? 'Starting Match...'
+              ? (<><span className="kred-spinner-sm" />Starting Match...</>)
               : `Start Game with ${openCount} ${openCount === 1 ? 'Bot' : 'Bots'}`}
           </button>
         ) : (

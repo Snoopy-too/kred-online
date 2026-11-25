@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { findNearestEmptyCommunitySpot } from '../hotspots/geometryUtils.js';
 
 export function usePieceDrag({
   boardRef,
@@ -6,6 +7,8 @@ export function usePieceDrag({
   zoomLevel = 1,
   selectedPieceLoc = '',
   validDestinations = [],
+  activeHotspots = null,
+  currentBoardState = null,
   onPieceClick = null,
   onDestinationClick = null,
   disabled = false
@@ -19,6 +22,8 @@ export function usePieceDrag({
     zoomLevel,
     selectedPieceLoc,
     validDestinations,
+    activeHotspots,
+    currentBoardState,
     onPieceClick,
     onDestinationClick
   });
@@ -27,6 +32,8 @@ export function usePieceDrag({
     zoomLevel,
     selectedPieceLoc,
     validDestinations,
+    activeHotspots,
+    currentBoardState,
     onPieceClick,
     onDestinationClick
   };
@@ -84,12 +91,27 @@ export function usePieceDrag({
         const hits = typeof root.elementsFromPoint === 'function'
           ? root.elementsFromPoint(e.clientX, e.clientY)
           : [];
-        const { validDestinations: targets, onDestinationClick: drop } = latestRef.current;
+        const {
+          validDestinations: targets,
+          activeHotspots: hotspots,
+          currentBoardState: boardState,
+          onDestinationClick: drop
+        } = latestRef.current;
+        const commTarget = targets.find(t => t === 'community' || t.startsWith('community_'));
 
         for (const el of hits) {
           const dropEl = el.closest?.('[data-drop-loc]');
           const dropLoc = dropEl?.getAttribute('data-drop-loc');
-          if (dropLoc && targets.includes(dropLoc) && drop) {
+          if (!dropLoc || !drop) continue;
+
+          if (commTarget && (dropLoc === 'community' || dropLoc.startsWith('community_'))) {
+            const pos = clientToBoardPct(e.clientX, e.clientY);
+            const nearest = findNearestEmptyCommunitySpot(parseFloat(pos.left), parseFloat(pos.top), hotspots, boardState);
+            drop(nearest || commTarget);
+            break;
+          }
+
+          if (targets.includes(dropLoc)) {
             drop(dropLoc);
             break;
           }
@@ -127,6 +149,7 @@ export function usePieceDrag({
   return {
     draggedPiece: dragState?.isDragging ? dragState : null,
     startPieceDrag,
-    shouldSuppressClick
+    shouldSuppressClick,
+    clientToBoardPct
   };
 }

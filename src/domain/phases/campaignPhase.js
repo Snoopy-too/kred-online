@@ -14,6 +14,7 @@ export function createCampaignPhase() {
   return {
     onBegin: ({ G }) => {
       if (!G || !G.players) return;
+      G.lastOutcomeNotice = null;
       appendGameLog(G, 'CAMPAIGN', 'phase');
       if (G.nextMoverId === undefined || G.nextMoverId === null) {
         let startP = '0';

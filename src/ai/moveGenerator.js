@@ -109,18 +109,19 @@ function boardSignature(boardState, domains, commKeys) {
 }
 
 function findCanonicalCommunitySource(boardState, community, stagedMoves = [], excludedPieceId = null) {
-  const commKeys = Object.keys(boardState)
-    .filter((k) => k.startsWith('community_') && boardState[k] !== null)
+  const allCommKeys = Object.keys(boardState).filter((k) => k.startsWith('community_'));
+  const commKeys = allCommKeys
+    .filter((k) => boardState[k] !== null)
     .sort((a, b) => parseInt(a.slice(10), 10) - parseInt(b.slice(10), 10));
 
-  for (const targetType of [PIECE_TYPES.MARK, PIECE_TYPES.HEEL]) {
+  for (const targetType of [PIECE_TYPES.MARK, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN]) {
     if (!isCommunityPieceAvailable(targetType, boardState, community, stagedMoves)) continue;
     const match = commKeys.find(
       (k) => boardState[k]?.type === targetType && (!excludedPieceId || boardState[k].id !== excludedPieceId)
     );
     if (match) return match;
   }
-  if ((community?.marks || 0) > 0 || (community?.heels || 0) > 0) {
+  if (allCommKeys.length === 0 && ((community?.marks || 0) > 0 || (community?.heels || 0) > 0 || (community?.pawns || 0) > 0)) {
     return 'community';
   }
   return null;

@@ -76,6 +76,7 @@ export function initBureaucracy(G) {
       return sum;
     }, 0) : 0;
     G.players[pId].funding = funding;
+    G.players[pId].bureaucracyInitialFunding = funding;
   });
 
   const order = Object.keys(G.players).sort((a, b) => {
@@ -108,8 +109,10 @@ export function cleanupBureaucracy(G) {
   // so a stale order must never survive into the next campaign.
   delete G.bureaucracyTurnOrder;
   delete G.bureaucracyTurnIndex;
+  G.lastOutcomeNotice = null;
   // Return bank tiles to hands for next campaign
   Object.keys(G.players).forEach(pId => {
+    delete G.players[pId].bureaucracyInitialFunding;
     if (G.players[pId].bank) {
       G.players[pId].hand = G.players[pId].bank.map(b => b.tileId);
       G.players[pId].bank = [];

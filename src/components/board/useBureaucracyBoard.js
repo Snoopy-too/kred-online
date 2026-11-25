@@ -138,7 +138,8 @@ export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnl
   };
 
   const handleBureaucracyDestinationClick = (toLoc) => {
-    if (!isMyTurn || !moveFromLoc || !moveValidDestinations.includes(toLoc)) return;
+    const isCommValid = toLoc.startsWith('community_') && moveValidDestinations.some(d => d === 'community' || d.startsWith('community_'));
+    if (!isMyTurn || !moveFromLoc || (!moveValidDestinations.includes(toLoc) && !isCommValid)) return;
 
     const inferred = inferMoveType(moveFromLoc, toLoc, pId, G.boardState, G.community, numPlayers, [], '');
     const isBasic = BASIC_MOVE_TYPES.includes(inferred);
@@ -146,14 +147,13 @@ export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnl
     if (!isBasic && !isExtra) return;
 
     const actionType = isBasic ? 'BASIC_ACTION' : 'EXTRA_ACTION';
-    const normTo = toLoc.startsWith('community_') ? 'community' : toLoc;
 
     dispatchBureaucracy({
       actionType,
       subAction: {
         type: inferred,
         from: moveFromLoc,
-        to: normTo
+        to: toLoc
       }
     });
   };

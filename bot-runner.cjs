@@ -17244,28 +17244,21 @@ function createDraftPhase() {
 function isCommunityPieceAvailable(pieceType, boardState, community, stagedMoves = []) {
   let hasMarks = false;
   let hasHeels = false;
-  const movedPieceId = stagedMoves && stagedMoves.length > 0 ? stagedMoves[0]?.pieceId : null;
+  const movedPieceId = stagedMoves?.[0]?.pieceId || null;
   if (boardState) {
-    Object.keys(boardState).forEach((k2) => {
-      if (k2.startsWith("community_") && boardState[k2]) {
-        const piece = boardState[k2];
-        if (movedPieceId && piece.id === movedPieceId) {
-          return;
-        }
-        if (piece.type === PIECE_TYPES.MARK) hasMarks = true;
-        if (piece.type === PIECE_TYPES.HEEL) hasHeels = true;
-      }
-    });
+    for (const k2 of Object.keys(boardState)) {
+      if (!k2.startsWith("community_") || !boardState[k2]) continue;
+      const piece = boardState[k2];
+      if (movedPieceId && piece.id === movedPieceId) continue;
+      if (piece.type === PIECE_TYPES.MARK) hasMarks = true;
+      if (piece.type === PIECE_TYPES.HEEL) hasHeels = true;
+    }
   } else if (community) {
-    if (community.marks > 0) hasMarks = true;
-    if (community.heels > 0) hasHeels = true;
+    hasMarks = community.marks > 0;
+    hasHeels = community.heels > 0;
   }
-  if (pieceType === PIECE_TYPES.HEEL && hasMarks) {
-    return false;
-  }
-  if (pieceType === PIECE_TYPES.PAWN && (hasMarks || hasHeels)) {
-    return false;
-  }
+  if (pieceType === PIECE_TYPES.HEEL && hasMarks) return false;
+  if (pieceType === PIECE_TYPES.PAWN && (hasMarks || hasHeels)) return false;
   return true;
 }
 function validateSingleMove(move, moverId, boardState, community, numPlayers, stagedMoves = []) {
@@ -17285,17 +17278,26 @@ function validateSingleMove(move, moverId, boardState, community, numPlayers, st
           const piece = boardState[from];
           if (!piece) return { valid: false, reason: "No piece at selected community spot" };
           pieceType = piece.type;
-          if (piece.type !== PIECE_TYPES.MARK && piece.type !== PIECE_TYPES.HEEL) {
-            return { valid: false, reason: "Only Marks and Heels can be placed in Seats" };
-          }
         } else {
-          if (community && community.marks === 0 && community.heels === 0) {
-            return { valid: false, reason: "No Marks or Heels available in Community" };
+          const commPieces = Object.keys(boardState).filter((k2) => k2.startsWith("community_")).map((k2) => boardState[k2]).filter(Boolean);
+          const hasExplicitComm = Object.keys(boardState).some((k2) => k2.startsWith("community_"));
+          if (hasExplicitComm) {
+            if (commPieces.some((p2) => p2.type === PIECE_TYPES.MARK)) pieceType = PIECE_TYPES.MARK;
+            else if (commPieces.some((p2) => p2.type === PIECE_TYPES.HEEL)) pieceType = PIECE_TYPES.HEEL;
+            else if (commPieces.some((p2) => p2.type === PIECE_TYPES.PAWN)) pieceType = PIECE_TYPES.PAWN;
+            else return { valid: false, reason: "No pieces available in Community" };
+          } else {
+            if (community && !community.marks && !community.heels && !community.pawns) {
+              return { valid: false, reason: "No pieces available in Community" };
+            }
+            pieceType = community?.marks > 0 ? PIECE_TYPES.MARK : community?.heels > 0 ? PIECE_TYPES.HEEL : PIECE_TYPES.PAWN;
           }
-          pieceType = community?.marks > 0 ? PIECE_TYPES.MARK : PIECE_TYPES.HEEL;
         }
         if (!isCommunityPieceAvailable(pieceType, boardState, community, stagedMoves)) {
           return { valid: false, reason: `${pieceType}s cannot be taken from Community until lower tier pieces are depleted` };
+        }
+        if (pieceType === PIECE_TYPES.PAWN && Object.keys(boardState).some((k2) => k2.startsWith(`p${pTo.domainNum}_`) && boardState[k2]?.type === PIECE_TYPES.PAWN)) {
+          return { valid: false, reason: "A player may only own 1 Pawn at a time" };
         }
         return { valid: true };
       }
@@ -17497,8 +17499,13 @@ function validateMoveCombination(moves, moverId, boardState, community, numPlaye
   }
   return { valid: true };
 }
+function adjustCommunityCount(community, pieceType, delta) {
+  if (!community || !pieceType) return;
+  const key = pieceType === PIECE_TYPES.MARK ? "marks" : pieceType === PIECE_TYPES.HEEL ? "heels" : pieceType === PIECE_TYPES.PAWN ? "pawns" : null;
+  if (key && typeof community[key] === "number") community[key] = Math.max(0, community[key] + delta);
+}
 function applyMoveToState(move, boardState, community) {
-  const { type, from, to } = move;
+  const { from, to } = move;
   let pieceToMove = null;
   const isFromComm = from === "community" || from.startsWith("community_");
   const isToComm = to === "community" || to.startsWith("community_");
@@ -17506,22 +17513,23 @@ function applyMoveToState(move, boardState, community) {
     if (from !== "community" && boardState[from]) {
       pieceToMove = boardState[from];
       boardState[from] = null;
+      adjustCommunityCount(community, pieceToMove.type, -1);
     } else {
       const commKeys = Object.keys(boardState).filter((k2) => k2.startsWith("community_")).sort((a2, b2) => parseInt(a2.replace("community_", ""), 10) - parseInt(b2.replace("community_", ""), 10));
-      let commKey = commKeys.find((k2) => boardState[k2]?.type === PIECE_TYPES.MARK);
-      if (!commKey) commKey = commKeys.find((k2) => boardState[k2]?.type === PIECE_TYPES.HEEL);
-      if (!commKey) commKey = commKeys.find((k2) => boardState[k2] !== null);
+      const commKey = commKeys.find((k2) => boardState[k2]?.type === PIECE_TYPES.MARK) || commKeys.find((k2) => boardState[k2]?.type === PIECE_TYPES.HEEL) || commKeys.find((k2) => boardState[k2] !== null);
       if (commKey) {
         pieceToMove = boardState[commKey];
         boardState[commKey] = null;
-      } else {
-        if (community && community.marks > 0) {
-          community.marks--;
-          pieceToMove = { id: `m_${Date.now()}_${Math.random()}`, type: PIECE_TYPES.MARK };
-        } else if (community && community.heels > 0) {
-          community.heels--;
-          pieceToMove = { id: `h_${Date.now()}_${Math.random()}`, type: PIECE_TYPES.HEEL };
-        }
+        adjustCommunityCount(community, pieceToMove.type, -1);
+      } else if (community?.marks > 0) {
+        community.marks--;
+        pieceToMove = { id: `m_${Date.now()}_${Math.random()}`, type: PIECE_TYPES.MARK };
+      } else if (community?.heels > 0) {
+        community.heels--;
+        pieceToMove = { id: `h_${Date.now()}_${Math.random()}`, type: PIECE_TYPES.HEEL };
+      } else if (community?.pawns > 0) {
+        community.pawns--;
+        pieceToMove = { id: `p_${Date.now()}_${Math.random()}`, type: PIECE_TYPES.PAWN };
       }
     }
   } else {
@@ -17529,15 +17537,13 @@ function applyMoveToState(move, boardState, community) {
     boardState[from] = null;
   }
   if (isToComm) {
-    if (to !== "community" && to.startsWith("community_")) {
+    if (to !== "community" && to.startsWith("community_") && boardState[to] == null) {
       boardState[to] = pieceToMove;
     } else {
-      const commKeys = Object.keys(boardState).filter((k2) => k2.startsWith("community_")).sort((a2, b2) => parseInt(a2.replace("community_", ""), 10) - parseInt(b2.replace("community_", ""), 10));
-      const emptyCommKey = commKeys.find((k2) => boardState[k2] === null);
-      if (emptyCommKey) {
-        boardState[emptyCommKey] = pieceToMove;
-      }
+      const emptyCommKey = Object.keys(boardState).filter((k2) => k2.startsWith("community_")).sort((a2, b2) => parseInt(a2.replace("community_", ""), 10) - parseInt(b2.replace("community_", ""), 10)).find((k2) => boardState[k2] === null);
+      if (emptyCommKey) boardState[emptyCommKey] = pieceToMove;
     }
+    adjustCommunityCount(community, pieceToMove?.type, 1);
   } else {
     boardState[to] = pieceToMove;
   }
@@ -17899,6 +17905,7 @@ function initBureaucracy(G2) {
       return sum;
     }, 0) : 0;
     G2.players[pId].funding = funding;
+    G2.players[pId].bureaucracyInitialFunding = funding;
   });
   const order = Object.keys(G2.players).sort((a2, b2) => {
     if (G2.players[b2].funding !== G2.players[a2].funding) {
@@ -17920,7 +17927,9 @@ function cleanupBureaucracy(G2) {
   if (!G2 || !G2.players) return;
   delete G2.bureaucracyTurnOrder;
   delete G2.bureaucracyTurnIndex;
+  G2.lastOutcomeNotice = null;
   Object.keys(G2.players).forEach((pId) => {
+    delete G2.players[pId].bureaucracyInitialFunding;
     if (G2.players[pId].bank) {
       G2.players[pId].hand = G2.players[pId].bank.map((b2) => b2.tileId);
       G2.players[pId].bank = [];
@@ -18076,6 +18085,7 @@ function createCampaignPhase() {
   return {
     onBegin: ({ G: G2 }) => {
       if (!G2 || !G2.players) return;
+      G2.lastOutcomeNotice = null;
       appendGameLog(G2, "CAMPAIGN", "phase");
       if (G2.nextMoverId === void 0 || G2.nextMoverId === null) {
         let startP = "0";
@@ -29714,15 +29724,16 @@ function boardSignature(boardState, domains, commKeys) {
   return `${sig}|${m},${h2},${p2}`;
 }
 function findCanonicalCommunitySource(boardState, community, stagedMoves = [], excludedPieceId = null) {
-  const commKeys = Object.keys(boardState).filter((k2) => k2.startsWith("community_") && boardState[k2] !== null).sort((a2, b2) => parseInt(a2.slice(10), 10) - parseInt(b2.slice(10), 10));
-  for (const targetType of [PIECE_TYPES.MARK, PIECE_TYPES.HEEL]) {
+  const allCommKeys = Object.keys(boardState).filter((k2) => k2.startsWith("community_"));
+  const commKeys = allCommKeys.filter((k2) => boardState[k2] !== null).sort((a2, b2) => parseInt(a2.slice(10), 10) - parseInt(b2.slice(10), 10));
+  for (const targetType of [PIECE_TYPES.MARK, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN]) {
     if (!isCommunityPieceAvailable(targetType, boardState, community, stagedMoves)) continue;
     const match = commKeys.find(
       (k2) => boardState[k2]?.type === targetType && (!excludedPieceId || boardState[k2].id !== excludedPieceId)
     );
     if (match) return match;
   }
-  if ((community?.marks || 0) > 0 || (community?.heels || 0) > 0) {
+  if (allCommKeys.length === 0 && ((community?.marks || 0) > 0 || (community?.heels || 0) > 0 || (community?.pawns || 0) > 0)) {
     return "community";
   }
   return null;

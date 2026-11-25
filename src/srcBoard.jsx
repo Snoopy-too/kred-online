@@ -187,7 +187,14 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID]?.length, playerID, isOnline]);
 
   if (!G || !G.players || !ctx) {
-    return <div className="kred-container">Loading game state...</div>;
+    return (
+      <div className="kred-container">
+        <div className="kred-loading-screen" style={{ minHeight: '60vh' }}>
+          <div className="kred-spinner" />
+          <span>Loading game state...</span>
+        </div>
+      </div>
+    );
   }
 
   const activeBoardImage = getBoardImageUrl(numPlayers);
@@ -336,13 +343,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
           ) : (
             <>
               {/* Unified Action Section — always at the top of the sidebar */}
-          {isSupportPending && (
-            <SupportDropCard
-              G={G}
-              playerID={playerID}
-              moves={moves}
-              getPlayerLabel={getPlayerLabel}
-            />
+          {isSupportPending && !(currentPhase === 'campaign' && (outcomeNotice?.type === 'quiet' || outcomeNotice?.type === 'challengeFailed')) && (
+            <SupportDropCard G={G} playerID={playerID} getPlayerLabel={getPlayerLabel} />
           )}
 
           {!isSupportPending && currentPhase === 'draft' && (
@@ -373,15 +375,21 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
             />
           )}
 
-          {!isSupportPending && currentPhase === 'campaign' && (
+          {currentPhase === 'campaign' && (!isSupportPending || outcomeNotice?.type === 'quiet' || outcomeNotice?.type === 'challengeFailed') && (
             <>
               <div className="turn-builder-card campaign-action-panel">
-                {outcomeNotice && outcomeNoticeKey !== dismissedOutcomeKey ? (
+                {outcomeNotice && (isSupportPending || outcomeNoticeKey !== dismissedOutcomeKey) ? (
                   <OutcomeNoticeCard
                     notice={outcomeNotice}
                     getPlayerLabel={getPlayerLabel}
-                    onDismiss={(isMyTurn || isPendingActiveMe) ? () => setDismissedOutcomeKey(outcomeNoticeKey) : null}
-                    waitingLabel={!(isMyTurn || isPendingActiveMe) ? `Waiting for ${getPlayerLabel(G?.pendingPlay ? activePendingPlayer : ctx?.currentPlayer)}...` : null}
+                    pendingSupport={isSupportPending ? G.pendingSupport : null}
+                    playerID={playerID}
+                    onDismiss={!isSupportPending && (isMyTurn || isPendingActiveMe) ? () => setDismissedOutcomeKey(outcomeNoticeKey) : null}
+                    waitingLabel={
+                      isSupportPending
+                        ? (!isSupportOwnerMe ? `Waiting for ${getPlayerLabel(G.pendingSupport.ownerId)} to move an unsupported piece...` : null)
+                        : (!(isMyTurn || isPendingActiveMe) ? `Waiting for ${getPlayerLabel(G?.pendingPlay ? activePendingPlayer : ctx?.currentPlayer)}...` : null)
+                    }
                   />
                 ) : G?.pendingPlay && !showTurnBuilderForPending ? (
                   <PendingPlayModal
@@ -457,6 +465,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
             G={G}
             myPlayer={myPlayer}
             playerID={playerID}
+            currentPhase={currentPhase}
             selectedTileId={staged.selectedTileId}
             onSelectTile={staged.handleSelectTile}
             disabled={!isMyTurn || currentPhase !== 'campaign' || Boolean(G?.pendingPlay) || isSupportPending}

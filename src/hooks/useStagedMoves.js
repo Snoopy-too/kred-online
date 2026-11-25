@@ -193,7 +193,8 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
   };
 
   const handleDestinationClick = (toLoc) => {
-    if (!selectedPieceLoc || !validDestinations.includes(toLoc)) return;
+    const isCommValid = toLoc.startsWith('community_') && validDestinations.some(d => d === 'community' || d.startsWith('community_'));
+    if (!selectedPieceLoc || (!validDestinations.includes(toLoc) && !isCommValid)) return;
 
     const currentBoard = JSON.parse(JSON.stringify(transientBoardState || G.boardState));
     const currentComm = JSON.parse(JSON.stringify(transientCommunity || G.community));
@@ -213,13 +214,12 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
       isReexecuting
     );
 
-    const normTo = toLoc.startsWith('community_') ? 'community' : toLoc;
     const pieceObj = currentBoard[selectedPieceLoc];
 
     const newMove = {
       type: inferredType,
       from: selectedPieceLoc,
-      to: normTo,
+      to: toLoc,
       pieceId: pieceObj ? pieceObj.id : undefined
     };
 
