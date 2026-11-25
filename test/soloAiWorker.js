@@ -5,8 +5,10 @@ import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame } from '../src/srcGame.js';
 import {
   STANDARD_TILE_IDS,
+  createBotMemory,
+  updateBotMemory,
   buildBotObservation,
-  getBotPersona,
+  pickRandomPersonas,
   decideAction
 } from '../src/ai/index.js';
 
@@ -20,7 +22,7 @@ function makeSeededRng(seed) {
   };
 }
 
-function assertTileConservation(G, contextLabel) {
+function assertTileConservation(G, contextLabel, numPlayers) {
   const tiles = [];
   for (const id of Object.keys(G.players || {})) {
     const p = G.players[id];
@@ -34,48 +36,70 @@ function assertTileConservation(G, contextLabel) {
     tiles.push(G.pendingPlay.tileIdPlayed);
   }
 
-  assert.equal(tiles.length, 24, `${contextLabel}: expected 24 tiles, got ${tiles.length}`);
+  const expectedCount = numPlayers === 5 ? 25 : 24;
+  assert.equal(tiles.length, expectedCount, `${contextLabel}: expected ${expectedCount} tiles, got ${tiles.length}`);
   const unique = new Set(tiles);
-  assert.equal(unique.size, 24, `${contextLabel}: duplicate or missing tile in ${tiles.join(',')}`);
+  assert.equal(unique.size, expectedCount, `${contextLabel}: duplicate or missing tile in ${tiles.join(',')}`);
   for (const tid of STANDARD_TILE_IDS) {
     assert.ok(unique.has(tid), `${contextLabel}: missing standard tile ${tid}`);
   }
+  if (numPlayers === 5) {
+    assert.ok(unique.has('BLANK'), `${contextLabel}: missing BLANK tile in 5P game`);
+  }
 }
 
-function runBatch({ matchIndices, draftedMatches, maxActionsPerMatch }) {
-  const personas = {
-    '0': getBotPersona('0'),
-    '1': getBotPersona('1'),
-    '2': getBotPersona('2')
-  };
+function runBatch({ matchIndices, draftedMatches, maxActionsPerMatch, playerCounts = [3, 4, 5] }) {
   const origLog = console.log;
   console.log = () => {};
   let totalActions = 0;
   let maxActions = 0;
-  const winners = { '0': 0, '1': 0, '2': 0, draw: 0 };
+  const byPlayerCount = {};
+  const personaStats = {};
+  let draws = 0;
 
   try {
     for (const matchIdx of matchIndices) {
+      const numPlayers = playerCounts[matchIdx % playerCounts.length];
       const skipDraft = matchIdx >= draftedMatches;
       const rng = makeSeededRng(1000 + matchIdx * 37);
-      const game = createKredGame(3, skipDraft);
+      const seatIds = Array.from({ length: numPlayers }, (_, i) => String(i));
+      const picked = pickRandomPersonas(numPlayers, rng);
+      const personas = {};
+      seatIds.forEach((id, idx) => {
+        personas[id] = picked[idx];
+        const name = picked[idx].name;
+        if (!personaStats[name]) personaStats[name] = { games: 0, wins: 0 };
+        personaStats[name].games++;
+      });
+
+      const game = createKredGame(numPlayers, skipDraft);
       const multiplayer = Local();
-      const matchID = `solo-stress-${matchIdx}`;
-      const clients = ['0', '1', '2'].map((playerID) => {
-        const c = Client({ game, numPlayers: 3, matchID, playerID, multiplayer });
+      const matchID = `solo-stress-${numPlayers}p-${matchIdx}`;
+      const clients = seatIds.map((playerID) => {
+        const c = Client({ game, numPlayers, matchID, playerID, multiplayer });
         c.start();
         return c;
       });
+      const memories = {};
+      for (const id of seatIds) memories[id] = createBotMemory();
+      const syncAllMemories = () => {
+        for (const id of seatIds) {
+          const st = clients[Number(id)].getState();
+          if (st?.G && st?.ctx) {
+            updateBotMemory(memories[id], st.G, st.ctx, id, personas[id], rng);
+          }
+        }
+      };
 
       try {
         let actions = 0;
         let state = clients[0].getState();
-        assertTileConservation(state.G, `match ${matchIdx} init`);
+        assertTileConservation(state.G, `match ${matchIdx} (${numPlayers}P) init`, numPlayers);
 
         while (!state.ctx.gameover && !state.G.winner && actions < maxActionsPerMatch) {
           let acted = false;
           const order = state.ctx.phase === 'draft'
-            ? ['0', '1', '2']
+            ? seatIds
             : [String(state.ctx.currentPlayer)];
 
           for (const botId of order) {
@@ -83,19 +107,21 @@ function runBatch({ matchIndices, draftedMatches, maxActionsPerMatch }) {
             const botState = botClient.getState();
             if (botState.ctx.gameover || botState.G.winner) break;
 
-            const obs = buildBotObservation(botState.G, botState.ctx, botId);
+            syncAllMemories();
+            const obs = buildBotObservation(botState.G, botState.ctx, botId, memories[botId]);
             const action = decideAction(obs, personas[botId], rng);
             if (!action) continue;
 
             const beforeId = botState._stateID;
             botClient.moves[action.move](...action.args);
             const afterState = botClient.getState();
+            syncAllMemories();
 
             assert.ok(
               afterState._stateID > beforeId,
-              `match ${matchIdx} action #${actions}: INVALID_MOVE for bot ${botId} -> ${action.move} ${JSON.stringify(action.args)} in phase=${botState.ctx.phase} step=${botState.G.pendingPlay?.step}`
+              `match ${matchIdx} (${numPlayers}P) action #${actions}: INVALID_MOVE for bot ${botId} (${personas[botId].name}) -> ${action.move} ${JSON.stringify(action.args)} in phase=${botState.ctx.phase} step=${botState.G.pendingPlay?.step}`
             );
-            assertTileConservation(afterState.G, `match ${matchIdx} action #${actions} (${action.move})`);
+            assertTileConservation(afterState.G, `match ${matchIdx} (${numPlayers}P) action #${actions} (${action.move})`, numPlayers);
             actions++;
             totalActions++;
             acted = true;
@@ -105,7 +131,7 @@ function runBatch({ matchIndices, draftedMatches, maxActionsPerMatch }) {
 
           if (!acted) {
             assert.fail(
-              `match ${matchIdx} stalled at action #${actions} phase=${state.ctx.phase} current=${state.ctx.currentPlayer} pending=${state.G.pendingPlay?.step}`
+              `match ${matchIdx} (${numPlayers}P) stalled at action #${actions} phase=${state.ctx.phase} current=${state.ctx.currentPlayer} pending=${state.G.pendingPlay?.step}`
             );
           }
         }
@@ -113,19 +139,28 @@ function runBatch({ matchIndices, draftedMatches, maxActionsPerMatch }) {
         const finalState = clients[0].getState();
         assert.ok(
           actions < maxActionsPerMatch,
-          `match ${matchIdx} hit action cap (${maxActionsPerMatch}) without winner`
+          `match ${matchIdx} (${numPlayers}P) hit action cap (${maxActionsPerMatch}) without winner`
         );
         assert.ok(
-          ['0', '1', '2', 'draw'].includes(finalState.G.winner),
-          `match ${matchIdx} invalid winner: ${finalState.G.winner}`
+          [...seatIds, 'draw'].includes(finalState.G.winner),
+          `match ${matchIdx} (${numPlayers}P) invalid winner: ${finalState.G.winner}`
         );
         assert.deepEqual(
           finalState.ctx.gameover,
           { winner: finalState.G.winner },
-          `match ${matchIdx} missing or mismatched ctx.gameover`
+          `match ${matchIdx} (${numPlayers}P) missing or mismatched ctx.gameover`
         );
         if (actions > maxActions) maxActions = actions;
-        winners[finalState.G.winner] = (winners[finalState.G.winner] || 0) + 1;
+        const pKey = `${numPlayers}P`;
+        if (!byPlayerCount[pKey]) byPlayerCount[pKey] = { matches: 0, maxActions: 0 };
+        byPlayerCount[pKey].matches++;
+        if (actions > byPlayerCount[pKey].maxActions) byPlayerCount[pKey].maxActions = actions;
+        if (finalState.G.winner === 'draw') {
+          draws++;
+        } else {
+          const winnerName = personas[finalState.G.winner]?.name;
+          if (winnerName && personaStats[winnerName]) personaStats[winnerName].wins++;
+        }
       } finally {
         clients.forEach((c) => c.stop());
       }
@@ -134,7 +169,7 @@ function runBatch({ matchIndices, draftedMatches, maxActionsPerMatch }) {
     console.log = origLog;
   }
 
-  return { completed: matchIndices.length, totalActions, maxActions, winners };
+  return { completed: matchIndices.length, totalActions, maxActions, byPlayerCount, personaStats, draws };
 }
 
 parentPort.postMessage(runBatch(workerData));

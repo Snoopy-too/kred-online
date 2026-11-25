@@ -120,6 +120,12 @@
   margin-bottom: 12px;
 }
 
+.challenger-reward-banner {
+  flex-wrap: wrap;
+  background: rgba(200, 155, 60, 0.14);
+  border-color: rgba(200, 155, 60, 0.45);
+}
+
 .tile-banner-svg {
   width: 32px;
   height: 64px;

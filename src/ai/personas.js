@@ -16,6 +16,7 @@ export const BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1.0,
     firstPlayerBonus: 12,
     paranoiaWeight: 1.0,
+    memoryRecall: 0.85,
     thinkingDelayMs: [600, 1200]
   },
   '1': {
@@ -32,6 +33,7 @@ export const BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1.15,
     firstPlayerBonus: 12,
     paranoiaWeight: 0.6,
+    memoryRecall: 0.45,
     thinkingDelayMs: [1000, 2200]
   },
   '2': {
@@ -39,15 +41,16 @@ export const BOT_PERSONAS = Object.freeze({
     name: 'Vale',
     title: 'The Watchdog',
     archetype: 'Rule-Enforcing Watchdog',
-    bluffThreshold: 0.80,
-    bribeGenerosity: 0.7,
-    greedWeight: 0.6,
-    integrityWeight: 1.6,
-    challengeThreshold: 36,
-    aggressionWeight: 0.9,
-    draftFundingWeight: 0.9,
+    bluffThreshold: 0.72,
+    bribeGenerosity: 0.75,
+    greedWeight: 0.7,
+    integrityWeight: 1.5,
+    challengeThreshold: 44,
+    aggressionWeight: 1.15,
+    draftFundingWeight: 1.0,
     firstPlayerBonus: 14,
-    paranoiaWeight: 1.4,
+    paranoiaWeight: 1.3,
+    memoryRecall: 0.95,
     thinkingDelayMs: [700, 1400]
   },
   '3': {
@@ -64,6 +67,7 @@ export const BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1.05,
     firstPlayerBonus: 13,
     paranoiaWeight: 1.1,
+    memoryRecall: 0.90,
     thinkingDelayMs: [800, 1700]
   },
   '4': {
@@ -80,6 +84,7 @@ export const BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1.1,
     firstPlayerBonus: 11,
     paranoiaWeight: 0.75,
+    memoryRecall: 0.65,
     thinkingDelayMs: [900, 1900]
   }
 });

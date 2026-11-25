@@ -29329,7 +29329,100 @@ var import_setimmediate2 = __toESM(require_setImmediate());
 var STANDARD_TILE_IDS = Object.freeze(
   Object.keys(TILES).filter((id) => id !== "BLANK").sort()
 );
-function computeUnseenTileIds(ownHand = [], ownBank = [], allFaceUpBankTiles = []) {
+function createBotMemory() {
+  return {
+    lastPhase: null,
+    knownBanked: {},
+    // { [tileId]: ownerId } remembered as banked this campaign
+    knownHands: {},
+    // { [tileId]: ownerId } carried over from previous campaign's banks
+    seenEvents: /* @__PURE__ */ new Set()
+  };
+}
+function updateBotMemory(memory, G2, ctx, botId, persona = null, rng = Math.random) {
+  if (!memory || !G2) return memory;
+  const pId = String(botId);
+  const phase = ctx?.phase || null;
+  const recall = persona?.memoryRecall ?? 0.8;
+  const remember = (eventKey, targetMap, tileId, ownerId) => {
+    if (!tileId || tileId === "HIDDEN" || tileId === "BLANK") return;
+    if (ownerId === void 0 || ownerId === null) return;
+    if (memory.seenEvents.has(eventKey)) return;
+    memory.seenEvents.add(eventKey);
+    if (recall > 0 && (recall >= 1 || rng() <= recall)) {
+      targetMap[tileId] = String(ownerId);
+    }
+  };
+  if (phase === "draft" && memory.lastPhase !== "draft") {
+    memory.knownBanked = {};
+    memory.knownHands = {};
+    memory.seenEvents.clear();
+  } else if (memory.lastPhase === "bureaucracy" && phase === "campaign") {
+    const nextHands = {};
+    for (const [tileId, ownerId] of Object.entries(memory.knownBanked)) {
+      if (ownerId !== pId && recall > 0 && (recall >= 1 || rng() <= recall)) {
+        nextHands[tileId] = ownerId;
+      }
+    }
+    memory.knownHands = nextHands;
+    memory.knownBanked = {};
+    memory.seenEvents.clear();
+  }
+  memory.lastPhase = phase;
+  const pp = G2.pendingPlay;
+  if (pp && String(pp.moverId) === pId && pp.tileIdPlayed && pp.tileIdPlayed !== "HIDDEN") {
+    const recId = String(pp.receiverId);
+    if (recId !== pId) {
+      const bankLen = G2.players?.[recId]?.bank?.length ?? 0;
+      remember(`pass:${pp.tileIdPlayed}:${recId}:${bankLen}`, memory.knownBanked, pp.tileIdPlayed, recId);
+      delete memory.knownHands[pp.tileIdPlayed];
+    }
+  }
+  const notice = G2.lastOutcomeNotice;
+  if (notice && (notice.type === "challengeFailed" || notice.type === "challengeSuccess") && notice.tileIdPlayed && notice.tileIdPlayed !== "HIDDEN") {
+    const recId = String(notice.receiverId);
+    if (recId !== pId) {
+      const bankLen = G2.players?.[recId]?.bank?.length ?? 0;
+      remember(
+        `reveal:${notice.type}:${notice.tileIdPlayed}:${notice.moverId}:${recId}:${bankLen}`,
+        memory.knownBanked,
+        notice.tileIdPlayed,
+        recId
+      );
+      delete memory.knownHands[notice.tileIdPlayed];
+    }
+  }
+  Object.keys(G2.players || {}).forEach((id) => {
+    const p2 = G2.players[id] || {};
+    const bank = Array.isArray(p2.bank) ? p2.bank : [];
+    if (id === pId) {
+      for (const tid of p2.hand || []) {
+        delete memory.knownHands[tid];
+        delete memory.knownBanked[tid];
+      }
+      for (const item of bank) {
+        if (item?.tileId) {
+          delete memory.knownHands[item.tileId];
+          delete memory.knownBanked[item.tileId];
+        }
+      }
+      return;
+    }
+    for (const item of bank) {
+      if (!item.faceDown && item.tileId && item.tileId !== "HIDDEN") {
+        remember(`faceup:${item.tileId}:${id}`, memory.knownBanked, item.tileId, id);
+        delete memory.knownHands[item.tileId];
+      }
+    }
+    if (Array.isArray(p2.hand) && p2.hand.length === 0) {
+      for (const [tid, owner] of Object.entries(memory.knownHands)) {
+        if (owner === id) delete memory.knownHands[tid];
+      }
+    }
+  });
+  return memory;
+}
+function computeUnseenTileIds(ownHand = [], ownBank = [], allFaceUpBankTiles = [], knownBankedTileIds = []) {
   const seen = /* @__PURE__ */ new Set();
   for (const id of ownHand) {
     if (id && id !== "HIDDEN") seen.add(id);
@@ -29338,6 +29431,9 @@ function computeUnseenTileIds(ownHand = [], ownBank = [], allFaceUpBankTiles = [
     if (item?.tileId && item.tileId !== "HIDDEN") seen.add(item.tileId);
   }
   for (const id of allFaceUpBankTiles) {
+    if (id && id !== "HIDDEN") seen.add(id);
+  }
+  for (const id of knownBankedTileIds) {
     if (id && id !== "HIDDEN") seen.add(id);
   }
   return STANDARD_TILE_IDS.filter((id) => !seen.has(id));
@@ -29369,7 +29465,7 @@ function sanitizePendingPlay(pp, G2, pId, me) {
     backupCommunity: pp.backupCommunity ? { ...pp.backupCommunity } : null
   };
 }
-function buildBotObservation(G2, ctx, botId) {
+function buildBotObservation(G2, ctx, botId, memory = null) {
   const pId = String(botId);
   const players = {};
   const allFaceUpTiles = [];
@@ -29410,7 +29506,13 @@ function buildBotObservation(G2, ctx, botId) {
     hasDraftedThisRound: Boolean(G2?.draftSelectionsThisRound?.[pId]),
     bank: ownBank,
     facedownBankTiles,
-    unseenTileIds: computeUnseenTileIds(ownHand, ownBank, allFaceUpTiles),
+    unseenTileIds: computeUnseenTileIds(
+      ownHand,
+      ownBank,
+      allFaceUpTiles,
+      memory?.knownBanked ? Object.keys(memory.knownBanked) : []
+    ),
+    memory: memory ? { knownBanked: { ...memory.knownBanked }, knownHands: { ...memory.knownHands } } : { knownBanked: {}, knownHands: {} },
     pendingPlay: sanitizePendingPlay(G2?.pendingPlay, G2, pId, me),
     pendingSupport: G2?.pendingSupport ? { ...G2.pendingSupport, validDestinations: [...G2.pendingSupport.validDestinations || []] } : null
   };
@@ -29432,6 +29534,7 @@ var BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1,
     firstPlayerBonus: 12,
     paranoiaWeight: 1,
+    memoryRecall: 0.85,
     thinkingDelayMs: [600, 1200]
   },
   "1": {
@@ -29448,6 +29551,7 @@ var BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1.15,
     firstPlayerBonus: 12,
     paranoiaWeight: 0.6,
+    memoryRecall: 0.45,
     thinkingDelayMs: [1e3, 2200]
   },
   "2": {
@@ -29455,15 +29559,16 @@ var BOT_PERSONAS = Object.freeze({
     name: "Vale",
     title: "The Watchdog",
     archetype: "Rule-Enforcing Watchdog",
-    bluffThreshold: 0.8,
-    bribeGenerosity: 0.7,
-    greedWeight: 0.6,
-    integrityWeight: 1.6,
-    challengeThreshold: 36,
-    aggressionWeight: 0.9,
-    draftFundingWeight: 0.9,
+    bluffThreshold: 0.72,
+    bribeGenerosity: 0.75,
+    greedWeight: 0.7,
+    integrityWeight: 1.5,
+    challengeThreshold: 44,
+    aggressionWeight: 1.15,
+    draftFundingWeight: 1,
     firstPlayerBonus: 14,
-    paranoiaWeight: 1.4,
+    paranoiaWeight: 1.3,
+    memoryRecall: 0.95,
     thinkingDelayMs: [700, 1400]
   },
   "3": {
@@ -29480,6 +29585,7 @@ var BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1.05,
     firstPlayerBonus: 13,
     paranoiaWeight: 1.1,
+    memoryRecall: 0.9,
     thinkingDelayMs: [800, 1700]
   },
   "4": {
@@ -29496,6 +29602,7 @@ var BOT_PERSONAS = Object.freeze({
     draftFundingWeight: 1.1,
     firstPlayerBonus: 11,
     paranoiaWeight: 0.75,
+    memoryRecall: 0.65,
     thinkingDelayMs: [900, 1900]
   }
 });
@@ -30137,9 +30244,13 @@ function decideReceipt(obs, persona, rng = Math.random) {
     const fundingNeed = Math.max(0, 1 - ownFunding / prices.PROMOTE_OFFICE);
     const notchesLost = obs.players[obs.botId]?.credibilityNotchesLost || 0;
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
+    const knownHands = obs.memory?.knownHands || {};
+    const moverCandidateTiles = (obs.unseenTileIds || []).filter(
+      (id) => !knownHands[id] || knownHands[id] === pp.moverId
+    );
     const unseenMatches = getTilesMatchingMoves(
       pp.movesMade,
-      obs.unseenTileIds,
+      moverCandidateTiles,
       pp.moverId,
       boardBefore,
       commBefore,
@@ -30163,9 +30274,13 @@ function decideChallenge(obs, persona, rng = Math.random) {
     if (!pp) return { move: "passChallenge", args: [] };
     const boardBefore = pp.backupBoard || obs.boardState;
     const commBefore = pp.backupCommunity || obs.community;
+    const knownHands = obs.memory?.knownHands || {};
+    const moverCandidateTiles = (obs.unseenTileIds || []).filter(
+      (id) => !knownHands[id] || knownHands[id] === pp.moverId
+    );
     const matchingUnseen = getTilesMatchingMoves(
       pp.movesMade || [],
-      obs.unseenTileIds,
+      moverCandidateTiles,
       pp.moverId,
       boardBefore,
       commBefore,
@@ -30175,6 +30290,7 @@ function decideChallenge(obs, persona, rng = Math.random) {
     if (remainingCopies === 0) {
       return { move: "challengeTile", args: [] };
     }
+    const moverKnownToHoldMatch = matchingUnseen.some((id) => knownHands[id] === pp.moverId);
     const prices = BUREAUCRACY_PRICES[obs.numPlayers] || BUREAUCRACY_PRICES[3];
     const ownFunding = getOwnBankedFunding(obs);
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
@@ -30187,7 +30303,8 @@ function decideChallenge(obs, persona, rng = Math.random) {
     const credPts = notchesLost === 0 ? 8 : notchesLost === 1 ? -8 : -42;
     const fundingPts = Math.min(14, ownFunding / prices.PROMOTE_OFFICE * 14);
     const bribeSuspicion = (obs.players[pp.receiverId]?.credibilityRemaining || 0) === 0 ? 10 : 0;
-    const suspicion = rarityPts + gainPts + winPts + credPts + fundingPts + bribeSuspicion + (rng() - 0.5) * 14;
+    const knownHoldBonus = moverKnownToHoldMatch ? -20 : 0;
+    const suspicion = rarityPts + gainPts + winPts + credPts + fundingPts + bribeSuspicion + knownHoldBonus + (rng() - 0.5) * 14;
     const rawThresh = persona?.challengeThreshold ?? 52;
     const threshold = rawThresh <= 1 ? rawThresh * 100 : rawThresh;
     return suspicion >= threshold ? { move: "challengeTile", args: [] } : { move: "passChallenge", args: [] };
@@ -30735,12 +30852,14 @@ function createSoloController({
   const lastDispatched = /* @__PURE__ */ new Map();
   const activeStatuses = /* @__PURE__ */ new Map();
   const personas = {};
+  const memories = {};
   const clients = {};
   const unsubs = [];
   const randomPersonas = pickRandomPersonas(botIds.length, rng);
   botIds.forEach((botId, idx) => {
     const override = personaOverrides[botId];
     personas[botId] = override && typeof override === "object" ? { ...randomPersonas[idx], ...override } : randomPersonas[idx];
+    memories[botId] = createBotMemory();
   });
   const emitStatus = () => {
     if (typeof onStatusChange !== "function") return;
@@ -30767,7 +30886,8 @@ function createSoloController({
       clearBotTimer(botId);
       return;
     }
-    const obs = buildBotObservation(state.G, state.ctx, botId);
+    updateBotMemory(memories[botId], state.G, state.ctx, botId, personas[botId], rng);
+    const obs = buildBotObservation(state.G, state.ctx, botId, memories[botId]);
     const previewDecision = decideAction(obs, personas[botId], rng);
     if (!previewDecision) {
       if (obs.phase !== "draft" || obs.hasDraftedThisRound) {
@@ -30798,7 +30918,8 @@ function createSoloController({
         if (!freshState || !freshState.G || !freshState.ctx) return;
         if (freshState.G.winner || freshState.ctx.gameover) return;
         if (freshState.isConnected === false) return;
-        const freshObs = buildBotObservation(freshState.G, freshState.ctx, botId);
+        updateBotMemory(memories[botId], freshState.G, freshState.ctx, botId, personas[botId], rng);
+        const freshObs = buildBotObservation(freshState.G, freshState.ctx, botId, memories[botId]);
         const decision = decideAction(freshObs, personas[botId], rng);
         if (!decision) return;
         const moveFn = client.moves?.[decision.move];

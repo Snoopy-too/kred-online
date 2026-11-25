@@ -1,6 +1,6 @@
 import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
-import { buildBotObservation } from './observation.js';
+import { buildBotObservation, createBotMemory, updateBotMemory } from './observation.js';
 import { pickRandomPersonas } from './personas.js';
 import { decideAction } from './decisions.js';
 
@@ -84,6 +84,7 @@ export function createSoloController({
   const lastDispatched = new Map();
   const activeStatuses = new Map();
   const personas = {};
+  const memories = {};
   const clients = {};
   const unsubs = [];
 
@@ -93,6 +94,7 @@ export function createSoloController({
     personas[botId] = override && typeof override === 'object'
       ? { ...randomPersonas[idx], ...override }
       : randomPersonas[idx];
+    memories[botId] = createBotMemory();
   });
 
   const emitStatus = () => {
@@ -125,7 +127,8 @@ export function createSoloController({
       return;
     }
 
-    const obs = buildBotObservation(state.G, state.ctx, botId);
+    updateBotMemory(memories[botId], state.G, state.ctx, botId, personas[botId], rng);
+    const obs = buildBotObservation(state.G, state.ctx, botId, memories[botId]);
     const previewDecision = decideAction(obs, personas[botId], rng);
 
     if (!previewDecision) {
@@ -163,7 +166,8 @@ export function createSoloController({
         if (freshState.G.winner || freshState.ctx.gameover) return;
         if (freshState.isConnected === false) return;
 
-        const freshObs = buildBotObservation(freshState.G, freshState.ctx, botId);
+        updateBotMemory(memories[botId], freshState.G, freshState.ctx, botId, personas[botId], rng);
+        const freshObs = buildBotObservation(freshState.G, freshState.ctx, botId, memories[botId]);
         const decision = decideAction(freshObs, personas[botId], rng);
         if (!decision) return;
 

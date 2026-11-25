@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getActiveChallenger, getPendingPlayActivePlayer } from '../domain/board.js';
+import { TILES } from '../domain/types.js';
+import { getTileImageUrl } from '../utils/assets.js';
 import { OutcomeNoticeCard, isSupportedOutcomeNotice } from './board/OutcomeNoticeCard.jsx';
 import {
   executeOnlineAcceptTile,
@@ -157,9 +159,37 @@ export function PendingPlayModal({
               >
                 {isFullCredibility ? 'Continue (Skip Reward)' : 'Restore Credibility (+1)'}
               </button>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>
-                Or use the Bureaucracy panel below.
-              </p>
+              {(() => {
+                const facedownTiles = (myPlayer.bank || []).filter((item) => item.faceDown);
+                if (facedownTiles.length === 0) return null;
+                const facedownFunding = facedownTiles.reduce((sum, item) => sum + (TILES[item.tileId]?.funding || 0), 0);
+                return (
+                  <div className="reexecute-tile-banner challenger-reward-banner" style={{ margin: '2px 0 0' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                      {facedownTiles.map((item, idx) => {
+                        const tileFunding = TILES[item.tileId]?.funding || 0;
+                        return (
+                          <img
+                            key={`${item.tileId}-${idx}`}
+                            src={getTileImageUrl(item.tileId)}
+                            alt={item.tileId === 'BLANK' ? '' : `Tile ${item.tileId}`}
+                            title={`Tile ${item.tileId} (K${tileFunding})`}
+                            style={{ width: '53px', height: 'auto', aspectRatio: '2.5 / 5', objectFit: 'contain', flexShrink: 0 }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '120px', flex: 1 }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                        Or spend your face-down bank tile{facedownTiles.length === 1 ? '' : 's'} on 1 Bureaucracy action below.
+                      </span>
+                      <span style={{ color: 'var(--accent-gold)', fontWeight: 600, fontSize: '14px' }}>
+                        Available Funding: K{facedownFunding}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </>
         ) : isSupportedOutcomeNotice(G?.lastOutcomeNotice) ? (

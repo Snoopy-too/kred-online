@@ -55,8 +55,12 @@ export function decideReceipt(obs, persona, rng = Math.random) {
     const fundingNeed = Math.max(0, 1 - ownFunding / prices.PROMOTE_OFFICE);
     const notchesLost = obs.players[obs.botId]?.credibilityNotchesLost || 0;
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
+    const knownHands = obs.memory?.knownHands || {};
+    const moverCandidateTiles = (obs.unseenTileIds || []).filter(
+      (id) => !knownHands[id] || knownHands[id] === pp.moverId
+    );
     const unseenMatches = getTilesMatchingMoves(
-      pp.movesMade, obs.unseenTileIds, pp.moverId, boardBefore, commBefore, obs.numPlayers
+      pp.movesMade, moverCandidateTiles, pp.moverId, boardBefore, commBefore, obs.numPlayers
     ).length;
 
     const greed = persona?.greedWeight ?? 1.0;
@@ -97,8 +101,12 @@ export function decideChallenge(obs, persona, rng = Math.random) {
 
     const boardBefore = pp.backupBoard || obs.boardState;
     const commBefore = pp.backupCommunity || obs.community;
+    const knownHands = obs.memory?.knownHands || {};
+    const moverCandidateTiles = (obs.unseenTileIds || []).filter(
+      (id) => !knownHands[id] || knownHands[id] === pp.moverId
+    );
     const matchingUnseen = getTilesMatchingMoves(
-      pp.movesMade || [], obs.unseenTileIds, pp.moverId, boardBefore, commBefore, obs.numPlayers
+      pp.movesMade || [], moverCandidateTiles, pp.moverId, boardBefore, commBefore, obs.numPlayers
     );
     const remainingCopies = matchingUnseen.length;
 
@@ -106,6 +114,7 @@ export function decideChallenge(obs, persona, rng = Math.random) {
       return { move: 'challengeTile', args: [] };
     }
 
+    const moverKnownToHoldMatch = matchingUnseen.some((id) => knownHands[id] === pp.moverId);
     const prices = BUREAUCRACY_PRICES[obs.numPlayers] || BUREAUCRACY_PRICES[3];
     const ownFunding = getOwnBankedFunding(obs);
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
@@ -119,8 +128,9 @@ export function decideChallenge(obs, persona, rng = Math.random) {
     const credPts = notchesLost === 0 ? 8 : notchesLost === 1 ? -8 : -42;
     const fundingPts = Math.min(14, (ownFunding / prices.PROMOTE_OFFICE) * 14);
     const bribeSuspicion = (obs.players[pp.receiverId]?.credibilityRemaining || 0) === 0 ? 10 : 0;
+    const knownHoldBonus = moverKnownToHoldMatch ? -20 : 0;
     const suspicion =
-      rarityPts + gainPts + winPts + credPts + fundingPts + bribeSuspicion + (rng() - 0.5) * 14;
+      rarityPts + gainPts + winPts + credPts + fundingPts + bribeSuspicion + knownHoldBonus + (rng() - 0.5) * 14;
 
     const rawThresh = persona?.challengeThreshold ?? 52;
     const threshold = rawThresh <= 1 ? rawThresh * 100 : rawThresh;

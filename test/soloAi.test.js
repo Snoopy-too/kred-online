@@ -453,11 +453,12 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
     assert.equal(earlyPawnAction.args[0].targetLoc, 'p1_seat1');
   });
 
-  it('completes 100 full 3-bot matches (60 drafted + 40 skipDraft) cleanly with zero invalid moves and strict tile conservation', async () => {
+  it('completes 100 full 3P/4P/5P bot matches with random personas (60 drafted + 40 skipDraft) cleanly', async () => {
     const startMs = Date.now();
     const totalMatches = 100;
     const draftedMatches = 60;
-    const maxActionsPerMatch = 1500;
+    const maxActionsPerMatch = 2500;
+    const playerCounts = [3, 4, 5];
     const workerCount = 4;
 
     const batches = Array.from({ length: workerCount }, () => []);
@@ -465,23 +466,38 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
       batches[i % workerCount].push(i);
     }
 
-    const results = await runWorkersInPool(batches, { draftedMatches, maxActionsPerMatch });
+    const results = await runWorkersInPool(batches, { draftedMatches, maxActionsPerMatch, playerCounts });
 
     let completed = 0;
     let totalActions = 0;
     let maxActions = 0;
-    const winners = { '0': 0, '1': 0, '2': 0, draw: 0 };
+    let draws = 0;
+    const byPlayerCount = {};
+    const personaStats = {};
 
     for (const r of results) {
       completed += r.completed;
       totalActions += r.totalActions;
+      draws += r.draws || 0;
       if (r.maxActions > maxActions) maxActions = r.maxActions;
-      for (const k of Object.keys(winners)) winners[k] += r.winners[k] || 0;
+      for (const [k, v] of Object.entries(r.byPlayerCount || {})) {
+        if (!byPlayerCount[k]) byPlayerCount[k] = { matches: 0, maxActions: 0 };
+        byPlayerCount[k].matches += v.matches;
+        if (v.maxActions > byPlayerCount[k].maxActions) byPlayerCount[k].maxActions = v.maxActions;
+      }
+      for (const [name, s] of Object.entries(r.personaStats || {})) {
+        if (!personaStats[name]) personaStats[name] = { games: 0, wins: 0 };
+        personaStats[name].games += s.games;
+        personaStats[name].wins += s.wins;
+      }
     }
 
     const elapsedMs = Date.now() - startMs;
+    const winSummary = Object.fromEntries(
+      Object.entries(personaStats).map(([name, s]) => [name, `${s.wins}/${s.games}`])
+    );
     console.info(
-      `[Solo AI Stress] ${completed} matches (${totalActions} total actions, max=${maxActions}, winners=${JSON.stringify(winners)}) completed in ${elapsedMs}ms`
+      `[Solo AI Stress] ${completed} matches (${totalActions} total actions, max=${maxActions}, draws=${draws}, modes=${JSON.stringify(byPlayerCount)}, personas=${JSON.stringify(winSummary)}) completed in ${elapsedMs}ms`
     );
     assert.equal(completed, totalMatches);
   });
