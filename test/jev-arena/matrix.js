@@ -13,7 +13,7 @@ export function distinctTileCombos() {
   const seen = new Set();
   const combos = [];
   for (const [id, tile] of Object.entries(TILES)) {
-    if (id === 'BLANK') continue;
+    if (id === '___') continue;
     const key = [...tile.moves].sort().join('+');
     if (!seen.has(key)) {
       seen.add(key);

@@ -40,12 +40,12 @@ export function TurnBuilder({
     titleText = 'Penalty Withdraw Action';
     const hasLegalWithdraw = !boardState || isMoveTypePossible(MOVE_TYPES.WITHDRAW, playerID, boardState, community, numPlayers);
     canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Withdraw' || (!hasLegalWithdraw && stagedMoves.length === 0);
-    finishButtonLabel = canFinish ? (hasLegalWithdraw ? 'Submit Penalty Withdraw' : 'Skip (No Legal Withdraw)') : 'Withdraw Move Required';
+    finishButtonLabel = canFinish ? (stagedMoves.length === 1 ? 'Submit Penalty Withdraw' : 'Skip (No Legal Withdraw)') : 'Withdraw Move Required';
   } else if (isFreeAdvance) {
     titleText = 'Free Advance Bonus Action';
     const hasLegalAdvance = !boardState || isMoveTypePossible(MOVE_TYPES.ADVANCE, playerID, boardState, community, numPlayers);
     canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Advance' || (!hasLegalAdvance && stagedMoves.length === 0);
-    finishButtonLabel = canFinish ? (hasLegalAdvance ? 'Submit Free Advance' : 'Skip (No Legal Advance)') : 'Advance Move Required';
+    finishButtonLabel = canFinish ? (stagedMoves.length === 1 ? 'Submit Free Advance' : 'Skip (No Legal Advance)') : 'Advance Move Required';
   }
 
   const handleFinishClick = () => {
@@ -70,7 +70,7 @@ export function TurnBuilder({
           <div className="reexecute-tile-banner" style={{ margin: '6px 0 12px', alignItems: 'center' }}>
             <img
               src={getTileImageUrl(selectedTileId)}
-              alt={selectedTileId === 'BLANK' ? '' : `Tile ${selectedTileId}`}
+              alt={selectedTileId === '___' ? '' : `Tile ${selectedTileId}`}
               style={{ width: '53px', height: 'auto', aspectRatio: '2.5 / 5', objectFit: 'contain', flexShrink: 0 }}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

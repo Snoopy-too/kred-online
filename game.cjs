@@ -4128,31 +4128,31 @@ var MOVE_TYPES = {
   ASSIST: "Assist"
 };
 var TILES = {
-  "01": { id: "01", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ADVANCE], funding: 1 },
-  "02": { id: "02", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ADVANCE], funding: 2 },
-  "03": { id: "03", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.ADVANCE], funding: 0 },
-  "04": { id: "04", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.ADVANCE], funding: 1 },
-  "05": { id: "05", moves: [MOVE_TYPES.ADVANCE], funding: 2 },
-  "06": { id: "06", moves: [MOVE_TYPES.ADVANCE], funding: 3 },
-  "07": { id: "07", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ADVANCE], funding: 4 },
-  "08": { id: "08", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ADVANCE], funding: 5 },
-  "09": { id: "09", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ORGANIZE], funding: 1 },
-  "10": { id: "10", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ORGANIZE], funding: 2 },
-  "11": { id: "11", moves: [MOVE_TYPES.INFLUENCE], funding: 4 },
-  "12": { id: "12", moves: [MOVE_TYPES.ORGANIZE], funding: 5 },
-  "13": { id: "13", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ORGANIZE], funding: 5 },
-  "14": { id: "14", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ORGANIZE], funding: 6 },
-  "15": { id: "15", moves: [MOVE_TYPES.REMOVE], funding: 3 },
-  "16": { id: "16", moves: [MOVE_TYPES.REMOVE], funding: 4 },
-  "17": { id: "17", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.WITHDRAW], funding: 3 },
-  "18": { id: "18", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.WITHDRAW], funding: 4 },
-  "19": { id: "19", moves: [MOVE_TYPES.WITHDRAW], funding: 6 },
-  "20": { id: "20", moves: [MOVE_TYPES.WITHDRAW], funding: 7 },
-  "21": { id: "21", moves: [MOVE_TYPES.WITHDRAW], funding: 8 },
-  "22": { id: "22", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.WITHDRAW], funding: 7 },
-  "23": { id: "23", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.WITHDRAW], funding: 8 },
-  "24": { id: "24", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.WITHDRAW], funding: 9 },
-  "BLANK": { id: "BLANK", moves: [], funding: 0, isWild: true }
+  "-1+": { id: "-1+", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ADVANCE], funding: 1 },
+  "-2+": { id: "-2+", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ADVANCE], funding: 2 },
+  "^0+": { id: "^0+", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.ADVANCE], funding: 0 },
+  "^1+": { id: "^1+", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.ADVANCE], funding: 1 },
+  "_2+": { id: "_2+", moves: [MOVE_TYPES.ADVANCE], funding: 2 },
+  "_3+": { id: "_3+", moves: [MOVE_TYPES.ADVANCE], funding: 3 },
+  "+4+": { id: "+4+", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ADVANCE], funding: 4 },
+  "+5+": { id: "+5+", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ADVANCE], funding: 5 },
+  "-1^": { id: "-1^", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ORGANIZE], funding: 1 },
+  "-2^": { id: "-2^", moves: [MOVE_TYPES.REMOVE, MOVE_TYPES.ORGANIZE], funding: 2 },
+  "^4_": { id: "^4_", moves: [MOVE_TYPES.INFLUENCE], funding: 4 },
+  "_5^": { id: "_5^", moves: [MOVE_TYPES.ORGANIZE], funding: 5 },
+  "+5^": { id: "+5^", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ORGANIZE], funding: 5 },
+  "+6^": { id: "+6^", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.ORGANIZE], funding: 6 },
+  "-3_": { id: "-3_", moves: [MOVE_TYPES.REMOVE], funding: 3 },
+  "-4_": { id: "-4_", moves: [MOVE_TYPES.REMOVE], funding: 4 },
+  "^3-": { id: "^3-", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.WITHDRAW], funding: 3 },
+  "^4-": { id: "^4-", moves: [MOVE_TYPES.INFLUENCE, MOVE_TYPES.WITHDRAW], funding: 4 },
+  "_6-": { id: "_6-", moves: [MOVE_TYPES.WITHDRAW], funding: 6 },
+  "_7-": { id: "_7-", moves: [MOVE_TYPES.WITHDRAW], funding: 7 },
+  "_8-": { id: "_8-", moves: [MOVE_TYPES.WITHDRAW], funding: 8 },
+  "+7-": { id: "+7-", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.WITHDRAW], funding: 7 },
+  "+8-": { id: "+8-", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.WITHDRAW], funding: 8 },
+  "+9-": { id: "+9-", moves: [MOVE_TYPES.ASSIST, MOVE_TYPES.WITHDRAW], funding: 9 },
+  "___": { id: "___", moves: [], funding: 0, isWild: true }
 };
 var INITIAL_PIECE_COUNTS = {
   3: { MARKS: 12, HEELS: 9, PAWNS: 3, TILES_PER_PLAYER: 8, HAS_BLANK: false },
@@ -5117,7 +5117,7 @@ function checkVictory(boardState, pId) {
 function sanitizeLoadedState(targetG) {
   if (!targetG || !targetG.players) return;
   const hasBlank = targetG.numPlayers === 5;
-  const ALL_TILE_IDS = Object.keys(TILES).filter((k2) => k2 !== "BLANK" || hasBlank);
+  const ALL_TILE_IDS = Object.keys(TILES).filter((k2) => k2 !== "___" || hasBlank);
   const usedTileIds = /* @__PURE__ */ new Set();
   Object.values(targetG.players).forEach((p2) => {
     (p2.hand || []).forEach((t2) => {
@@ -5137,17 +5137,17 @@ function sanitizeLoadedState(targetG) {
   const unusedTiles = ALL_TILE_IDS.filter((id) => !usedTileIds.has(id));
   Object.values(targetG.players).forEach((p2) => {
     if (p2.hand) {
-      p2.hand = p2.hand.map((t2) => t2 === "HIDDEN" || !t2 ? unusedTiles.pop() || "01" : t2);
+      p2.hand = p2.hand.map((t2) => t2 === "HIDDEN" || !t2 ? unusedTiles.pop() || "-1+" : t2);
     }
     if (p2.bank) {
-      p2.bank = p2.bank.map((b2) => b2 && b2.tileId === "HIDDEN" ? { ...b2, tileId: unusedTiles.pop() || "01" } : b2);
+      p2.bank = p2.bank.map((b2) => b2 && b2.tileId === "HIDDEN" ? { ...b2, tileId: unusedTiles.pop() || "-1+" } : b2);
     }
   });
   if (targetG.draftPacks) {
     Object.keys(targetG.draftPacks).forEach((pId) => {
       if (Array.isArray(targetG.draftPacks[pId])) {
         targetG.draftPacks[pId] = targetG.draftPacks[pId].map(
-          (t2) => t2 === "HIDDEN" || !t2 ? unusedTiles.pop() || "01" : t2
+          (t2) => t2 === "HIDDEN" || !t2 ? unusedTiles.pop() || "-1+" : t2
         );
       }
     });
@@ -5654,11 +5654,22 @@ function classifyPlay(movesMade, tileIdPlayed, moverId = "0", boardState = null,
 }
 
 // src/domain/gameLog.js
+var PIECE_SHORT = { Mark: "M", Heel: "H", Pawn: "P" };
+function captureBoardSnapshot(boardState) {
+  if (!boardState) return null;
+  const snap = {};
+  for (const k2 of Object.keys(boardState)) {
+    const p2 = boardState[k2];
+    if (p2 && p2.type) snap[k2] = PIECE_SHORT[p2.type] || p2.type;
+  }
+  return snap;
+}
 function appendGameLog(G2, text, tone = "info") {
   if (!G2 || !text) return;
   if (!Array.isArray(G2.history)) G2.history = [];
   const nextId = G2.history.length > 0 ? (G2.history[G2.history.length - 1].id || G2.history.length) + 1 : 1;
-  G2.history.push({ id: nextId, text, tone });
+  const snap = captureBoardSnapshot(G2.boardState);
+  G2.history.push(snap ? { id: nextId, text, tone, snap } : { id: nextId, text, tone });
   if (G2.history.length > 150) {
     G2.history.splice(0, G2.history.length - 150);
   }
@@ -5747,15 +5758,155 @@ function recordBureaucracyFunding(G2) {
   }
 }
 
+// src/domain/kgn.js
+var MOVE_CODE = {
+  Advance: "A",
+  Withdraw: "W",
+  Organize: "O",
+  Assist: "S",
+  Remove: "R",
+  Influence: "I"
+};
+var PIECE_CODE = {
+  Mark: "M",
+  Heel: "H",
+  Pawn: "P"
+};
+function formatKgnPlayer(playerId) {
+  return `P${parseInt(playerId, 10) + 1}`;
+}
+function formatKgnLoc(loc) {
+  if (!loc) return "?";
+  const p2 = parseLocation(loc);
+  if (!p2) return String(loc);
+  if (p2.type === "community") return "C";
+  if (p2.type === "office") return `${p2.domainNum}O`;
+  if (p2.type === "rostrum") return `${p2.domainNum}R${p2.index}`;
+  if (p2.type === "seat") return `${p2.domainNum}S${p2.index}`;
+  return String(loc);
+}
+function formatKgnMove(move) {
+  if (!move || !move.type) return "";
+  const code = MOVE_CODE[move.type] || move.type;
+  return `${code} ${formatKgnLoc(move.from)}>${formatKgnLoc(move.to)}`;
+}
+function formatKgnMoves(moves = []) {
+  const parts = (moves || []).map(formatKgnMove).filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : "Pass";
+}
+function formatKgnBureaucracyAction({ actionType, targetLoc, pieceType, subAction, cost }) {
+  const costTag = cost ? ` (K${cost})` : "";
+  if (actionType === "RESTORE_CRED") return `+C${costTag}`;
+  if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
+    const pCode = PIECE_CODE[pieceType] || pieceType || "?";
+    return `Prom ${formatKgnLoc(targetLoc)}>${pCode}${costTag}`;
+  }
+  if (subAction) return `${formatKgnMove(subAction)}${costTag}`;
+  return `${actionType}${costTag}`;
+}
+function pushKgnLine(G2, text, tone = "info", meta = null) {
+  if (!G2 || !text) return null;
+  if (!Array.isArray(G2.kgnLines)) G2.kgnLines = [];
+  const nextId = G2.kgnLines.length > 0 ? (G2.kgnLines[G2.kgnLines.length - 1].id || G2.kgnLines.length) + 1 : 1;
+  const entry = meta ? { id: nextId, text, tone, ...meta } : { id: nextId, text, tone };
+  G2.kgnLines.push(entry);
+  return entry;
+}
+function logKgnPhase(G2, phase) {
+  if (!G2) return;
+  if (phase === "campaign") {
+    G2.kgnCampaignCount = (G2.kgnCampaignCount || 0) + 1;
+    pushKgnLine(G2, `; === CAMPAIGN ${G2.kgnCampaignCount} ===`, "phase");
+  } else if (phase === "bureaucracy") {
+    G2.kgnBureaucracyCount = (G2.kgnBureaucracyCount || 0) + 1;
+    G2.kgnBureaucracyTurnNum = 0;
+    pushKgnLine(G2, `; === BUREAUCRACY ${G2.kgnBureaucracyCount} ===`, "phase");
+  }
+}
+function logKgnCampaignPlay(G2, moverId, receiverId, moves = []) {
+  if (!G2) return;
+  G2.kgnTurnCount = (G2.kgnTurnCount || 0) + 1;
+  const text = `${G2.kgnTurnCount}. ${formatKgnPlayer(moverId)}: ${formatKgnMoves(moves)} -> ${formatKgnPlayer(receiverId)}`;
+  pushKgnLine(G2, text, "play", { kgnKind: "turn" });
+}
+function logKgnOutcome(G2, code, { challengerId = null, tileId = null } = {}) {
+  if (!G2) return;
+  let suffix = code;
+  if ((code === "W" || code === "G") && challengerId !== null && challengerId !== void 0) {
+    suffix += `(${formatKgnPlayer(challengerId)})`;
+  }
+  if (code !== "Q" && tileId) {
+    suffix += ` [${tileId}]`;
+  }
+  const tone = code === "Q" ? "accept" : code === "W" ? "warn" : "alert";
+  if (Array.isArray(G2.kgnLines)) {
+    for (let i2 = G2.kgnLines.length - 1; i2 >= 0; i2--) {
+      if (G2.kgnLines[i2].kgnKind === "turn" && !G2.kgnLines[i2].text.includes(" | ")) {
+        G2.kgnLines[i2].text = `${G2.kgnLines[i2].text} | ${suffix}`;
+        G2.kgnLines[i2].tone = tone;
+        return;
+      }
+    }
+  }
+  pushKgnLine(G2, suffix, tone);
+}
+function logKgnSubLine(G2, text, tone = "info") {
+  pushKgnLine(G2, `   ${text}`, tone);
+}
+function findOrStartBureaucracyLine(G2, playerId) {
+  const pTag = formatKgnPlayer(playerId);
+  if (Array.isArray(G2.kgnLines) && G2.kgnLines.length > 0) {
+    const last = G2.kgnLines[G2.kgnLines.length - 1];
+    if (last.kgnKind === "bureaucracy" && last.kgnPlayer === String(playerId) && !last.kgnEnded) {
+      return last;
+    }
+  }
+  G2.kgnBureaucracyTurnNum = (G2.kgnBureaucracyTurnNum || 0) + 1;
+  const initFund = G2.players?.[playerId]?.bureaucracyInitialFunding ?? G2.players?.[playerId]?.funding ?? 0;
+  return pushKgnLine(G2, `B${G2.kgnBureaucracyTurnNum}. ${pTag}(K${initFund}):`, "info", {
+    kgnKind: "bureaucracy",
+    kgnPlayer: String(playerId),
+    kgnEnded: false
+  });
+}
+function logKgnBureaucracyAction(G2, playerId, actionInfo) {
+  if (!G2) return;
+  const entry = findOrStartBureaucracyLine(G2, playerId);
+  const token = formatKgnBureaucracyAction(actionInfo);
+  const sep = entry.text.endsWith(":") ? " " : ", ";
+  entry.text = `${entry.text}${sep}${token}`;
+}
+function logKgnBureaucracyEnd(G2, playerId) {
+  if (!G2) return;
+  const entry = findOrStartBureaucracyLine(G2, playerId);
+  const sep = entry.text.endsWith(":") ? " " : ", ";
+  entry.text = `${entry.text}${sep}End`;
+  entry.kgnEnded = true;
+}
+function logKgnResult(G2) {
+  if (!G2 || !G2.winner) return;
+  const resTag = G2.winner === "draw" ? "Draw" : formatKgnPlayer(G2.winner);
+  if (Array.isArray(G2.kgnLines) && G2.kgnLines.length > 0) {
+    const last = G2.kgnLines[G2.kgnLines.length - 1];
+    if (!last.text.includes(" # ")) {
+      last.text = `${last.text} # ${resTag}`;
+      last.tone = "win";
+      return;
+    }
+  }
+  pushKgnLine(G2, `# ${resTag}`, "win");
+}
+
 // src/domain/phases/campaignResolution.js
 function applyVictoryCheck(G2, tileId) {
-  if (!G2 || !G2.players || tileId === "BLANK") return;
+  if (!G2 || !G2.players || tileId === "___") return;
   const prevWinner = G2.winner;
   const winners = Object.keys(G2.players).filter((p2) => checkVictory(G2.boardState, p2));
   if (winners.length > 1) G2.winner = "draw";
   else if (winners.length === 1) G2.winner = winners[0];
   if (G2.winner && G2.winner !== prevWinner) {
     appendGameLog(G2, G2.winner === "draw" ? "Match ended in a draw." : `Player ${G2.winner} won the game!`, "win");
+    logKgnResult(G2);
   }
 }
 function resolvePlayToBank(G2) {
@@ -5773,6 +5924,7 @@ function resolvePlayToBank(G2) {
     text: `Player ${receiverId} banked Player ${moverId}'s tile.`
   };
   appendGameLog(G2, "Quiet is Kept!", "accept");
+  logKgnOutcome(G2, "Q");
   if (!findUnsupportedPiece(G2.boardState, G2.numPlayers)) {
     applyVictoryCheck(G2, tileIdPlayed);
   }
@@ -5791,6 +5943,7 @@ function finishPendingPlayOrReward(G2) {
       if (G2.players[challengerId].credibilityNotchesLost > 0) {
         G2.players[challengerId].credibilityNotchesLost--;
       }
+      logKgnSubLine(G2, `Rew(${formatKgnPlayer(challengerId)}): +1C`);
     }
   }
   G2.pendingPlay = null;
@@ -5839,6 +5992,7 @@ function handleResolveSupportDrop({ G: G2, playerID, events }, toLoc) {
   G2.boardState[toLoc] = G2.boardState[ps.from];
   G2.boardState[ps.from] = null;
   appendGameLog(G2, `Player ${pId} moved unsupported piece to ${formatSupportSpot(toLoc)}.`, "info");
+  logKgnSubLine(G2, `Drop(${formatKgnPlayer(pId)}): ${formatKgnLoc(ps.from)}>${formatKgnLoc(toLoc)}`);
   const nextUnsupported = findUnsupportedPiece(G2.boardState, G2.numPlayers);
   if (nextUnsupported) {
     G2.pendingSupport = {
@@ -5961,9 +6115,11 @@ function cleanupBureaucracy(G2) {
       G2.players[pId].bank = [];
     }
   });
+  const prevWinner = G2.winner;
   const winners = Object.keys(G2.players).filter((pId) => checkVictory(G2.boardState, pId));
   if (winners.length > 1) G2.winner = "draw";
   else if (winners.length === 1) G2.winner = winners[0];
+  if (G2.winner && G2.winner !== prevWinner) logKgnResult(G2);
 }
 function applyChallengerBureaucracyAction(G2, pId, { actionType, targetLoc, subAction }) {
   const player = G2.players[pId];
@@ -5983,6 +6139,14 @@ function applyChallengerBureaucracyAction(G2, pId, { actionType, targetLoc, subA
   tilesToPay.forEach((t2) => {
     t2.faceDown = false;
   });
+  const actionStr = formatKgnBureaucracyAction({
+    actionType,
+    targetLoc,
+    pieceType: G2.boardState[targetLoc]?.type,
+    subAction,
+    cost
+  });
+  logKgnSubLine(G2, `Rew(${formatKgnPlayer(pId)}): ${actionStr}`);
   if (actionType === "RESTORE_CRED") {
     appendGameLog(G2, `Player ${pId} spent K${cost} to restore credibility.`, "info");
   } else if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
@@ -6033,6 +6197,7 @@ function createBureaucracyPhase() {
       initBureaucracy(G2);
       recordBureaucracyFunding(G2);
       appendGameLog(G2, "BUREAUCRACY", "phase");
+      logKgnPhase(G2, "bureaucracy");
     },
     turn: {
       order: {
@@ -6066,6 +6231,13 @@ function createBureaucracyPhase() {
         const success = executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAction });
         if (!success) return INVALID_MOVE;
         player.funding -= cost;
+        logKgnBureaucracyAction(G2, pId, {
+          actionType,
+          targetLoc,
+          pieceType: G2.boardState[targetLoc]?.type,
+          subAction,
+          cost
+        });
         if (actionType === "RESTORE_CRED") {
           appendGameLog(G2, `Player ${pId} spent K${cost} to restore credibility.`, "info");
         } else if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
@@ -6086,6 +6258,7 @@ function createBureaucracyPhase() {
         if (G2) {
           if (playerID !== void 0 && playerID !== null) {
             appendGameLog(G2, `Player ${playerID} ended their Bureaucracy turn.`, "info");
+            logKgnBureaucracyEnd(G2, playerID);
           }
           G2.bureaucracyTurnIndex = (G2.bureaucracyTurnIndex || 0) + 1;
         }
@@ -6113,10 +6286,11 @@ function createCampaignPhase() {
       if (!G2 || !G2.players) return;
       G2.lastOutcomeNotice = null;
       appendGameLog(G2, "CAMPAIGN", "phase");
+      logKgnPhase(G2, "campaign");
       if (G2.nextMoverId === void 0 || G2.nextMoverId === null) {
         let startP = "0";
         Object.keys(G2.players).forEach((pId) => {
-          if (G2.players[pId].hand && G2.players[pId].hand.includes("03")) startP = pId;
+          if (G2.players[pId].hand && G2.players[pId].hand.includes("^0+")) startP = pId;
         });
         G2.nextMoverId = startP;
       }
@@ -6130,7 +6304,7 @@ function createCampaignPhase() {
           }
           let startP = "0";
           Object.keys(G2.players).forEach((pId) => {
-            if (G2.players[pId].hand && G2.players[pId].hand.includes("03")) startP = pId;
+            if (G2.players[pId].hand && G2.players[pId].hand.includes("^0+")) startP = pId;
           });
           return findNextPlayerWithTiles(G2, startP);
         },
@@ -6221,6 +6395,7 @@ function createCampaignPhase() {
         const movesLog = formatTurnMovesLog(moverId, moveActions);
         if (movesLog) appendGameLog(G2, movesLog, "info");
         appendGameLog(G2, `Player ${moverId} played a tile to Player ${receiverId}.`, "play");
+        logKgnCampaignPlay(G2, moverId, receiverId, moveActions);
         if (G2.players[receiverId].credibilityNotchesLost >= 3) {
           if (getOrderedChallengers(G2).length === 0) {
             resolvePlayToBank(G2);
@@ -6280,6 +6455,7 @@ function createCampaignPhase() {
           };
           recordPlayerStat(G2, receiverId, "whistlesBlown");
           appendGameLog(G2, `Whistle Blown! Player ${receiverId} exposed Player ${moverId}.`, "alert");
+          logKgnOutcome(G2, "B", { tileId: tileIdPlayed });
         } else {
           G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
           G2.pendingPlay = null;
@@ -6338,6 +6514,7 @@ function createCampaignPhase() {
               text: `Challenger Player ${challengerId} exposed Player ${moverId}'s dishonest play! Player ${moverId} lost 1 credibility notch and board moves were reset.`
             };
             appendGameLog(G2, `Smoking Gun! Player ${challengerId} exposed Player ${moverId}.`, "alert");
+            logKgnOutcome(G2, "G", { challengerId, tileId: tileIdPlayed });
           } else {
             if (moverStartCredNotches < 3 && G2.players[moverId].credibilityNotchesLost > 0) {
               G2.players[moverId].credibilityNotchesLost--;
@@ -6357,6 +6534,7 @@ function createCampaignPhase() {
               text: `Player ${challengerId} challenged Player ${moverId}, but the play with Tile ${tileIdPlayed} was HONEST! Player ${challengerId} lost 1 credibility notch.`
             };
             appendGameLog(G2, `Witch Hunt! Player ${challengerId} challenged an honest play.`, "warn");
+            logKgnOutcome(G2, "W", { challengerId, tileId: tileIdPlayed });
             if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "victoryCheck", tileId: tileIdPlayed })) {
               applyVictoryCheck(G2, tileIdPlayed);
             }
@@ -6396,6 +6574,7 @@ function createCampaignPhase() {
         moveActions.forEach((m) => applyMoveToState(m, G2.boardState, G2.community));
         const reexecLog = formatTurnMovesLog(moverId, moveActions);
         appendGameLog(G2, reexecLog || `Player ${moverId} re-executed honestly.`, "info");
+        logKgnSubLine(G2, `Re: ${formatKgnMoves(moveActions)}`);
         if (G2.players[moverId].pendingPenaltyWithdraw) {
           G2.pendingPlay.step = "penaltyWithdraw";
           queuePendingSupport(G2, { phase: "campaign" });
@@ -6419,6 +6598,7 @@ function createCampaignPhase() {
           return INVALID_MOVE;
         }
         G2.players[moverId].pendingPenaltyWithdraw = false;
+        logKgnSubLine(G2, `PenW(${formatKgnPlayer(moverId)}): ${moveAction ? formatKgnMove(moveAction) : "Pass"}`);
         if (G2.pendingPlay.whistleblownByReceiver) {
           G2.pendingPlay.step = "receiverReward";
           queuePendingSupport(G2, { phase: "campaign" });
@@ -6435,6 +6615,7 @@ function createCampaignPhase() {
         if (G2.players[receiverId].credibilityNotchesLost > 0) {
           G2.players[receiverId].credibilityNotchesLost = Math.max(0, G2.players[receiverId].credibilityNotchesLost - 2);
         }
+        logKgnSubLine(G2, `Rew(${formatKgnPlayer(receiverId)}): +2C`);
         finishPendingPlayOrReward(G2);
         events.endTurn();
       },
@@ -6457,6 +6638,7 @@ function createCampaignPhase() {
         } else if (isMoveTypePossible(MOVE_TYPES.ADVANCE, receiverId, G2.boardState, G2.community, G2.numPlayers)) {
           return INVALID_MOVE;
         }
+        logKgnSubLine(G2, `Rew(${formatKgnPlayer(receiverId)}): FreeA ${moveAction ? formatKgnMove(moveAction) : "Pass"}`);
         if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "finishPendingPlayOrReward" })) {
           finishPendingPlayOrReward(G2);
         }
@@ -6470,6 +6652,7 @@ function createCampaignPhase() {
         if (G2.players[pId].credibilityNotchesLost > 0) {
           G2.players[pId].credibilityNotchesLost--;
         }
+        logKgnSubLine(G2, `Rew(${formatKgnPlayer(pId)}): +1C`);
         const receiverId = G2.pendingPlay.receiverId;
         G2.pendingPlay = null;
         if (receiverId !== void 0 && receiverId !== null) G2.nextMoverId = receiverId;
@@ -6584,7 +6767,7 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
         heels: commHeelsCount,
         pawns: commPawnsCount
       };
-      const tileIds = Object.keys(TILES).filter((id) => id !== "BLANK" || config.HAS_BLANK);
+      const tileIds = Object.keys(TILES).filter((id) => id !== "___" || config.HAS_BLANK);
       const shuffledDeck = random.Shuffle(tileIds);
       const draftPacks = {};
       const players = {};

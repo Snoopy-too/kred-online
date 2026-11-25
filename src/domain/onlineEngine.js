@@ -23,7 +23,7 @@ export function finishOnlinePendingPlayOrReward(nextG) {
   const receiverId = nextG.pendingPlay?.receiverId || nextG.nextMoverId;
   const tileId = nextG.pendingPlay?.reexecuteTileId || nextG.pendingPlay?.tileIdPlayed;
 
-  if (tileId && tileId !== 'BLANK') {
+  if (tileId && tileId !== '___') {
     const winners = Object.keys(nextG.players).filter(p => checkVictory(nextG.boardState, p));
     if (winners.length > 1) nextG.winner = 'draw';
     else if (winners.length === 1) nextG.winner = winners[0];
@@ -103,7 +103,7 @@ export function executeOnlineCampaignTurn(effectiveG, playerID, payload, updateM
 
   nextG.lastOutcomeNotice = null;
 
-  if (nextG.players[receiverId].credibilityNotchesLost >= 3 || tileId === 'BLANK') {
+  if (nextG.players[receiverId].credibilityNotchesLost >= 3 || tileId === '___') {
     nextG.pendingPlay.step = 'challenge';
   }
 
@@ -124,7 +124,7 @@ export function executeOnlineAcceptTile(effectiveG, playerID, updateMasterGameSt
     nextG.nextMoverId = receiverId;
     nextG.pendingPlay = null;
 
-    if (tileIdPlayed !== 'BLANK') {
+    if (tileIdPlayed !== '___') {
       const winners = Object.keys(nextG.players).filter(p => checkVictory(nextG.boardState, p));
       if (winners.length > 1) nextG.winner = 'draw';
       else if (winners.length === 1) nextG.winner = winners[0];
@@ -183,7 +183,7 @@ export function executeOnlineRejectTile(effectiveG, playerID, updateMasterGameSt
       text: `Receiver Player ${receiverId} inspected Player ${moverId}'s play and it was HONEST!`
     };
 
-    if (tileIdPlayed !== 'BLANK') {
+    if (tileIdPlayed !== '___') {
       const winners = Object.keys(nextG.players).filter(p => checkVictory(nextG.boardState, p));
       if (winners.length > 1) nextG.winner = 'draw';
       else if (winners.length === 1) nextG.winner = winners[0];
@@ -256,7 +256,7 @@ export function executeOnlineChallengeTile(effectiveG, playerID, updateMasterGam
       text: `Player ${challengerId} challenged Player ${moverId}, but the play was HONEST!`
     };
 
-    if (tileIdPlayed !== 'BLANK') {
+    if (tileIdPlayed !== '___') {
       const winners = Object.keys(nextG.players).filter(p => checkVictory(nextG.boardState, p));
       if (winners.length > 1) nextG.winner = 'draw';
       else if (winners.length === 1) nextG.winner = winners[0];
@@ -287,7 +287,7 @@ export function executeOnlinePassChallenge(effectiveG, playerID, updateMasterGam
     nextG.nextMoverId = receiverId;
     nextG.pendingPlay = null;
 
-    if (tileIdPlayed !== 'BLANK') {
+    if (tileIdPlayed !== '___') {
       const winners = Object.keys(nextG.players).filter(p => checkVictory(nextG.boardState, p));
       if (winners.length > 1) nextG.winner = 'draw';
       else if (winners.length === 1) nextG.winner = winners[0];

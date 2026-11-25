@@ -98,7 +98,7 @@ export function DraftPhaseCard({
                 >
                   <img
                     src={getTileImageUrl(tileId)}
-                    alt={tileId === 'BLANK' ? '' : `Tile ${tileId}`}
+                    alt={tileId === '___' ? '' : `Tile ${tileId}`}
                     className="tile-svg"
                   />
                 </div>

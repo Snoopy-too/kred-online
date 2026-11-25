@@ -5,7 +5,7 @@ export function sanitizeLoadedState(targetG) {
   if (!targetG || !targetG.players) return;
 
   const hasBlank = targetG.numPlayers === 5;
-  const ALL_TILE_IDS = Object.keys(TILES).filter(k => k !== 'BLANK' || hasBlank);
+  const ALL_TILE_IDS = Object.keys(TILES).filter(k => k !== '___' || hasBlank);
   const usedTileIds = new Set();
 
   Object.values(targetG.players).forEach(p => {
@@ -22,10 +22,10 @@ export function sanitizeLoadedState(targetG) {
 
   Object.values(targetG.players).forEach(p => {
     if (p.hand) {
-      p.hand = p.hand.map(t => (t === 'HIDDEN' || !t) ? (unusedTiles.pop() || '01') : t);
+      p.hand = p.hand.map(t => (t === 'HIDDEN' || !t) ? (unusedTiles.pop() || '-1+') : t);
     }
     if (p.bank) {
-      p.bank = p.bank.map(b => (b && b.tileId === 'HIDDEN') ? { ...b, tileId: unusedTiles.pop() || '01' } : b);
+      p.bank = p.bank.map(b => (b && b.tileId === 'HIDDEN') ? { ...b, tileId: unusedTiles.pop() || '-1+' } : b);
     }
   });
 
@@ -33,7 +33,7 @@ export function sanitizeLoadedState(targetG) {
     Object.keys(targetG.draftPacks).forEach(pId => {
       if (Array.isArray(targetG.draftPacks[pId])) {
         targetG.draftPacks[pId] = targetG.draftPacks[pId].map(t =>
-          (t === 'HIDDEN' || !t) ? (unusedTiles.pop() || '01') : t
+          (t === 'HIDDEN' || !t) ? (unusedTiles.pop() || '-1+') : t
         );
       }
     });

@@ -260,7 +260,7 @@ export function SvgBoardCanvas({
                  isPeekingTile ? (
                    <img
                      src={getTileImageUrl(G.pendingPlay.tileIdPlayed)}
-                     alt={G.pendingPlay.tileIdPlayed === 'BLANK' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
+                     alt={G.pendingPlay.tileIdPlayed === '___' ? '' : `Tile ${G.pendingPlay.tileIdPlayed}`}
                      className="domino-tile-svg"
                    />
                  ) : (
@@ -322,7 +322,7 @@ export function SvgBoardCanvas({
                 >
                   <img
                     src={getTileImageUrl(bTile.tileId)}
-                    alt={bTile.tileId === 'BLANK' ? '' : `Tile ${bTile.tileId}`}
+                    alt={bTile.tileId === '___' ? '' : `Tile ${bTile.tileId}`}
                     className="domino-tile-svg"
                   />
                 </div>

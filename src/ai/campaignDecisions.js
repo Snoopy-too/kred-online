@@ -37,7 +37,7 @@ export function decideDraftPick(obs, persona, rng = Math.random) {
       if (!tile) continue;
       const fundingScore = (tile.funding || 0) * fundingWeight * 3;
       const moveScore = (tile.moves || []).reduce((s, m) => s + (DRAFT_MOVE_WEIGHTS[m] || 0), 0);
-      const startBonus = tileId === '03' ? firstBonus : 0;
+      const startBonus = tileId === '^0+' ? firstBonus : 0;
       const total = fundingScore + moveScore + startBonus + (rng() - 0.5) * 2;
       if (total > bestScore) {
         bestScore = total;

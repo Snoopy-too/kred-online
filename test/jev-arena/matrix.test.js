@@ -10,7 +10,7 @@ describe('combination matrix', () => {
     const keys = new Set(distinctTileCombos().map((c) => [...c].sort().join('+')));
     const fromRules = new Set();
     for (const [id, tile] of Object.entries(TILES)) {
-      if (id === 'BLANK') continue;
+      if (id === '___') continue;
       fromRules.add([...tile.moves].sort().join('+'));
     }
     assert.deepEqual(keys, fromRules);

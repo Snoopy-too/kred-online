@@ -1,3 +1,29 @@
+const PIECE_SHORT = { Mark: 'M', Heel: 'H', Pawn: 'P' };
+const PIECE_LONG = { M: 'Mark', H: 'Heel', P: 'Pawn' };
+
+export function captureBoardSnapshot(boardState) {
+  if (!boardState) return null;
+  const snap = {};
+  for (const k of Object.keys(boardState)) {
+    const p = boardState[k];
+    if (p && p.type) snap[k] = PIECE_SHORT[p.type] || p.type;
+  }
+  return snap;
+}
+
+export function expandBoardSnapshot(snap, templateBoard) {
+  if (!snap) return null;
+  const out = {};
+  if (templateBoard) {
+    for (const k of Object.keys(templateBoard)) out[k] = null;
+  }
+  for (const k of Object.keys(snap)) {
+    const type = PIECE_LONG[snap[k]] || snap[k];
+    out[k] = { id: `snap_${k}`, type };
+  }
+  return out;
+}
+
 /**
  * Appends a deterministic, serializable public event to G.history.
  * Uses `Player <id>` placeholders so clients resolve display names on render.
@@ -6,7 +32,8 @@ export function appendGameLog(G, text, tone = 'info') {
   if (!G || !text) return;
   if (!Array.isArray(G.history)) G.history = [];
   const nextId = G.history.length > 0 ? (G.history[G.history.length - 1].id || G.history.length) + 1 : 1;
-  G.history.push({ id: nextId, text, tone });
+  const snap = captureBoardSnapshot(G.boardState);
+  G.history.push(snap ? { id: nextId, text, tone, snap } : { id: nextId, text, tone });
   if (G.history.length > 150) {
     G.history.splice(0, G.history.length - 150);
   }

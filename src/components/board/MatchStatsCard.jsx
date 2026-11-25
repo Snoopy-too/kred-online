@@ -1,6 +1,21 @@
 import React from 'react';
+import { exportKgnDocument } from '../../domain/kgn.js';
 
 export function MatchStatsCard({ G, getPlayerLabel }) {
+  const handleSaveKgn = () => {
+    const content = exportKgnDocument(G, getPlayerLabel);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const unixTs = Math.floor(Date.now() / 1000);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kred-${dateStr}-${unixTs}.kgn`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
   const playerIds = Object.keys(G?.players || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
   const statsByPlayer = G?.matchStats || {};
 
@@ -33,8 +48,21 @@ export function MatchStatsCard({ G, getPlayerLabel }) {
 
   return (
     <div className="turn-builder-card">
-      <div className="turn-card-header">
-        <h3>Match Stats</h3>
+      <div className="turn-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <h3 style={{ margin: 0 }}>Match Stats</h3>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={handleSaveKgn}
+          style={{
+            padding: '4px 10px',
+            fontSize: '11px',
+            border: '1px solid rgba(200, 155, 60, 0.45)',
+            color: 'var(--accent-gold)'
+          }}
+        >
+          Save KGN
+        </button>
       </div>
 
       <div style={{ overflowX: 'auto' }}>

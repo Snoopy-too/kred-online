@@ -23,12 +23,12 @@ export function PlayerHandDrawer({ myPlayer, selectedTileId, onSelectTile, disab
                     onSelectTile(tileId);
                   }
                 }}
-                title={tileId === 'BLANK' ? 'Click to play Blank Tile' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Click to play Tile ${tileId}`}
+                title={tileId === '___' ? 'Click to play Blank Tile' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Click to play Tile ${tileId}`}
               >
                 {tileId === 'HIDDEN' ? (
                   <img src={getTileImageUrl(null)} alt="Opponent Tile" className="hand-tile-img" />
                 ) : (
-                  <img src={getTileImageUrl(tileId)} alt={tileId === 'BLANK' ? '' : `Tile ${tileId}`} className="hand-tile-img" />
+                  <img src={getTileImageUrl(tileId)} alt={tileId === '___' ? '' : `Tile ${tileId}`} className="hand-tile-img" />
                 )}
                 {isSelected && (
                   <div className="tile-selected-badge-under">

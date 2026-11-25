@@ -12,9 +12,7 @@ export function getAssetUrl(path) {
 
 export function getTileImageUrl(tileId) {
   if (!tileId || tileId === 'HIDDEN') return getAssetUrl('images/tile_back.svg');
-  if (tileId === 'BLANK') return getAssetUrl('images/BLANK.svg');
-  const padded = String(tileId).padStart(2, '0');
-  return getAssetUrl(`images/${padded}.svg`);
+  return getAssetUrl(`images/${encodeURIComponent(String(tileId))}.svg`);
 }
 
 export function getBoardImageUrl(numPlayers) {

@@ -44,7 +44,7 @@ export function makeInitialG(numPlayers, seed) {
 
   const community = { marks: commMarksCount, heels: commHeelsCount, pawns: commPawnsCount };
 
-  const tileIds = Object.keys(TILES).filter((id) => id !== 'BLANK' || config.HAS_BLANK);
+  const tileIds = Object.keys(TILES).filter((id) => id !== '___' || config.HAS_BLANK);
   const shuffledDeck = rng.shuffle([...tileIds]);
 
   const players = {};
@@ -63,7 +63,7 @@ export function makeInitialG(numPlayers, seed) {
   // Campaign opener holds tile 03 (mirrors campaignPhase onBegin).
   let startP = '0';
   for (const pId of Object.keys(players)) {
-    if (players[pId].hand.includes('03')) startP = pId;
+    if (players[pId].hand.includes('^0+')) startP = pId;
   }
 
   return {

@@ -1,14 +1,16 @@
 import { checkVictory, getNextPlayer, findUnsupportedPiece } from '../board.js';
 import { appendGameLog } from '../gameLog.js';
+import { logKgnOutcome, logKgnResult, logKgnSubLine, formatKgnPlayer } from '../kgn.js';
 
 export function applyVictoryCheck(G, tileId) {
-  if (!G || !G.players || tileId === 'BLANK') return;
+  if (!G || !G.players || tileId === '___') return;
   const prevWinner = G.winner;
   const winners = Object.keys(G.players).filter(p => checkVictory(G.boardState, p));
   if (winners.length > 1) G.winner = 'draw';
   else if (winners.length === 1) G.winner = winners[0];
   if (G.winner && G.winner !== prevWinner) {
     appendGameLog(G, G.winner === 'draw' ? 'Match ended in a draw.' : `Player ${G.winner} won the game!`, 'win');
+    logKgnResult(G);
   }
 }
 
@@ -27,6 +29,7 @@ export function resolvePlayToBank(G) {
     text: `Player ${receiverId} banked Player ${moverId}'s tile.`
   };
   appendGameLog(G, 'Quiet is Kept!', 'accept');
+  logKgnOutcome(G, 'Q');
   if (!findUnsupportedPiece(G.boardState, G.numPlayers)) {
     applyVictoryCheck(G, tileIdPlayed);
   }
@@ -48,6 +51,7 @@ export function finishPendingPlayOrReward(G) {
       if (G.players[challengerId].credibilityNotchesLost > 0) {
         G.players[challengerId].credibilityNotchesLost--;
       }
+      logKgnSubLine(G, `Rew(${formatKgnPlayer(challengerId)}): +1C`);
     }
   }
 

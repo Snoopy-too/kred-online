@@ -63,7 +63,7 @@ export function CalibrationSpotOverlay({
             {showTileFaces ? (
               <React.Fragment>
                 <img
-                  src={getTileImageUrl('01')}
+                  src={getTileImageUrl('-1+')}
                   alt="Tile Face Preview"
                   className="tile-placeholder-img"
                   draggable={false}

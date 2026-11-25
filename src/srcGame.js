@@ -113,7 +113,7 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
       };
 
       // Prepare Tile Deck
-      const tileIds = Object.keys(TILES).filter(id => id !== 'BLANK' || config.HAS_BLANK);
+      const tileIds = Object.keys(TILES).filter(id => id !== '___' || config.HAS_BLANK);
       const shuffledDeck = random.Shuffle(tileIds);
 
       // Deal tiles into draft packs or directly to hands if skipDraft is true

@@ -5,6 +5,15 @@ import { applyMoveToState, validateSingleMove } from './moves.js';
 import { handleLoadSaveState } from './sharedMoves.js';
 import { queuePendingSupport, handleResolveSupportDrop } from './supportRule.js';
 import { appendGameLog, recordBureaucracyFunding, formatMoveInfinitive } from './gameLog.js';
+import {
+  logKgnPhase,
+  logKgnBureaucracyAction,
+  logKgnBureaucracyEnd,
+  logKgnSubLine,
+  logKgnResult,
+  formatKgnPlayer,
+  formatKgnBureaucracyAction
+} from './kgn.js';
 
 export function selectBestBankTilesToPay(facedownBankTiles, cost) {
   if (!facedownBankTiles || facedownBankTiles.length === 0 || cost <= 0) return [];
@@ -119,9 +128,11 @@ export function cleanupBureaucracy(G) {
     }
   });
 
+  const prevWinner = G.winner;
   const winners = Object.keys(G.players).filter(pId => checkVictory(G.boardState, pId));
   if (winners.length > 1) G.winner = 'draw';
   else if (winners.length === 1) G.winner = winners[0];
+  if (G.winner && G.winner !== prevWinner) logKgnResult(G);
 }
 
 export function applyChallengerBureaucracyAction(G, pId, { actionType, targetLoc, subAction }) {
@@ -147,6 +158,14 @@ export function applyChallengerBureaucracyAction(G, pId, { actionType, targetLoc
     t.faceDown = false;
   });
 
+  const actionStr = formatKgnBureaucracyAction({
+    actionType,
+    targetLoc,
+    pieceType: G.boardState[targetLoc]?.type,
+    subAction,
+    cost
+  });
+  logKgnSubLine(G, `Rew(${formatKgnPlayer(pId)}): ${actionStr}`);
   if (actionType === 'RESTORE_CRED') {
     appendGameLog(G, `Player ${pId} spent K${cost} to restore credibility.`, 'info');
   } else if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
@@ -207,6 +226,7 @@ export function createBureaucracyPhase() {
       initBureaucracy(G);
       recordBureaucracyFunding(G);
       appendGameLog(G, 'BUREAUCRACY', 'phase');
+      logKgnPhase(G, 'bureaucracy');
     },
 
     turn: {
@@ -246,6 +266,13 @@ export function createBureaucracyPhase() {
         if (!success) return INVALID_MOVE;
 
         player.funding -= cost;
+        logKgnBureaucracyAction(G, pId, {
+          actionType,
+          targetLoc,
+          pieceType: G.boardState[targetLoc]?.type,
+          subAction,
+          cost
+        });
         if (actionType === 'RESTORE_CRED') {
           appendGameLog(G, `Player ${pId} spent K${cost} to restore credibility.`, 'info');
         } else if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
@@ -268,6 +295,7 @@ export function createBureaucracyPhase() {
         if (G) {
           if (playerID !== undefined && playerID !== null) {
             appendGameLog(G, `Player ${playerID} ended their Bureaucracy turn.`, 'info');
+            logKgnBureaucracyEnd(G, playerID);
           }
           G.bureaucracyTurnIndex = (G.bureaucracyTurnIndex || 0) + 1;
         }

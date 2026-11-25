@@ -32,7 +32,7 @@ describe('action enumerator (derived from rules)', () => {
 
   it('receipt offers accept, and reject only for non-honest plays', () => {
     const G = makeInitialG(3, 1);
-    G.pendingPlay = { moverId: '0', receiverId: '1', tileIdPlayed: '05', playType: 'Dishonest', step: 'receipt', challengesPassed: [] };
+    G.pendingPlay = { moverId: '0', receiverId: '1', tileIdPlayed: '_2+', playType: 'Dishonest', step: 'receipt', challengesPassed: [] };
     const dishonest = enumerateLegalActions(G);
     assert.deepEqual(dishonest.options.map((o) => o.executorName).sort(),
       ['executeOnlineAcceptTile', 'executeOnlineRejectTile']);
@@ -44,7 +44,7 @@ describe('action enumerator (derived from rules)', () => {
   it('challenge with no eligible challengers offers the resolving pass', () => {
     const G = makeInitialG(3, 1);
     for (const p of Object.keys(G.players)) G.players[p].credibilityNotchesLost = 3;
-    G.pendingPlay = { moverId: '0', receiverId: '1', tileIdPlayed: '05', playType: 'Dishonest', step: 'challenge', challengesPassed: [] };
+    G.pendingPlay = { moverId: '0', receiverId: '1', tileIdPlayed: '_2+', playType: 'Dishonest', step: 'challenge', challengesPassed: [] };
     const { playerId, options } = enumerateLegalActions(G);
     assert.equal(playerId, '1');
     assert.equal(options.length, 1);

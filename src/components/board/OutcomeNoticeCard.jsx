@@ -55,8 +55,8 @@ export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null,
       {showTile && (
         <img
           src={getTileImageUrl(notice.tileIdPlayed)}
-          alt={notice.tileIdPlayed === 'BLANK' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
-          title={notice.tileIdPlayed === 'BLANK' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
+          alt={notice.tileIdPlayed === '___' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
+          title={notice.tileIdPlayed === '___' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
           style={{
             width: '62px',
             height: 'auto',

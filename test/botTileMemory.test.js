@@ -22,9 +22,9 @@ function makeBaseG() {
     boardState: makeEmptyBoard(),
     community: { marks: 6, heels: 9, pawns: 3 },
     players: {
-      '0': { hand: ['01', '02'], bank: [], credibilityNotchesLost: 0, funding: 0 },
-      '1': { hand: ['03', '04'], bank: [], credibilityNotchesLost: 0, funding: 0 },
-      '2': { hand: ['05', '06'], bank: [], credibilityNotchesLost: 0, funding: 0 }
+      '0': { hand: ['-1+', '-2+'], bank: [], credibilityNotchesLost: 0, funding: 0 },
+      '1': { hand: ['^0+', '^1+'], bank: [], credibilityNotchesLost: 0, funding: 0 },
+      '2': { hand: ['_2+', '_3+'], bank: [], credibilityNotchesLost: 0, funding: 0 }
     },
     pendingPlay: null,
     lastOutcomeNotice: null
@@ -38,23 +38,23 @@ describe('Bot tile memory', () => {
     const mem = createBotMemory();
     const sharpPersona = getBotPersona('2', { memoryRecall: 1.0 });
 
-    // Bot 0 passes tile '24' (Advance + Withdraw) to Player 1
+    // Bot 0 passes tile '+9-' (Advance + Withdraw) to Player 1
     G.pendingPlay = {
       step: 'receipt',
       moverId: '0',
       receiverId: '1',
-      tileIdPlayed: '24',
+      tileIdPlayed: '+9-',
       movesMade: [],
       challengesPassed: []
     };
     updateBotMemory(mem, G, ctx, '0', sharpPersona, () => 0.5);
-    assert.equal(mem.knownBanked['24'], '1');
+    assert.equal(mem.knownBanked['+9-'], '1');
 
-    // Once banked face-down in Player 1's bank, Bot 0 still excludes '24' from unseenTileIds
+    // Once banked face-down in Player 1's bank, Bot 0 still excludes '+9-' from unseenTileIds
     G.pendingPlay = null;
     G.players['1'].bank.push({ tileId: 'HIDDEN', faceDown: true });
     const obs = buildBotObservation(G, ctx, '0', mem);
-    assert.ok(!obs.unseenTileIds.includes('24'));
+    assert.ok(!obs.unseenTileIds.includes('+9-'));
   });
 
   it('remembers tiles publicly revealed to be honest (challengeFailed) even when banked face-down', () => {
@@ -69,14 +69,14 @@ describe('Bot tile memory', () => {
       challengerId: '2',
       moverId: '0',
       receiverId: '1',
-      tileIdPlayed: '15'
+      tileIdPlayed: '-3_'
     };
 
     updateBotMemory(mem, G, ctx, '2', sharpPersona, () => 0.5);
-    assert.equal(mem.knownBanked['15'], '1');
+    assert.equal(mem.knownBanked['-3_'], '1');
 
     const obs = buildBotObservation(G, ctx, '2', mem);
-    assert.ok(!obs.unseenTileIds.includes('15'));
+    assert.ok(!obs.unseenTileIds.includes('-3_'));
   });
 
   it('carries remembered banked tiles into knownHands on bureaucracy -> campaign and filters by mover', () => {
@@ -84,25 +84,25 @@ describe('Bot tile memory', () => {
     const mem = createBotMemory();
     const sharpPersona = getBotPersona('2', { memoryRecall: 1.0 });
 
-    // Campaign 1: Tile '05' (unique: Withdraw + Influence? let's use '16' which is Withdraw + Organize)
-    // Actually use '03' (unique: no moves / BLANK? No, '03' is Advance). Let's check: '15' is Assist + Influence.
-    // Even simpler: put '01' in knownBanked for Player 1 during bureaucracy, then enter campaign 2.
+    // Campaign 1: Tile '_2+' (unique: Withdraw + Influence? let's use '-4_' which is Withdraw + Organize)
+    // Actually use '^0+' (unique: no moves / BLANK? No, '^0+' is Advance). Let's check: '-3_' is Assist + Influence.
+    // Even simpler: put '-1+' in knownBanked for Player 1 during bureaucracy, then enter campaign 2.
     updateBotMemory(mem, G, { phase: 'bureaucracy', currentPlayer: '0', turn: 10 }, '2', sharpPersona, () => 0.5);
-    mem.knownBanked['11'] = '1';
+    mem.knownBanked['^4_'] = '1';
 
     // Transition to next campaign: banks become hands
     updateBotMemory(mem, G, { phase: 'campaign', currentPlayer: '0', turn: 11 }, '2', sharpPersona, () => 0.5);
-    assert.equal(mem.knownHands['11'], '1');
+    assert.equal(mem.knownHands['^4_'], '1');
     assert.deepEqual(mem.knownBanked, {});
 
-    // If Player 0 claims a move whose only unseen matching tile is '11', Bot 2 knows Player 1 holds '11' -> guaranteed challenge!
+    // If Player 0 claims a move whose only unseen matching tile is '^4_', Bot 2 knows Player 1 holds '^4_' -> guaranteed challenge!
     const beforeBoard = makeEmptyBoard();
     beforeBoard.p1_seat1 = { id: 'm1', type: 'Mark' };
     const afterBoard = structuredClone(beforeBoard);
     afterBoard.p1_seat1 = null;
     afterBoard.p1_rostrum1 = { id: 'm1', type: 'Mark' };
 
-    // Pretend only tile '11' (or a matching tile) is left in unseenTileIds
+    // Pretend only tile '^4_' (or a matching tile) is left in unseenTileIds
     const obsMover0 = {
       botId: '2',
       phase: 'campaign',
@@ -116,8 +116,8 @@ describe('Bot tile memory', () => {
         '1': { id: '1', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 4, bankCount: 0, funding: 0 },
         '2': { id: '2', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 4, bankCount: 0, funding: 0 }
       },
-      unseenTileIds: ['05'], // '05' is pure Advance
-      memory: { knownBanked: {}, knownHands: { '05': '1' } },
+      unseenTileIds: ['_2+'], // '_2+' is pure Advance
+      memory: { knownBanked: {}, knownHands: { '_2+': '1' } },
       pendingPlay: {
         step: 'challenge',
         moverId: '0',
@@ -129,7 +129,7 @@ describe('Bot tile memory', () => {
     };
     assert.equal(decideChallenge(obsMover0, sharpPersona, () => 0.5).move, 'challengeTile');
 
-    // Conversely, if Player 1 (who is remembered to hold '03') makes that Advance, it's NOT a 0-copy auto-challenge
+    // Conversely, if Player 1 (who is remembered to hold '^0+') makes that Advance, it's NOT a 0-copy auto-challenge
     const obsMover1 = {
       ...obsMover0,
       pendingPlay: {
@@ -150,7 +150,7 @@ describe('Bot tile memory', () => {
     obsMover1.boardState = afterBoard1;
     obsMover1.pendingPlay.backupBoard = beforeBoard1;
     obsMover1.pendingPlay.movesMade = [{ type: 'Advance', from: 'p2_seat1', to: 'p2_rostrum1' }];
-    // With 1 notch lost and knowing mover 1 holds '03' (-20 bonus), bot passes instead of witch-hunting
+    // With 1 notch lost and knowing mover 1 holds '^0+' (-20 bonus), bot passes instead of witch-hunting
     assert.equal(decideChallenge(obsMover1, getBotPersona('0'), () => 0.5).move, 'passChallenge');
   });
 
@@ -162,19 +162,19 @@ describe('Bot tile memory', () => {
       challengerId: '2',
       moverId: '0',
       receiverId: '1',
-      tileIdPlayed: '15'
+      tileIdPlayed: '-3_'
     };
 
     const forgetfulMem = createBotMemory();
     updateBotMemory(forgetfulMem, G, ctx, '2', getBotPersona('1', { memoryRecall: 0 }), () => 0.1);
-    assert.equal(forgetfulMem.knownBanked['15'], undefined);
+    assert.equal(forgetfulMem.knownBanked['-3_'], undefined);
 
     const midMem = createBotMemory();
     updateBotMemory(midMem, G, ctx, '2', getBotPersona('1', { memoryRecall: 0.45 }), () => 0.6);
-    assert.equal(midMem.knownBanked['15'], undefined);
+    assert.equal(midMem.knownBanked['-3_'], undefined);
 
     const midMemHit = createBotMemory();
     updateBotMemory(midMemHit, G, ctx, '2', getBotPersona('1', { memoryRecall: 0.45 }), () => 0.3);
-    assert.equal(midMemHit.knownBanked['15'], '1');
+    assert.equal(midMemHit.knownBanked['-3_'], '1');
   });
 });

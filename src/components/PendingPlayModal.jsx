@@ -172,7 +172,7 @@ export function PendingPlayModal({
                           <img
                             key={`${item.tileId}-${idx}`}
                             src={getTileImageUrl(item.tileId)}
-                            alt={item.tileId === 'BLANK' ? '' : `Tile ${item.tileId}`}
+                            alt={item.tileId === '___' ? '' : `Tile ${item.tileId}`}
                             title={`Tile ${item.tileId} (K${tileFunding})`}
                             style={{ width: '53px', height: 'auto', aspectRatio: '2.5 / 5', objectFit: 'contain', flexShrink: 0 }}
                           />

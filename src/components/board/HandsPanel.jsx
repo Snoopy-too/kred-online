@@ -108,11 +108,11 @@ export function HandsPanel({
                     onSelectTile(tileId);
                   }
                 }}
-                title={tileId === 'BLANK' ? 'Click to play Blank Tile' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Click to play Tile ${tileId}`}
+                title={tileId === '___' ? 'Click to play Blank Tile' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Click to play Tile ${tileId}`}
               >
                 <img
                   src={getTileImageUrl(tileId === 'HIDDEN' ? null : tileId)}
-                  alt={tileId === 'BLANK' ? '' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Tile ${tileId}`}
+                  alt={tileId === '___' ? '' : tileId === 'HIDDEN' ? 'Opponent Tile' : `Tile ${tileId}`}
                   className="hand-tile-img"
                 />
                 {isSelected && (

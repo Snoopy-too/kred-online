@@ -6,7 +6,7 @@ export function getStartingPlayerForCampaign(G) {
   if (!G || !G.players) return '0';
   let startP = '0';
   Object.keys(G.players).forEach(pId => {
-    if (G.players[pId]?.hand && G.players[pId].hand.includes('03')) {
+    if (G.players[pId]?.hand && G.players[pId].hand.includes('^0+')) {
       startP = pId;
     }
   });

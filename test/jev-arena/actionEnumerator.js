@@ -40,7 +40,7 @@ const SELF_MOVES = new Set(['Advance', 'Withdraw', 'Organize']);
 export function getActiveMover(G) {
   if (G.nextMoverId !== undefined && G.nextMoverId !== null) return String(G.nextMoverId);
   for (const pId of Object.keys(G.players || {})) {
-    if ((G.players[pId].hand || []).includes('03')) return pId;
+    if ((G.players[pId].hand || []).includes('^0+')) return pId;
   }
   return '0';
 }

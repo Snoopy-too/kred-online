@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { expandBoardSnapshot } from './domain/gameLog.js';
 import { INITIAL_PIECE_COUNTS } from './domain/types.js';
 import { computeHotspots } from './components/ComputeHotspots.js';
 import { TurnBuilder } from './components/TurnBuilder.jsx';
@@ -40,6 +41,11 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   const panStartRef = useRef(null);
   const [autoDraftTileId, setAutoDraftTileId] = useState(null);
   const [dismissedOutcomeKey, setDismissedOutcomeKey] = useState('');
+  const [peekingHistoryId, setPeekingHistoryId] = useState(null);
+  const peekingBoardState = useMemo(() => {
+    const entry = peekingHistoryId !== null ? (G?.history || []).find((e) => e.id === peekingHistoryId) : null;
+    return entry?.snap ? expandBoardSnapshot(entry.snap, G?.boardState) : null;
+  }, [peekingHistoryId, G?.history, G?.boardState]);
 
   const outcomeNotice = isSupportedOutcomeNotice(G?.lastOutcomeNotice) ? G.lastOutcomeNotice : null;
   const outcomeNoticeKey = outcomeNotice
@@ -318,12 +324,12 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
               selectedTileId={staged.selectedTileId}
               onSelectReceiver={staged.handleSelectReceiver}
               validReceivers={staged.validReceivers}
-              validDestinations={isSupportPending ? (isSupportOwnerMe ? G.pendingSupport.validDestinations : []) : isBureaucracyInteraction ? bureaucracyBoard.moveValidDestinations : staged.validDestinations}
-              selectedPieceLoc={isSupportPending ? (isSupportOwnerMe ? G.pendingSupport.from : '') : isBureaucracyInteraction ? bureaucracyBoard.moveFromLoc : staged.selectedPieceLoc}
-              stagedMoves={isSupportPending ? [] : staged.stagedMoves}
-              onPieceClick={isSupportPending ? noop : isBureaucracyInteraction ? bureaucracyBoard.handleBureaucracySpotClick : staged.handlePieceClick}
-              onDestinationClick={isSupportPending ? (isSupportOwnerMe ? (toLoc) => moves?.resolveSupportDrop?.(toLoc) : noop) : isBureaucracyInteraction ? bureaucracyBoard.handleBureaucracyDestinationClick : staged.handleDestinationClick}
-              transientBoardState={isSupportPending ? null : staged.transientBoardState}
+              validDestinations={peekingBoardState ? [] : isSupportPending ? (isSupportOwnerMe ? G.pendingSupport.validDestinations : []) : isBureaucracyInteraction ? bureaucracyBoard.moveValidDestinations : staged.validDestinations}
+              selectedPieceLoc={peekingBoardState ? '' : isSupportPending ? (isSupportOwnerMe ? G.pendingSupport.from : '') : isBureaucracyInteraction ? bureaucracyBoard.moveFromLoc : staged.selectedPieceLoc}
+              stagedMoves={peekingBoardState || isSupportPending ? [] : staged.stagedMoves}
+              onPieceClick={peekingBoardState || isSupportPending ? noop : isBureaucracyInteraction ? bureaucracyBoard.handleBureaucracySpotClick : staged.handlePieceClick}
+              onDestinationClick={peekingBoardState ? noop : isSupportPending ? (isSupportOwnerMe ? (toLoc) => moves?.resolveSupportDrop?.(toLoc) : noop) : isBureaucracyInteraction ? bureaucracyBoard.handleBureaucracyDestinationClick : staged.handleDestinationClick}
+              transientBoardState={peekingBoardState || (isSupportPending ? null : staged.transientBoardState)}
               zoomLevel={zoomLevel * autoScale * boardZoom}
               peekPendingTile={staged.peekPendingTile}
               onTogglePeekTile={staged.handleTogglePeekTile}
@@ -338,7 +344,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
           {G?.winner || ctx?.gameover ? (
             <>
               <MatchStatsCard G={G} getPlayerLabel={getPlayerLabel} />
-              <GameLogPanel G={G} getPlayerLabel={getPlayerLabel} defaultOpen={true} />
+              <GameLogPanel G={G} getPlayerLabel={getPlayerLabel} defaultOpen={true} selectedHistoryId={peekingHistoryId} onSelectHistoryEntry={(e) => setPeekingHistoryId(e ? e.id : null)} />
             </>
           ) : (
             <>
@@ -474,7 +480,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
             botIds={botIds}
           />
 
-          <GameLogPanel G={G} ctx={ctx} getPlayerLabel={getPlayerLabel} />
+          <GameLogPanel G={G} getPlayerLabel={getPlayerLabel} selectedHistoryId={peekingHistoryId} onSelectHistoryEntry={(e) => setPeekingHistoryId(e ? e.id : null)} />
             </>
           )}
         </div>

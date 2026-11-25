@@ -5,6 +5,16 @@ import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame, filterSoloPlayerView } from '../src/srcGame.js';
 import { classifyPlay, validateSingleMove } from '../src/domain/moves.js';
 import { initBureaucracy } from '../src/domain/bureaucracy.js';
+import {
+  logKgnPhase,
+  logKgnCampaignPlay,
+  logKgnOutcome,
+  logKgnSubLine,
+  logKgnBureaucracyAction,
+  logKgnBureaucracyEnd,
+  logKgnResult,
+  exportKgnDocument
+} from '../src/domain/kgn.js';
 
 function makeLocalClients(game, matchID) {
   const multiplayer = Local();
@@ -24,7 +34,7 @@ describe('campaign edge cases & solo playerView hardening', () => {
       ...base,
       setup: (arg) => {
         const G = base.setup(arg);
-        G.players['0'].hand = ['03', '04'];
+        G.players['0'].hand = ['^0+', '^1+'];
         G.players['1'].credibilityNotchesLost = 3;
         G.players['2'].credibilityNotchesLost = 3;
         G.nextMoverId = '0';
@@ -34,7 +44,7 @@ describe('campaign edge cases & solo playerView hardening', () => {
     const clients = makeLocalClients(customGame, 'zero-cred-all');
     try {
       clients[0].moves.submitTurnMovesAndTile({
-        tileId: '03',
+        tileId: '^0+',
         receiverId: '1',
         moves: []
       });
@@ -63,8 +73,8 @@ describe('campaign edge cases & solo playerView hardening', () => {
         G.pendingPlay = {
           moverId: '0',
           receiverId: '1',
-          tileIdPlayed: '05',
-          reexecuteTileId: '05',
+          tileIdPlayed: '_2+',
+          reexecuteTileId: '_2+',
           movesMade: [],
           playType: 'Dishonest',
           whistleblownByReceiver: false,
@@ -99,8 +109,8 @@ describe('campaign edge cases & solo playerView hardening', () => {
         G.pendingPlay = {
           moverId: '0',
           receiverId: '1',
-          tileIdPlayed: '05',
-          reexecuteTileId: '05',
+          tileIdPlayed: '_2+',
+          reexecuteTileId: '_2+',
           movesMade: [],
           playType: 'Dishonest',
           whistleblownByReceiver: false,
@@ -130,7 +140,7 @@ describe('campaign edge cases & solo playerView hardening', () => {
         G.players['0'].hand = [];
         G.players['1'].hand = [];
         G.players['2'].hand = [];
-        G.players['0'].bank = [{ tileId: '24', faceDown: true }];
+        G.players['0'].bank = [{ tileId: '+9-', faceDown: true }];
         for (let s = 1; s <= 6; s++) {
           G.boardState[`p1_seat${s}`] = { id: `m_${s}`, type: 'Mark' };
         }
@@ -157,31 +167,31 @@ describe('campaign edge cases & solo playerView hardening', () => {
   it('filterSoloPlayerView hides opponent hands, packs, and face-down bank tiles without mutating G', () => {
     const raw = {
       players: {
-        '0': { hand: ['01'], bank: [{ tileId: '02', faceDown: true }], credibilityNotchesLost: 0 },
-        '1': { hand: ['03', '04'], bank: [{ tileId: '05', faceDown: true }, { tileId: '06', faceDown: false }], credibilityNotchesLost: 0 },
-        '2': { hand: ['07'], bank: [], credibilityNotchesLost: 3 }
+        '0': { hand: ['-1+'], bank: [{ tileId: '-2+', faceDown: true }], credibilityNotchesLost: 0 },
+        '1': { hand: ['^0+', '^1+'], bank: [{ tileId: '_2+', faceDown: true }, { tileId: '_3+', faceDown: false }], credibilityNotchesLost: 0 },
+        '2': { hand: ['+4+'], bank: [], credibilityNotchesLost: 3 }
       },
-      draftPacks: { '0': ['08'], '1': ['09', '10'], '2': ['11'] },
+      draftPacks: { '0': ['+5+'], '1': ['-1^', '-2^'], '2': ['^4_'] },
       pendingPlay: {
         moverId: '1',
         receiverId: '2',
-        tileIdPlayed: '12',
+        tileIdPlayed: '_5^',
         playType: 'Dishonest',
         step: 'receipt'
       }
     };
     const v0 = filterSoloPlayerView(raw, '0');
-    assert.deepEqual(v0.players['0'].hand, ['01']);
+    assert.deepEqual(v0.players['0'].hand, ['-1+']);
     assert.deepEqual(v0.players['1'].hand, ['HIDDEN', 'HIDDEN']);
     assert.equal(v0.players['1'].bank[0].tileId, 'HIDDEN');
-    assert.equal(v0.players['1'].bank[1].tileId, '06');
+    assert.equal(v0.players['1'].bank[1].tileId, '_3+');
     assert.deepEqual(v0.draftPacks['1'], ['HIDDEN', 'HIDDEN']);
     assert.equal(v0.pendingPlay.tileIdPlayed, 'HIDDEN');
     assert.equal(v0.pendingPlay.playType, 'HIDDEN');
 
     // Original G unchanged
-    assert.deepEqual(raw.players['1'].hand, ['03', '04']);
-    assert.equal(raw.pendingPlay.tileIdPlayed, '12');
+    assert.deepEqual(raw.players['1'].hand, ['^0+', '^1+']);
+    assert.equal(raw.pendingPlay.tileIdPlayed, '_5^');
 
     // 0-cred receiver cannot inspect pending tile
     const v2 = filterSoloPlayerView(raw, '2');
@@ -204,9 +214,9 @@ describe('campaign edge cases & solo playerView hardening', () => {
     const community = { marks: 1, heels: 3, pawns: 3 };
 
     const assistOnly = [{ type: 'Assist', from: 'community_1', to: 'p3_seat6' }];
-    assert.equal(classifyPlay(assistOnly, '13', '1', boardState, community, 3), 'Honest');
-    assert.equal(classifyPlay([], '13', '1', boardState, community, 3), 'Dishonest');
-    assert.equal(classifyPlay([{ type: 'Withdraw', from: 'p2_seat1', to: 'community' }], '13', '1', boardState, community, 3), 'Dishonest');
+    assert.equal(classifyPlay(assistOnly, '+5^', '1', boardState, community, 3), 'Honest');
+    assert.equal(classifyPlay([], '+5^', '1', boardState, community, 3), 'Dishonest');
+    assert.equal(classifyPlay([{ type: 'Withdraw', from: 'p2_seat1', to: 'community' }], '+5^', '1', boardState, community, 3), 'Dishonest');
   });
 
   it('allows Advance to gain a Pawn from community only when no Marks or Heels remain (and respects Max 1 Pawn)', () => {
@@ -225,13 +235,47 @@ describe('campaign edge cases & solo playerView hardening', () => {
     const G = {
       boardState: {},
       players: {
-        '0': { bank: [{ tileId: '01', faceDown: true }, { tileId: '02', faceDown: false }], credibilityNotchesLost: 0 },
-        '1': { bank: [{ tileId: '18', faceDown: true }], credibilityNotchesLost: 0 }
+        '0': { bank: [{ tileId: '-1+', faceDown: true }, { tileId: '-2+', faceDown: false }], credibilityNotchesLost: 0 },
+        '1': { bank: [{ tileId: '^4-', faceDown: true }], credibilityNotchesLost: 0 }
       }
     };
     initBureaucracy(G);
     assert.equal(G.players['0'].bureaucracyInitialFunding, G.players['0'].funding);
     assert.equal(G.players['1'].bureaucracyInitialFunding, G.players['1'].funding);
     assert.ok(G.players['1'].bureaucracyInitialFunding > 0);
+  });
+
+  it('records and exports KGN with Q/B/W/G outcomes, revealed-only tiles, and bureaucracy turns', () => {
+    const G = {
+      numPlayers: 3,
+      players: {
+        '0': { funding: 18, bureaucracyInitialFunding: 18 },
+        '1': { funding: 12, bureaucracyInitialFunding: 12 },
+        '2': { funding: 6, bureaucracyInitialFunding: 6 }
+      },
+      history: []
+    };
+    logKgnPhase(G, 'campaign');
+    logKgnCampaignPlay(G, '0', '1', [{ type: 'Advance', from: 'community_1', to: 'p1_seat1' }]);
+    logKgnOutcome(G, 'Q');
+    logKgnCampaignPlay(G, '1', '2', [{ type: 'Advance', from: 'community_2', to: 'p2_seat1' }]);
+    logKgnOutcome(G, 'B', { tileId: '+9-' });
+    logKgnSubLine(G, 'Re: W 2S1>C');
+    logKgnCampaignPlay(G, '2', '0', [{ type: 'Remove', from: 'p1_seat1', to: 'community' }]);
+    logKgnOutcome(G, 'W', { challengerId: '1', tileId: '-3_' });
+    logKgnPhase(G, 'bureaucracy');
+    logKgnBureaucracyAction(G, '0', { actionType: 'PROMOTE_SEAT', targetLoc: 'p1_seat1', pieceType: 'Heel', cost: 6 });
+    logKgnBureaucracyEnd(G, '0');
+    G.winner = '0';
+    logKgnResult(G);
+
+    const doc = exportKgnDocument(G, (id) => ['Josh', 'Vance', 'Thorne'][parseInt(id, 10)]);
+    assert.ok(doc.includes('[Format "KGN 1.0"]'));
+    assert.ok(doc.includes('[P1 "Josh"]'));
+    assert.ok(doc.includes('[Result "P1"]'));
+    assert.ok(doc.includes('1. P1: A C>1S1 -> P2 | Q'));
+    assert.ok(doc.includes('2. P2: A C>2S1 -> P3 | B [+9-]'));
+    assert.ok(doc.includes('3. P3: R 1S1>C -> P1 | W(P2) [-3_]'));
+    assert.ok(doc.includes('B1. P1(K18): Prom 1S1>H (K6), End # P1'));
   });
 });

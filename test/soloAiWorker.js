@@ -44,7 +44,7 @@ function assertTileConservation(G, contextLabel, numPlayers) {
     assert.ok(unique.has(tid), `${contextLabel}: missing standard tile ${tid}`);
   }
   if (numPlayers === 5) {
-    assert.ok(unique.has('BLANK'), `${contextLabel}: missing BLANK tile in 5P game`);
+    assert.ok(unique.has('___'), `${contextLabel}: missing BLANK tile in 5P game`);
   }
 }
 

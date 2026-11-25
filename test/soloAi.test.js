@@ -59,32 +59,32 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
       players: {
         '0': {
           credibilityNotchesLost: 1,
-          hand: ['01', '02'],
-          bank: [{ tileId: '04', faceDown: true }],
+          hand: ['-1+', '-2+'],
+          bank: [{ tileId: '^1+', faceDown: true }],
           funding: 1,
           pendingPenaltyWithdraw: false
         },
         '1': {
           credibilityNotchesLost: 0,
-          hand: ['05', '06'],
-          bank: [{ tileId: '07', faceDown: true }, { tileId: '08', faceDown: false }],
+          hand: ['_2+', '_3+'],
+          bank: [{ tileId: '+4+', faceDown: true }, { tileId: '+5+', faceDown: false }],
           funding: 5,
           pendingPenaltyWithdraw: false
         },
         '2': {
           credibilityNotchesLost: 3,
-          hand: ['09'],
-          bank: [{ tileId: '10', faceDown: true }],
+          hand: ['-1^'],
+          bank: [{ tileId: '-2^', faceDown: true }],
           funding: 7,
           pendingPenaltyWithdraw: true
         }
       },
-      draftPacks: { '0': ['11'], '1': ['12', '13'], '2': ['14'] },
+      draftPacks: { '0': ['^4_'], '1': ['_5^', '+5^'], '2': ['+6^'] },
       draftSelectionsThisRound: { '0': false, '1': true, '2': false },
       pendingPlay: {
         moverId: '0',
         receiverId: '1',
-        tileIdPlayed: '24',
+        tileIdPlayed: '+9-',
         playType: 'Dishonest',
         movesMade: [],
         challengesPassed: [],
@@ -96,27 +96,27 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
 
     const obs2 = buildBotObservation(mockG, mockCtx, '2');
     const hiddenViewCheck = JSON.stringify({ ...obs2, unseenTileIds: undefined });
-    for (const secret of ['01', '02', '04', '05', '06', '07', '11', '12', '13', '24', 'Dishonest']) {
+    for (const secret of ['-1+', '-2+', '^1+', '_2+', '_3+', '+4+', '^4_', '_5^', '+5^', '+9-', 'Dishonest']) {
       assert.ok(!hiddenViewCheck.includes(`"${secret}"`), `Bot 2 observation leaked secret ${secret}`);
     }
-    assert.deepEqual(obs2.hand, ['09']);
-    assert.deepEqual(obs2.draftPack, ['14']);
+    assert.deepEqual(obs2.hand, ['-1^']);
+    assert.deepEqual(obs2.draftPack, ['+6^']);
     assert.equal(obs2.pendingPlay.tileIdPlayed, null);
     assert.equal(obs2.pendingPlay.playType, null);
     assert.equal(obs2.players['1'].handCount, 2);
     assert.equal(obs2.players['1'].bankCount, 2);
-    assert.deepEqual(obs2.players['1'].faceUpBankTiles, ['08']);
+    assert.deepEqual(obs2.players['1'].faceUpBankTiles, ['+5+']);
     assert.equal(obs2.players['0'].credibilityRemaining, 2);
 
     assert.equal(obs2.unseenTileIds.length, 21);
-    assert.ok(!obs2.unseenTileIds.includes('08'));
-    assert.ok(!obs2.unseenTileIds.includes('09'));
-    assert.ok(!obs2.unseenTileIds.includes('10'));
-    assert.ok(obs2.unseenTileIds.includes('05'));
-    assert.ok(obs2.unseenTileIds.includes('07'));
+    assert.ok(!obs2.unseenTileIds.includes('+5+'));
+    assert.ok(!obs2.unseenTileIds.includes('-1^'));
+    assert.ok(!obs2.unseenTileIds.includes('-2^'));
+    assert.ok(obs2.unseenTileIds.includes('_2+'));
+    assert.ok(obs2.unseenTileIds.includes('+4+'));
 
     const obs1 = buildBotObservation(mockG, mockCtx, '1');
-    assert.equal(obs1.pendingPlay.tileIdPlayed, '24');
+    assert.equal(obs1.pendingPlay.tileIdPlayed, '+9-');
 
     const zeroCredG = structuredClone(mockG);
     zeroCredG.pendingPlay.receiverId = '2';
@@ -131,7 +131,7 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
     const reexecG = structuredClone(mockG);
     reexecG.pendingPlay.step = 'reexecute';
     const obs2Reexec = buildBotObservation(reexecG, mockCtx, '2');
-    assert.equal(obs2Reexec.pendingPlay.tileIdPlayed, '24');
+    assert.equal(obs2Reexec.pendingPlay.tileIdPlayed, '+9-');
   });
 
   it('evaluateDomain, card-counting challenge guarantee, honest receipt guard, and own-domain bureaucracy guard hold', () => {
@@ -187,7 +187,7 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
         step: 'receipt',
         moverId: '0',
         receiverId: '1',
-        tileIdPlayed: '05',
+        tileIdPlayed: '_2+',
         movesMade: [{ type: 'Advance', from: 'community_1', to: 'p1_seat2' }],
         backupBoard: G.boardState,
         backupCommunity: G.community
@@ -223,10 +223,10 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
       G.community,
       3
     );
-    assert.deepEqual(matches, ['05', '06']);
+    assert.deepEqual(matches, ['_2+', '_3+']);
 
     // Post-movesMade board check: when Organize fills the sole remaining empty seat,
-    // Assist+Organize tiles ('13', '14') classify as Honest because Assist is impossible afterwards
+    // Assist+Organize tiles ('+5^', '+6^') classify as Honest because Assist is impossible afterwards
     const nearFullBoard = structuredClone(G.boardState);
     for (let p = 1; p <= 3; p++) {
       for (let s = 1; s <= 6; s++) {
@@ -235,13 +235,13 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
     }
     const postMatches = getTilesMatchingMoves(
       [{ type: 'Organize', from: 'p1_seat1', to: 'p3_seat6' }],
-      ['12', '13', '14'],
+      ['_5^', '+5^', '+6^'],
       '0',
       nearFullBoard,
       G.community,
       3
     );
-    assert.deepEqual(postMatches, ['12', '13', '14']);
+    assert.deepEqual(postMatches, ['_5^', '+5^', '+6^']);
 
     // Empty-community Remove+Advance reexecute check:
     // 1) With 0 Marks in Community, removing the sole opp Mark cannot legally Advance that same piece in the same turn -> [Remove] is Honest
@@ -261,14 +261,14 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
         numPlayers: 3,
         boardState: emptyCommBoard,
         community: emptyComm,
-        pendingPlay: { reexecuteTileId: '01' }
+        pendingPlay: { reexecuteTileId: '-1+' }
       },
       getBotPersona('1')
     );
     assert.equal(reexecSingle.move, 'reexecuteHonestly');
     assert.equal(reexecSingle.args[0].length, 1);
     assert.equal(validateMoveCombination(reexecSingle.args[0], '1', emptyCommBoard, emptyComm, 3).valid, true);
-    assert.equal(classifyPlay(reexecSingle.args[0], '01', '1', emptyCommBoard, emptyComm, 3), 'Honest');
+    assert.equal(classifyPlay(reexecSingle.args[0], '-1+', '1', emptyCommBoard, emptyComm, 3), 'Honest');
 
     // 2) With a second distinct Community Mark available, exhaustive search constructs [Remove, Advance]
     const twoPieceBoard = structuredClone(emptyCommBoard);
@@ -280,14 +280,14 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
         numPlayers: 3,
         boardState: twoPieceBoard,
         community: twoPieceComm,
-        pendingPlay: { reexecuteTileId: '01' }
+        pendingPlay: { reexecuteTileId: '-1+' }
       },
       getBotPersona('1')
     );
     assert.equal(reexecPair.move, 'reexecuteHonestly');
     assert.equal(reexecPair.args[0].length, 2);
     assert.equal(validateMoveCombination(reexecPair.args[0], '1', twoPieceBoard, twoPieceComm, 3).valid, true);
-    assert.equal(classifyPlay(reexecPair.args[0], '01', '1', twoPieceBoard, twoPieceComm, 3), 'Honest');
+    assert.equal(classifyPlay(reexecPair.args[0], '-1+', '1', twoPieceBoard, twoPieceComm, 3), 'Honest');
   });
 
   it('bot strategy heuristics avoid Mark in Office, avoid unjustified honest Remove, favor fewer-tile receivers, tune receipt/challenge by funding & credibility, and prioritize early Pawn in Bureaucracy', () => {
@@ -306,8 +306,8 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
       numPlayers: 3,
       boardState: officeMarkBoard,
       community: G.community,
-      hand: ['05'],
-      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '05'),
+      hand: ['_2+'],
+      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '_2+'),
       players: {
         '0': { id: '0', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 1, bankCount: 2, funding: 0 },
         '1': { id: '1', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 4, bankCount: 2, funding: 0 },
@@ -336,11 +336,11 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
     // 3) Mover avoids honest Remove without a good reason, but plays it when it triggers a support cascade
     const obsWeakRemove = {
       ...obsBankSpread,
-      hand: ['15', '05'],
-      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '15' && id !== '05')
+      hand: ['-3_', '_2+'],
+      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '-3_' && id !== '_2+')
     };
     const weakRemoveChoice = decideCampaignMove(obsWeakRemove, getBotPersona('2'), () => 0.5);
-    assert.equal(weakRemoveChoice.args[0].tileId, '05');
+    assert.equal(weakRemoveChoice.args[0].tileId, '_2+');
 
     const cascadeBoard = structuredClone(G.boardState);
     cascadeBoard.p2_seat1 = { id: 'm_only', type: 'Mark' };
@@ -379,12 +379,12 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
         '1': { id: '1', credibilityNotchesLost: notchesLost, credibilityRemaining: 3 - notchesLost, handCount: 5, bankCount: facedownBankTiles.length, funding: 0 },
         '2': { id: '2', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 5, bankCount: 2, funding: 0 }
       },
-      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '08'),
+      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '+5+'),
       pendingPlay: {
         step: 'receipt',
         moverId: '0',
         receiverId: '1',
-        tileIdPlayed: '08', // Assist+Advance (funding 5) played dishonestly as single Advance
+        tileIdPlayed: '+5+', // Assist+Advance (funding 5) played dishonestly as single Advance
         movesMade: [{ type: 'Advance', from: 'community_1', to: 'p1_seat2' }],
         backupBoard: beforeBoard,
         backupCommunity: G.community
@@ -393,11 +393,11 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
     const zeroPersona = getBotPersona('0');
     assert.equal(decideReceipt(makeReceiptObs(1, []), zeroPersona, () => 0.5).move, 'acceptTile');
     assert.equal(
-      decideReceipt(makeReceiptObs(1, [{ tileId: '24', faceDown: true }, { tileId: '23', faceDown: true }]), zeroPersona, () => 0.5).move,
+      decideReceipt(makeReceiptObs(1, [{ tileId: '+9-', faceDown: true }, { tileId: '+8-', faceDown: true }]), zeroPersona, () => 0.5).move,
       'rejectTile'
     );
     assert.equal(decideReceipt(makeReceiptObs(2, []), zeroPersona, () => 0.5).move, 'rejectTile');
-    assert.equal(decideReceipt(makeReceiptObs(0, [{ tileId: '20', faceDown: true }]), zeroPersona, () => 0.5).move, 'rejectTile');
+    assert.equal(decideReceipt(makeReceiptObs(0, [{ tileId: '_7-', faceDown: true }]), zeroPersona, () => 0.5).move, 'rejectTile');
 
     // 5) Challenger with plenty of funding or credibility is more likely to challenge
     const makeChallObs = (notchesLost, facedownBankTiles) => ({
@@ -425,7 +425,7 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
     });
     assert.equal(decideChallenge(makeChallObs(1, []), zeroPersona, () => 0.5).move, 'passChallenge');
     assert.equal(
-      decideChallenge(makeChallObs(0, [{ tileId: '24', faceDown: true }, { tileId: '23', faceDown: true }]), zeroPersona, () => 0.5).move,
+      decideChallenge(makeChallObs(0, [{ tileId: '+9-', faceDown: true }, { tileId: '+8-', faceDown: true }]), zeroPersona, () => 0.5).move,
       'challengeTile'
     );
 

@@ -31,7 +31,7 @@ function resolveQuietIsKept(client, receiverId, challengerId) {
 test('Office piece with no rostrum support waits until Quiet is Kept, then lets owner choose Rostrum 1 or 2', () => {
   const client = createCampaignClient((G) => {
     G.nextMoverId = '0';
-    G.players['0'].hand = ['19', '02']; // '19' is Withdraw
+    G.players['0'].hand = ['_6-', '-2+']; // '_6-' is Withdraw
     G.boardState.p1_office = { id: 'p1_pawn', type: PIECE_TYPES.PAWN };
     G.boardState.p1_rostrum1 = { id: 'p1_heel1', type: PIECE_TYPES.HEEL };
     G.boardState.p1_rostrum2 = null;
@@ -44,7 +44,7 @@ test('Office piece with no rostrum support waits until Quiet is Kept, then lets 
   // Player 0 withdraws Rostrum 1 -> Seat 2, leaving Office unsupported
   client.updatePlayerID('0');
   client.moves.submitTurnMovesAndTile({
-    tileId: '19',
+    tileId: '_6-',
     receiverId: '1',
     moves: [{ type: 'Withdraw', from: 'p1_rostrum1', to: 'p1_seat2' }]
   });
@@ -77,7 +77,7 @@ test('Office piece with no rostrum support waits until Quiet is Kept, then lets 
 test('Cascading drop after Witch Hunt: Office -> unsupported Rostrum 1 -> owner chooses Seat 1, 2, or 3', () => {
   const client = createCampaignClient((G) => {
     G.nextMoverId = '0';
-    G.players['0'].hand = ['19', '02']; // '19' is honest Withdraw
+    G.players['0'].hand = ['_6-', '-2+']; // '_6-' is honest Withdraw
     G.boardState.p1_office = { id: 'p1_pawn', type: PIECE_TYPES.PAWN };
     G.boardState.p1_rostrum1 = null;
     G.boardState.p1_rostrum2 = { id: 'p1_heel2', type: PIECE_TYPES.HEEL };
@@ -91,7 +91,7 @@ test('Cascading drop after Witch Hunt: Office -> unsupported Rostrum 1 -> owner 
 
   client.updatePlayerID('0');
   client.moves.submitTurnMovesAndTile({
-    tileId: '19',
+    tileId: '_6-',
     receiverId: '1',
     moves: [{ type: 'Withdraw', from: 'p1_rostrum2', to: 'p1_seat4' }]
   });
@@ -122,7 +122,7 @@ test('Cascading drop after Witch Hunt: Office -> unsupported Rostrum 1 -> owner 
 test('Opponent owns unsupported Rostrum piece and chooses seat after Quiet is Kept', () => {
   const client = createCampaignClient((G) => {
     G.nextMoverId = '0';
-    G.players['0'].hand = ['15', '02']; // '15' is Remove
+    G.players['0'].hand = ['-3_', '-2+']; // '-3_' is Remove
     G.boardState.p2_rostrum1 = { id: 'p2_heel', type: PIECE_TYPES.HEEL };
     G.boardState.p2_seat1 = { id: 'p2_m1', type: PIECE_TYPES.MARK };
     G.boardState.p2_seat2 = null;
@@ -132,7 +132,7 @@ test('Opponent owns unsupported Rostrum piece and chooses seat after Quiet is Ke
   // Player 0 Removes Player 1's last supporting seat Mark
   client.updatePlayerID('0');
   client.moves.submitTurnMovesAndTile({
-    tileId: '15',
+    tileId: '-3_',
     receiverId: '2',
     moves: [{ type: 'Remove', from: 'p2_seat1', to: 'community' }]
   });
@@ -163,7 +163,7 @@ test('Opponent owns unsupported Rostrum piece and chooses seat after Quiet is Ke
 test('AI prefers supported Rostrum over unsupported Rostrum when dropping from Office', () => {
   const client = createCampaignClient((G) => {
     G.nextMoverId = '0';
-    G.players['0'].hand = ['19', '02'];
+    G.players['0'].hand = ['_6-', '-2+'];
     G.boardState.p1_office = { id: 'p1_pawn', type: PIECE_TYPES.PAWN };
     G.boardState.p1_rostrum1 = null;
     G.boardState.p1_rostrum2 = { id: 'p1_heel2', type: PIECE_TYPES.HEEL };
@@ -177,7 +177,7 @@ test('AI prefers supported Rostrum over unsupported Rostrum when dropping from O
 
   client.updatePlayerID('0');
   client.moves.submitTurnMovesAndTile({
-    tileId: '19',
+    tileId: '_6-',
     receiverId: '1',
     moves: [{ type: 'Withdraw', from: 'p1_rostrum2', to: 'p1_seat5' }]
   });

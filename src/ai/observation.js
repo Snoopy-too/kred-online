@@ -2,7 +2,7 @@ import { TILES } from '../domain/types.js';
 import { getPendingPlayActivePlayer } from '../domain/board.js';
 
 export const STANDARD_TILE_IDS = Object.freeze(
-  Object.keys(TILES).filter((id) => id !== 'BLANK').sort()
+  Object.keys(TILES).filter((id) => id !== '___').sort()
 );
 
 /**
@@ -29,7 +29,7 @@ export function updateBotMemory(memory, G, ctx, botId, persona = null, rng = Mat
   const recall = persona?.memoryRecall ?? 0.8;
 
   const remember = (eventKey, targetMap, tileId, ownerId) => {
-    if (!tileId || tileId === 'HIDDEN' || tileId === 'BLANK') return;
+    if (!tileId || tileId === 'HIDDEN' || tileId === '___') return;
     if (ownerId === undefined || ownerId === null) return;
     if (memory.seenEvents.has(eventKey)) return;
     memory.seenEvents.add(eventKey);
@@ -120,7 +120,7 @@ export function updateBotMemory(memory, G, ctx, botId, persona = null, rng = Mat
 }
 
 /**
- * Computes tile IDs from the 24 standard tiles ('01'..'24') not visible
+ * Computes tile IDs from the 24 standard tiles ('-1+'..'+9-') not visible
  * in botId's own hand, botId's own bank, any player's face-up bank tiles,
  * or remembered face-down banked tiles from the current campaign.
  */

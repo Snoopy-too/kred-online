@@ -7,6 +7,15 @@ import { applyChallengerBureaucracyAction } from '../bureaucracy.js';
 import { applyVictoryCheck, resolvePlayToBank, findNextPlayerWithTiles, finishPendingPlayOrReward } from './campaignResolution.js';
 import { queuePendingSupport, handleResolveSupportDrop } from '../supportRule.js';
 import { appendGameLog, recordPlayerStat, formatTurnMovesLog } from '../gameLog.js';
+import {
+  logKgnPhase,
+  logKgnCampaignPlay,
+  logKgnOutcome,
+  logKgnSubLine,
+  formatKgnPlayer,
+  formatKgnMove,
+  formatKgnMoves
+} from '../kgn.js';
 
 export { finishPendingPlayOrReward };
 
@@ -16,10 +25,11 @@ export function createCampaignPhase() {
       if (!G || !G.players) return;
       G.lastOutcomeNotice = null;
       appendGameLog(G, 'CAMPAIGN', 'phase');
+      logKgnPhase(G, 'campaign');
       if (G.nextMoverId === undefined || G.nextMoverId === null) {
         let startP = '0';
         Object.keys(G.players).forEach(pId => {
-          if (G.players[pId].hand && G.players[pId].hand.includes('03')) startP = pId;
+          if (G.players[pId].hand && G.players[pId].hand.includes('^0+')) startP = pId;
         });
         G.nextMoverId = startP;
       }
@@ -34,7 +44,7 @@ export function createCampaignPhase() {
           }
           let startP = '0';
           Object.keys(G.players).forEach(pId => {
-            if (G.players[pId].hand && G.players[pId].hand.includes('03')) startP = pId;
+            if (G.players[pId].hand && G.players[pId].hand.includes('^0+')) startP = pId;
           });
           return findNextPlayerWithTiles(G, startP);
         },
@@ -137,6 +147,7 @@ export function createCampaignPhase() {
         const movesLog = formatTurnMovesLog(moverId, moveActions);
         if (movesLog) appendGameLog(G, movesLog, 'info');
         appendGameLog(G, `Player ${moverId} played a tile to Player ${receiverId}.`, 'play');
+        logKgnCampaignPlay(G, moverId, receiverId, moveActions);
 
         if (G.players[receiverId].credibilityNotchesLost >= 3) {
           if (getOrderedChallengers(G).length === 0) {
@@ -209,6 +220,7 @@ export function createCampaignPhase() {
           };
           recordPlayerStat(G, receiverId, 'whistlesBlown');
           appendGameLog(G, `Whistle Blown! Player ${receiverId} exposed Player ${moverId}.`, 'alert');
+          logKgnOutcome(G, 'B', { tileId: tileIdPlayed });
         } else {
           G.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
           G.pendingPlay = null;
@@ -279,6 +291,7 @@ export function createCampaignPhase() {
             text: `Challenger Player ${challengerId} exposed Player ${moverId}'s dishonest play! Player ${moverId} lost 1 credibility notch and board moves were reset.`
           };
           appendGameLog(G, `Smoking Gun! Player ${challengerId} exposed Player ${moverId}.`, 'alert');
+          logKgnOutcome(G, 'G', { challengerId, tileId: tileIdPlayed });
         } else {
           if (moverStartCredNotches < 3 && G.players[moverId].credibilityNotchesLost > 0) {
             G.players[moverId].credibilityNotchesLost--;
@@ -299,6 +312,7 @@ export function createCampaignPhase() {
             text: `Player ${challengerId} challenged Player ${moverId}, but the play with Tile ${tileIdPlayed} was HONEST! Player ${challengerId} lost 1 credibility notch.`
           };
           appendGameLog(G, `Witch Hunt! Player ${challengerId} challenged an honest play.`, 'warn');
+          logKgnOutcome(G, 'W', { challengerId, tileId: tileIdPlayed });
 
           if (!queuePendingSupport(G, { phase: 'campaign', afterResolve: 'victoryCheck', tileId: tileIdPlayed })) {
             applyVictoryCheck(G, tileIdPlayed);
@@ -350,6 +364,7 @@ export function createCampaignPhase() {
         moveActions.forEach(m => applyMoveToState(m, G.boardState, G.community));
         const reexecLog = formatTurnMovesLog(moverId, moveActions);
         appendGameLog(G, reexecLog || `Player ${moverId} re-executed honestly.`, 'info');
+        logKgnSubLine(G, `Re: ${formatKgnMoves(moveActions)}`);
 
         if (G.players[moverId].pendingPenaltyWithdraw) {
           G.pendingPlay.step = 'penaltyWithdraw';
@@ -377,6 +392,7 @@ export function createCampaignPhase() {
         }
 
         G.players[moverId].pendingPenaltyWithdraw = false;
+        logKgnSubLine(G, `PenW(${formatKgnPlayer(moverId)}): ${moveAction ? formatKgnMove(moveAction) : 'Pass'}`);
 
         if (G.pendingPlay.whistleblownByReceiver) {
           G.pendingPlay.step = 'receiverReward';
@@ -395,6 +411,7 @@ export function createCampaignPhase() {
         if (G.players[receiverId].credibilityNotchesLost > 0) {
           G.players[receiverId].credibilityNotchesLost = Math.max(0, G.players[receiverId].credibilityNotchesLost - 2);
         }
+        logKgnSubLine(G, `Rew(${formatKgnPlayer(receiverId)}): +2C`);
         finishPendingPlayOrReward(G);
         events.endTurn();
       },
@@ -420,6 +437,7 @@ export function createCampaignPhase() {
         } else if (isMoveTypePossible(MOVE_TYPES.ADVANCE, receiverId, G.boardState, G.community, G.numPlayers)) {
           return INVALID_MOVE;
         }
+        logKgnSubLine(G, `Rew(${formatKgnPlayer(receiverId)}): FreeA ${moveAction ? formatKgnMove(moveAction) : 'Pass'}`);
 
         if (!queuePendingSupport(G, { phase: 'campaign', afterResolve: 'finishPendingPlayOrReward' })) {
           finishPendingPlayOrReward(G);
@@ -435,6 +453,7 @@ export function createCampaignPhase() {
         if (G.players[pId].credibilityNotchesLost > 0) {
           G.players[pId].credibilityNotchesLost--;
         }
+        logKgnSubLine(G, `Rew(${formatKgnPlayer(pId)}): +1C`);
         const receiverId = G.pendingPlay.receiverId;
         G.pendingPlay = null;
         if (receiverId !== undefined && receiverId !== null) G.nextMoverId = receiverId;
