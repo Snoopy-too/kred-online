@@ -1,7 +1,7 @@
 import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
 import { buildBotObservation } from './observation.js';
-import { getBotPersona } from './personas.js';
+import { pickRandomPersonas } from './personas.js';
 import { decideAction } from './decisions.js';
 
 export function formatBotStatus(obs, persona) {
@@ -87,9 +87,13 @@ export function createSoloController({
   const clients = {};
   const unsubs = [];
 
-  for (const botId of botIds) {
-    personas[botId] = getBotPersona(botId, personaOverrides[botId]);
-  }
+  const randomPersonas = pickRandomPersonas(botIds.length, rng);
+  botIds.forEach((botId, idx) => {
+    const override = personaOverrides[botId];
+    personas[botId] = override && typeof override === 'object'
+      ? { ...randomPersonas[idx], ...override }
+      : randomPersonas[idx];
+  });
 
   const emitStatus = () => {
     if (typeof onStatusChange !== 'function') return;

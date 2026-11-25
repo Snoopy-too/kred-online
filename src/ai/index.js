@@ -1,5 +1,5 @@
 export { STANDARD_TILE_IDS, computeUnseenTileIds, buildBotObservation } from './observation.js';
-export { BOT_PERSONAS, getBotPersona } from './personas.js';
+export { BOT_PERSONAS, getBotPersona, pickRandomPersonas, findPersonaByName } from './personas.js';
 export {
   evaluateDomain,
   evaluateProgressionBonus,

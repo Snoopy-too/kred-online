@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame } from '../src/srcGame.js';
-import { createSoloController, buildBotObservation, getBotPersona, decideAction } from '../src/ai/index.js';
+import { createSoloController, buildBotObservation, getBotPersona, pickRandomPersonas, findPersonaByName, decideAction } from '../src/ai/index.js';
 
 function waitUntil(predicate, timeoutMs = 4000, onTimeoutInfo = null) {
   return new Promise((resolve, reject) => {
@@ -137,5 +137,23 @@ describe('soloController integration with hideOpponentHands', () => {
     await new Promise((r) => setTimeout(r, 60));
     assert.equal(humanClient.getState()._stateID, stateBefore);
     humanClient.stop();
+  });
+
+  it('pickRandomPersonas selects distinct personas and varies across matches', () => {
+    const seenPairs = new Set();
+    for (let seed = 1; seed <= 25; seed++) {
+      let s = seed;
+      const rng = () => {
+        s = (s * 1664525 + 1013904223) >>> 0;
+        return s / 4294967296;
+      };
+      const picked = pickRandomPersonas(4, rng);
+      assert.equal(picked.length, 4);
+      assert.equal(new Set(picked.map((p) => p.id)).size, 4);
+      seenPairs.add(picked.slice(0, 2).map((p) => p.id).join(','));
+    }
+    assert.ok(seenPairs.size > 1, 'Expected random persona selection to vary across games');
+    assert.equal(findPersonaByName('Thorne (Bot)')?.id, '3');
+    assert.equal(findPersonaByName('Mire')?.id, '4');
   });
 });

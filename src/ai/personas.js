@@ -2,6 +2,22 @@
  * AI bot personality profiles for Solo Mode and 3-bot headless simulation.
  */
 export const BOT_PERSONAS = Object.freeze({
+  '0': {
+    id: '0',
+    name: 'Zero',
+    title: 'The Pragmatist',
+    archetype: 'Balanced Strategist',
+    bluffThreshold: 0.58,
+    bribeGenerosity: 1.0,
+    greedWeight: 1.0,
+    integrityWeight: 1.1,
+    challengeThreshold: 52,
+    aggressionWeight: 1.1,
+    draftFundingWeight: 1.0,
+    firstPlayerBonus: 12,
+    paranoiaWeight: 1.0,
+    thinkingDelayMs: [600, 1200]
+  },
   '1': {
     id: '1',
     name: 'Vance',
@@ -33,22 +49,6 @@ export const BOT_PERSONAS = Object.freeze({
     firstPlayerBonus: 14,
     paranoiaWeight: 1.4,
     thinkingDelayMs: [700, 1400]
-  },
-  '0': {
-    id: '0',
-    name: 'Zero',
-    title: 'The Pragmatist',
-    archetype: 'Balanced Strategist',
-    bluffThreshold: 0.58,
-    bribeGenerosity: 1.0,
-    greedWeight: 1.0,
-    integrityWeight: 1.1,
-    challengeThreshold: 52,
-    aggressionWeight: 1.1,
-    draftFundingWeight: 1.0,
-    firstPlayerBonus: 12,
-    paranoiaWeight: 1.0,
-    thinkingDelayMs: [600, 1200]
   },
   '3': {
     id: '3',
@@ -91,4 +91,30 @@ export function getBotPersona(botId, overrides = {}) {
   const base = BOT_PERSONAS[String(botId)] || BOT_PERSONAS['0'];
   if (!overrides || typeof overrides !== 'object') return { ...base };
   return { ...base, ...overrides };
+}
+
+/**
+ * Picks `count` distinct personas at random using Fisher-Yates shuffle.
+ */
+export function pickRandomPersonas(count, rng = Math.random) {
+  const pool = Object.values(BOT_PERSONAS).map((p) => ({ ...p }));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const picked = [];
+  for (let i = 0; i < count; i++) {
+    picked.push({ ...pool[i % pool.length] });
+  }
+  return picked;
+}
+
+/**
+ * Finds a persona by display name (with or without trailing "(Bot)").
+ */
+export function findPersonaByName(name) {
+  if (!name || typeof name !== 'string') return null;
+  const clean = name.replace(/\s*\(Bot\)$/i, '').trim().toLowerCase();
+  const match = Object.values(BOT_PERSONAS).find((p) => p.name.toLowerCase() === clean);
+  return match ? { ...match } : null;
 }

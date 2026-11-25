@@ -55,6 +55,40 @@ function getValidReceivers(obs) {
 }
 
 /**
+ * Returns true when an honest candidate includes Remove without a strong tactical reason
+ * (immediate win, empty community Marks, support cascade, or disrupting a threatening opponent).
+ */
+function isHonestRemoveUnjustified(cand, obs, botId) {
+  const removeMoves = cand.moves.filter((m) => m.type === MOVE_TYPES.REMOVE);
+  if (removeMoves.length === 0) return false;
+  if (checkVictory(cand.afterBoard, botId)) return false;
+  if ((obs.community?.marks || 0) === 0) return false;
+
+  for (const rm of removeMoves) {
+    const match = /^p(\d+)_/.exec(rm.from || '');
+    if (!match) continue;
+    const domPrefix = `p${match[1]}`;
+    const oppId = String(parseInt(match[1], 10) - 1);
+
+    if (evaluateDomain(obs.boardState, oppId) >= 75) return false;
+    if (obs.boardState[`${domPrefix}_office`]) return false;
+
+    let oppSeats = 0;
+    for (let s = 1; s <= 6; s++) {
+      if (obs.boardState[`${domPrefix}_seat${s}`]) oppSeats++;
+    }
+    if (oppSeats >= 5) return false;
+
+    const upperKeys = [`${domPrefix}_rostrum1`, `${domPrefix}_rostrum2`, `${domPrefix}_office`];
+    const upperBefore = upperKeys.filter((k) => obs.boardState[k]).length;
+    const upperAfter = upperKeys.filter((k) => cand.afterBoard[k]).length;
+    if (upperAfter < upperBefore) return false;
+  }
+
+  return true;
+}
+
+/**
  * Chooses (moves, tileId, receiverId) for a Campaign turn.
  */
 export function decideCampaignMove(obs, persona, rng = Math.random) {
@@ -148,11 +182,17 @@ export function decideCampaignMove(obs, persona, rng = Math.random) {
       if (k.includes('_seat') && obs.boardState[k] === null) emptySeatCount++;
     }
 
+    const oppReceivers = validReceivers.filter((id) => id !== botId);
+    const minOppBank = oppReceivers.length > 0
+      ? Math.min(...oppReceivers.map((id) => obs.players[id]?.bankCount || 0))
+      : 0;
+
     let bestChoice = null;
     let bestUtility = -Infinity;
 
     for (const cand of pool) {
       const meta = cand.meta;
+      const unjustifiedRemove = isHonestRemoveUnjustified(cand, obs, botId);
       for (const tileId of hand) {
         const isHonest = meta.honestInHand.has(tileId);
         const funding = TILES[tileId]?.funding || 0;
@@ -168,13 +208,16 @@ export function decideCampaignMove(obs, persona, rng = Math.random) {
           const isSelf = receiverId === botId;
           const recCred = obs.players[receiverId]?.credibilityRemaining || 0;
           const recScore = evaluateDomain(obs.boardState, receiverId);
+          const bankDiff = isSelf ? 0 : (obs.players[receiverId]?.bankCount || 0) - minOppBank;
+          const bankTerm = -bankDiff * 5.5;
           let utility;
 
           if (isHonest) {
             const fundingTerm = isSelf ? funding * 2.2 : -funding * 1.3;
             const targetTerm = isSelf ? 0 : -recScore * 0.15;
             const urgencyTerm = needsEmptySeatSoon ? (emptySeatCount <= 5 ? 24 : 14) : 0;
-            utility = cand.score + fundingTerm + targetTerm + urgencyTerm;
+            const removePenalty = unjustifiedRemove ? (cand.moves.length === 1 ? 18 : 14) : 0;
+            utility = cand.score + fundingTerm + targetTerm + bankTerm + urgencyTerm - removePenalty;
           } else {
             const bluffPenalty = bluffThreshold * 58;
             const credRisk = myNotches >= 3 ? 38 : myNotches === 2 ? 42 : myNotches === 1 ? 18 : 10;
@@ -193,7 +236,7 @@ export function decideCampaignMove(obs, persona, rng = Math.random) {
                 ? funding * 2.0 * bribeGenerosity - weakBribePenalty
                 : -funding * 1.5;
             utility =
-              cand.score * 0.9 + bribeTerm - bluffPenalty - credRisk - plausibilityPenalty -
+              cand.score * 0.9 + bribeTerm + bankTerm - bluffPenalty - credRisk - plausibilityPenalty -
               (isSelf ? 0 : recScore * 0.12);
           }
 

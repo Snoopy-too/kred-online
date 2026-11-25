@@ -12,6 +12,7 @@ import {
   generateLegalMovesForBot,
   getTilesMatchingMoves,
   decideChallenge,
+  decideCampaignMove,
   decideReceipt,
   decideReexecute,
   decideBureaucracyAction
@@ -287,6 +288,169 @@ describe('Solo AI info hiding, card counting, and heuristics', () => {
     assert.equal(reexecPair.args[0].length, 2);
     assert.equal(validateMoveCombination(reexecPair.args[0], '1', twoPieceBoard, twoPieceComm, 3).valid, true);
     assert.equal(classifyPlay(reexecPair.args[0], '01', '1', twoPieceBoard, twoPieceComm, 3), 'Honest');
+  });
+
+  it('bot strategy heuristics avoid Mark in Office, avoid unjustified honest Remove, favor fewer-tile receivers, tune receipt/challenge by funding & credibility, and prioritize early Pawn in Bureaucracy', () => {
+    const base = createKredGame(3, true);
+    const G = base.setup({ ctx: { numPlayers: 3 }, random: { Shuffle: (a) => a } });
+
+    // 1) Mover avoids putting a Mark into the Office when another Advance exists
+    const officeMarkBoard = structuredClone(G.boardState);
+    officeMarkBoard.p1_rostrum1 = { id: 'm_r1', type: 'Mark' };
+    officeMarkBoard.p1_rostrum2 = { id: 'm_r2', type: 'Mark' };
+    officeMarkBoard.p1_office = null;
+    const obsMarkOffice = {
+      botId: '0',
+      phase: 'campaign',
+      currentPlayer: '0',
+      numPlayers: 3,
+      boardState: officeMarkBoard,
+      community: G.community,
+      hand: ['05'],
+      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '05'),
+      players: {
+        '0': { id: '0', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 1, bankCount: 2, funding: 0 },
+        '1': { id: '1', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 4, bankCount: 2, funding: 0 },
+        '2': { id: '2', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 4, bankCount: 2, funding: 0 }
+      }
+    };
+    const markOfficeChoice = decideCampaignMove(obsMarkOffice, getBotPersona('0'), () => 0.5);
+    assert.ok(
+      !markOfficeChoice.args[0].moves.some((m) => m.to === 'p1_office'),
+      `Mover should not advance a Mark into Office, got ${JSON.stringify(markOfficeChoice.args[0].moves)}`
+    );
+
+    // 2) Mover prefers giving tile to receiver with fewer banked tiles
+    const obsBankSpread = {
+      ...obsMarkOffice,
+      boardState: G.boardState,
+      players: {
+        '0': { id: '0', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 4, bankCount: 2, funding: 0 },
+        '1': { id: '1', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 3, bankCount: 4, funding: 0 },
+        '2': { id: '2', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 6, bankCount: 1, funding: 0 }
+      }
+    };
+    const spreadChoice = decideCampaignMove(obsBankSpread, getBotPersona('0'), () => 0.5);
+    assert.equal(spreadChoice.args[0].receiverId, '2');
+
+    // 3) Mover avoids honest Remove without a good reason, but plays it when it triggers a support cascade
+    const obsWeakRemove = {
+      ...obsBankSpread,
+      hand: ['15', '05'],
+      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '15' && id !== '05')
+    };
+    const weakRemoveChoice = decideCampaignMove(obsWeakRemove, getBotPersona('2'), () => 0.5);
+    assert.equal(weakRemoveChoice.args[0].tileId, '05');
+
+    const cascadeBoard = structuredClone(G.boardState);
+    cascadeBoard.p2_seat1 = { id: 'm_only', type: 'Mark' };
+    cascadeBoard.p2_seat2 = null;
+    cascadeBoard.p2_seat3 = null;
+    cascadeBoard.p2_seat4 = { id: 'm_s4', type: 'Mark' };
+    cascadeBoard.p2_seat5 = { id: 'm_s5', type: 'Mark' };
+    cascadeBoard.p2_seat6 = { id: 'm_s6', type: 'Mark' };
+    cascadeBoard.p2_rostrum1 = { id: 'h_sup1', type: 'Heel' };
+    cascadeBoard.p2_rostrum2 = { id: 'h_sup2', type: 'Heel' };
+    cascadeBoard.p2_office = { id: 'pw_sup', type: 'Pawn' };
+    const obsCascadeRemove = {
+      ...obsWeakRemove,
+      boardState: cascadeBoard
+    };
+    const cascadeChoice = decideCampaignMove(obsCascadeRemove, getBotPersona('2'), () => 0.5);
+    assert.ok(
+      cascadeChoice.args[0].moves.some((m) => m.type === 'Remove' && m.from === 'p2_seat1'),
+      `Expected Remove on sole supporting Mark p2_seat1, got ${JSON.stringify(cascadeChoice.args[0])}`
+    );
+
+    // 4) Receiver: low funding -> more likely to accept dishonest move, unless 0 or 2 notches lost
+    const beforeBoard = structuredClone(G.boardState);
+    const afterBoard = structuredClone(G.boardState);
+    afterBoard.p1_seat2 = { id: 'm_adv', type: 'Mark' }; // mover gained +5
+    const makeReceiptObs = (notchesLost, facedownBankTiles) => ({
+      botId: '1',
+      phase: 'campaign',
+      currentPlayer: '1',
+      numPlayers: 3,
+      boardState: afterBoard,
+      community: G.community,
+      facedownBankTiles,
+      players: {
+        '0': { id: '0', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 5, bankCount: 2, funding: 0 },
+        '1': { id: '1', credibilityNotchesLost: notchesLost, credibilityRemaining: 3 - notchesLost, handCount: 5, bankCount: facedownBankTiles.length, funding: 0 },
+        '2': { id: '2', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 5, bankCount: 2, funding: 0 }
+      },
+      unseenTileIds: STANDARD_TILE_IDS.filter((id) => id !== '08'),
+      pendingPlay: {
+        step: 'receipt',
+        moverId: '0',
+        receiverId: '1',
+        tileIdPlayed: '08', // Assist+Advance (funding 5) played dishonestly as single Advance
+        movesMade: [{ type: 'Advance', from: 'community_1', to: 'p1_seat2' }],
+        backupBoard: beforeBoard,
+        backupCommunity: G.community
+      }
+    });
+    const zeroPersona = getBotPersona('0');
+    assert.equal(decideReceipt(makeReceiptObs(1, []), zeroPersona, () => 0.5).move, 'acceptTile');
+    assert.equal(
+      decideReceipt(makeReceiptObs(1, [{ tileId: '24', faceDown: true }, { tileId: '23', faceDown: true }]), zeroPersona, () => 0.5).move,
+      'rejectTile'
+    );
+    assert.equal(decideReceipt(makeReceiptObs(2, []), zeroPersona, () => 0.5).move, 'rejectTile');
+    assert.equal(decideReceipt(makeReceiptObs(0, [{ tileId: '20', faceDown: true }]), zeroPersona, () => 0.5).move, 'rejectTile');
+
+    // 5) Challenger with plenty of funding or credibility is more likely to challenge
+    const makeChallObs = (notchesLost, facedownBankTiles) => ({
+      botId: '2',
+      phase: 'campaign',
+      currentPlayer: '2',
+      numPlayers: 3,
+      boardState: afterBoard,
+      community: G.community,
+      facedownBankTiles,
+      players: {
+        '0': { id: '0', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 5, bankCount: 2, funding: 0 },
+        '1': { id: '1', credibilityNotchesLost: 0, credibilityRemaining: 3, handCount: 5, bankCount: 2, funding: 0 },
+        '2': { id: '2', credibilityNotchesLost: notchesLost, credibilityRemaining: 3 - notchesLost, handCount: 5, bankCount: facedownBankTiles.length, funding: 0 }
+      },
+      unseenTileIds: STANDARD_TILE_IDS,
+      pendingPlay: {
+        step: 'challenge',
+        moverId: '0',
+        receiverId: '1',
+        movesMade: [{ type: 'Advance', from: 'community_1', to: 'p1_seat2' }],
+        backupBoard: beforeBoard,
+        backupCommunity: G.community
+      }
+    });
+    assert.equal(decideChallenge(makeChallObs(1, []), zeroPersona, () => 0.5).move, 'passChallenge');
+    assert.equal(
+      decideChallenge(makeChallObs(0, [{ tileId: '24', faceDown: true }, { tileId: '23', faceDown: true }]), zeroPersona, () => 0.5).move,
+      'challengeTile'
+    );
+
+    // 6) Bureaucracy prioritizes getting a Pawn sooner (even on a Seat when Office is empty)
+    const burBoard = structuredClone(G.boardState);
+    burBoard.p1_seat1 = { id: 'h_s1', type: 'Heel' };
+    burBoard.p1_seat2 = { id: 'm_s2', type: 'Mark' };
+    burBoard.p1_office = null;
+    const obsEarlyPawn = {
+      botId: '0',
+      phase: 'bureaucracy',
+      currentPlayer: '0',
+      numPlayers: 3,
+      boardState: burBoard,
+      community: { marks: 3, heels: 8, pawns: 3 },
+      players: {
+        '0': { id: '0', credibilityNotchesLost: 0, credibilityRemaining: 3, funding: 6 },
+        '1': { id: '1', credibilityNotchesLost: 0, credibilityRemaining: 3, funding: 0 },
+        '2': { id: '2', credibilityNotchesLost: 0, credibilityRemaining: 3, funding: 0 }
+      }
+    };
+    const earlyPawnAction = decideBureaucracyAction(obsEarlyPawn, zeroPersona, () => 0.5);
+    assert.equal(earlyPawnAction.move, 'buyBureaucracyAction');
+    assert.equal(earlyPawnAction.args[0].actionType, 'PROMOTE_SEAT');
+    assert.equal(earlyPawnAction.args[0].targetLoc, 'p1_seat1');
   });
 
   it('completes 100 full 3-bot matches (60 drafted + 40 skipDraft) cleanly with zero invalid moves and strict tile conservation', async () => {

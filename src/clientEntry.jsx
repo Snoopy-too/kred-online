@@ -4,7 +4,6 @@ import { Client } from 'boardgame.io/dist/esm/react.js';
 import { SocketIO } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame } from './srcGame.js';
 import { KredBoard } from './srcBoard.jsx';
-import { getBotPersona } from './ai/personas.js';
 import { TableStagingOverlay } from './components/TableStagingOverlay.jsx';
 import { setModalPortalRoot } from './components/board/AdminModal.jsx';
 import { GameLogger } from '../diagnostics/gameLogger.js';
@@ -149,7 +148,7 @@ function KredGameClient({ config }) {
     [seats]
   );
   const playerNames = useMemo(
-    () => seats.map((s, idx) => (s.name ? s.name.replace(/\s*\(Bot\)$/, '') : getBotPersona(idx).name)),
+    () => seats.map((s, idx) => (s.name ? s.name.replace(/\s*\(Bot\)$/, '') : `Player ${idx + 1}`)),
     [seats]
   );
 

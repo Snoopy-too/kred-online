@@ -144,12 +144,30 @@ export function scoreBureaucracyOption(obs, option, persona, rng = Math.random) 
   let score = delta.total * 1.4 - meta.paidFunding * 0.4;
 
   if (meta.kind.startsWith('PROMOTE_')) {
-    if (meta.toType === PIECE_TYPES.PAWN && meta.kind !== 'PROMOTE_OFFICE') {
-      return -100;
+    const officeOccupied = Boolean(obs.boardState?.[`${domainPrefix}_office`]);
+    if (meta.toType === PIECE_TYPES.PAWN) {
+      if (meta.kind === 'PROMOTE_OFFICE') {
+        score += 45;
+      } else if (!officeOccupied) {
+        // Getting a Pawn sooner is critical since you cannot win without one.
+        if (meta.kind === 'PROMOTE_ROSTRUM') {
+          score += 40;
+        } else {
+          const seatNum = parseInt(String(meta.loc || '').split('_seat')[1], 10);
+          const rostrumAbove = seatNum <= 3 ? `${domainPrefix}_rostrum1` : `${domainPrefix}_rostrum2`;
+          score += obs.boardState?.[rostrumAbove] ? 20 : 34;
+        }
+      } else {
+        // Avoid trapping the sole Pawn below an already-occupied Office.
+        score -= 15;
+      }
+    } else if (meta.kind === 'PROMOTE_OFFICE') {
+      score += 22;
+    } else if (meta.kind === 'PROMOTE_ROSTRUM' && meta.fromType === PIECE_TYPES.MARK) {
+      score += 20;
+    } else if (meta.kind === 'PROMOTE_SEAT' && meta.fromType === PIECE_TYPES.MARK && heelCount < 3) {
+      score += 10;
     }
-    if (meta.kind === 'PROMOTE_OFFICE') score += meta.fromType === PIECE_TYPES.HEEL ? 35 : 22;
-    if (meta.kind === 'PROMOTE_ROSTRUM' && meta.fromType === PIECE_TYPES.MARK) score += 20;
-    if (meta.kind === 'PROMOTE_SEAT' && meta.fromType === PIECE_TYPES.MARK && heelCount < 3) score += 10;
   } else if (meta.kind === 'BASIC_ACTION') {
     if (delta.ownDelta <= 0) return -50;
     score += 10;

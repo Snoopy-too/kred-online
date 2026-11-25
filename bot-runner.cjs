@@ -29418,6 +29418,22 @@ function buildBotObservation(G2, ctx, botId) {
 
 // src/ai/personas.js
 var BOT_PERSONAS = Object.freeze({
+  "0": {
+    id: "0",
+    name: "Zero",
+    title: "The Pragmatist",
+    archetype: "Balanced Strategist",
+    bluffThreshold: 0.58,
+    bribeGenerosity: 1,
+    greedWeight: 1,
+    integrityWeight: 1.1,
+    challengeThreshold: 52,
+    aggressionWeight: 1.1,
+    draftFundingWeight: 1,
+    firstPlayerBonus: 12,
+    paranoiaWeight: 1,
+    thinkingDelayMs: [600, 1200]
+  },
   "1": {
     id: "1",
     name: "Vance",
@@ -29449,22 +29465,6 @@ var BOT_PERSONAS = Object.freeze({
     firstPlayerBonus: 14,
     paranoiaWeight: 1.4,
     thinkingDelayMs: [700, 1400]
-  },
-  "0": {
-    id: "0",
-    name: "Zero",
-    title: "The Pragmatist",
-    archetype: "Balanced Strategist",
-    bluffThreshold: 0.58,
-    bribeGenerosity: 1,
-    greedWeight: 1,
-    integrityWeight: 1.1,
-    challengeThreshold: 52,
-    aggressionWeight: 1.1,
-    draftFundingWeight: 1,
-    firstPlayerBonus: 12,
-    paranoiaWeight: 1,
-    thinkingDelayMs: [600, 1200]
   },
   "3": {
     id: "3",
@@ -29503,6 +29503,24 @@ function getBotPersona(botId, overrides = {}) {
   const base = BOT_PERSONAS[String(botId)] || BOT_PERSONAS["0"];
   if (!overrides || typeof overrides !== "object") return { ...base };
   return { ...base, ...overrides };
+}
+function pickRandomPersonas(count, rng = Math.random) {
+  const pool = Object.values(BOT_PERSONAS).map((p2) => ({ ...p2 }));
+  for (let i2 = pool.length - 1; i2 > 0; i2--) {
+    const j2 = Math.floor(rng() * (i2 + 1));
+    [pool[i2], pool[j2]] = [pool[j2], pool[i2]];
+  }
+  const picked = [];
+  for (let i2 = 0; i2 < count; i2++) {
+    picked.push({ ...pool[i2 % pool.length] });
+  }
+  return picked;
+}
+function findPersonaByName(name) {
+  if (!name || typeof name !== "string") return null;
+  const clean = name.replace(/\s*\(Bot\)$/i, "").trim().toLowerCase();
+  const match = Object.values(BOT_PERSONAS).find((p2) => p2.name.toLowerCase() === clean);
+  return match ? { ...match } : null;
 }
 
 // src/ai/moveGenerator.js
@@ -29860,12 +29878,14 @@ function evaluateProgressionBonus(boardState, playerId) {
   if (occupiedSeats === 6) bonus += 6;
   if (office?.type === PIECE_TYPES.PAWN) {
     bonus += 26;
+  } else if (office?.type === PIECE_TYPES.MARK) {
+    bonus -= 22;
   } else if (pawnInRostrum) {
-    bonus += office === null ? 14 : 4;
+    bonus += office === null ? 16 : -4;
   } else if (pawnInSeat) {
-    bonus += 6;
-  } else if (office) {
-    bonus += office.type === PIECE_TYPES.HEEL ? 16 : 8;
+    bonus += office === null ? 8 : -4;
+  } else if (office?.type === PIECE_TYPES.HEEL) {
+    bonus += 16;
   }
   const hasCommHeel = Object.keys(boardState).some(
     (k2) => k2.startsWith("community_") && boardState[k2]?.type === PIECE_TYPES.HEEL
@@ -30027,12 +30047,28 @@ function scoreBureaucracyOption(obs, option, persona, rng = Math.random) {
   if (checkVictory(afterBoard, botId)) return 1500 + delta.total;
   let score = delta.total * 1.4 - meta.paidFunding * 0.4;
   if (meta.kind.startsWith("PROMOTE_")) {
-    if (meta.toType === PIECE_TYPES.PAWN && meta.kind !== "PROMOTE_OFFICE") {
-      return -100;
+    const officeOccupied = Boolean(obs.boardState?.[`${domainPrefix}_office`]);
+    if (meta.toType === PIECE_TYPES.PAWN) {
+      if (meta.kind === "PROMOTE_OFFICE") {
+        score += 45;
+      } else if (!officeOccupied) {
+        if (meta.kind === "PROMOTE_ROSTRUM") {
+          score += 40;
+        } else {
+          const seatNum = parseInt(String(meta.loc || "").split("_seat")[1], 10);
+          const rostrumAbove = seatNum <= 3 ? `${domainPrefix}_rostrum1` : `${domainPrefix}_rostrum2`;
+          score += obs.boardState?.[rostrumAbove] ? 20 : 34;
+        }
+      } else {
+        score -= 15;
+      }
+    } else if (meta.kind === "PROMOTE_OFFICE") {
+      score += 22;
+    } else if (meta.kind === "PROMOTE_ROSTRUM" && meta.fromType === PIECE_TYPES.MARK) {
+      score += 20;
+    } else if (meta.kind === "PROMOTE_SEAT" && meta.fromType === PIECE_TYPES.MARK && heelCount < 3) {
+      score += 10;
     }
-    if (meta.kind === "PROMOTE_OFFICE") score += meta.fromType === PIECE_TYPES.HEEL ? 35 : 22;
-    if (meta.kind === "PROMOTE_ROSTRUM" && meta.fromType === PIECE_TYPES.MARK) score += 20;
-    if (meta.kind === "PROMOTE_SEAT" && meta.fromType === PIECE_TYPES.MARK && heelCount < 3) score += 10;
   } else if (meta.kind === "BASIC_ACTION") {
     if (delta.ownDelta <= 0) return -50;
     score += 10;
@@ -30066,6 +30102,12 @@ function decideBureaucracyAction(obs, persona, rng = Math.random) {
 }
 
 // src/ai/pendingDecisions.js
+function getOwnBankedFunding(obs) {
+  if (Array.isArray(obs.facedownBankTiles) && obs.facedownBankTiles.length > 0) {
+    return obs.facedownBankTiles.reduce((sum, t2) => sum + (TILES[t2.tileId]?.funding || 0), 0);
+  }
+  return obs.players?.[obs.botId]?.funding || 0;
+}
 function decideReceipt(obs, persona, rng = Math.random) {
   try {
     const pp = obs.pendingPlay;
@@ -30089,7 +30131,10 @@ function decideReceipt(obs, persona, rng = Math.random) {
     if (checkVictory(obs.boardState, pp.moverId)) {
       return { move: "rejectTile", args: [] };
     }
+    const prices = BUREAUCRACY_PRICES[obs.numPlayers] || BUREAUCRACY_PRICES[3];
     const funding = TILES[pp.tileIdPlayed]?.funding || 0;
+    const ownFunding = getOwnBankedFunding(obs);
+    const fundingNeed = Math.max(0, 1 - ownFunding / prices.PROMOTE_OFFICE);
     const notchesLost = obs.players[obs.botId]?.credibilityNotchesLost || 0;
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
     const unseenMatches = getTilesMatchingMoves(
@@ -30100,9 +30145,13 @@ function decideReceipt(obs, persona, rng = Math.random) {
       commBefore,
       obs.numPlayers
     ).length;
+    const greed = persona?.greedWeight ?? 1;
+    const integrity = persona?.integrityWeight ?? 1;
     const obviousLieRisk = unseenMatches === 0 ? 25 : moverGain >= 15 ? 12 : 4;
-    const keepBribeScore = funding * 3.5 * (persona?.greedWeight ?? 1) - obviousLieRisk * (persona?.paranoiaWeight ?? 1);
-    const whistleBlowScore = notchesLost * 18 * (persona?.integrityWeight ?? 1) + Math.max(0, moverGain) * 1.2 + (notchesLost === 0 ? 15 : 0);
+    const lowFundingBonus = funding > 0 ? fundingNeed * (10 + funding * 1.5) * greed : 0;
+    const keepBribeScore = funding * 3.5 * greed + lowFundingBonus - obviousLieRisk * (persona?.paranoiaWeight ?? 1);
+    const credWhistleTerm = notchesLost >= 2 ? 48 * integrity + 10 : notchesLost === 0 ? 26 * integrity : 10 * integrity;
+    const whistleBlowScore = credWhistleTerm + Math.max(0, moverGain) * 1.2;
     return whistleBlowScore >= keepBribeScore + (rng() - 0.5) * 4 ? { move: "rejectTile", args: [] } : { move: "acceptTile", args: [] };
   } catch {
     return { move: "acceptTile", args: [] };
@@ -30126,6 +30175,8 @@ function decideChallenge(obs, persona, rng = Math.random) {
     if (remainingCopies === 0) {
       return { move: "challengeTile", args: [] };
     }
+    const prices = BUREAUCRACY_PRICES[obs.numPlayers] || BUREAUCRACY_PRICES[3];
+    const ownFunding = getOwnBankedFunding(obs);
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
     const moverAfter = evaluateDomain(obs.boardState, pp.moverId);
     const moverWinning = checkVictory(obs.boardState, pp.moverId);
@@ -30133,9 +30184,10 @@ function decideChallenge(obs, persona, rng = Math.random) {
     const rarityPts = Math.min(52, 1 / remainingCopies * 55);
     const gainPts = Math.max(0, moverGain) * 1;
     const winPts = moverWinning ? 90 : moverAfter >= 75 ? 20 : 0;
-    const credPenalty = notchesLost >= 2 ? -45 : notchesLost === 1 ? -14 : 0;
+    const credPts = notchesLost === 0 ? 8 : notchesLost === 1 ? -8 : -42;
+    const fundingPts = Math.min(14, ownFunding / prices.PROMOTE_OFFICE * 14);
     const bribeSuspicion = (obs.players[pp.receiverId]?.credibilityRemaining || 0) === 0 ? 10 : 0;
-    const suspicion = rarityPts + gainPts + winPts + credPenalty + bribeSuspicion + (rng() - 0.5) * 14;
+    const suspicion = rarityPts + gainPts + winPts + credPts + fundingPts + bribeSuspicion + (rng() - 0.5) * 14;
     const rawThresh = persona?.challengeThreshold ?? 52;
     const threshold = rawThresh <= 1 ? rawThresh * 100 : rawThresh;
     return suspicion >= threshold ? { move: "challengeTile", args: [] } : { move: "passChallenge", args: [] };
@@ -30390,6 +30442,30 @@ function decideDraftPick(obs, persona, rng = Math.random) {
 function getValidReceivers2(obs) {
   return getValidReceivers(obs, obs.botId);
 }
+function isHonestRemoveUnjustified(cand, obs, botId) {
+  const removeMoves = cand.moves.filter((m) => m.type === MOVE_TYPES.REMOVE);
+  if (removeMoves.length === 0) return false;
+  if (checkVictory(cand.afterBoard, botId)) return false;
+  if ((obs.community?.marks || 0) === 0) return false;
+  for (const rm of removeMoves) {
+    const match = /^p(\d+)_/.exec(rm.from || "");
+    if (!match) continue;
+    const domPrefix = `p${match[1]}`;
+    const oppId = String(parseInt(match[1], 10) - 1);
+    if (evaluateDomain(obs.boardState, oppId) >= 75) return false;
+    if (obs.boardState[`${domPrefix}_office`]) return false;
+    let oppSeats = 0;
+    for (let s2 = 1; s2 <= 6; s2++) {
+      if (obs.boardState[`${domPrefix}_seat${s2}`]) oppSeats++;
+    }
+    if (oppSeats >= 5) return false;
+    const upperKeys = [`${domPrefix}_rostrum1`, `${domPrefix}_rostrum2`, `${domPrefix}_office`];
+    const upperBefore = upperKeys.filter((k2) => obs.boardState[k2]).length;
+    const upperAfter = upperKeys.filter((k2) => cand.afterBoard[k2]).length;
+    if (upperAfter < upperBefore) return false;
+  }
+  return true;
+}
 function decideCampaignMove(obs, persona, rng = Math.random) {
   const hand = obs.hand || [];
   const validReceivers = getValidReceivers2(obs);
@@ -30473,10 +30549,13 @@ function decideCampaignMove(obs, persona, rng = Math.random) {
     for (const k2 of Object.keys(obs.boardState)) {
       if (k2.includes("_seat") && obs.boardState[k2] === null) emptySeatCount++;
     }
+    const oppReceivers = validReceivers.filter((id) => id !== botId);
+    const minOppBank = oppReceivers.length > 0 ? Math.min(...oppReceivers.map((id) => obs.players[id]?.bankCount || 0)) : 0;
     let bestChoice = null;
     let bestUtility = -Infinity;
     for (const cand of pool) {
       const meta = cand.meta;
+      const unjustifiedRemove = isHonestRemoveUnjustified(cand, obs, botId);
       for (const tileId of hand) {
         const isHonest = meta.honestInHand.has(tileId);
         const funding = TILES[tileId]?.funding || 0;
@@ -30486,12 +30565,15 @@ function decideCampaignMove(obs, persona, rng = Math.random) {
           const isSelf = receiverId === botId;
           const recCred = obs.players[receiverId]?.credibilityRemaining || 0;
           const recScore = evaluateDomain(obs.boardState, receiverId);
+          const bankDiff = isSelf ? 0 : (obs.players[receiverId]?.bankCount || 0) - minOppBank;
+          const bankTerm = -bankDiff * 5.5;
           let utility;
           if (isHonest) {
             const fundingTerm = isSelf ? funding * 2.2 : -funding * 1.3;
             const targetTerm = isSelf ? 0 : -recScore * 0.15;
             const urgencyTerm = needsEmptySeatSoon ? emptySeatCount <= 5 ? 24 : 14 : 0;
-            utility = cand.score + fundingTerm + targetTerm + urgencyTerm;
+            const removePenalty = unjustifiedRemove ? cand.moves.length === 1 ? 18 : 14 : 0;
+            utility = cand.score + fundingTerm + targetTerm + bankTerm + urgencyTerm - removePenalty;
           } else {
             const bluffPenalty = bluffThreshold * 58;
             const credRisk = myNotches >= 3 ? 38 : myNotches === 2 ? 42 : myNotches === 1 ? 18 : 10;
@@ -30505,7 +30587,7 @@ function decideCampaignMove(obs, persona, rng = Math.random) {
             }
             const weakBribePenalty = !isSelf && recCred > 0 && funding < 5 ? 26 : 0;
             const bribeTerm = isSelf ? funding * 2 : recCred > 0 ? funding * 2 * bribeGenerosity - weakBribePenalty : -funding * 1.5;
-            utility = cand.score * 0.9 + bribeTerm - bluffPenalty - credRisk - plausibilityPenalty - (isSelf ? 0 : recScore * 0.12);
+            utility = cand.score * 0.9 + bribeTerm + bankTerm - bluffPenalty - credRisk - plausibilityPenalty - (isSelf ? 0 : recScore * 0.12);
           }
           utility += (rng() - 0.5) * 3;
           if (utility > bestUtility) {
@@ -30655,9 +30737,11 @@ function createSoloController({
   const personas = {};
   const clients = {};
   const unsubs = [];
-  for (const botId of botIds) {
-    personas[botId] = getBotPersona(botId, personaOverrides[botId]);
-  }
+  const randomPersonas = pickRandomPersonas(botIds.length, rng);
+  botIds.forEach((botId, idx) => {
+    const override = personaOverrides[botId];
+    personas[botId] = override && typeof override === "object" ? { ...randomPersonas[idx], ...override } : randomPersonas[idx];
+  });
   const emitStatus = () => {
     if (typeof onStatusChange !== "function") return;
     const first = activeStatuses.values().next().value || null;
@@ -30794,9 +30878,13 @@ function createKredBotManager({ db, port = 4002 }) {
     }
     const players = Object.values(metadata.players || {});
     const creds = {};
+    const personaOverrides = {};
     for (const p2 of players) {
       if (isBotMeta(p2) && p2.credentials) {
-        creds[String(p2.id)] = p2.credentials;
+        const seatId = String(p2.id);
+        creds[seatId] = p2.credentials;
+        const matched = p2.data?.personaId !== void 0 ? getBotPersona(p2.data.personaId) : findPersonaByName(p2.name);
+        if (matched) personaOverrides[seatId] = matched;
       }
     }
     const botIds = Object.keys(creds);
@@ -30813,6 +30901,7 @@ function createKredBotManager({ db, port = 4002 }) {
       numPlayers,
       botIds,
       credentialsByBot: creds,
+      personaOverrides,
       multiplayer: SocketIO({ server: baseUrl, socketOpts: { forceNew: true } }),
       onBotError: (err, id) => console.error(`[KRED-BOTS] Match ${matchID} bot ${id} error:`, err?.message || err)
     });
@@ -30843,22 +30932,23 @@ function createKredBotManager({ db, port = 4002 }) {
       throw new Error("KRED match not found");
     }
     const players = Object.values(metadata.players || {});
-    for (const seat of players) {
-      if (seat && !seat.name) {
-        const seatId = String(seat.id);
-        const persona = getBotPersona(seatId);
-        try {
-          await fetch(`${baseUrl}/games/kred/${matchID}/join`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              playerID: seatId,
-              playerName: `${persona.name} (Bot)`,
-              data: { isBot: true }
-            })
-          });
-        } catch {
-        }
+    const openSeats = players.filter((seat) => seat && !seat.name);
+    const chosenPersonas = pickRandomPersonas(openSeats.length);
+    for (let i2 = 0; i2 < openSeats.length; i2++) {
+      const seat = openSeats[i2];
+      const seatId = String(seat.id);
+      const persona = chosenPersonas[i2];
+      try {
+        await fetch(`${baseUrl}/games/kred/${matchID}/join`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playerID: seatId,
+            playerName: `${persona.name} (Bot)`,
+            data: { isBot: true, personaId: persona.id }
+          })
+        });
+      } catch {
       }
     }
     return attachMatchBots(matchID);

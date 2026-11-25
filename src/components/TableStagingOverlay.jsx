@@ -1,5 +1,4 @@
 import React from 'react';
-import { getBotPersona } from '../ai/personas.js';
 
 export function TableStagingOverlay({
   seats,
@@ -38,9 +37,7 @@ export function TableStagingOverlay({
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-          {seats.map((seat) => {
-            const persona = getBotPersona(seat.id);
-            return (
+          {seats.map((seat) => (
               <div
                 key={seat.id}
                 style={{
@@ -56,7 +53,7 @@ export function TableStagingOverlay({
                 <span style={{ fontWeight: 600, fontSize: '14px' }}>
                   {seat.occupied
                     ? `${seat.name}${seat.isSelf ? ' (You)' : ''}`
-                    : `${persona.name}`}
+                    : `Seat ${Number(seat.id) + 1} (Random Bot)`}
                 </span>
                 <span style={{
                   fontSize: '11px',
@@ -69,8 +66,7 @@ export function TableStagingOverlay({
                   {seat.occupied ? (seat.isBot ? 'AI Bot' : 'Player') : 'AI Bot · Open Seat'}
                 </span>
               </div>
-            );
-          })}
+          ))}
         </div>
 
         {isHost ? (

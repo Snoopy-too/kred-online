@@ -1,7 +1,7 @@
 import { SocketIO } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame } from '../srcGame.js';
 import { createSoloController } from './soloController.js';
-import { getBotPersona } from './personas.js';
+import { getBotPersona, pickRandomPersonas, findPersonaByName } from './personas.js';
 
 function isBotMeta(p) {
   return Boolean(p && ((p.data && p.data.isBot) || (p.name && p.name.endsWith('(Bot)'))));
@@ -31,9 +31,15 @@ export function createKredBotManager({ db, port = 4002 }) {
 
     const players = Object.values(metadata.players || {});
     const creds = {};
+    const personaOverrides = {};
     for (const p of players) {
       if (isBotMeta(p) && p.credentials) {
-        creds[String(p.id)] = p.credentials;
+        const seatId = String(p.id);
+        creds[seatId] = p.credentials;
+        const matched = p.data?.personaId !== undefined
+          ? getBotPersona(p.data.personaId)
+          : findPersonaByName(p.name);
+        if (matched) personaOverrides[seatId] = matched;
       }
     }
     const botIds = Object.keys(creds);
@@ -52,6 +58,7 @@ export function createKredBotManager({ db, port = 4002 }) {
       numPlayers,
       botIds,
       credentialsByBot: creds,
+      personaOverrides,
       multiplayer: SocketIO({ server: baseUrl, socketOpts: { forceNew: true } }),
       onBotError: (err, id) => console.error(`[KRED-BOTS] Match ${matchID} bot ${id} error:`, err?.message || err)
     });
@@ -85,23 +92,24 @@ export function createKredBotManager({ db, port = 4002 }) {
     }
 
     const players = Object.values(metadata.players || {});
-    for (const seat of players) {
-      if (seat && !seat.name) {
-        const seatId = String(seat.id);
-        const persona = getBotPersona(seatId);
-        try {
-          await fetch(`${baseUrl}/games/kred/${matchID}/join`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              playerID: seatId,
-              playerName: `${persona.name} (Bot)`,
-              data: { isBot: true }
-            })
-          });
-        } catch {
-          // Seat may have been taken concurrently by a human
-        }
+    const openSeats = players.filter((seat) => seat && !seat.name);
+    const chosenPersonas = pickRandomPersonas(openSeats.length);
+    for (let i = 0; i < openSeats.length; i++) {
+      const seat = openSeats[i];
+      const seatId = String(seat.id);
+      const persona = chosenPersonas[i];
+      try {
+        await fetch(`${baseUrl}/games/kred/${matchID}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerID: seatId,
+            playerName: `${persona.name} (Bot)`,
+            data: { isBot: true, personaId: persona.id }
+          })
+        });
+      } catch {
+        // Seat may have been taken concurrently by a human
       }
     }
 

@@ -1,4 +1,4 @@
-import { MOVE_TYPES, TILES } from '../domain/types.js';
+import { BUREAUCRACY_PRICES, MOVE_TYPES, TILES } from '../domain/types.js';
 import { checkVictory, enforceSupportRule } from '../domain/board.js';
 import {
   classifyPlay,
@@ -16,6 +16,13 @@ import {
   enumerateAffordableBureaucracyOptions,
   scoreBureaucracyOption
 } from './bureaucracyDecisions.js';
+
+function getOwnBankedFunding(obs) {
+  if (Array.isArray(obs.facedownBankTiles) && obs.facedownBankTiles.length > 0) {
+    return obs.facedownBankTiles.reduce((sum, t) => sum + (TILES[t.tileId]?.funding || 0), 0);
+  }
+  return obs.players?.[obs.botId]?.funding || 0;
+}
 
 /**
  * Decides whether the receiving bot accepts or rejects a pending tile.
@@ -42,21 +49,34 @@ export function decideReceipt(obs, persona, rng = Math.random) {
       return { move: 'rejectTile', args: [] };
     }
 
+    const prices = BUREAUCRACY_PRICES[obs.numPlayers] || BUREAUCRACY_PRICES[3];
     const funding = TILES[pp.tileIdPlayed]?.funding || 0;
+    const ownFunding = getOwnBankedFunding(obs);
+    const fundingNeed = Math.max(0, 1 - ownFunding / prices.PROMOTE_OFFICE);
     const notchesLost = obs.players[obs.botId]?.credibilityNotchesLost || 0;
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
     const unseenMatches = getTilesMatchingMoves(
       pp.movesMade, obs.unseenTileIds, pp.moverId, boardBefore, commBefore, obs.numPlayers
     ).length;
 
+    const greed = persona?.greedWeight ?? 1.0;
+    const integrity = persona?.integrityWeight ?? 1.0;
     const obviousLieRisk = unseenMatches === 0 ? 25 : moverGain >= 15 ? 12 : 4;
+    const lowFundingBonus = funding > 0 ? fundingNeed * (10 + funding * 1.5) * greed : 0;
     const keepBribeScore =
-      funding * 3.5 * (persona?.greedWeight ?? 1.0) -
+      funding * 3.5 * greed +
+      lowFundingBonus -
       obviousLieRisk * (persona?.paranoiaWeight ?? 1.0);
-    const whistleBlowScore =
-      notchesLost * 18 * (persona?.integrityWeight ?? 1.0) +
-      Math.max(0, moverGain) * 1.2 +
-      (notchesLost === 0 ? 15 : 0);
+
+    // At 0 notches lost (Free Advance reward) or 2 notches lost (very low credibility: +2 restore & 0-cred danger),
+    // receivers are significantly more likely to blow the whistle than at 1 notch lost.
+    const credWhistleTerm =
+      notchesLost >= 2
+        ? 48 * integrity + 10
+        : notchesLost === 0
+          ? 26 * integrity
+          : 10 * integrity;
+    const whistleBlowScore = credWhistleTerm + Math.max(0, moverGain) * 1.2;
 
     return whistleBlowScore >= keepBribeScore + (rng() - 0.5) * 4
       ? { move: 'rejectTile', args: [] }
@@ -86,6 +106,8 @@ export function decideChallenge(obs, persona, rng = Math.random) {
       return { move: 'challengeTile', args: [] };
     }
 
+    const prices = BUREAUCRACY_PRICES[obs.numPlayers] || BUREAUCRACY_PRICES[3];
+    const ownFunding = getOwnBankedFunding(obs);
     const moverGain = evaluateDomain(obs.boardState, pp.moverId) - evaluateDomain(boardBefore, pp.moverId);
     const moverAfter = evaluateDomain(obs.boardState, pp.moverId);
     const moverWinning = checkVictory(obs.boardState, pp.moverId);
@@ -94,9 +116,11 @@ export function decideChallenge(obs, persona, rng = Math.random) {
     const rarityPts = Math.min(52, (1 / remainingCopies) * 55);
     const gainPts = Math.max(0, moverGain) * 1.0;
     const winPts = moverWinning ? 90 : moverAfter >= 75 ? 20 : 0;
-    const credPenalty = notchesLost >= 2 ? -45 : notchesLost === 1 ? -14 : 0;
+    const credPts = notchesLost === 0 ? 8 : notchesLost === 1 ? -8 : -42;
+    const fundingPts = Math.min(14, (ownFunding / prices.PROMOTE_OFFICE) * 14);
     const bribeSuspicion = (obs.players[pp.receiverId]?.credibilityRemaining || 0) === 0 ? 10 : 0;
-    const suspicion = rarityPts + gainPts + winPts + credPenalty + bribeSuspicion + (rng() - 0.5) * 14;
+    const suspicion =
+      rarityPts + gainPts + winPts + credPts + fundingPts + bribeSuspicion + (rng() - 0.5) * 14;
 
     const rawThresh = persona?.challengeThreshold ?? 52;
     const threshold = rawThresh <= 1 ? rawThresh * 100 : rawThresh;

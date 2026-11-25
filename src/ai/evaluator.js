@@ -70,12 +70,15 @@ export function evaluateProgressionBonus(boardState, playerId) {
 
   if (office?.type === PIECE_TYPES.PAWN) {
     bonus += 26;
+  } else if (office?.type === PIECE_TYPES.MARK) {
+    // Avoid putting a Mark in the Office: it blocks the Office and needs two promotions (or Withdraw) to fix.
+    bonus -= 22;
   } else if (pawnInRostrum) {
-    bonus += office === null ? 14 : 4;
+    bonus += office === null ? 16 : -4;
   } else if (pawnInSeat) {
-    bonus += 6;
-  } else if (office) {
-    bonus += office.type === PIECE_TYPES.HEEL ? 16 : 8;
+    bonus += office === null ? 8 : -4;
+  } else if (office?.type === PIECE_TYPES.HEEL) {
+    bonus += 16;
   }
 
   const hasCommHeel = Object.keys(boardState).some(
