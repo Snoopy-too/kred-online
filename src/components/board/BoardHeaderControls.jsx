@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAssetUrl } from '../../utils/assets.js';
 import { getOrderedChallengers } from '../../domain/board.js';
+import { DEFAULT_PERSPECTIVE_OFFSETS, getPerspectiveRotation } from './perspectiveUtils.js';
 import { AdminModal } from './AdminModal.jsx';
 
 const STATUS_ICONS = {
@@ -142,9 +143,11 @@ export function BoardHeaderControls({
   onResetBoardView = null,
   isAdmin = false,
   calibrationMode = false,
-  showDiagnostics = false,
   onToggleCalibration = null,
-  onToggleDiagnostics = null,
+  calibration = null,
+  activeHotspots = null,
+  numPlayers = 3,
+  tilesPerPlayer = 8,
   setShowSaveLoadModal,
   onResetTransientState = null
 }) {
@@ -165,7 +168,6 @@ export function BoardHeaderControls({
   const callbacksRef = React.useRef({});
   callbacksRef.current = {
     onToggleCalibration,
-    onToggleDiagnostics,
     setBoardZoom,
     onResetBoardView,
     setShowSaveLoadModal,
@@ -175,28 +177,67 @@ export function BoardHeaderControls({
 
   const hasZoom = Boolean(setBoardZoom);
   const hasCal = Boolean(onToggleCalibration);
-  const hasDiag = Boolean(onToggleDiagnostics);
   const hasSaveLoad = Boolean(moves && typeof moves.loadSaveState === 'function');
+
+  const formatKredSpotLabel = (locKey) => {
+    if (locKey.startsWith('community_')) return `COM${locKey.replace('community_', '')}`;
+    const [p, typePart = ''] = locKey.split('_');
+    const pNum = p.match(/^p(\d+)$/i)?.[1] || p;
+    const map = { office: 'OF', rostrum1: 'R1', rostrum2: 'R2', dropTile: 'DR', cred: 'CR' };
+    const tLabel = map[typePart] || (typePart.startsWith('seat') ? typePart.replace('seat', 'S') : typePart.startsWith('bank') ? typePart.replace('bank', 'BA') : typePart);
+    return `P${pNum} ${tLabel}`;
+  };
+
+  const buildArrangeConfig = () => {
+    if (!isAdmin || !hasCal || !calibration) return null;
+    const pIdx = parseInt(playerID || 0, 10);
+    const activeOff = calibration.perspectiveOffsets?.[pIdx] || DEFAULT_PERSPECTIVE_OFFSETS[numPlayers]?.[pIdx] || { x: 0, y: 0 };
+    return {
+      active: Boolean(calibrationMode),
+      title: `Arrange Components (${numPlayers}P)`,
+      onToggle: () => callbacksRef.current.onToggleCalibration?.(),
+      spots: activeHotspots || {},
+      selectedKeys: calibration.selectedCalibrateKeys || [],
+      onSelect: calibration.setSelectedCalibrateKeys,
+      formatLabel: formatKredSpotLabel,
+      groups: [
+        ...Array.from({ length: numPlayers }, (_, i) => ({
+          label: `P${i + 1} Bank`,
+          keys: Array.from({ length: tilesPerPlayer }, (_, j) => `p${i + 1}_bank${j + 1}`)
+        })),
+        { label: 'Drop Tiles', keys: Array.from({ length: numPlayers }, (_, i) => `p${i + 1}_dropTile`) },
+        { label: 'Cred Tokens', keys: Array.from({ length: numPlayers }, (_, i) => `p${i + 1}_cred`) }
+      ],
+      toggles: [
+        { label: calibration.showSpotLabels ? '🏷 Hide Labels' : '🏷 Show Labels', onClick: () => calibration.setShowSpotLabels((v) => !v) },
+        { label: calibration.showTileFaces ? '🎴 Tile Art: ON' : '📐 Tile Art: OFF', onClick: () => calibration.setShowTileFaces((v) => !v) }
+      ],
+      onSaveDraft: calibration.handleSaveDraft,
+      onResetDraft: calibration.handleResetDraft,
+      onCopyJson: calibration.handleCopyCoordinates,
+      onImportJson: calibration.handleImportJson,
+      statusMsg: calibration.draftSavedMsg,
+      copied: calibration.copiedJson,
+      onNudge: (dx, dy) => calibration.handleNudgeSelectedSpotsPixels?.(dx, dy, getPerspectiveRotation(numPlayers, playerID) + (activeOff.r || 0)),
+      onRotate: calibration.handleRotateSelectedSpots,
+      onSetAngle: (v) => { calibration.setAngleInput(v); calibration.handleSetExactAngle(v); },
+      onScale: calibration.handleScaleSelectedSpots,
+      onSetScale: (v) => { calibration.setScaleInput(v); calibration.handleSetExactScale(v); },
+      angleInput: calibration.angleInput,
+      scaleInput: calibration.scaleInput,
+      onGroupRotate: calibration.handleRotateSelectedSpotsAroundCenter,
+      view: {
+        label: `Board View (P${pIdx + 1})`,
+        metrics: `X=${activeOff.x}%, Y=${activeOff.y}%, Rot=${activeOff.r ?? 0}°`,
+        onNudge: (dx, dy) => calibration.handleNudgePerspective?.(playerID, dx, dy),
+        onRotate: (deg) => calibration.handleRotatePerspective?.(playerID, deg),
+        onReset: () => calibration.handleResetPerspectiveOffset?.(playerID)
+      }
+    };
+  };
 
   useEffect(() => {
     if (!lobbyToolbar) return;
-    const devTools = isAdmin
-      ? [
-          hasCal && {
-            label: calibrationMode ? 'Exit Calibrate' : 'Calibrate Board',
-            icon: 'bi-crosshair',
-            active: calibrationMode,
-            onClick: () => callbacksRef.current.onToggleCalibration?.()
-          },
-          hasDiag && {
-            label: showDiagnostics ? 'Hide Diagnostics' : 'Diagnostics Log',
-            icon: 'bi-terminal',
-            active: showDiagnostics,
-            onClick: () => callbacksRef.current.onToggleDiagnostics?.()
-          }
-        ].filter(Boolean)
-      : [];
-
     lobbyToolbar.configure({
       logo: {
         src: getAssetUrl('images/logo.png'),
@@ -241,10 +282,21 @@ export function BoardHeaderControls({
             }
           }
         : null,
-      devTools,
+      arrange: buildArrangeConfig(),
+      devTools: [],
       forceDevTools: isAdmin
     });
-  }, [lobbyToolbar, isAdmin, calibrationMode, showDiagnostics, hasZoom, hasCal, hasDiag, hasSaveLoad]);
+  }, [lobbyToolbar, isAdmin, calibrationMode, hasZoom, hasCal, hasSaveLoad]);
+
+  useEffect(() => {
+    if (!lobbyToolbar || typeof lobbyToolbar.updateArrange !== 'function' || !calibrationMode) return;
+    lobbyToolbar.updateArrange(buildArrangeConfig());
+  }, [
+    lobbyToolbar, calibrationMode, numPlayers, playerID,
+    calibration?.selectedCalibrateKeys, calibration?.calibratedPositions, calibration?.perspectiveOffsets,
+    calibration?.showSpotLabels, calibration?.showTileFaces, calibration?.draftSavedMsg,
+    calibration?.copiedJson, calibration?.angleInput, calibration?.scaleInput
+  ]);
 
   useEffect(() => {
     if (lobbyToolbar && typeof lobbyToolbar.updateZoom === 'function') {
@@ -340,7 +392,7 @@ export function BoardHeaderControls({
                       style={{ ...menuItemStyle, color: calibrationMode ? '#f87171' : 'var(--text-main)' }}
                       onClick={() => { setShowAdminMenu(false); onToggleCalibration(); }}
                     >
-                      <span>{calibrationMode ? 'Exit Calibrate' : 'Calibrate Board'}</span>
+                      <span>{calibrationMode ? 'Exit Arrange' : 'Arrange Components'}</span>
                       <i className="bi bi-crosshair" />
                     </button>
                   )}
@@ -352,16 +404,6 @@ export function BoardHeaderControls({
                     <span>Save / Load State</span>
                     <i className="bi bi-floppy" />
                   </button>
-                  {onToggleDiagnostics && (
-                    <button
-                      type="button"
-                      style={menuItemStyle}
-                      onClick={() => { setShowAdminMenu(false); onToggleDiagnostics(); }}
-                    >
-                      <span>{showDiagnostics ? 'Hide Diagnostics' : 'Diagnostics Log'}</span>
-                      <i className="bi bi-terminal" />
-                    </button>
-                  )}
                 </div>
               </>
             )}

@@ -6,8 +6,6 @@ import { createKredGame } from './srcGame.js';
 import { KredBoard } from './srcBoard.jsx';
 import { TableStagingOverlay } from './components/TableStagingOverlay.jsx';
 import { setModalPortalRoot } from './components/board/AdminModal.jsx';
-import { GameLogger } from '../diagnostics/gameLogger.js';
-import { DiagnosticsPanel } from '../diagnostics/DiagnosticsPanel.jsx';
 import './styles/base.css';
 import './styles/board.css';
 import './styles/controls.css';
@@ -43,12 +41,6 @@ function GameBoardWrapper(props) {
   const isOver = Boolean(props.ctx?.gameover || props.G?.winner);
 
   useEffect(() => {
-    if (props.gameLogger && props.G && props.ctx) {
-      props.gameLogger.handleStateChange({ G: props.G, ctx: props.ctx });
-    }
-  }, [props.gameLogger, props.G, props.ctx]);
-
-  useEffect(() => {
     if (isOver && !notifiedRef.current) {
       notifiedRef.current = true;
       if (typeof window.setMatchGameOver === 'function') {
@@ -69,7 +61,6 @@ function KredGameClient({ config }) {
 
   const [isAdmin, setIsAdmin] = useState(() => isUserAdmin(window.tfdNavbar?.currentUser));
   const [calibrationMode, setCalibrationMode] = useState(false);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const [seats, setSeats] = useState([]);
   const [metaLoaded, setMetaLoaded] = useState(false);
@@ -163,12 +154,6 @@ function KredGameClient({ config }) {
 
   const firstHumanSeat = seats.find((s) => s.occupied && !s.isBot);
   const isHost = Boolean(firstHumanSeat && firstHumanSeat.isSelf);
-  const numPlayers = seats.length || 3;
-
-  const gameLogger = useMemo(
-    () => (isAdmin ? new GameLogger(matchID || 'kred', numPlayers) : null),
-    [isAdmin, matchID, numPlayers]
-  );
 
   const handleToggleCalibration = useCallback(() => {
     setCalibrationMode((prev) => {
@@ -176,10 +161,6 @@ function KredGameClient({ config }) {
       if (window.setCalibrationMode) window.setCalibrationMode(next);
       return next;
     });
-  }, []);
-
-  const handleToggleDiagnostics = useCallback(() => {
-    setShowDiagnostics((prev) => !prev);
   }, []);
 
   const handleStartWithBots = async () => {
@@ -243,19 +224,9 @@ function KredGameClient({ config }) {
         isOnline={false}
         isAdmin={isAdmin}
         calibrationMode={calibrationMode}
-        showDiagnostics={showDiagnostics}
         onToggleCalibration={handleToggleCalibration}
-        onToggleDiagnostics={handleToggleDiagnostics}
-        gameLogger={gameLogger}
         botIds={botIds}
       />
-      {isAdmin && gameLogger && (
-        <DiagnosticsPanel
-          gameLogger={gameLogger}
-          isOpen={showDiagnostics}
-          onClose={() => setShowDiagnostics(false)}
-        />
-      )}
       {showWaiting && (
         <TableStagingOverlay
           seats={seats}

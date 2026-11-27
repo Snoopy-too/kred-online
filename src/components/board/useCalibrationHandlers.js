@@ -304,9 +304,9 @@ export function useCalibrationHandlers(numPlayers, propCalibrationMode, baseHots
     });
   };
 
-  const handleNudgeSelectedSpotsPixels = (dxPx, dyPx) => {
+  const handleNudgeSelectedSpotsPixels = (dxPx, dyPx, perspectiveRotation = 0) => {
     if (!selectedCalibrateKeys || selectedCalibrateKeys.length === 0) return;
-    setCalibratedPositions(prev => calculateNudgedSpotsPixels(prev, baseHotspots, selectedCalibrateKeys, dxPx, dyPx));
+    setCalibratedPositions(prev => calculateNudgedSpotsPixels(prev, baseHotspots, selectedCalibrateKeys, dxPx, dyPx, perspectiveRotation));
   };
 
   const handleRotateSelectedSpotsAroundCenter = (deltaAngle) => {

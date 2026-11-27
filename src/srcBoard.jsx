@@ -5,7 +5,6 @@ import { computeHotspots } from './components/ComputeHotspots.js';
 import { TurnBuilder } from './components/TurnBuilder.jsx';
 import { BureaucracyPanel } from './components/BureaucracyPanel.jsx';
 import { PendingPlayModal } from './components/PendingPlayModal.jsx';
-import { BoardCalibrationToolbar } from './components/board/BoardCalibrationToolbar.jsx';
 import { SvgBoardCanvas } from './components/board/SvgBoardCanvas.jsx';
 import { HandsPanel } from './components/board/HandsPanel.jsx';
 import { GameLogPanel } from './components/board/GameLogPanel.jsx';
@@ -32,7 +31,7 @@ import { useBoardScale } from './hooks/useBoardScale.js';
 import { useStagedMoves } from './hooks/useStagedMoves.js';
 import { useTurnReplayAnimation } from './components/board/useTurnReplayAnimation.js';
 
-export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, isSolo = false, isAdmin = false, showDiagnostics = false, onToggleDiagnostics = null, onToggleCalibration = null, botIds = [], botStatus = null, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
+export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, isSolo = false, isAdmin = false, onToggleCalibration = null, botIds = [], botStatus = null, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
   const G = (isOnline && dbMasterState) ? (dbMasterState.G || dbMasterState) : rawG;
   const ctx = (isOnline && dbMasterState) ? (dbMasterState.ctx || rawCtx) : rawCtx;
 
@@ -240,9 +239,11 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         onResetBoardView={handleResetBoardView}
         isAdmin={isAdmin}
         calibrationMode={calibration.calibrationMode}
-        showDiagnostics={showDiagnostics}
-        onToggleDiagnostics={onToggleDiagnostics}
         onToggleCalibration={onToggleCalibration}
+        calibration={calibration}
+        activeHotspots={activeHotspots}
+        numPlayers={numPlayers}
+        tilesPerPlayer={tilesPerPlayer}
         setShowSaveLoadModal={setShowSaveLoadModal}
         onResetTransientState={staged.handleResetTurn}
       />
@@ -252,15 +253,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
           🎉 {G.winner === 'draw' ? 'MATCH ENDED IN A DRAW!' : `${getPlayerLabel(G.winner).toUpperCase()} HAS WON THE GAME!`} 🎉
         </div>
       )}
-
-      <BoardCalibrationToolbar
-        {...calibration}
-        onClose={onToggleCalibration}
-        activeHotspots={activeHotspots}
-        numPlayers={numPlayers}
-        tilesPerPlayer={tilesPerPlayer}
-        playerID={playerID}
-      />
 
       <div className="kred-layout">
         <div

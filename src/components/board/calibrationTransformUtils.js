@@ -84,13 +84,19 @@ export const calculateExactScaleSpots = (prevCal, activeHotspots, targetKeys, sc
   return nextCal;
 };
 
-export const calculateNudgedSpotsPixels = (prevCal, activeHotspots, targetKeys, dxPx, dyPx) => {
+export const calculateNudgedSpotsPixels = (prevCal, activeHotspots, targetKeys, dxPx, dyPx, perspectiveRotation = 0) => {
   const containerEl = document.querySelector('.board-image-overlay-container');
   const width = (containerEl && containerEl.offsetWidth) || 1000;
   const height = (containerEl && containerEl.offsetHeight) || 1000;
 
-  const percentDx = (dxPx / width) * 100;
-  const percentDy = (dyPx / height) * 100;
+  const rotRad = ((perspectiveRotation || 0) * Math.PI) / 180;
+  const cosR = Math.cos(rotRad);
+  const sinR = Math.sin(rotRad);
+  const localDx = dxPx * cosR + dyPx * sinR;
+  const localDy = -dxPx * sinR + dyPx * cosR;
+
+  const percentDx = (localDx / width) * 100;
+  const percentDy = (localDy / height) * 100;
 
   const nextCal = { ...prevCal };
   targetKeys.forEach(k => {
