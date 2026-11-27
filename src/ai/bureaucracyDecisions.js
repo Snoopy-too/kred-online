@@ -1,7 +1,7 @@
 import { BUREAUCRACY_PRICES, MOVE_TYPES, PIECE_TYPES, TILES } from '../domain/types.js';
 import { checkVictory } from '../domain/board.js';
 import { validateSingleMove } from '../domain/moves.js';
-import { selectBestBankTilesToPay } from '../domain/bureaucracy.js';
+import { getPromotionTargetType, selectBestBankTilesToPay } from '../domain/bureaucracy.js';
 import {
   evaluateDomain,
   generateLegalMovesForBot,
@@ -71,12 +71,7 @@ export function enumerateAffordableBureaucracyOptions(obs, paymentMode = 'fundin
     for (const loc of spec.locs) {
       const piece = obs.boardState[loc];
       if (!piece) continue;
-      let higherType = null;
-      if (piece.type === PIECE_TYPES.MARK && (obs.community?.heels || 0) > 0) {
-        higherType = PIECE_TYPES.HEEL;
-      } else if (piece.type === PIECE_TYPES.HEEL && (obs.community?.pawns || 0) > 0 && !hasPawn) {
-        higherType = PIECE_TYPES.PAWN;
-      }
+      const higherType = getPromotionTargetType(piece.type, obs.community, hasPawn);
       if (!higherType) continue;
 
       const commKey = findCommunitySwapKey(obs.boardState, higherType);

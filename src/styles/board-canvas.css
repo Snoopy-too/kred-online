@@ -90,7 +90,6 @@
 .piece-pawn-img {
   width: 4.9cqw;
   height: 4.9cqw;
-  filter: drop-shadow(0 0 6px #f59e0b) drop-shadow(0 0 12px #fbbf24) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.9)) !important;
 }
 
 /* Credibility Token Board Display & Calibration */

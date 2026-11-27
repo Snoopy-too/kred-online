@@ -90,7 +90,7 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
 
     if (G?.pendingPlay) {
       const activeP = getPendingPlayActivePlayer(G);
-      if (activeP !== playerID) return;
+      if (String(activeP) !== String(playerID)) return;
 
       const step = G.pendingPlay.step;
       const currentBoard = transientBoardState || G.boardState;
@@ -122,7 +122,7 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
           tileId,
           true
         );
-        setSelectedPieceLoc(locKey);
+        setSelectedPieceLoc(validTargets.length > 0 ? locKey : '');
         setValidDestinations(validTargets);
         return;
       }
@@ -134,19 +134,19 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
           const inferred = inferMoveType(locKey, toLoc, playerID, currentBoard, currentComm, numPlayers, [], '');
           return inferred === MOVE_TYPES.WITHDRAW;
         });
-        setSelectedPieceLoc(locKey);
+        setSelectedPieceLoc(withdrawTargets.length > 0 ? locKey : '');
         setValidDestinations(withdrawTargets);
         return;
       }
 
-      if (step === 'freeAdvance') {
+      if (step === 'freeAdvance' || step === 'receiverReward') {
         if (stagedMoves.length >= 1) return;
         const allTargets = getValidDestinations(locKey, playerID, currentBoard, currentComm, numPlayers, [], '');
         const advanceTargets = allTargets.filter(toLoc => {
           const inferred = inferMoveType(locKey, toLoc, playerID, currentBoard, currentComm, numPlayers, [], '');
           return inferred === MOVE_TYPES.ADVANCE;
         });
-        setSelectedPieceLoc(locKey);
+        setSelectedPieceLoc(advanceTargets.length > 0 ? locKey : '');
         setValidDestinations(advanceTargets);
         return;
       }

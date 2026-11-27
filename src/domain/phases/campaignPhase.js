@@ -12,7 +12,7 @@ import {
   logKgnCampaignPlay,
   logKgnOutcome,
   logKgnSubLine,
-  formatKgnPlayer,
+  logKgnReward,
   formatKgnMove,
   formatKgnMoves
 } from '../kgn.js';
@@ -147,7 +147,7 @@ export function createCampaignPhase() {
         const movesLog = formatTurnMovesLog(moverId, moveActions);
         if (movesLog) appendGameLog(G, movesLog, 'info');
         appendGameLog(G, `Player ${moverId} played a tile to Player ${receiverId}.`, 'play');
-        logKgnCampaignPlay(G, moverId, receiverId, moveActions);
+        logKgnCampaignPlay(G, moverId, receiverId, moveActions, backupBoard);
 
         if (G.players[receiverId].credibilityNotchesLost >= 3) {
           if (getOrderedChallengers(G).length === 0) {
@@ -220,7 +220,7 @@ export function createCampaignPhase() {
           };
           recordPlayerStat(G, receiverId, 'whistlesBlown');
           appendGameLog(G, `Whistle Blown! Player ${receiverId} exposed Player ${moverId}.`, 'alert');
-          logKgnOutcome(G, 'B', { tileId: tileIdPlayed });
+          logKgnOutcome(G, 'B', { receiverId: pId, tileId: tileIdPlayed });
         } else {
           G.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
           G.pendingPlay = null;
@@ -361,10 +361,11 @@ export function createCampaignPhase() {
         const playType = classifyPlay(moveActions, tileId, moverId, G.boardState, G.community, G.numPlayers);
         if (playType !== 'Honest') return INVALID_MOVE;
 
+        const preReexecBoard = { ...G.boardState };
         moveActions.forEach(m => applyMoveToState(m, G.boardState, G.community));
         const reexecLog = formatTurnMovesLog(moverId, moveActions);
         appendGameLog(G, reexecLog || `Player ${moverId} re-executed honestly.`, 'info');
-        logKgnSubLine(G, `Re: ${formatKgnMoves(moveActions)}`);
+        logKgnSubLine(G, formatKgnMoves(moveActions, preReexecBoard, G.boardState));
 
         if (G.players[moverId].pendingPenaltyWithdraw) {
           G.pendingPlay.step = 'penaltyWithdraw';
@@ -392,7 +393,7 @@ export function createCampaignPhase() {
         }
 
         G.players[moverId].pendingPenaltyWithdraw = false;
-        logKgnSubLine(G, `PenW(${formatKgnPlayer(moverId)}): ${moveAction ? formatKgnMove(moveAction) : 'Pass'}`);
+        logKgnSubLine(G, `-${moveAction ? formatKgnMove(moveAction) : 'pass'}`);
 
         if (G.pendingPlay.whistleblownByReceiver) {
           G.pendingPlay.step = 'receiverReward';
@@ -405,13 +406,13 @@ export function createCampaignPhase() {
 
       claimReceiverCredibilityReward: ({ G, ctx, playerID, events }) => {
         const receiverId = String(playerID);
-        if (G.pendingSupport || !G.pendingPlay || G.pendingPlay.step !== 'receiverReward' || G.pendingPlay.receiverId !== receiverId) {
+        if (G.pendingSupport || !G.pendingPlay || !['receiverReward', 'freeAdvance'].includes(G.pendingPlay.step) || G.pendingPlay.receiverId !== receiverId) {
           return INVALID_MOVE;
         }
         if (G.players[receiverId].credibilityNotchesLost > 0) {
           G.players[receiverId].credibilityNotchesLost = Math.max(0, G.players[receiverId].credibilityNotchesLost - 2);
         }
-        logKgnSubLine(G, `Rew(${formatKgnPlayer(receiverId)}): +2C`);
+        logKgnReward(G, '2');
         finishPendingPlayOrReward(G);
         events.endTurn();
       },
@@ -427,8 +428,9 @@ export function createCampaignPhase() {
 
       executeFreeAdvance: ({ G, ctx, playerID, events }, moveAction) => {
         const receiverId = String(playerID);
-        if (G.pendingSupport || !G.pendingPlay || G.pendingPlay.step !== 'freeAdvance' || G.pendingPlay.receiverId !== receiverId) return INVALID_MOVE;
+        if (G.pendingSupport || !G.pendingPlay || !['freeAdvance', 'receiverReward'].includes(G.pendingPlay.step) || G.pendingPlay.receiverId !== receiverId) return INVALID_MOVE;
 
+        const preFreeBoard = { ...G.boardState };
         if (moveAction) {
           if (moveAction.type !== MOVE_TYPES.ADVANCE) return INVALID_MOVE;
           const val = validateSingleMove(moveAction, receiverId, G.boardState, G.community, G.numPlayers);
@@ -437,7 +439,7 @@ export function createCampaignPhase() {
         } else if (isMoveTypePossible(MOVE_TYPES.ADVANCE, receiverId, G.boardState, G.community, G.numPlayers)) {
           return INVALID_MOVE;
         }
-        logKgnSubLine(G, `Rew(${formatKgnPlayer(receiverId)}): FreeA ${moveAction ? formatKgnMove(moveAction) : 'Pass'}`);
+        logKgnReward(G, moveAction ? formatKgnMove(moveAction, preFreeBoard, G.boardState) : 'pass');
 
         if (!queuePendingSupport(G, { phase: 'campaign', afterResolve: 'finishPendingPlayOrReward' })) {
           finishPendingPlayOrReward(G);
@@ -453,7 +455,7 @@ export function createCampaignPhase() {
         if (G.players[pId].credibilityNotchesLost > 0) {
           G.players[pId].credibilityNotchesLost--;
         }
-        logKgnSubLine(G, `Rew(${formatKgnPlayer(pId)}): +1C`);
+        logKgnReward(G, '1');
         const receiverId = G.pendingPlay.receiverId;
         G.pendingPlay = null;
         if (receiverId !== undefined && receiverId !== null) G.nextMoverId = receiverId;

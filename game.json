@@ -36,17 +36,16 @@
     "board",
     "political"
   ],
-  "modes": [
+  "options": [
     {
-      "id": "standard",
-      "name": "Standard",
-      "description": "Standard 3-5 player campaign with full drafting and bureaucracy phases.",
-      "isDefault": true
+      "id": "skipDraft",
+      "name": "Skip Draft (tiles dealt randomly)",
+      "default": false
     },
     {
-      "id": "quick",
-      "name": "Quick (Skip Draft)",
-      "description": "Faster game with pre-dealt cards, skipping the draft phase."
+      "id": "expertMode",
+      "name": "Expert Mode (touch move, no piece highlighting, no game log)",
+      "default": false
     }
   ]
 }

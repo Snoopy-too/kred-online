@@ -17,7 +17,12 @@ export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null,
   if (!isSupportedOutcomeNotice(notice)) return null;
   const meta = OUTCOME_META[notice.type];
   const label = (id) => (getPlayerLabel ? getPlayerLabel(id) : `Player ${parseInt(id, 10) + 1}`);
-  const showTile = Boolean(meta.showTile && notice.tileIdPlayed && notice.tileIdPlayed !== 'HIDDEN');
+  const hideTile =
+    notice.type === 'challengeFailed' &&
+    playerID != null &&
+    notice.moverId != null &&
+    String(playerID) === String(notice.moverId);
+  const showTile = Boolean(meta.showTile && !hideTile && notice.tileIdPlayed && notice.tileIdPlayed !== 'HIDDEN');
   const isSupportOwnerMe = Boolean(pendingSupport && String(pendingSupport.ownerId) === String(playerID));
   const supportFromLabel = pendingSupport ? formatSupportSpot(pendingSupport.from) : '';
   const supportIsOffice = Boolean(pendingSupport?.from?.endsWith('_office'));
@@ -88,7 +93,7 @@ export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null,
           </div>
         )}
         {waitingLabel && (
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginTop: '2px' }}>
             {waitingLabel}
           </div>
         )}

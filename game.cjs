@@ -5664,12 +5664,31 @@ function captureBoardSnapshot(boardState) {
   }
   return snap;
 }
+function captureTileSnapshot(G2) {
+  if (!G2?.players) return null;
+  const players = {};
+  for (const id of Object.keys(G2.players)) {
+    const p2 = G2.players[id] || {};
+    players[id] = {
+      hand: Array.isArray(p2.hand) ? [...p2.hand] : [],
+      bank: Array.isArray(p2.bank) ? p2.bank.map((b2) => ({ tileId: b2.tileId, faceDown: Boolean(b2.faceDown) })) : [],
+      cred: p2.credibilityNotchesLost || 0
+    };
+  }
+  const pp = G2.pendingPlay;
+  const drop = pp && (pp.step === "receipt" || pp.step === "challenge") ? { receiverId: String(pp.receiverId), step: pp.step } : null;
+  return { players, drop };
+}
 function appendGameLog(G2, text, tone = "info") {
   if (!G2 || !text) return;
   if (!Array.isArray(G2.history)) G2.history = [];
   const nextId = G2.history.length > 0 ? (G2.history[G2.history.length - 1].id || G2.history.length) + 1 : 1;
   const snap = captureBoardSnapshot(G2.boardState);
-  G2.history.push(snap ? { id: nextId, text, tone, snap } : { id: nextId, text, tone });
+  const tiles = captureTileSnapshot(G2);
+  const entry = { id: nextId, text, tone };
+  if (snap) entry.snap = snap;
+  if (tiles) entry.tiles = tiles;
+  G2.history.push(entry);
   if (G2.history.length > 150) {
     G2.history.splice(0, G2.history.length - 150);
   }
@@ -5759,50 +5778,47 @@ function recordBureaucracyFunding(G2) {
 }
 
 // src/domain/kgn.js
-var MOVE_CODE = {
-  Advance: "A",
-  Withdraw: "W",
-  Organize: "O",
-  Assist: "S",
-  Remove: "R",
-  Influence: "I"
-};
 var PIECE_CODE = {
-  Mark: "M",
-  Heel: "H",
-  Pawn: "P"
+  Mark: "m",
+  Heel: "h",
+  Pawn: "p"
 };
 function formatKgnPlayer(playerId) {
-  return `P${parseInt(playerId, 10) + 1}`;
+  const idx = parseInt(playerId, 10);
+  return Number.isInteger(idx) && idx >= 0 && idx < 26 ? String.fromCharCode(65 + idx) : String(playerId);
 }
 function formatKgnLoc(loc) {
   if (!loc) return "?";
   const p2 = parseLocation(loc);
   if (!p2) return String(loc);
-  if (p2.type === "community") return "C";
-  if (p2.type === "office") return `${p2.domainNum}O`;
-  if (p2.type === "rostrum") return `${p2.domainNum}R${p2.index}`;
-  if (p2.type === "seat") return `${p2.domainNum}S${p2.index}`;
+  if (p2.type === "community") return "c";
+  const owner = formatKgnPlayer(p2.playerId);
+  if (p2.type === "office") return `${owner}o`;
+  if (p2.type === "rostrum") return `${owner}r${p2.index}`;
+  if (p2.type === "seat") return `${owner}s${p2.index}`;
   return String(loc);
 }
-function formatKgnMove(move) {
-  if (!move || !move.type) return "";
-  const code = MOVE_CODE[move.type] || move.type;
-  return `${code} ${formatKgnLoc(move.from)}>${formatKgnLoc(move.to)}`;
+function formatKgnMove(move, boardBefore = null, boardAfter = null) {
+  if (!move || !move.from || !move.to) return "";
+  let fromStr = formatKgnLoc(move.from);
+  if (fromStr === "c") {
+    const pieceType = boardBefore?.[move.from]?.type || boardAfter?.[move.to]?.type || move.pieceType;
+    if (PIECE_CODE[pieceType]) fromStr = PIECE_CODE[pieceType];
+  }
+  return `${fromStr}>${formatKgnLoc(move.to)}`;
 }
-function formatKgnMoves(moves = []) {
-  const parts = (moves || []).map(formatKgnMove).filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "Pass";
+function formatKgnMoves(moves = [], boardBefore = null, boardAfter = null) {
+  const parts = (moves || []).map((m) => formatKgnMove(m, boardBefore, boardAfter)).filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : "pass";
 }
-function formatKgnBureaucracyAction({ actionType, targetLoc, pieceType, subAction, cost }) {
-  const costTag = cost ? ` (K${cost})` : "";
-  if (actionType === "RESTORE_CRED") return `+C${costTag}`;
+function formatKgnBureaucracyAction({ actionType, targetLoc, pieceType, subAction, boardBefore = null, boardAfter = null }) {
+  if (actionType === "RESTORE_CRED") return "+1";
   if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
     const pCode = PIECE_CODE[pieceType] || pieceType || "?";
-    return `Prom ${formatKgnLoc(targetLoc)}>${pCode}${costTag}`;
+    return `${formatKgnLoc(targetLoc)}>${pCode}`;
   }
-  if (subAction) return `${formatKgnMove(subAction)}${costTag}`;
-  return `${actionType}${costTag}`;
+  if (subAction) return formatKgnMove(subAction, boardBefore, boardAfter);
+  return String(actionType || "");
 }
 function pushKgnLine(G2, text, tone = "info", meta = null) {
   if (!G2 || !text) return null;
@@ -5816,42 +5832,67 @@ function logKgnPhase(G2, phase) {
   if (!G2) return;
   if (phase === "campaign") {
     G2.kgnCampaignCount = (G2.kgnCampaignCount || 0) + 1;
-    pushKgnLine(G2, `; === CAMPAIGN ${G2.kgnCampaignCount} ===`, "phase");
   } else if (phase === "bureaucracy") {
     G2.kgnBureaucracyCount = (G2.kgnBureaucracyCount || 0) + 1;
     G2.kgnBureaucracyTurnNum = 0;
-    pushKgnLine(G2, `; === BUREAUCRACY ${G2.kgnBureaucracyCount} ===`, "phase");
   }
 }
-function logKgnCampaignPlay(G2, moverId, receiverId, moves = []) {
+function logKgnCampaignPlay(G2, moverId, receiverId, moves = [], boardBefore = null) {
   if (!G2) return;
   G2.kgnTurnCount = (G2.kgnTurnCount || 0) + 1;
-  const text = `${G2.kgnTurnCount}. ${formatKgnPlayer(moverId)}: ${formatKgnMoves(moves)} -> ${formatKgnPlayer(receiverId)}`;
-  pushKgnLine(G2, text, "play", { kgnKind: "turn" });
+  const text = `${G2.kgnTurnCount}.${formatKgnPlayer(moverId)} ${formatKgnMoves(moves, boardBefore, G2.boardState)} @${formatKgnPlayer(receiverId)}`;
+  pushKgnLine(G2, text, "play", { kgnKind: "turn", kgnReceiver: String(receiverId), kgnResolved: false });
 }
-function logKgnOutcome(G2, code, { challengerId = null, tileId = null } = {}) {
+function logKgnOutcome(G2, code, { challengerId = null, receiverId = null, tileId = null } = {}) {
   if (!G2) return;
-  let suffix = code;
-  if ((code === "W" || code === "G") && challengerId !== null && challengerId !== void 0) {
-    suffix += `(${formatKgnPlayer(challengerId)})`;
-  }
-  if (code !== "Q" && tileId) {
-    suffix += ` [${tileId}]`;
-  }
   const tone = code === "Q" ? "accept" : code === "W" ? "warn" : "alert";
+  let entry = null;
   if (Array.isArray(G2.kgnLines)) {
     for (let i2 = G2.kgnLines.length - 1; i2 >= 0; i2--) {
-      if (G2.kgnLines[i2].kgnKind === "turn" && !G2.kgnLines[i2].text.includes(" | ")) {
-        G2.kgnLines[i2].text = `${G2.kgnLines[i2].text} | ${suffix}`;
-        G2.kgnLines[i2].tone = tone;
-        return;
+      if (G2.kgnLines[i2].kgnKind === "turn" && !G2.kgnLines[i2].kgnResolved) {
+        entry = G2.kgnLines[i2];
+        break;
       }
     }
   }
-  pushKgnLine(G2, suffix, tone);
+  let suffix = "";
+  if (code !== "Q") {
+    const tilePart = tileId ? `[${tileId}]` : "";
+    const mark = code === "W" ? "?" : "!";
+    const actorId = code === "B" ? receiverId ?? entry?.kgnReceiver : challengerId;
+    const actorPart = actorId !== null && actorId !== void 0 ? `${mark}${formatKgnPlayer(actorId)}` : mark;
+    suffix = [tilePart, actorPart].filter(Boolean).join(" ");
+  }
+  if (entry) {
+    if (suffix) entry.text = `${entry.text} ${suffix}`;
+    entry.tone = tone;
+    entry.kgnResolved = true;
+    return;
+  }
+  if (suffix) pushKgnLine(G2, suffix, tone);
 }
 function logKgnSubLine(G2, text, tone = "info") {
-  pushKgnLine(G2, `   ${text}`, tone);
+  if (!G2 || !text) return;
+  if (Array.isArray(G2.kgnLines) && G2.kgnLines.length > 0) {
+    const last = G2.kgnLines[G2.kgnLines.length - 1];
+    if (last.kgnKind === "turn" || last.kgnKind === "bureaucracy") {
+      last.text = `${last.text} ${text}`;
+      return;
+    }
+  }
+  pushKgnLine(G2, text, tone);
+}
+function logKgnReward(G2, reward) {
+  if (!G2 || !reward) return;
+  const token = reward.startsWith("+") ? reward : `+${reward}`;
+  if (Array.isArray(G2.kgnLines) && G2.kgnLines.length > 0) {
+    const last = G2.kgnLines[G2.kgnLines.length - 1];
+    if (last.kgnKind === "turn" && /![A-Z](?=\s|$)/.test(last.text)) {
+      last.text = last.text.replace(/(![A-Z])(?=\s|$)/, `$1${token}`);
+      return;
+    }
+  }
+  logKgnSubLine(G2, token);
 }
 function findOrStartBureaucracyLine(G2, playerId) {
   const pTag = formatKgnPlayer(playerId);
@@ -5863,7 +5904,7 @@ function findOrStartBureaucracyLine(G2, playerId) {
   }
   G2.kgnBureaucracyTurnNum = (G2.kgnBureaucracyTurnNum || 0) + 1;
   const initFund = G2.players?.[playerId]?.bureaucracyInitialFunding ?? G2.players?.[playerId]?.funding ?? 0;
-  return pushKgnLine(G2, `B${G2.kgnBureaucracyTurnNum}. ${pTag}(K${initFund}):`, "info", {
+  return pushKgnLine(G2, `b${G2.kgnBureaucracyTurnNum}.${pTag}(${initFund})`, "info", {
     kgnKind: "bureaucracy",
     kgnPlayer: String(playerId),
     kgnEnded: false
@@ -5873,14 +5914,11 @@ function logKgnBureaucracyAction(G2, playerId, actionInfo) {
   if (!G2) return;
   const entry = findOrStartBureaucracyLine(G2, playerId);
   const token = formatKgnBureaucracyAction(actionInfo);
-  const sep = entry.text.endsWith(":") ? " " : ", ";
-  entry.text = `${entry.text}${sep}${token}`;
+  if (token) entry.text = `${entry.text} ${token}`;
 }
 function logKgnBureaucracyEnd(G2, playerId) {
   if (!G2) return;
   const entry = findOrStartBureaucracyLine(G2, playerId);
-  const sep = entry.text.endsWith(":") ? " " : ", ";
-  entry.text = `${entry.text}${sep}End`;
   entry.kgnEnded = true;
 }
 function logKgnResult(G2) {
@@ -5943,7 +5981,7 @@ function finishPendingPlayOrReward(G2) {
       if (G2.players[challengerId].credibilityNotchesLost > 0) {
         G2.players[challengerId].credibilityNotchesLost--;
       }
-      logKgnSubLine(G2, `Rew(${formatKgnPlayer(challengerId)}): +1C`);
+      logKgnReward(G2, "1");
     }
   }
   G2.pendingPlay = null;
@@ -5992,7 +6030,7 @@ function handleResolveSupportDrop({ G: G2, playerID, events }, toLoc) {
   G2.boardState[toLoc] = G2.boardState[ps.from];
   G2.boardState[ps.from] = null;
   appendGameLog(G2, `Player ${pId} moved unsupported piece to ${formatSupportSpot(toLoc)}.`, "info");
-  logKgnSubLine(G2, `Drop(${formatKgnPlayer(pId)}): ${formatKgnLoc(ps.from)}>${formatKgnLoc(toLoc)}`);
+  logKgnSubLine(G2, `-${formatKgnLoc(ps.from)}>${formatKgnLoc(toLoc)}`);
   const nextUnsupported = findUnsupportedPiece(G2.boardState, G2.numPlayers);
   if (nextUnsupported) {
     G2.pendingSupport = {
@@ -6021,7 +6059,7 @@ function handleResolveSupportDrop({ G: G2, playerID, events }, toLoc) {
     applyVictoryCheck(G2, ps.tileId);
   }
   if (ps.phase === "bureaucracy") {
-    if (ps.returnToPlayerId !== null && String(ps.returnToPlayerId) !== pId) {
+    if (ps.returnToPlayerId === null || String(ps.returnToPlayerId) !== pId) {
       events.endTurn();
     }
   } else {
@@ -6057,6 +6095,20 @@ function selectBestBankTilesToPay(facedownBankTiles, cost) {
   }
   return bestSubset || [];
 }
+var COMMUNITY_COUNT_KEY = {
+  [PIECE_TYPES.MARK]: "marks",
+  [PIECE_TYPES.HEEL]: "heels",
+  [PIECE_TYPES.PAWN]: "pawns"
+};
+function getPromotionTargetType(pieceType, community, playerHasPawn) {
+  if (pieceType === PIECE_TYPES.MARK) {
+    if ((community?.heels || 0) > 0) return PIECE_TYPES.HEEL;
+    if ((community?.pawns || 0) > 0 && !playerHasPawn) return PIECE_TYPES.PAWN;
+  } else if (pieceType === PIECE_TYPES.HEEL) {
+    if ((community?.pawns || 0) > 0 && !playerHasPawn) return PIECE_TYPES.PAWN;
+  }
+  return null;
+}
 function promoteSwapInState(G2, targetLoc, targetType, higherType) {
   const commKey = Object.keys(G2.boardState).find(
     (k2) => k2.startsWith("community_") && G2.boardState[k2]?.type === higherType
@@ -6066,14 +6118,34 @@ function promoteSwapInState(G2, targetLoc, targetType, higherType) {
   const commPiece = G2.boardState[commKey];
   G2.boardState[targetLoc] = commPiece;
   G2.boardState[commKey] = targetPiece;
-  if (targetType === PIECE_TYPES.MARK && higherType === PIECE_TYPES.HEEL) {
-    G2.community.marks = (G2.community.marks || 0) + 1;
-    G2.community.heels = Math.max(0, (G2.community.heels || 0) - 1);
-  } else if (targetType === PIECE_TYPES.HEEL && higherType === PIECE_TYPES.PAWN) {
-    G2.community.heels = (G2.community.heels || 0) + 1;
-    G2.community.pawns = Math.max(0, (G2.community.pawns || 0) - 1);
-  }
+  const returnKey = COMMUNITY_COUNT_KEY[targetType];
+  const takeKey = COMMUNITY_COUNT_KEY[higherType];
+  if (returnKey) G2.community[returnKey] = (G2.community[returnKey] || 0) + 1;
+  if (takeKey) G2.community[takeKey] = Math.max(0, (G2.community[takeKey] || 0) - 1);
   return true;
+}
+function getBureaucracyActionCost(prices, actionType) {
+  if (!prices) return 0;
+  return prices[actionType] || 0;
+}
+function logBureaucracyAction(G2, pId, { actionType, targetLoc, subAction, cost, preBoard }) {
+  logKgnBureaucracyAction(G2, pId, {
+    actionType,
+    targetLoc,
+    pieceType: G2.boardState[targetLoc]?.type,
+    subAction,
+    boardBefore: preBoard,
+    boardAfter: G2.boardState
+  });
+  if (actionType === "RESTORE_CRED") {
+    appendGameLog(G2, `Player ${pId} spent K${cost} to restore credibility.`, "info");
+  } else if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
+    const pieceType = G2.boardState[targetLoc]?.type || "piece";
+    const spotWord = actionType === "PROMOTE_SEAT" ? "seat" : actionType === "PROMOTE_ROSTRUM" ? "rostrum" : "office";
+    appendGameLog(G2, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, "info");
+  } else if (subAction) {
+    appendGameLog(G2, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, "info");
+  }
 }
 function initBureaucracy(G2) {
   if (!G2 || !G2.players) return;
@@ -6102,11 +6174,13 @@ function initBureaucracy(G2) {
   });
   G2.bureaucracyTurnOrder = order;
   G2.bureaucracyTurnIndex = 0;
+  G2.lastBureaucracyReplay = null;
 }
 function cleanupBureaucracy(G2) {
   if (!G2 || !G2.players) return;
   delete G2.bureaucracyTurnOrder;
   delete G2.bureaucracyTurnIndex;
+  delete G2.lastBureaucracyReplay;
   G2.lastOutcomeNotice = null;
   Object.keys(G2.players).forEach((pId) => {
     delete G2.players[pId].bureaucracyInitialFunding;
@@ -6134,6 +6208,7 @@ function applyChallengerBureaucracyAction(G2, pId, { actionType, targetLoc, subA
   else if (actionType === "EXTRA_ACTION") cost = prices.EXTRA_ACTION;
   const tilesToPay = selectBestBankTilesToPay(facedownTiles, cost);
   if (tilesToPay.length === 0) return false;
+  const preBoard = { ...G2.boardState };
   const success = executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAction });
   if (!success) return false;
   tilesToPay.forEach((t2) => {
@@ -6144,9 +6219,10 @@ function applyChallengerBureaucracyAction(G2, pId, { actionType, targetLoc, subA
     targetLoc,
     pieceType: G2.boardState[targetLoc]?.type,
     subAction,
-    cost
+    boardBefore: preBoard,
+    boardAfter: G2.boardState
   });
-  logKgnSubLine(G2, `Rew(${formatKgnPlayer(pId)}): ${actionStr}`);
+  logKgnReward(G2, actionStr);
   if (actionType === "RESTORE_CRED") {
     appendGameLog(G2, `Player ${pId} spent K${cost} to restore credibility.`, "info");
   } else if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
@@ -6171,13 +6247,9 @@ function executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAc
   if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
     const piece = G2.boardState[targetLoc];
     if (!piece) return false;
-    if (piece.type === PIECE_TYPES.MARK && G2.community.heels > 0) {
-      return promoteSwapInState(G2, targetLoc, PIECE_TYPES.MARK, PIECE_TYPES.HEEL);
-    } else if (piece.type === PIECE_TYPES.HEEL && G2.community.pawns > 0) {
-      if (playerHasPawn) return false;
-      return promoteSwapInState(G2, targetLoc, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN);
-    }
-    return false;
+    const higherType = getPromotionTargetType(piece.type, G2.community, playerHasPawn);
+    if (!higherType) return false;
+    return promoteSwapInState(G2, targetLoc, piece.type, higherType);
   }
   if (actionType === "BASIC_ACTION" || actionType === "EXTRA_ACTION") {
     if (!subAction || !subAction.type || !subAction.from || !subAction.to) return false;
@@ -6220,38 +6292,70 @@ function createBureaucracyPhase() {
         const pId = String(playerID);
         const prices = BUREAUCRACY_PRICES[G2.numPlayers] || BUREAUCRACY_PRICES[3];
         const player = G2.players[pId];
-        let cost = 0;
-        if (actionType === "RESTORE_CRED") cost = prices.RESTORE_CRED;
-        else if (actionType === "PROMOTE_SEAT") cost = prices.PROMOTE_SEAT;
-        else if (actionType === "PROMOTE_ROSTRUM") cost = prices.PROMOTE_ROSTRUM;
-        else if (actionType === "PROMOTE_OFFICE") cost = prices.PROMOTE_OFFICE;
-        else if (actionType === "BASIC_ACTION") cost = prices.BASIC_ACTION;
-        else if (actionType === "EXTRA_ACTION") cost = prices.EXTRA_ACTION;
+        const cost = getBureaucracyActionCost(prices, actionType);
         if (cost === 0 || player.funding < cost) return INVALID_MOVE;
+        const preBoard = JSON.parse(JSON.stringify(G2.boardState));
         const success = executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAction });
         if (!success) return INVALID_MOVE;
         player.funding -= cost;
-        logKgnBureaucracyAction(G2, pId, {
-          actionType,
-          targetLoc,
-          pieceType: G2.boardState[targetLoc]?.type,
-          subAction,
-          cost
-        });
-        if (actionType === "RESTORE_CRED") {
-          appendGameLog(G2, `Player ${pId} spent K${cost} to restore credibility.`, "info");
-        } else if (actionType === "PROMOTE_SEAT" || actionType === "PROMOTE_ROSTRUM" || actionType === "PROMOTE_OFFICE") {
-          const pieceType = G2.boardState[targetLoc]?.type || "piece";
-          const spotWord = actionType === "PROMOTE_SEAT" ? "seat" : actionType === "PROMOTE_ROSTRUM" ? "rostrum" : "office";
-          appendGameLog(G2, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, "info");
-        } else {
-          appendGameLog(G2, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, "info");
+        logBureaucracyAction(G2, pId, { actionType, targetLoc, subAction, cost, preBoard });
+        if (subAction) {
+          G2.lastBureaucracyReplay = {
+            seq: (G2.lastBureaucracyReplay?.seq || 0) + 1,
+            playerId: pId,
+            movesMade: [subAction],
+            backupBoard: preBoard
+          };
         }
         if (queuePendingSupport(G2, { phase: "bureaucracy", returnToPlayerId: pId })) {
           if (String(G2.pendingSupport.ownerId) !== pId) {
             events.endTurn();
           }
         }
+      },
+      submitBureaucracyTurn: ({ G: G2, playerID, events }, actions = []) => {
+        if (G2.pendingSupport || !Array.isArray(actions)) return INVALID_MOVE;
+        const pId = String(playerID);
+        const prices = BUREAUCRACY_PRICES[G2.numPlayers] || BUREAUCRACY_PRICES[3];
+        const player = G2.players[pId];
+        if (!player) return INVALID_MOVE;
+        const preTurnBoard = JSON.parse(JSON.stringify(G2.boardState));
+        const preTurnCommunity = JSON.parse(JSON.stringify(G2.community));
+        const preTurnFunding = player.funding;
+        const preTurnCred = player.credibilityNotchesLost;
+        const appliedLogs = [];
+        const movesMade = [];
+        for (const act of actions) {
+          const { actionType, targetLoc, subAction } = act || {};
+          const cost = getBureaucracyActionCost(prices, actionType);
+          const preBoard = JSON.parse(JSON.stringify(G2.boardState));
+          if (cost === 0 || player.funding < cost || !executeBureaucracyActionPayload(G2, pId, { actionType, targetLoc, subAction })) {
+            G2.boardState = preTurnBoard;
+            G2.community = preTurnCommunity;
+            player.funding = preTurnFunding;
+            player.credibilityNotchesLost = preTurnCred;
+            return INVALID_MOVE;
+          }
+          player.funding -= cost;
+          appliedLogs.push({ actionType, targetLoc, subAction, cost, preBoard });
+          if (subAction) movesMade.push(subAction);
+        }
+        for (const item of appliedLogs) {
+          logBureaucracyAction(G2, pId, item);
+        }
+        if (movesMade.length > 0) {
+          G2.lastBureaucracyReplay = {
+            seq: (G2.lastBureaucracyReplay?.seq || 0) + 1,
+            playerId: pId,
+            movesMade,
+            backupBoard: preTurnBoard
+          };
+        }
+        appendGameLog(G2, `Player ${pId} ended their Bureaucracy turn.`, "info");
+        logKgnBureaucracyEnd(G2, pId);
+        G2.bureaucracyTurnIndex = (G2.bureaucracyTurnIndex || 0) + 1;
+        queuePendingSupport(G2, { phase: "bureaucracy", returnToPlayerId: null });
+        events.endTurn();
       },
       endBureaucracyTurn: ({ G: G2, playerID, events }) => {
         if (G2?.pendingSupport) return INVALID_MOVE;
@@ -6395,7 +6499,7 @@ function createCampaignPhase() {
         const movesLog = formatTurnMovesLog(moverId, moveActions);
         if (movesLog) appendGameLog(G2, movesLog, "info");
         appendGameLog(G2, `Player ${moverId} played a tile to Player ${receiverId}.`, "play");
-        logKgnCampaignPlay(G2, moverId, receiverId, moveActions);
+        logKgnCampaignPlay(G2, moverId, receiverId, moveActions, backupBoard);
         if (G2.players[receiverId].credibilityNotchesLost >= 3) {
           if (getOrderedChallengers(G2).length === 0) {
             resolvePlayToBank(G2);
@@ -6455,7 +6559,7 @@ function createCampaignPhase() {
           };
           recordPlayerStat(G2, receiverId, "whistlesBlown");
           appendGameLog(G2, `Whistle Blown! Player ${receiverId} exposed Player ${moverId}.`, "alert");
-          logKgnOutcome(G2, "B", { tileId: tileIdPlayed });
+          logKgnOutcome(G2, "B", { receiverId: pId, tileId: tileIdPlayed });
         } else {
           G2.players[receiverId].bank.push({ tileId: tileIdPlayed, faceDown: true });
           G2.pendingPlay = null;
@@ -6571,10 +6675,11 @@ function createCampaignPhase() {
         if (!val.valid) return INVALID_MOVE;
         const playType = classifyPlay(moveActions, tileId, moverId, G2.boardState, G2.community, G2.numPlayers);
         if (playType !== "Honest") return INVALID_MOVE;
+        const preReexecBoard = { ...G2.boardState };
         moveActions.forEach((m) => applyMoveToState(m, G2.boardState, G2.community));
         const reexecLog = formatTurnMovesLog(moverId, moveActions);
         appendGameLog(G2, reexecLog || `Player ${moverId} re-executed honestly.`, "info");
-        logKgnSubLine(G2, `Re: ${formatKgnMoves(moveActions)}`);
+        logKgnSubLine(G2, formatKgnMoves(moveActions, preReexecBoard, G2.boardState));
         if (G2.players[moverId].pendingPenaltyWithdraw) {
           G2.pendingPlay.step = "penaltyWithdraw";
           queuePendingSupport(G2, { phase: "campaign" });
@@ -6598,7 +6703,7 @@ function createCampaignPhase() {
           return INVALID_MOVE;
         }
         G2.players[moverId].pendingPenaltyWithdraw = false;
-        logKgnSubLine(G2, `PenW(${formatKgnPlayer(moverId)}): ${moveAction ? formatKgnMove(moveAction) : "Pass"}`);
+        logKgnSubLine(G2, `-${moveAction ? formatKgnMove(moveAction) : "pass"}`);
         if (G2.pendingPlay.whistleblownByReceiver) {
           G2.pendingPlay.step = "receiverReward";
           queuePendingSupport(G2, { phase: "campaign" });
@@ -6609,13 +6714,13 @@ function createCampaignPhase() {
       },
       claimReceiverCredibilityReward: ({ G: G2, ctx, playerID, events }) => {
         const receiverId = String(playerID);
-        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "receiverReward" || G2.pendingPlay.receiverId !== receiverId) {
+        if (G2.pendingSupport || !G2.pendingPlay || !["receiverReward", "freeAdvance"].includes(G2.pendingPlay.step) || G2.pendingPlay.receiverId !== receiverId) {
           return INVALID_MOVE;
         }
         if (G2.players[receiverId].credibilityNotchesLost > 0) {
           G2.players[receiverId].credibilityNotchesLost = Math.max(0, G2.players[receiverId].credibilityNotchesLost - 2);
         }
-        logKgnSubLine(G2, `Rew(${formatKgnPlayer(receiverId)}): +2C`);
+        logKgnReward(G2, "2");
         finishPendingPlayOrReward(G2);
         events.endTurn();
       },
@@ -6629,7 +6734,8 @@ function createCampaignPhase() {
       },
       executeFreeAdvance: ({ G: G2, ctx, playerID, events }, moveAction) => {
         const receiverId = String(playerID);
-        if (G2.pendingSupport || !G2.pendingPlay || G2.pendingPlay.step !== "freeAdvance" || G2.pendingPlay.receiverId !== receiverId) return INVALID_MOVE;
+        if (G2.pendingSupport || !G2.pendingPlay || !["freeAdvance", "receiverReward"].includes(G2.pendingPlay.step) || G2.pendingPlay.receiverId !== receiverId) return INVALID_MOVE;
+        const preFreeBoard = { ...G2.boardState };
         if (moveAction) {
           if (moveAction.type !== MOVE_TYPES.ADVANCE) return INVALID_MOVE;
           const val = validateSingleMove(moveAction, receiverId, G2.boardState, G2.community, G2.numPlayers);
@@ -6638,7 +6744,7 @@ function createCampaignPhase() {
         } else if (isMoveTypePossible(MOVE_TYPES.ADVANCE, receiverId, G2.boardState, G2.community, G2.numPlayers)) {
           return INVALID_MOVE;
         }
-        logKgnSubLine(G2, `Rew(${formatKgnPlayer(receiverId)}): FreeA ${moveAction ? formatKgnMove(moveAction) : "Pass"}`);
+        logKgnReward(G2, moveAction ? formatKgnMove(moveAction, preFreeBoard, G2.boardState) : "pass");
         if (!queuePendingSupport(G2, { phase: "campaign", afterResolve: "finishPendingPlayOrReward" })) {
           finishPendingPlayOrReward(G2);
         }
@@ -6652,7 +6758,7 @@ function createCampaignPhase() {
         if (G2.players[pId].credibilityNotchesLost > 0) {
           G2.players[pId].credibilityNotchesLost--;
         }
-        logKgnSubLine(G2, `Rew(${formatKgnPlayer(pId)}): +1C`);
+        logKgnReward(G2, "1");
         const receiverId = G2.pendingPlay.receiverId;
         G2.pendingPlay = null;
         if (receiverId !== void 0 && receiverId !== null) G2.nextMoverId = receiverId;
@@ -6715,6 +6821,20 @@ function filterSoloPlayerView(G2, playerID) {
       pp.playType = "HIDDEN";
     }
   }
+  if (Array.isArray(nextG.history)) {
+    nextG.history.forEach((entry) => {
+      const tp = entry?.tiles?.players;
+      if (!tp) return;
+      Object.keys(tp).forEach((id) => {
+        if (id !== pId) {
+          if (Array.isArray(tp[id].hand)) tp[id].hand = tp[id].hand.map(() => "HIDDEN");
+          if (Array.isArray(tp[id].bank)) {
+            tp[id].bank = tp[id].bank.map((b2) => b2.faceDown ? { ...b2, tileId: "HIDDEN" } : b2);
+          }
+        }
+      });
+    });
+  }
   return nextG;
 }
 function createKredGame(numPlayers, skipDraft = false, options = {}) {
@@ -6726,7 +6846,8 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
     setup: ({ ctx, random }, setupData) => {
       const np = numPlayers || ctx.numPlayers || 3;
       const effectiveSkipDraft = Boolean(skipDraft || setupData?.skipDraft || setupData?.mode === "quick");
-      console.log("[KredGame Setup] numPlayers:", np, "skipDraft:", effectiveSkipDraft, "ctx.numPlayers:", ctx.numPlayers);
+      const effectiveExpertMode = Boolean(options?.expertMode || setupData?.expertMode);
+      console.log("[KredGame Setup] numPlayers:", np, "skipDraft:", effectiveSkipDraft, "expertMode:", effectiveExpertMode, "ctx.numPlayers:", ctx.numPlayers);
       const config = INITIAL_PIECE_COUNTS[np] || INITIAL_PIECE_COUNTS[3];
       const boardState = {};
       for (let p2 = 0; p2 < np; p2++) {
@@ -6802,6 +6923,7 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
       }
       return {
         numPlayers: np,
+        expertMode: effectiveExpertMode,
         boardState,
         community,
         players,

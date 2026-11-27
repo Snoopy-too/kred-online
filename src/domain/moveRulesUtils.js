@@ -148,7 +148,7 @@ export function inferMoveType(
 
   for (const type of allowedMoveTypes) {
     const moveCandidate = { type, from: fromLoc, to: normTo };
-    const isValid = validateSingleMove(moveCandidate, moverId, boardState, community, numPlayers).valid;
+    const isValid = validateSingleMove(moveCandidate, moverId, boardState, community, numPlayers, stagedMoves).valid;
     if (isValid) return type;
   }
 

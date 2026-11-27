@@ -1,6 +1,6 @@
 export function get5PHotspots() {
   return {
-    "p1_office": { "left": "40.90%", "top": "13.58%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p1_office": { "left": "41.68%", "top": "14.99%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p1_rostrum1": { "left": "26.33%", "top": "35.18%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p1_rostrum2": { "left": "43.51%", "top": "21.91%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p1_seat1": { "left": "31.53%", "top": "38.37%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -17,7 +17,7 @@ export function get5PHotspots() {
     "p1_dropTile": { "left": "45.81%", "top": "4.60%", "rot": 341, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(341deg) scale(1.5)" },
     "p1_cred": { "left": "20.38%", "top": "10.63%", "rot": 308, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(308deg) scale(2.25)" },
 
-    "p2_office": { "left": "76.08%", "top": "29.29%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p2_office": { "left": "76.93%", "top": "30.28%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p2_rostrum1": { "left": "52.14%", "top": "22.25%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p2_rostrum2": { "left": "70.03%", "top": "35.84%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p2_seat1": { "left": "49.99%", "top": "27.50%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -34,7 +34,7 @@ export function get5PHotspots() {
     "p2_dropTile": { "left": "86.21%", "top": "31.32%", "rot": 52, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(52deg) scale(1.5)" },
     "p2_cred": { "left": "72.58%", "top": "7.99%", "rot": 15, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(15deg) scale(2.25)" },
 
-    "p3_office": { "left": "72.82%", "top": "68.56%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p3_office": { "left": "73.86%", "top": "69.66%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p3_rostrum1": { "left": "72.27%", "top": "42.77%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p3_rostrum2": { "left": "65.59%", "top": "64.10%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p3_seat1": { "left": "66.38%", "top": "42.53%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -51,7 +51,7 @@ export function get5PHotspots() {
     "p3_dropTile": { "left": "74.25%", "top": "78.82%", "rot": 125, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(125deg) scale(1.5)" },
     "p3_cred": { "left": "91.44%", "top": "58.17%", "rot": 90, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(90deg) scale(2.25)" },
 
-    "p4_office": { "left": "35.52%", "top": "77.49%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p4_office": { "left": "36.34%", "top": "78.62%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p4_rostrum1": { "left": "59.57%", "top": "68.77%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p4_rostrum2": { "left": "37.80%", "top": "69.25%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p4_seat1": { "left": "57.64%", "top": "63.12%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -68,7 +68,7 @@ export function get5PHotspots() {
     "p4_dropTile": { "left": "26.57%", "top": "81.79%", "rot": 15, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(15deg) scale(1.5)" },
     "p4_cred": { "left": "50.77%", "top": "92.26%", "rot": 163, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(163deg) scale(2.25)" },
 
-    "p5_office": { "left": "15.87%", "top": "43.73%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "p5_office": { "left": "16.50%", "top": "44.76%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p5_rostrum1": { "left": "31.56%", "top": "64.99%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p5_rostrum2": { "left": "24.72%", "top": "41.66%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p5_seat1": { "left": "36.22%", "top": "61.23%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -85,12 +85,12 @@ export function get5PHotspots() {
     "p5_dropTile": { "left": "9.09%", "top": "36.16%", "rot": 89, "scale": 1.5, "transform": "translate(-50%, -50%) rotate(89deg) scale(1.5)" },
     "p5_cred": { "left": "7.22%", "top": "63.02%", "rot": 231, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(231deg) scale(2.25)" },
 
-    "community_1": { "left": "44.93%", "top": "47.19%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
-    "community_2": { "left": "40.96%", "top": "47.94%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
-    "community_3": { "left": "45.95%", "top": "34.42%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
-    "community_4": { "left": "50.97%", "top": "35.08%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_1": { "left": "57.96%", "top": "41.80%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_2": { "left": "41.69%", "top": "43.33%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_3": { "left": "43.10%", "top": "56.03%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_4": { "left": "44.65%", "top": "46.97%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_5": { "left": "43.91%", "top": "51.76%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
-    "community_6": { "left": "41.94%", "top": "43.37%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_6": { "left": "40.53%", "top": "48.23%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_7": { "left": "54.65%", "top": "44.66%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_8": { "left": "45.73%", "top": "42.03%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_9": { "left": "53.45%", "top": "40.00%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -110,11 +110,11 @@ export function get5PHotspots() {
     "community_23": { "left": "47.20%", "top": "59.19%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_24": { "left": "60.40%", "top": "50.74%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_25": { "left": "35.81%", "top": "49.06%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
-    "community_26": { "left": "43.41%", "top": "56.19%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
-    "community_27": { "left": "39.55%", "top": "52.36%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_26": { "left": "39.57%", "top": "52.43%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_27": { "left": "45.93%", "top": "35.11%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_28": { "left": "37.70%", "top": "44.64%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_29": { "left": "39.26%", "top": "39.50%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
-    "community_30": { "left": "58.23%", "top": "41.23%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
+    "community_30": { "left": "51.29%", "top": "35.76%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "community_target": { "left": "48.25%", "top": "46.24%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" }
   };
 }

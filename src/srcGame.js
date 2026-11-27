@@ -42,6 +42,21 @@ export function filterSoloPlayerView(G, playerID) {
     }
   }
 
+  if (Array.isArray(nextG.history)) {
+    nextG.history.forEach((entry) => {
+      const tp = entry?.tiles?.players;
+      if (!tp) return;
+      Object.keys(tp).forEach((id) => {
+        if (id !== pId) {
+          if (Array.isArray(tp[id].hand)) tp[id].hand = tp[id].hand.map(() => 'HIDDEN');
+          if (Array.isArray(tp[id].bank)) {
+            tp[id].bank = tp[id].bank.map((b) => (b.faceDown ? { ...b, tileId: 'HIDDEN' } : b));
+          }
+        }
+      });
+    });
+  }
+
   return nextG;
 }
 
@@ -61,7 +76,8 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
       // Use the factory-injected numPlayers (ctx.numPlayers defaults to 2 in local mode)
       const np = numPlayers || ctx.numPlayers || 3;
       const effectiveSkipDraft = Boolean(skipDraft || setupData?.skipDraft || setupData?.mode === 'quick');
-      console.log('[KredGame Setup] numPlayers:', np, 'skipDraft:', effectiveSkipDraft, 'ctx.numPlayers:', ctx.numPlayers);
+      const effectiveExpertMode = Boolean(options?.expertMode || setupData?.expertMode);
+      console.log('[KredGame Setup] numPlayers:', np, 'skipDraft:', effectiveSkipDraft, 'expertMode:', effectiveExpertMode, 'ctx.numPlayers:', ctx.numPlayers);
 
       const config = INITIAL_PIECE_COUNTS[np] || INITIAL_PIECE_COUNTS[3];
 
@@ -153,6 +169,7 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
 
       return {
         numPlayers: np,
+        expertMode: effectiveExpertMode,
         boardState,
         community,
         players,

@@ -4,12 +4,16 @@ import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
 import { createKredGame, filterSoloPlayerView } from '../src/srcGame.js';
 import { classifyPlay, validateSingleMove } from '../src/domain/moves.js';
-import { initBureaucracy } from '../src/domain/bureaucracy.js';
+import { inferMoveType } from '../src/domain/moveRulesUtils.js';
+import { executeBureaucracyActionPayload, getPromotionTargetType, initBureaucracy } from '../src/domain/bureaucracy.js';
+import { appendGameLog, expandHistoryPeek } from '../src/domain/gameLog.js';
+import { enumerateAffordableBureaucracyOptions } from '../src/ai/bureaucracyDecisions.js';
 import {
   logKgnPhase,
   logKgnCampaignPlay,
   logKgnOutcome,
   logKgnSubLine,
+  logKgnReward,
   logKgnBureaucracyAction,
   logKgnBureaucracyEnd,
   logKgnResult,
@@ -245,9 +249,13 @@ describe('campaign edge cases & solo playerView hardening', () => {
     assert.ok(G.players['1'].bureaucracyInitialFunding > 0);
   });
 
-  it('records and exports KGN with Q/B/W/G outcomes, revealed-only tiles, and bureaucracy turns', () => {
+  it('records and exports concise inline KGN with community piece codes, outcomes, and bureaucracy turns', () => {
     const G = {
       numPlayers: 3,
+      boardState: {
+        p1_seat1: { id: 'm1', type: 'Mark' },
+        p2_seat1: { id: 'h1', type: 'Heel' }
+      },
       players: {
         '0': { funding: 18, bureaucracyInitialFunding: 18 },
         '1': { funding: 12, bureaucracyInitialFunding: 12 },
@@ -259,23 +267,109 @@ describe('campaign edge cases & solo playerView hardening', () => {
     logKgnCampaignPlay(G, '0', '1', [{ type: 'Advance', from: 'community_1', to: 'p1_seat1' }]);
     logKgnOutcome(G, 'Q');
     logKgnCampaignPlay(G, '1', '2', [{ type: 'Advance', from: 'community_2', to: 'p2_seat1' }]);
-    logKgnOutcome(G, 'B', { tileId: '+9-' });
-    logKgnSubLine(G, 'Re: W 2S1>C');
+    logKgnOutcome(G, 'B', { receiverId: '2', tileId: '+9-' });
+    logKgnSubLine(G, 'Bs1>c');
+    logKgnReward(G, '2');
     logKgnCampaignPlay(G, '2', '0', [{ type: 'Remove', from: 'p1_seat1', to: 'community' }]);
     logKgnOutcome(G, 'W', { challengerId: '1', tileId: '-3_' });
     logKgnPhase(G, 'bureaucracy');
-    logKgnBureaucracyAction(G, '0', { actionType: 'PROMOTE_SEAT', targetLoc: 'p1_seat1', pieceType: 'Heel', cost: 6 });
+    logKgnBureaucracyAction(G, '0', { actionType: 'PROMOTE_SEAT', targetLoc: 'p1_seat1', pieceType: 'Heel' });
     logKgnBureaucracyEnd(G, '0');
     G.winner = '0';
     logKgnResult(G);
 
     const doc = exportKgnDocument(G, (id) => ['Josh', 'Vance', 'Thorne'][parseInt(id, 10)]);
     assert.ok(doc.includes('[Format "KGN 1.0"]'));
-    assert.ok(doc.includes('[P1 "Josh"]'));
-    assert.ok(doc.includes('[Result "P1"]'));
-    assert.ok(doc.includes('1. P1: A C>1S1 -> P2 | Q'));
-    assert.ok(doc.includes('2. P2: A C>2S1 -> P3 | B [+9-]'));
-    assert.ok(doc.includes('3. P3: R 1S1>C -> P1 | W(P2) [-3_]'));
-    assert.ok(doc.includes('B1. P1(K18): Prom 1S1>H (K6), End # P1'));
+    assert.ok(doc.includes('[A "Josh"]'));
+    assert.ok(doc.includes('[Result "A"]'));
+    assert.ok(doc.includes('1.A m>As1 @B'));
+    assert.ok(doc.includes('2.B h>Bs1 @C [+9-] !C+2 Bs1>c'));
+    assert.ok(doc.includes('3.C As1>c @A [-3_] ?B'));
+    assert.ok(doc.includes('b1.A(18) As1>h # A'));
+  });
+
+  it('promotes a Mark directly to a Pawn for a single promotion cost when no Heels remain in community', () => {
+    // When Heels exist in community, Mark promotes to Heel (not Pawn)
+    assert.equal(getPromotionTargetType('Mark', { marks: 0, heels: 1, pawns: 1 }, false), 'Heel');
+    // When no Heels remain, Mark promotes directly to Pawn (respecting Max 1 Pawn and community Pawns)
+    assert.equal(getPromotionTargetType('Mark', { marks: 0, heels: 0, pawns: 1 }, false), 'Pawn');
+    assert.equal(getPromotionTargetType('Mark', { marks: 0, heels: 0, pawns: 1 }, true), null);
+    assert.equal(getPromotionTargetType('Mark', { marks: 0, heels: 0, pawns: 0 }, false), null);
+
+    // Executing PROMOTE_SEAT / PROMOTE_ROSTRUM / PROMOTE_OFFICE swaps Mark with community Pawn and updates counts
+    for (const [actionType, loc] of [['PROMOTE_SEAT', 'p1_seat1'], ['PROMOTE_ROSTRUM', 'p1_rostrum1'], ['PROMOTE_OFFICE', 'p1_office']]) {
+      const G = {
+        numPlayers: 3,
+        players: { '0': { funding: 18 } },
+        community: { marks: 2, heels: 0, pawns: 1 },
+        boardState: {
+          [loc]: { id: 'm1', type: 'Mark' },
+          community_1: { id: 'cp1', type: 'Pawn' }
+        }
+      };
+      assert.equal(executeBureaucracyActionPayload(G, '0', { actionType, targetLoc: loc }), true);
+      assert.equal(G.boardState[loc].type, 'Pawn');
+      assert.equal(G.boardState.community_1.type, 'Mark');
+      assert.deepEqual(G.community, { marks: 3, heels: 0, pawns: 0 });
+    }
+
+    // AI enumerator includes direct Mark -> Pawn promotion at single seat promotion price
+    const opts = enumerateAffordableBureaucracyOptions({
+      botId: '0',
+      numPlayers: 3,
+      players: { '0': { funding: 6, credibilityNotchesLost: 0 } },
+      community: { marks: 0, heels: 0, pawns: 1 },
+      boardState: {
+        p1_seat1: { id: 'm1', type: 'Mark' },
+        community_1: { id: 'cp1', type: 'Pawn' }
+      }
+    }, 'funding');
+    const promo = opts.find(o => o.payload.actionType === 'PROMOTE_SEAT' && o.payload.targetLoc === 'p1_seat1');
+    assert.ok(promo);
+    assert.equal(promo.meta.fromType, 'Mark');
+    assert.equal(promo.meta.toType, 'Pawn');
+    assert.equal(promo.meta.cost, 6);
+  });
+
+  it('game log snapshots capture hands, banks, and drop zones and respect filterSoloPlayerView', () => {
+    const G = {
+      boardState: { p1_seat1: { id: 'm1', type: 'Mark' } },
+      players: {
+        '0': { hand: ['+9-', '-1+'], bank: [{ tileId: '^1+', faceDown: true }], credibilityNotchesLost: 1 },
+        '1': { hand: ['_8-'], bank: [{ tileId: '+5+', faceDown: true }, { tileId: '-3_', faceDown: false }], credibilityNotchesLost: 0 }
+      },
+      pendingPlay: { step: 'receipt', moverId: '0', receiverId: '1', tileIdPlayed: '+6^' },
+      history: []
+    };
+    appendGameLog(G, 'Player 0 played a tile to Player 1.', 'play');
+
+    // Mutate live state afterwards and verify peek restores the snapshot
+    G.players['0'].hand = [];
+    G.players['1'].bank = [];
+    G.pendingPlay = null;
+
+    const filtered = filterSoloPlayerView(G, '0');
+    const peek = expandHistoryPeek(filtered, 1);
+    assert.equal(peek.active, true);
+    assert.equal(peek.hasTiles, true);
+    assert.deepEqual(peek.G.players['0'].hand, ['+9-', '-1+']);
+    assert.deepEqual(peek.G.players['1'].hand, ['HIDDEN']);
+    assert.deepEqual(peek.G.players['1'].bank, [
+      { tileId: 'HIDDEN', faceDown: true },
+      { tileId: '-3_', faceDown: false }
+    ]);
+    assert.deepEqual(peek.G.pendingPlay, { step: 'receipt', receiverId: '1' });
+  });
+
+  it('inferMoveType respects stagedMoves when a Withdraw returns a Mark before a Heel Assist', () => {
+    const boardAfterWithdraw = {
+      p1_seat1: null,
+      p2_seat2: null,
+      community_1: { id: 'm_withdrawn', type: 'Mark' },
+      community_2: { id: 'h_avail', type: 'Heel' }
+    };
+    const staged = [{ type: 'Withdraw', from: 'p1_seat1', to: 'community_1', pieceId: 'm_withdrawn' }];
+    const inferred = inferMoveType('community_2', 'p2_seat2', '0', boardAfterWithdraw, { marks: 1, heels: 1, pawns: 0 }, 3, staged, '+8-', true);
+    assert.equal(inferred, 'Assist');
   });
 });

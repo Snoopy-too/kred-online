@@ -250,14 +250,19 @@
 
 .reset-turn-btn {
   background: #3d3028;
-  color: var(--accent-red);
-  border: 1px solid var(--accent-red);
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.reset-turn-btn:hover {
+  background: #4e3e34;
+  border-color: rgba(255, 255, 255, 0.38);
 }
 
 .finish-turn-btn {

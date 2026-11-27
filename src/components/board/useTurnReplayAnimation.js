@@ -17,6 +17,7 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel, player
   const [animatingTile, setAnimatingTile] = useState(null);
 
   const lastReplayedPlayKeyRef = useRef(null);
+  const lastBureaucracySeqRef = useRef(null);
   const animationTimersRef = useRef([]);
 
   const clearTimers = () => {
@@ -215,13 +216,34 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel, player
     runPieceMoveSequence(pendingPlay, true);
   }, [G?.pendingPlay, playerID]);
 
-  const triggerPieceWalkReplay = () => {
-    const pendingPlay = G?.pendingPlay;
-    if (!pendingPlay || !pendingPlay.movesMade || pendingPlay.movesMade.length === 0) {
+  useEffect(() => {
+    const bReplay = G?.lastBureaucracyReplay;
+    if (!bReplay || !bReplay.movesMade || bReplay.movesMade.length === 0) {
+      return;
+    }
+    if (lastBureaucracySeqRef.current === bReplay.seq) {
+      return;
+    }
+    lastBureaucracySeqRef.current = bReplay.seq;
+    if (playerID !== null && String(bReplay.playerId) === String(playerID)) {
       return;
     }
     clearTimers();
-    runPieceMoveSequence(pendingPlay, false);
+    runPieceMoveSequence(bReplay, false);
+  }, [G?.lastBureaucracyReplay?.seq, playerID]);
+
+  const triggerPieceWalkReplay = () => {
+    const pendingPlay = G?.pendingPlay;
+    if (pendingPlay && pendingPlay.movesMade && pendingPlay.movesMade.length > 0) {
+      clearTimers();
+      runPieceMoveSequence(pendingPlay, false);
+      return;
+    }
+    const bReplay = G?.lastBureaucracyReplay;
+    if (bReplay && bReplay.movesMade && bReplay.movesMade.length > 0) {
+      clearTimers();
+      runPieceMoveSequence(bReplay, false);
+    }
   };
 
   return {

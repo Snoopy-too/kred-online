@@ -3,7 +3,7 @@
 ## 1. Components Reference
 
 ### 1.1 Pieces
-- **Mark**: Lowest rank. Can be Removed. Promotes to Heel.
+- **Mark**: Lowest rank. Can be Removed. Promotes to Heel (or directly to Pawn for a single promotion cost if no Heels remain in the community).
 - **Heel**: Mid rank. Cannot be Removed by opponents. Promotes to Pawn.
 - **Pawn**: Highest rank. Max 1 per player. Cannot be Removed or Influenced across Domains.
 

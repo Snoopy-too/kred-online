@@ -40,7 +40,10 @@ export function SvgBoardCanvas({
   onTogglePeekTile = null,
   validPromotionSpots = [],
   getPlayerLabel = null,
-  replayAnimation = null
+  replayAnimation = null,
+  onRestoreCred = null,
+  expertMode = false,
+  allowRepeatPiece = false
 }) {
   const {
     isReplaying = false,
@@ -82,12 +85,16 @@ export function SvgBoardCanvas({
 
   const playedPieceIdColors = new Map();
   const playedPieceLocColors = new Map();
-  if (!isReplaying) {
-    const activeMoves = (G?.pendingPlay?.movesMade?.length ? G.pendingPlay.movesMade : stagedMoves) || [];
-    const backupBoard = G?.pendingPlay?.backupBoard;
+  if (!isReplaying && !expertMode) {
+    const isPendingMoveHighlight = G?.pendingPlay?.step === 'receipt' || G?.pendingPlay?.step === 'challenge';
+    const activeMoves = (isPendingMoveHighlight && G?.pendingPlay?.movesMade?.length ? G.pendingPlay.movesMade : stagedMoves?.length ? stagedMoves : G?.lastBureaucracyReplay?.movesMade) || [];
+    const backupBoard = isPendingMoveHighlight ? G?.pendingPlay?.backupBoard : (!stagedMoves?.length ? G?.lastBureaucracyReplay?.backupBoard : null);
     for (const m of activeMoves) {
       const color = getMoveHighlightColor(m?.type);
       if (m?.to && m.to !== 'community') playedPieceLocColors.set(m.to, color);
+      if ((m?.type === 'Remove' || m?.type === 'Withdraw') && m?.from && m.from !== 'community') {
+        playedPieceLocColors.set(m.from, color);
+      }
       if (m?.pieceId) playedPieceIdColors.set(m.pieceId, color);
       if (backupBoard && m?.from && backupBoard[m.from]?.id) {
         playedPieceIdColors.set(backupBoard[m.from].id, color);
@@ -181,6 +188,7 @@ export function SvgBoardCanvas({
           const targetPlayerId = String(parseInt(domainNum, 10) - 1);
           const notchesLost = G?.players?.[targetPlayerId]?.credibilityNotchesLost || 0;
           const credScore = Math.max(0, 3 - notchesLost);
+          const isRestorableCred = Boolean(onRestoreCred && targetPlayerId === String(playerID) && notchesLost > 0);
 
           return (
             <div
@@ -190,9 +198,12 @@ export function SvgBoardCanvas({
                 left: coords.left,
                 top: coords.top,
                 transform: currentTransform,
-                zIndex: 12
+                zIndex: isRestorableCred ? 26 : 12,
+                cursor: isRestorableCred ? 'pointer' : 'default',
+                filter: isRestorableCred && !expertMode ? 'drop-shadow(0 0 8px rgba(250, 204, 21, 0.85))' : undefined
               }}
-              title={`Player ${domainNum} Credibility: ${credScore}/3`}
+              onClick={isRestorableCred ? onRestoreCred : undefined}
+              title={isRestorableCred ? 'Click to restore 1 credibility notch' : `Player ${domainNum} Credibility: ${credScore}/3`}
             >
               <img
                 src={getCredibilityIconUrl(credScore)}
@@ -354,24 +365,24 @@ export function SvgBoardCanvas({
         const isLockedCommunityPiece = Boolean(
           locKey.startsWith('community_') &&
           piece &&
-          !isCommunityPieceAvailable(piece.type, currentBoardState, G?.community, stagedMoves)
+          !isCommunityPieceAvailable(piece.type, currentBoardState, G?.community, allowRepeatPiece ? [] : stagedMoves)
         );
         const hasAlreadyMovedInTurn = Boolean(
+          !allowRepeatPiece &&
           stagedMoves.length === 1 &&
           ((stagedMoves[0].to === locKey) ||
            (piece && stagedMoves[0]?.pieceId && piece.id === stagedMoves[0].pieceId))
         );
         const isPromotionTarget = validPromotionSpots.includes(locKey);
         const playedPieceColor = (
-          piece && !isSelectedPiece && !isValidTarget && !isPromotionTarget
-            ? (playedPieceLocColors.get(locKey) || (piece.id ? playedPieceIdColors.get(piece.id) : null))
+          !isSelectedPiece && !isValidTarget && !isPromotionTarget
+            ? (playedPieceLocColors.get(locKey) || (piece?.id ? playedPieceIdColors.get(piece.id) : null))
             : null
         );
         const isUnclickableOtherPiece = Boolean(
           !isPromotionTarget && (
             isLockedCommunityPiece ||
-            hasAlreadyMovedInTurn ||
-            (selectedPieceLoc && selectedPieceLoc !== locKey && piece && !isValidTarget)
+            hasAlreadyMovedInTurn
           )
         );
 
@@ -390,7 +401,7 @@ export function SvgBoardCanvas({
           <div
             key={locKey}
             data-drop-loc={locKey}
-            className={`board-hotspot ${playedPieceColor ? `hotspot-played-${playedPieceColor}` : ''} ${isSelectedPiece ? 'hotspot-selected-piece' : ''} ${isValidTarget ? 'hotspot-valid-target' : ''} ${isPromotionTarget ? 'hotspot-promotion-target' : ''}`}
+            className={`board-hotspot ${!expertMode && playedPieceColor ? `hotspot-played-${playedPieceColor}` : ''} ${!expertMode && isSelectedPiece ? 'hotspot-selected-piece' : ''} ${!expertMode && isValidTarget ? 'hotspot-valid-target' : ''} ${!expertMode && isPromotionTarget ? 'hotspot-promotion-target' : ''}`}
             style={{
               left: coords.left,
               top: coords.top,
@@ -419,28 +430,14 @@ export function SvgBoardCanvas({
           >
             {renderPiece(piece)}
 
-            {isPromotionTarget && (
-              <div
-                className="gold-throbbing-circle"
-                style={{
-                  transform: perspectiveRotation
-                    ? `translate(-50%, -50%) rotate(${-perspectiveRotation}deg)`
-                    : 'translate(-50%, -50%)'
-                }}
-              >
+            {!expertMode && isPromotionTarget && (
+              <div className="gold-throbbing-circle" style={{ transform: perspectiveRotation ? `translate(-50%, -50%) rotate(${-perspectiveRotation}deg)` : 'translate(-50%, -50%)' }}>
                 <div className="gold-circle-pulse" />
               </div>
             )}
 
-            {isValidTarget && !isCommunitySpot && (
-              <div
-                className="green-throbbing-circle"
-                style={{
-                  transform: perspectiveRotation
-                    ? `translate(-50%, -50%) rotate(${-perspectiveRotation}deg)`
-                    : 'translate(-50%, -50%)'
-                }}
-              >
+            {!expertMode && isValidTarget && !isCommunitySpot && (
+              <div className="green-throbbing-circle" style={{ transform: perspectiveRotation ? `translate(-50%, -50%) rotate(${-perspectiveRotation}deg)` : 'translate(-50%, -50%)' }}>
                 <div className="green-circle-pulse" />
               </div>
             )}
@@ -464,7 +461,8 @@ export function SvgBoardCanvas({
               left: commTargetCoords.left,
               top: commTargetCoords.top,
               width: `${diameterPct}%`,
-              height: `${diameterPct}%`
+              height: `${diameterPct}%`,
+              ...(expertMode ? { background: 'transparent', border: 'none', boxShadow: 'none' } : {})
             }}
             onClick={(e) => {
               if (!onDestinationClick) return;
@@ -472,11 +470,13 @@ export function SvgBoardCanvas({
               const nearest = findNearestEmptyCommunitySpot(parseFloat(pos.left), parseFloat(pos.top), activeHotspots, currentBoardState);
               onDestinationClick(nearest || commTargetSpot);
             }}
-            title="Click or drop anywhere in Community"
+            title={expertMode ? undefined : 'Click or drop anywhere in Community'}
           >
-            <span className="large-community-target-text" style={counterRotationStyle}>
-              Move to<br />Community
-            </span>
+            {!expertMode && (
+              <span className="large-community-target-text" style={counterRotationStyle}>
+                Move to<br />Community
+              </span>
+            )}
           </div>
         );
       })()}

@@ -89,7 +89,7 @@ export function GameLogPanel({
           <span style={{ color: 'var(--text-muted)' }}>Waiting for first action...</span>
         ) : (
           visibleEntries.map((entry, idx) => {
-            const canPeek = Boolean(entry.snap && onSelectHistoryEntry);
+            const canPeek = Boolean((entry.snap || entry.tiles) && onSelectHistoryEntry);
             const isSelected = selectedHistoryId !== null && entry.id === selectedHistoryId;
             return (
               <div

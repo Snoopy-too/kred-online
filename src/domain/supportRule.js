@@ -1,7 +1,7 @@
 import { INVALID_MOVE } from 'boardgame.io/dist/esm/core.js';
 import { findUnsupportedPiece, parseLocation } from './board.js';
 import { appendGameLog } from './gameLog.js';
-import { logKgnSubLine, formatKgnPlayer, formatKgnLoc } from './kgn.js';
+import { logKgnSubLine, formatKgnLoc } from './kgn.js';
 import { applyVictoryCheck, resolvePlayToBank, finishPendingPlayOrReward } from './phases/campaignResolution.js';
 
 export function formatSupportSpot(loc) {
@@ -37,7 +37,7 @@ export function handleResolveSupportDrop({ G, playerID, events }, toLoc) {
   G.boardState[ps.from] = null;
 
   appendGameLog(G, `Player ${pId} moved unsupported piece to ${formatSupportSpot(toLoc)}.`, 'info');
-  logKgnSubLine(G, `Drop(${formatKgnPlayer(pId)}): ${formatKgnLoc(ps.from)}>${formatKgnLoc(toLoc)}`);
+  logKgnSubLine(G, `-${formatKgnLoc(ps.from)}>${formatKgnLoc(toLoc)}`);
 
   const nextUnsupported = findUnsupportedPiece(G.boardState, G.numPlayers);
   if (nextUnsupported) {
@@ -70,7 +70,7 @@ export function handleResolveSupportDrop({ G, playerID, events }, toLoc) {
   }
 
   if (ps.phase === 'bureaucracy') {
-    if (ps.returnToPlayerId !== null && String(ps.returnToPlayerId) !== pId) {
+    if (ps.returnToPlayerId === null || String(ps.returnToPlayerId) !== pId) {
       events.endTurn();
     }
   } else {

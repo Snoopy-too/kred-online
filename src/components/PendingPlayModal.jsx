@@ -17,7 +17,7 @@ export function PendingPlayModal({
   G, playerID, moves, peekPendingTile = false, onTogglePeekTile,
   isOnline = false, updateMasterGameState = null,
   onReplayPieceMoves = null, isReplaying = false,
-  getPlayerLabel = null
+  getPlayerLabel = null, expertMode = false
 }) {
   const myPlayer = (G && G.players && G.players[playerID]) || {};
   const isZeroCredibility = (myPlayer.credibilityNotchesLost || 0) >= 3;
@@ -43,7 +43,7 @@ export function PendingPlayModal({
   const isRewardChallenger = String(playerID) === String(pp.successfulChallengerId);
   const hasPieceMoves = Boolean(pp.movesMade && pp.movesMade.length > 0);
 
-  const replayBtn = hasPieceMoves && onReplayPieceMoves && (
+  const replayBtn = !expertMode && hasPieceMoves && onReplayPieceMoves && (
     <button
       className="btn btn-secondary"
       onClick={onReplayPieceMoves}
@@ -84,20 +84,24 @@ export function PendingPlayModal({
                 </button>
               )}
               {replayBtn}
-              <button
-                className="btn btn-primary"
-                onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
-              >
-                Accept
-              </button>
-              {pp.playType !== 'Honest' && !isZeroCredibility && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {pp.playType !== 'Honest' && !isZeroCredibility && (
+                  <button
+                    className="btn btn-danger"
+                    style={{ flex: 1 }}
+                    onClick={() => handleAction(() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile())}
+                  >
+                    Expose
+                  </button>
+                )}
                 <button
-                  className="btn btn-danger"
-                  onClick={() => handleAction(() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile())}
+                  className="btn btn-success"
+                  style={{ flex: 1 }}
+                  onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
                 >
-                  Expose
+                  Accept
                 </button>
-              )}
+              </div>
             </div>
           </>
         ) : pp.step === 'challenge' && isChallenger ? (
@@ -109,14 +113,14 @@ export function PendingPlayModal({
               {replayBtn}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  className="btn btn-warning"
+                  className="btn btn-danger"
                   style={{ flex: 1 }}
                   onClick={() => handleAction(() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile())}
                 >
                   Challenge
                 </button>
                 <button
-                  className="btn btn-secondary"
+                  className="btn btn-success"
                   style={{ flex: 1 }}
                   onClick={() => handleAction(() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge())}
                 >
@@ -195,6 +199,7 @@ export function PendingPlayModal({
         ) : isSupportedOutcomeNotice(G?.lastOutcomeNotice) ? (
           <OutcomeNoticeCard
             notice={G.lastOutcomeNotice}
+            playerID={playerID}
             getPlayerLabel={getPlayerLabel}
             waitingLabel={(() => {
               const activeId = getPendingPlayActivePlayer(G);
@@ -203,15 +208,12 @@ export function PendingPlayModal({
             })()}
           />
         ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '13px' }}>
-            <div>
-              {(() => {
-                const activeId = getPendingPlayActivePlayer(G);
-                const name = activeId !== null && getPlayerLabel ? getPlayerLabel(activeId) : null;
-                return name ? `Waiting for ${name}...` : 'Waiting...';
-              })()}
-            </div>
-            {(pp.step === 'receipt' || pp.step === 'challenge') && replayBtn}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '17px', fontWeight: 600, textAlign: 'center' }}>
+            {(() => {
+              const activeId = getPendingPlayActivePlayer(G);
+              const name = activeId !== null && getPlayerLabel ? getPlayerLabel(activeId) : null;
+              return name ? `Waiting for ${name}...` : 'Waiting...';
+            })()}
           </div>
         )}
       </div>

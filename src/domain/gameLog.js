@@ -24,6 +24,50 @@ export function expandBoardSnapshot(snap, templateBoard) {
   return out;
 }
 
+export function captureTileSnapshot(G) {
+  if (!G?.players) return null;
+  const players = {};
+  for (const id of Object.keys(G.players)) {
+    const p = G.players[id] || {};
+    players[id] = {
+      hand: Array.isArray(p.hand) ? [...p.hand] : [],
+      bank: Array.isArray(p.bank) ? p.bank.map((b) => ({ tileId: b.tileId, faceDown: Boolean(b.faceDown) })) : [],
+      cred: p.credibilityNotchesLost || 0
+    };
+  }
+  const pp = G.pendingPlay;
+  const drop = pp && (pp.step === 'receipt' || pp.step === 'challenge')
+    ? { receiverId: String(pp.receiverId), step: pp.step }
+    : null;
+  return { players, drop };
+}
+
+export function expandHistoryPeek(G, historyId) {
+  if (historyId === null || historyId === undefined) {
+    return { active: false, hasTiles: false, boardState: null, G };
+  }
+  const entry = (G?.history || []).find((e) => e.id === historyId);
+  if (!entry) return { active: false, hasTiles: false, boardState: null, G };
+  const boardState = entry.snap ? expandBoardSnapshot(entry.snap, G?.boardState) : null;
+  if (!entry.tiles) {
+    return { active: Boolean(boardState), hasTiles: false, boardState, G };
+  }
+  const players = { ...(G?.players || {}) };
+  for (const id of Object.keys(entry.tiles.players || {})) {
+    const tp = entry.tiles.players[id];
+    players[id] = {
+      ...(players[id] || {}),
+      hand: tp.hand || [],
+      bank: tp.bank || [],
+      credibilityNotchesLost: tp.cred ?? players[id]?.credibilityNotchesLost ?? 0
+    };
+  }
+  const pendingPlay = entry.tiles.drop
+    ? { step: entry.tiles.drop.step, receiverId: entry.tiles.drop.receiverId }
+    : null;
+  return { active: true, hasTiles: true, boardState, G: { ...G, players, pendingPlay } };
+}
+
 /**
  * Appends a deterministic, serializable public event to G.history.
  * Uses `Player <id>` placeholders so clients resolve display names on render.
@@ -33,7 +77,11 @@ export function appendGameLog(G, text, tone = 'info') {
   if (!Array.isArray(G.history)) G.history = [];
   const nextId = G.history.length > 0 ? (G.history[G.history.length - 1].id || G.history.length) + 1 : 1;
   const snap = captureBoardSnapshot(G.boardState);
-  G.history.push(snap ? { id: nextId, text, tone, snap } : { id: nextId, text, tone });
+  const tiles = captureTileSnapshot(G);
+  const entry = { id: nextId, text, tone };
+  if (snap) entry.snap = snap;
+  if (tiles) entry.tiles = tiles;
+  G.history.push(entry);
   if (G.history.length > 150) {
     G.history.splice(0, G.history.length - 150);
   }

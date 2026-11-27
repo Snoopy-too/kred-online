@@ -9,9 +9,8 @@ import {
   logKgnPhase,
   logKgnBureaucracyAction,
   logKgnBureaucracyEnd,
-  logKgnSubLine,
+  logKgnReward,
   logKgnResult,
-  formatKgnPlayer,
   formatKgnBureaucracyAction
 } from './kgn.js';
 
@@ -51,6 +50,22 @@ export function selectBestBankTilesToPay(facedownBankTiles, cost) {
   return bestSubset || [];
 }
 
+const COMMUNITY_COUNT_KEY = {
+  [PIECE_TYPES.MARK]: 'marks',
+  [PIECE_TYPES.HEEL]: 'heels',
+  [PIECE_TYPES.PAWN]: 'pawns'
+};
+
+export function getPromotionTargetType(pieceType, community, playerHasPawn) {
+  if (pieceType === PIECE_TYPES.MARK) {
+    if ((community?.heels || 0) > 0) return PIECE_TYPES.HEEL;
+    if ((community?.pawns || 0) > 0 && !playerHasPawn) return PIECE_TYPES.PAWN;
+  } else if (pieceType === PIECE_TYPES.HEEL) {
+    if ((community?.pawns || 0) > 0 && !playerHasPawn) return PIECE_TYPES.PAWN;
+  }
+  return null;
+}
+
 function promoteSwapInState(G, targetLoc, targetType, higherType) {
   const commKey = Object.keys(G.boardState).find(
     k => k.startsWith('community_') && G.boardState[k]?.type === higherType
@@ -63,15 +78,37 @@ function promoteSwapInState(G, targetLoc, targetType, higherType) {
   G.boardState[targetLoc] = commPiece;
   G.boardState[commKey] = targetPiece;
 
-  if (targetType === PIECE_TYPES.MARK && higherType === PIECE_TYPES.HEEL) {
-    G.community.marks = (G.community.marks || 0) + 1;
-    G.community.heels = Math.max(0, (G.community.heels || 0) - 1);
-  } else if (targetType === PIECE_TYPES.HEEL && higherType === PIECE_TYPES.PAWN) {
-    G.community.heels = (G.community.heels || 0) + 1;
-    G.community.pawns = Math.max(0, (G.community.pawns || 0) - 1);
-  }
+  const returnKey = COMMUNITY_COUNT_KEY[targetType];
+  const takeKey = COMMUNITY_COUNT_KEY[higherType];
+  if (returnKey) G.community[returnKey] = (G.community[returnKey] || 0) + 1;
+  if (takeKey) G.community[takeKey] = Math.max(0, (G.community[takeKey] || 0) - 1);
 
   return true;
+}
+
+export function getBureaucracyActionCost(prices, actionType) {
+  if (!prices) return 0;
+  return prices[actionType] || 0;
+}
+
+function logBureaucracyAction(G, pId, { actionType, targetLoc, subAction, cost, preBoard }) {
+  logKgnBureaucracyAction(G, pId, {
+    actionType,
+    targetLoc,
+    pieceType: G.boardState[targetLoc]?.type,
+    subAction,
+    boardBefore: preBoard,
+    boardAfter: G.boardState
+  });
+  if (actionType === 'RESTORE_CRED') {
+    appendGameLog(G, `Player ${pId} spent K${cost} to restore credibility.`, 'info');
+  } else if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
+    const pieceType = G.boardState[targetLoc]?.type || 'piece';
+    const spotWord = actionType === 'PROMOTE_SEAT' ? 'seat' : actionType === 'PROMOTE_ROSTRUM' ? 'rostrum' : 'office';
+    appendGameLog(G, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, 'info');
+  } else if (subAction) {
+    appendGameLog(G, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, 'info');
+  }
 }
 
 export function initBureaucracy(G) {
@@ -109,6 +146,7 @@ export function initBureaucracy(G) {
 
   G.bureaucracyTurnOrder = order;
   G.bureaucracyTurnIndex = 0;
+  G.lastBureaucracyReplay = null;
 }
 
 export function cleanupBureaucracy(G) {
@@ -118,6 +156,7 @@ export function cleanupBureaucracy(G) {
   // so a stale order must never survive into the next campaign.
   delete G.bureaucracyTurnOrder;
   delete G.bureaucracyTurnIndex;
+  delete G.lastBureaucracyReplay;
   G.lastOutcomeNotice = null;
   // Return bank tiles to hands for next campaign
   Object.keys(G.players).forEach(pId => {
@@ -151,6 +190,7 @@ export function applyChallengerBureaucracyAction(G, pId, { actionType, targetLoc
   const tilesToPay = selectBestBankTilesToPay(facedownTiles, cost);
   if (tilesToPay.length === 0) return false;
 
+  const preBoard = { ...G.boardState };
   const success = executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction });
   if (!success) return false;
 
@@ -163,9 +203,10 @@ export function applyChallengerBureaucracyAction(G, pId, { actionType, targetLoc
     targetLoc,
     pieceType: G.boardState[targetLoc]?.type,
     subAction,
-    cost
+    boardBefore: preBoard,
+    boardAfter: G.boardState
   });
-  logKgnSubLine(G, `Rew(${formatKgnPlayer(pId)}): ${actionStr}`);
+  logKgnReward(G, actionStr);
   if (actionType === 'RESTORE_CRED') {
     appendGameLog(G, `Player ${pId} spent K${cost} to restore credibility.`, 'info');
   } else if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
@@ -195,13 +236,9 @@ export function executeBureaucracyActionPayload(G, pId, { actionType, targetLoc,
     const piece = G.boardState[targetLoc];
     if (!piece) return false;
 
-    if (piece.type === PIECE_TYPES.MARK && G.community.heels > 0) {
-      return promoteSwapInState(G, targetLoc, PIECE_TYPES.MARK, PIECE_TYPES.HEEL);
-    } else if (piece.type === PIECE_TYPES.HEEL && G.community.pawns > 0) {
-      if (playerHasPawn) return false;
-      return promoteSwapInState(G, targetLoc, PIECE_TYPES.HEEL, PIECE_TYPES.PAWN);
-    }
-    return false;
+    const higherType = getPromotionTargetType(piece.type, G.community, playerHasPawn);
+    if (!higherType) return false;
+    return promoteSwapInState(G, targetLoc, piece.type, higherType);
   }
 
   if (actionType === 'BASIC_ACTION' || actionType === 'EXTRA_ACTION') {
@@ -252,35 +289,22 @@ export function createBureaucracyPhase() {
         const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
         const player = G.players[pId];
 
-        let cost = 0;
-        if (actionType === 'RESTORE_CRED') cost = prices.RESTORE_CRED;
-        else if (actionType === 'PROMOTE_SEAT') cost = prices.PROMOTE_SEAT;
-        else if (actionType === 'PROMOTE_ROSTRUM') cost = prices.PROMOTE_ROSTRUM;
-        else if (actionType === 'PROMOTE_OFFICE') cost = prices.PROMOTE_OFFICE;
-        else if (actionType === 'BASIC_ACTION') cost = prices.BASIC_ACTION;
-        else if (actionType === 'EXTRA_ACTION') cost = prices.EXTRA_ACTION;
-
+        const cost = getBureaucracyActionCost(prices, actionType);
         if (cost === 0 || player.funding < cost) return INVALID_MOVE;
 
+        const preBoard = JSON.parse(JSON.stringify(G.boardState));
         const success = executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction });
         if (!success) return INVALID_MOVE;
 
         player.funding -= cost;
-        logKgnBureaucracyAction(G, pId, {
-          actionType,
-          targetLoc,
-          pieceType: G.boardState[targetLoc]?.type,
-          subAction,
-          cost
-        });
-        if (actionType === 'RESTORE_CRED') {
-          appendGameLog(G, `Player ${pId} spent K${cost} to restore credibility.`, 'info');
-        } else if (actionType === 'PROMOTE_SEAT' || actionType === 'PROMOTE_ROSTRUM' || actionType === 'PROMOTE_OFFICE') {
-          const pieceType = G.boardState[targetLoc]?.type || 'piece';
-          const spotWord = actionType === 'PROMOTE_SEAT' ? 'seat' : actionType === 'PROMOTE_ROSTRUM' ? 'rostrum' : 'office';
-          appendGameLog(G, `Player ${pId} spent K${cost} to Promote to ${pieceType} in ${spotWord}.`, 'info');
-        } else {
-          appendGameLog(G, `Player ${pId} spent K${cost} to ${formatMoveInfinitive(subAction)}.`, 'info');
+        logBureaucracyAction(G, pId, { actionType, targetLoc, subAction, cost, preBoard });
+        if (subAction) {
+          G.lastBureaucracyReplay = {
+            seq: (G.lastBureaucracyReplay?.seq || 0) + 1,
+            playerId: pId,
+            movesMade: [subAction],
+            backupBoard: preBoard
+          };
         }
 
         if (queuePendingSupport(G, { phase: 'bureaucracy', returnToPlayerId: pId })) {
@@ -288,6 +312,56 @@ export function createBureaucracyPhase() {
             events.endTurn();
           }
         }
+      },
+
+      submitBureaucracyTurn: ({ G, playerID, events }, actions = []) => {
+        if (G.pendingSupport || !Array.isArray(actions)) return INVALID_MOVE;
+        const pId = String(playerID);
+        const prices = BUREAUCRACY_PRICES[G.numPlayers] || BUREAUCRACY_PRICES[3];
+        const player = G.players[pId];
+        if (!player) return INVALID_MOVE;
+
+        const preTurnBoard = JSON.parse(JSON.stringify(G.boardState));
+        const preTurnCommunity = JSON.parse(JSON.stringify(G.community));
+        const preTurnFunding = player.funding;
+        const preTurnCred = player.credibilityNotchesLost;
+        const appliedLogs = [];
+        const movesMade = [];
+
+        for (const act of actions) {
+          const { actionType, targetLoc, subAction } = act || {};
+          const cost = getBureaucracyActionCost(prices, actionType);
+          const preBoard = JSON.parse(JSON.stringify(G.boardState));
+          if (cost === 0 || player.funding < cost || !executeBureaucracyActionPayload(G, pId, { actionType, targetLoc, subAction })) {
+            G.boardState = preTurnBoard;
+            G.community = preTurnCommunity;
+            player.funding = preTurnFunding;
+            player.credibilityNotchesLost = preTurnCred;
+            return INVALID_MOVE;
+          }
+          player.funding -= cost;
+          appliedLogs.push({ actionType, targetLoc, subAction, cost, preBoard });
+          if (subAction) movesMade.push(subAction);
+        }
+
+        for (const item of appliedLogs) {
+          logBureaucracyAction(G, pId, item);
+        }
+
+        if (movesMade.length > 0) {
+          G.lastBureaucracyReplay = {
+            seq: (G.lastBureaucracyReplay?.seq || 0) + 1,
+            playerId: pId,
+            movesMade,
+            backupBoard: preTurnBoard
+          };
+        }
+
+        appendGameLog(G, `Player ${pId} ended their Bureaucracy turn.`, 'info');
+        logKgnBureaucracyEnd(G, pId);
+        G.bureaucracyTurnIndex = (G.bureaucracyTurnIndex || 0) + 1;
+        queuePendingSupport(G, { phase: 'bureaucracy', returnToPlayerId: null });
+        events.endTurn();
       },
 
       endBureaucracyTurn: ({ G, playerID, events }) => {

@@ -1,6 +1,6 @@
 import { checkVictory, getNextPlayer, findUnsupportedPiece } from '../board.js';
 import { appendGameLog } from '../gameLog.js';
-import { logKgnOutcome, logKgnResult, logKgnSubLine, formatKgnPlayer } from '../kgn.js';
+import { logKgnOutcome, logKgnResult, logKgnReward } from '../kgn.js';
 
 export function applyVictoryCheck(G, tileId) {
   if (!G || !G.players || tileId === '___') return;
@@ -51,7 +51,7 @@ export function finishPendingPlayOrReward(G) {
       if (G.players[challengerId].credibilityNotchesLost > 0) {
         G.players[challengerId].credibilityNotchesLost--;
       }
-      logKgnSubLine(G, `Rew(${formatKgnPlayer(challengerId)}): +1C`);
+      logKgnReward(G, '1');
     }
   }
 

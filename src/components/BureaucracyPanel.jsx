@@ -28,19 +28,29 @@ export function BureaucracyPanel({
   selectedPromotion = null,
   highlightedMoveTiers = new Set(),
   handlePromoteSelected = null,
+  handleRestoreCred = null,
   G,
   playerID,
   isOnline = false,
-  updateMasterGameState = null
+  updateMasterGameState = null,
+  expertMode = false,
+  effectiveFunding = null,
+  effectiveCredNotchesLost = null,
+  stagedCount = 0,
+  onResetTurn = null,
+  onFinishTurn = null,
+  onReplayMoves = null,
+  isReplaying = false
 }) {
   const pId = String(playerID);
   const isChallengerReward = G?.pendingPlay?.step === 'challengerReward' && String(G?.pendingPlay?.successfulChallengerId) === pId;
   const prices = BUREAUCRACY_PRICES[numPlayers] || BUREAUCRACY_PRICES[3];
 
   const facedownFunding = (myPlayer.bank || []).reduce((sum, item) => item.faceDown ? sum + (TILES[item.tileId]?.funding || 0) : sum, 0);
-  const funding = isChallengerReward ? facedownFunding : (myPlayer.funding || 0);
-  const credibilityNotchesLost = myPlayer.credibilityNotchesLost || 0;
+  const funding = effectiveFunding !== null ? effectiveFunding : (isChallengerReward ? facedownFunding : (myPlayer.funding || 0));
+  const credibilityNotchesLost = effectiveCredNotchesLost !== null ? effectiveCredNotchesLost : (myPlayer.credibilityNotchesLost || 0);
   const currentCred = Math.max(0, 3 - credibilityNotchesLost);
+  const hasBureaucracyReplay = !expertMode && !isChallengerReward && Boolean(isMyTurn) && Boolean(G?.lastBureaucracyReplay?.movesMade?.length);
 
   const rowStyle = (highlighted = false) => ({
     display: 'flex',
@@ -109,7 +119,8 @@ export function BureaucracyPanel({
                   style={actionBtnStyle}
                   disabled={!canAct || funding < prices.RESTORE_CRED || credibilityNotchesLost === 0}
                   onClick={() => {
-                    if (isOnline) executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState);
+                    if (handleRestoreCred) handleRestoreCred();
+                    else if (isOnline) executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState);
                     else moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' });
                   }}
                 >
@@ -130,11 +141,12 @@ export function BureaucracyPanel({
             { key: 'PROMOTE_ROSTRUM', label: 'Rostrum', price: prices.PROMOTE_ROSTRUM },
             { key: 'PROMOTE_OFFICE', label: 'Office', price: prices.PROMOTE_OFFICE }
           ].map((item) => {
-            const isHighlighted = canAct && selectedPromotion?.actionType === item.key;
+            const isSelected = canAct && selectedPromotion?.actionType === item.key;
+            const isHighlighted = !expertMode && isSelected;
             return (
               <div key={item.key} style={rowStyle(isHighlighted)}>
                 <span><KPrice amount={item.price} highlighted={isHighlighted} /> — {item.label}</span>
-                {isHighlighted && (
+                {isSelected && (
                   <button
                     className="btn btn-primary"
                     style={actionBtnStyle}
@@ -145,7 +157,7 @@ export function BureaucracyPanel({
                         ? 'Insufficient funding'
                         : !selectedPromotion.canUpgradeType
                         ? 'Piece cannot be promoted further or none left in Community'
-                        : `Promote this ${item.label} piece`
+                        : `Promote this ${item.label} piece to ${selectedPromotion.targetType}`
                     }
                   >
                     Promote
@@ -160,7 +172,7 @@ export function BureaucracyPanel({
             { key: 'BASIC_ACTION', label: 'to Advance, Withdraw or Organize', price: prices.BASIC_ACTION },
             { key: 'EXTRA_ACTION', label: 'to Assist, Remove or Influence', price: prices.EXTRA_ACTION }
           ].map((item) => {
-            const isHighlighted = canAct && highlightedMoveTiers?.has?.(item.key);
+            const isHighlighted = !expertMode && canAct && highlightedMoveTiers?.has?.(item.key);
             return (
               <div key={item.key} style={rowStyle(isHighlighted)}>
                 <span><KPrice amount={item.price} highlighted={isHighlighted} /> {item.label}</span>
@@ -168,12 +180,38 @@ export function BureaucracyPanel({
             );
           })}
 
+          {hasBureaucracyReplay && onReplayMoves && (
+            <div style={{ marginTop: '10px' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={onReplayMoves}
+                disabled={isReplaying}
+                style={{ width: '100%', border: '1px solid rgba(200, 155, 60, 0.45)', color: 'var(--accent-gold)' }}
+              >
+                {isReplaying ? 'Replaying...' : 'Replay Moves'}
+              </button>
+            </div>
+          )}
+
           {!isChallengerReward && (
             <div className="turn-actions-row" style={{ marginTop: '14px' }}>
+              {!expertMode && canAct && stagedCount > 0 && onResetTurn && (
+                <button
+                  className="btn btn-secondary reset-turn-btn"
+                  onClick={onResetTurn}
+                  title="Reset staged bureaucracy moves"
+                >
+                  ↺ Reset
+                </button>
+              )}
               <button
                 className={`btn btn-primary finish-turn-btn ${canAct ? 'active-finish' : ''}`}
                 disabled={!canAct}
-                onClick={() => isOnline ? executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState) : moves?.endBureaucracyTurn()}
+                onClick={() => {
+                  if (onFinishTurn) onFinishTurn();
+                  else if (isOnline) executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState);
+                  else moves?.endBureaucracyTurn();
+                }}
               >
                 Finish Turn
               </button>
