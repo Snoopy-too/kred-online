@@ -4,7 +4,7 @@ import {
   executeOnlineCampaignTurn,
   executeOnlineBureaucracyAction,
   executeOnlineEndBureaucracyTurn,
-} from '../src/domain/onlineEngine.js';
+} from './jev-arena/onlineEngine.js';
 
 // Ported from Apr Exp 2 (branch-de-escalante): server-side identity/turn
 // validation, adapted to kred2.0 where moves are validated in onlineEngine

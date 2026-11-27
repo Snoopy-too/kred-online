@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
-import { createKredGame } from '../src/srcGame.js';
+import { createKredGame } from '../src/game.js';
 import { createSoloController, buildBotObservation, getBotPersona, pickRandomPersonas, findPersonaByName, decideAction } from '../src/ai/index.js';
 
 function waitUntil(predicate, timeoutMs = 4000, onTimeoutInfo = null) {

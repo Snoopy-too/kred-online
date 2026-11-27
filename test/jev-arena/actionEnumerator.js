@@ -23,7 +23,7 @@ import {
   executeOnlineChallengerBureaucracyAction,
   executeOnlineBureaucracyAction,
   executeOnlineEndBureaucracyTurn,
-} from '../../src/domain/onlineEngine.js';
+} from './onlineEngine.js';
 import {
   validateSingleMove,
   validateMoveCombination,

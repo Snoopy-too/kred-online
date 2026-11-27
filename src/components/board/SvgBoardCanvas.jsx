@@ -4,7 +4,7 @@ import { getPerspectiveTransform } from './perspectiveUtils.js';
 import { isCommunityPieceAvailable } from '../../domain/moves.js';
 import { TurnReplayOverlay } from './TurnReplayOverlay.jsx';
 import { CalibrationSpotOverlay } from './CalibrationSpotOverlay.jsx';
-import { usePieceDrag } from './usePieceDrag.js';
+import { usePieceDrag } from '../../hooks/usePieceDrag.js';
 import { getCommunityAreaDiameterPct, findNearestEmptyCommunitySpot } from '../hotspots/geometryUtils.js';
 import { getAssetUrl, getTileImageUrl, getPieceIconUrl, getCredibilityIconUrl } from '../../utils/assets.js';
 

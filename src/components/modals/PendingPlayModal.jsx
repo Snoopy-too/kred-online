@@ -1,21 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getActiveChallenger, getPendingPlayActivePlayer } from '../domain/board.js';
-import { TILES } from '../domain/types.js';
-import { getTileImageUrl } from '../utils/assets.js';
-import { OutcomeNoticeCard, isSupportedOutcomeNotice } from './board/OutcomeNoticeCard.jsx';
-import {
-  executeOnlineAcceptTile,
-  executeOnlineRejectTile,
-  executeOnlineChallengeTile,
-  executeOnlinePassChallenge,
-  executeOnlineChallengerCredibility,
-  executeOnlineReceiverCredibilityReward,
-  executeOnlineReceiverAdvanceReward
-} from '../domain/onlineEngine.js';
+import { getActiveChallenger, getPendingPlayActivePlayer } from '../../domain/board.js';
+import { TILES } from '../../domain/types.js';
+import { getTileImageUrl } from '../../utils/assets.js';
+import { OutcomeNoticeCard, isSupportedOutcomeNotice } from '../sidebar/OutcomeNoticeCard.jsx';
 
 export function PendingPlayModal({
   G, playerID, moves, peekPendingTile = false, onTogglePeekTile,
-  isOnline = false, updateMasterGameState = null,
   onReplayPieceMoves = null, isReplaying = false,
   getPlayerLabel = null, expertMode = false
 }) {
@@ -89,7 +79,7 @@ export function PendingPlayModal({
                   <button
                     className="btn btn-danger"
                     style={{ flex: 1 }}
-                    onClick={() => handleAction(() => isOnline ? executeOnlineRejectTile(G, playerID, updateMasterGameState) : moves?.rejectTile())}
+                    onClick={() => handleAction(() => moves?.rejectTile())}
                   >
                     Expose
                   </button>
@@ -97,7 +87,7 @@ export function PendingPlayModal({
                 <button
                   className="btn btn-success"
                   style={{ flex: 1 }}
-                  onClick={() => handleAction(() => isOnline ? executeOnlineAcceptTile(G, playerID, updateMasterGameState) : moves?.acceptTile())}
+                  onClick={() => handleAction(() => moves?.acceptTile())}
                 >
                   Accept
                 </button>
@@ -115,14 +105,14 @@ export function PendingPlayModal({
                 <button
                   className="btn btn-danger"
                   style={{ flex: 1 }}
-                  onClick={() => handleAction(() => isOnline ? executeOnlineChallengeTile(G, playerID, updateMasterGameState) : moves?.challengeTile())}
+                  onClick={() => handleAction(() => moves?.challengeTile())}
                 >
                   Challenge
                 </button>
                 <button
                   className="btn btn-success"
                   style={{ flex: 1 }}
-                  onClick={() => handleAction(() => isOnline ? executeOnlinePassChallenge(G, playerID, updateMasterGameState) : moves?.passChallenge())}
+                  onClick={() => handleAction(() => moves?.passChallenge())}
                 >
                   Pass
                 </button>
@@ -138,14 +128,14 @@ export function PendingPlayModal({
               <button
                 className="btn btn-success"
                 disabled={isFullCredibility}
-                onClick={() => handleAction(() => isOnline ? executeOnlineReceiverCredibilityReward(G, playerID, updateMasterGameState) : moves?.claimReceiverCredibilityReward())}
+                onClick={() => handleAction(() => moves?.claimReceiverCredibilityReward())}
                 style={{ opacity: isFullCredibility ? 0.5 : 1, cursor: isFullCredibility ? 'not-allowed' : 'pointer' }}
               >
                 Restore Credibility {isFullCredibility ? '(Max)' : '(+2)'}
               </button>
               <button
                 className="btn btn-warning"
-                onClick={() => handleAction(() => isOnline ? executeOnlineReceiverAdvanceReward(G, playerID, updateMasterGameState) : moves?.chooseReceiverAdvanceReward())}
+                onClick={() => handleAction(() => moves?.chooseReceiverAdvanceReward())}
               >
                 Take Free Advance
               </button>
@@ -159,7 +149,7 @@ export function PendingPlayModal({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
               <button
                 className={isFullCredibility ? 'btn btn-secondary' : 'btn btn-success'}
-                onClick={() => handleAction(() => isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility())}
+                onClick={() => handleAction(() => moves?.claimChallengerCredibility())}
               >
                 {isFullCredibility ? 'Continue (Skip Reward)' : 'Restore Credibility (+1)'}
               </button>

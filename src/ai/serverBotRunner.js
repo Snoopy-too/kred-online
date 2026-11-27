@@ -1,5 +1,5 @@
 import { SocketIO } from 'boardgame.io/dist/esm/multiplayer.js';
-import { createKredGame } from '../srcGame.js';
+import { createKredGame } from '../game.js';
 import { createSoloController } from './soloController.js';
 import { getBotPersona, pickRandomPersonas, findPersonaByName } from './personas.js';
 

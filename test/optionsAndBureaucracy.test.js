@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Client } from 'boardgame.io/dist/esm/client.js';
-import { createKredGame } from '../src/srcGame.js';
+import { createKredGame } from '../src/game.js';
 import { TILES } from '../src/domain/types.js';
 
 function runServerSetup(setupData = {}, numPlayers = 3) {

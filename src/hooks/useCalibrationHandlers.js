@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { DEFAULT_PERSPECTIVE_OFFSETS } from './perspectiveUtils.js';
+import { DEFAULT_PERSPECTIVE_OFFSETS } from '../components/board/perspectiveUtils.js';
 import {
   loadLocalCalibrationCache,
   syncCalibrationFromDb,
   persistDraft,
   resetDraft,
   importCalibrationJson
-} from './calibrationStorageUtils.js';
+} from '../components/board/calibrationStorageUtils.js';
 import {
   calculateRotatedSpots,
   calculateExactAngleSpots,
@@ -14,7 +14,7 @@ import {
   calculateExactScaleSpots,
   calculateNudgedSpotsPixels,
   calculateRotatedSpotsAroundCenter
-} from './calibrationTransformUtils.js';
+} from '../components/board/calibrationTransformUtils.js';
 
 export function useCalibrationHandlers(numPlayers, propCalibrationMode, baseHotspots) {
   const [calibrationMode, setCalibrationMode] = useState(window.KRED_CALIBRATION_MODE || propCalibrationMode || false);

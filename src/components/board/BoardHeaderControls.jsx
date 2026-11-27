@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { getAssetUrl } from '../../utils/assets.js';
 import { getOrderedChallengers } from '../../domain/board.js';
 import { DEFAULT_PERSPECTIVE_OFFSETS, getPerspectiveRotation } from './perspectiveUtils.js';
-import { AdminModal } from './AdminModal.jsx';
 
 const STATUS_ICONS = {
   waiting: { cls: 'bi-hourglass-split', color: '#f59e0b', label: 'Waiting' },
@@ -148,12 +147,8 @@ export function BoardHeaderControls({
   activeHotspots = null,
   numPlayers = 3,
   tilesPerPlayer = 8,
-  setShowSaveLoadModal,
   onResetTransientState = null
 }) {
-  const [showManual, setShowManual] = useState(false);
-  const [showAdminMenu, setShowAdminMenu] = useState(false);
-
   const lobbyToolbar =
     typeof window !== 'undefined' &&
     window.tfdMatchToolbar &&
@@ -170,7 +165,6 @@ export function BoardHeaderControls({
     onToggleCalibration,
     setBoardZoom,
     onResetBoardView,
-    setShowSaveLoadModal,
     onResetTransientState,
     moves
   };
@@ -304,140 +298,10 @@ export function BoardHeaderControls({
     }
   }, [lobbyToolbar, boardZoom]);
 
-  const menuItemStyle = {
-    width: '100%',
-    textAlign: 'left',
-    padding: '8px 12px',
-    background: 'transparent',
-    border: 'none',
-    color: 'var(--text-main)',
-    fontSize: '12px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    textDecoration: 'none'
-  };
-
   const turnBadges = buildTurnBadges({ currentPhase, G, ctx, getPlayerLabel });
 
   return (
     <header className="kred-header">
-      {!lobbyToolbar && (
-      <div className="logo-brand">
-        <img src={getAssetUrl('images/logo.png')} alt="KRED" className="logo-img" />
-        <button
-          type="button"
-          onClick={() => setShowManual(true)}
-          className="status-badge"
-          style={{
-            color: 'var(--accent-gold)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-          title="Open KRED Manual"
-        >
-          <i className="bi bi-book" /> Manual
-        </button>
-        {isAdmin && (
-          <div style={{ position: 'relative' }}>
-            <button
-              type="button"
-              className={`status-badge ${calibrationMode ? 'btn-danger' : ''}`}
-              style={{
-                cursor: 'pointer',
-                color: calibrationMode ? '#fff' : 'var(--accent-gold)',
-                background: calibrationMode ? 'var(--accent-red)' : 'var(--bg-card)',
-                borderColor: calibrationMode ? 'var(--accent-red)' : 'rgba(200, 155, 60, 0.5)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontWeight: 700
-              }}
-              onClick={() => setShowAdminMenu((v) => !v)}
-              title="Admin Tools"
-            >
-              <i className="bi bi-gear" /> Admin {showAdminMenu ? '▴' : '▾'}
-            </button>
-
-            {showAdminMenu && (
-              <>
-                <div
-                  onClick={() => setShowAdminMenu(false)}
-                  style={{ position: 'fixed', inset: 0, zIndex: 199 }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 6px)',
-                    left: 0,
-                    minWidth: '175px',
-                    background: '#261f1a',
-                    border: '1px solid rgba(200, 155, 60, 0.45)',
-                    borderRadius: '8px',
-                    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.75)',
-                    zIndex: 200,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}
-                >
-                  {onToggleCalibration && (
-                    <button
-                      type="button"
-                      style={{ ...menuItemStyle, color: calibrationMode ? '#f87171' : 'var(--text-main)' }}
-                      onClick={() => { setShowAdminMenu(false); onToggleCalibration(); }}
-                    >
-                      <span>{calibrationMode ? 'Exit Arrange' : 'Arrange Components'}</span>
-                      <i className="bi bi-crosshair" />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    style={menuItemStyle}
-                    onClick={() => { setShowAdminMenu(false); setShowSaveLoadModal(true); }}
-                  >
-                    <span>Save / Load State</span>
-                    <i className="bi bi-floppy" />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        {setBoardZoom && (
-          <div
-            className="status-badge"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            title="Zoom board"
-          >
-            <i className="bi bi-zoom-in" style={{ color: 'var(--accent-gold)' }} />
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.05"
-              value={boardZoom}
-              onChange={(e) => setBoardZoom(parseFloat(e.target.value))}
-              aria-label="Board Zoom"
-              style={{ width: '80px', accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
-            />
-            <span
-              onClick={() => (onResetBoardView ? onResetBoardView() : setBoardZoom(1))}
-              title="Click to reset zoom & position"
-              style={{ minWidth: '38px', textAlign: 'right', cursor: 'pointer', fontWeight: 700, color: 'var(--text-main)' }}
-            >
-              {Math.round(boardZoom * 100)}%
-            </span>
-          </div>
-        )}
-      </div>
-      )}
-
       {!(G?.winner || ctx?.gameover) && (
       <div className="header-controls">
         <div
@@ -464,30 +328,6 @@ export function BoardHeaderControls({
         ))}
       </div>
       )}
-      <AdminModal
-        isOpen={showManual}
-        onClose={() => setShowManual(false)}
-        title="KRED Manual"
-        maxWidth="960px"
-        height="min(820px, 88vh)"
-        headerActions={
-          <a
-            href="https://theflyingdutchmen.games/KRED/manual?standalone=1"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--text-muted)', fontSize: '12px', textDecoration: 'none' }}
-            title="Open in new tab"
-          >
-            <i className="bi bi-box-arrow-up-right" /> New Tab
-          </a>
-        }
-      >
-        <iframe
-          src="https://theflyingdutchmen.games/KRED/manual?standalone=1"
-          title="KRED Manual"
-          style={{ flex: 1, width: '100%', border: 'none', background: '#fff' }}
-        />
-      </AdminModal>
     </header>
   );
 }

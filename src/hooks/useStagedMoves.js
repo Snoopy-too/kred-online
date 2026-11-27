@@ -3,9 +3,8 @@ import { MOVE_TYPES } from '../domain/types.js';
 import { getValidDestinations, inferMoveType } from '../domain/moveRulesUtils.js';
 import { applyMoveToState, isCommunityPieceAvailable } from '../domain/moves.js';
 import { getPendingPlayActivePlayer, getValidReceivers } from '../domain/board.js';
-import { executeOnlineCampaignTurn } from '../domain/onlineEngine.js';
 
-export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMasterGameState, numPlayers, tilesPerPlayer, currentPhase }) {
+export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPhase }) {
   const [selectedTileId, setSelectedTileId] = useState('');
   const [selectedReceiverId, setSelectedReceiverId] = useState('');
   const [stagedMoves, setStagedMoves] = useState([]);
@@ -236,14 +235,7 @@ export function useStagedMoves({ G, ctx, playerID, moves, isOnline, updateMaster
   const handleSubmitTurn = () => {
     if (!selectedTileId || !selectedReceiverId) return;
 
-    if (isOnline) {
-      executeOnlineCampaignTurn(
-        G,
-        playerID,
-        { tileId: selectedTileId, receiverId: selectedReceiverId, moves: stagedMoves },
-        updateMasterGameState
-      );
-    } else if (moves?.submitTurnMovesAndTile) {
+    if (moves?.submitTurnMovesAndTile) {
       moves.submitTurnMovesAndTile({
         tileId: selectedTileId,
         receiverId: selectedReceiverId,

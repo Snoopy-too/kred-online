@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { TILES, MOVE_TYPES } from '../domain/types.js';
-import { classifyPlay, isMoveTypePossible } from '../domain/moves.js';
-import { ConfirmModal } from './board/ConfirmModal.jsx';
-import { getTileImageUrl } from '../utils/assets.js';
+import { TILES, MOVE_TYPES } from '../../domain/types.js';
+import { classifyPlay, isMoveTypePossible } from '../../domain/moves.js';
+import { ConfirmModal } from '../modals/ConfirmModal.jsx';
+import { getTileImageUrl } from '../../utils/assets.js';
 
 export function TurnBuilder({
   selectedTileId,

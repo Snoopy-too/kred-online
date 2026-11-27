@@ -1,13 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { PIECE_TYPES, BUREAUCRACY_PRICES, MOVE_TYPES, TILES } from '../../domain/types.js';
-import { getPromotionTargetType, getBureaucracyActionCost, executeBureaucracyActionPayload } from '../../domain/bureaucracy.js';
-import { getValidDestinations, inferMoveType } from '../../domain/moveRulesUtils.js';
-import { executeOnlineBureaucracyAction, executeOnlineChallengerBureaucracyAction, executeOnlineEndBureaucracyTurn } from '../../domain/onlineEngine.js';
+import { PIECE_TYPES, BUREAUCRACY_PRICES, MOVE_TYPES, TILES } from '../domain/types.js';
+import { getPromotionTargetType, getBureaucracyActionCost, executeBureaucracyActionPayload } from '../domain/bureaucracy.js';
+import { getValidDestinations, inferMoveType } from '../domain/moveRulesUtils.js';
 
 const BASIC_MOVE_TYPES = [MOVE_TYPES.ADVANCE, MOVE_TYPES.WITHDRAW, MOVE_TYPES.ORGANIZE];
 const EXTRA_MOVE_TYPES = [MOVE_TYPES.ASSIST, MOVE_TYPES.REMOVE, MOVE_TYPES.INFLUENCE];
 
-export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnline = false, updateMasterGameState = null, expertMode = false }) {
+export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, expertMode = false }) {
   const [moveFromLoc, setMoveFromLoc] = useState('');
   const [stagedActions, setStagedActions] = useState([]);
   const [transientBoardState, setTransientBoardState] = useState(null);
@@ -31,7 +30,7 @@ export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnl
   const pId = String(playerID);
   const isChallengerReward = G?.pendingPlay?.step === 'challengerReward' && String(G?.pendingPlay?.successfulChallengerId) === pId;
   const isMyTurn = (ctx && String(ctx.currentPlayer) === pId) || isChallengerReward;
-  const isStagedMode = !expertMode && !isChallengerReward && !isOnline && ctx?.phase === 'bureaucracy';
+  const isStagedMode = !expertMode && !isChallengerReward && ctx?.phase === 'bureaucracy';
   const domainKey = `p${parseInt(pId, 10) + 1}`;
   const myPlayer = (G && G.players && G.players[pId]) || {};
 
@@ -146,11 +145,9 @@ export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnl
     }
 
     if (isChallengerReward) {
-      if (isOnline) executeOnlineChallengerBureaucracyAction(G, playerID, payload, updateMasterGameState);
-      else moves?.buyChallengerBureaucracyAction(payload);
+      moves?.buyChallengerBureaucracyAction(payload);
     } else {
-      if (isOnline) executeOnlineBureaucracyAction(G, playerID, payload, updateMasterGameState);
-      else moves?.buyBureaucracyAction(payload);
+      moves?.buyBureaucracyAction(payload);
     }
     resetBureaucracySelection();
   };
@@ -220,8 +217,6 @@ export function useBureaucracyBoard({ G, ctx, playerID, moves, numPlayers, isOnl
     if (isStagedMode && moves?.submitBureaucracyTurn) {
       moves.submitBureaucracyTurn(stagedActions);
       resetStagedState();
-    } else if (isOnline) {
-      executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState);
     } else {
       moves?.endBureaucracyTurn();
     }

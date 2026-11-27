@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Client } from 'boardgame.io/dist/esm/client.js';
-import { createKredGame } from '../src/srcGame.js';
+import { createKredGame } from '../src/game.js';
 import { buildBotObservation } from '../src/ai/observation.js';
 import { decideAction } from '../src/ai/decisions.js';
 import { PIECE_TYPES } from '../src/domain/types.js';

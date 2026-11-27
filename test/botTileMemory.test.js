@@ -7,7 +7,7 @@ import {
   decideChallenge,
   getBotPersona
 } from '../src/ai/index.js';
-import { createKredGame } from '../src/srcGame.js';
+import { createKredGame } from '../src/game.js';
 
 function makeEmptyBoard() {
   return createKredGame(3, true).setup({

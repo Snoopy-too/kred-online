@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
-import { createKredGame, filterSoloPlayerView } from '../src/srcGame.js';
+import { createKredGame, filterSoloPlayerView } from '../src/game.js';
 import { classifyPlay, validateSingleMove } from '../src/domain/moves.js';
 import { inferMoveType } from '../src/domain/moveRulesUtils.js';
 import { executeBureaucracyActionPayload, getPromotionTargetType, initBureaucracy } from '../src/domain/bureaucracy.js';

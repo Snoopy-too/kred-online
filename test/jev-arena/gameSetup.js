@@ -1,6 +1,6 @@
 // test/jev-arena/gameSetup.js
 // Deterministic campaign-ready G for the arena: mirrors createKredGame's
-// setup() in src/srcGame.js with skipDraft=true (tiles dealt straight to
+// setup() in src/game.js with skipDraft=true (tiles dealt straight to
 // hands), but with a seeded shuffle instead of boardgame.io's random.
 // Draft is out of scope — the arena covers the onlineEngine executors.
 

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
-import { createKredGame } from '../src/srcGame.js';
+import { createKredGame } from '../src/game.js';
 import { TILES } from '../src/domain/types.js';
 import {
   STANDARD_TILE_IDS,

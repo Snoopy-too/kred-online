@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { findNearestEmptyCommunitySpot } from '../hotspots/geometryUtils.js';
+import { findNearestEmptyCommunitySpot } from '../components/hotspots/geometryUtils.js';
 
 export function usePieceDrag({
   boardRef,

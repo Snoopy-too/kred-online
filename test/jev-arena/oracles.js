@@ -13,7 +13,7 @@ import {
   executeOnlineAcceptTile,
   executeOnlineBureaucracyAction,
   executeOnlineEndBureaucracyTurn,
-} from '../../src/domain/onlineEngine.js';
+} from './onlineEngine.js';
 import { validateMoveCombination } from '../../src/domain/moves.js';
 import { getPendingPlayActivePlayer } from '../../src/domain/board.js';
 import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS } from '../../src/domain/types.js';

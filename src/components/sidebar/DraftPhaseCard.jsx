@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { executeOnlineDraftTileSelect, executeOnlineSkipDraft } from '../../domain/phases/draftPhase.js';
 import { getTileImageUrl } from '../../utils/assets.js';
 
 export function DraftPhaseCard({
@@ -7,9 +6,7 @@ export function DraftPhaseCard({
   playerID,
   moves,
   hasDraftedThisRound,
-  autoDraftTileId,
-  isOnline = false,
-  updateMasterGameState = null
+  autoDraftTileId
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTileId, setSelectedTileId] = useState(null);
@@ -25,31 +22,15 @@ export function DraftPhaseCard({
     if (isSubmitting || hasDraftedThisRound) return;
     setIsSubmitting(true);
     setSelectedTileId(tileId);
-
-    if (isOnline) {
-      executeOnlineDraftTileSelect(G, playerID, tileId, updateMasterGameState);
-    } else if (moves?.selectDraftTile) {
-      moves.selectDraftTile(tileId);
-    }
-
-    setTimeout(() => {
-      setIsSubmitting(false);
-    }, 4000);
+    moves?.selectDraftTile?.(tileId);
+    setTimeout(() => setIsSubmitting(false), 4000);
   };
 
   const handleSkip = () => {
     if (isSubmitting || hasSkippedDraft) return;
     setIsSubmitting(true);
-
-    if (isOnline) {
-      executeOnlineSkipDraft(G, updateMasterGameState);
-    } else if (moves?.skipDraftPhase) {
-      moves.skipDraftPhase();
-    }
-
-    setTimeout(() => {
-      setIsSubmitting(false);
-    }, 4000);
+    moves?.skipDraftPhase?.();
+    setTimeout(() => setIsSubmitting(false), 4000);
   };
 
   return (

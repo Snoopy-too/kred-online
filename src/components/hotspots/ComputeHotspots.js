@@ -1,6 +1,6 @@
-import { get3PHotspots } from './hotspots/hotspots3P.js';
-import { get4PHotspots } from './hotspots/hotspots4P.js';
-import { get5PHotspots } from './hotspots/hotspots5P.js';
+import { get3PHotspots } from './hotspots3P.js';
+import { get4PHotspots } from './hotspots4P.js';
+import { get5PHotspots } from './hotspots5P.js';
 
 export const computeHotspots = (numPlayers) => {
   if (numPlayers === 4) {

@@ -2,10 +2,10 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client';
 import { Client } from 'boardgame.io/dist/esm/react.js';
 import { SocketIO } from 'boardgame.io/dist/esm/multiplayer.js';
-import { createKredGame } from './srcGame.js';
-import { KredBoard } from './srcBoard.jsx';
-import { TableStagingOverlay } from './components/TableStagingOverlay.jsx';
-import { setModalPortalRoot } from './components/board/AdminModal.jsx';
+import { createKredGame } from './game.js';
+import { KredBoard } from './KredBoard.jsx';
+import { TableStagingOverlay } from './components/modals/TableStagingOverlay.jsx';
+import { setModalPortalRoot } from './components/modals/AdminModal.jsx';
 import './styles/base.css';
 import './styles/board.css';
 import './styles/controls.css';
@@ -221,7 +221,6 @@ function KredGameClient({ config }) {
         playerID={playerID}
         credentials={credentials}
         playerNames={playerNames}
-        isOnline={false}
         isAdmin={isAdmin}
         calibrationMode={calibrationMode}
         onToggleCalibration={handleToggleCalibration}

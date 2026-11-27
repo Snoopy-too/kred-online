@@ -1,8 +1,7 @@
-import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES } from './types.js';
-import { enforceSupportRule, checkVictory, getOrderedChallengers, getNextPlayer } from './board.js';
-import { validateMoveCombination, applyMoveToState, classifyPlay } from './moves.js';
-import { getClockwiseOrder } from './board.js';
-import { initBureaucracy, cleanupBureaucracy, executeBureaucracyActionPayload, selectBestBankTilesToPay } from './bureaucracy.js';
+import { TurnSubmissionSchema, INITIAL_PIECE_COUNTS, TILES, BUREAUCRACY_PRICES } from '../../src/domain/types.js';
+import { enforceSupportRule, checkVictory, getOrderedChallengers, getNextPlayer, getClockwiseOrder } from '../../src/domain/board.js';
+import { validateMoveCombination, applyMoveToState, classifyPlay } from '../../src/domain/moves.js';
+import { initBureaucracy, cleanupBureaucracy, executeBureaucracyActionPayload, selectBestBankTilesToPay } from '../../src/domain/bureaucracy.js';
 
 export function isCampaignOver(G) {
   if (!G || !G.players) return false;

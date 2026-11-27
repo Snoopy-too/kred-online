@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { parentPort, workerData } from 'node:worker_threads';
 import { Client } from 'boardgame.io/dist/esm/client.js';
 import { Local } from 'boardgame.io/dist/esm/multiplayer.js';
-import { createKredGame } from '../src/srcGame.js';
+import { createKredGame } from '../src/game.js';
 import {
   STANDARD_TILE_IDS,
   createBotMemory,

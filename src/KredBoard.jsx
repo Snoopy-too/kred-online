@@ -1,39 +1,28 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { expandHistoryPeek } from './domain/gameLog.js';
 import { INITIAL_PIECE_COUNTS } from './domain/types.js';
-import { computeHotspots } from './components/ComputeHotspots.js';
-import { TurnBuilder } from './components/TurnBuilder.jsx';
-import { BureaucracyPanel } from './components/BureaucracyPanel.jsx';
-import { PendingPlayModal } from './components/PendingPlayModal.jsx';
+import { computeHotspots } from './components/hotspots/ComputeHotspots.js';
+import { TurnBuilder } from './components/sidebar/TurnBuilder.jsx';
+import { BureaucracyPanel } from './components/sidebar/BureaucracyPanel.jsx';
+import { PendingPlayModal } from './components/modals/PendingPlayModal.jsx';
 import { SvgBoardCanvas } from './components/board/SvgBoardCanvas.jsx';
-import { HandsPanel } from './components/board/HandsPanel.jsx';
-import { GameLogPanel } from './components/board/GameLogPanel.jsx';
-import { MatchStatsCard } from './components/board/MatchStatsCard.jsx';
-import { SupportDropCard } from './components/board/SupportDropCard.jsx';
-import { OutcomeNoticeCard, isSupportedOutcomeNotice } from './components/board/OutcomeNoticeCard.jsx';
-import { useCalibrationHandlers } from './components/board/useCalibrationHandlers.js';
+import { HandsPanel } from './components/sidebar/HandsPanel.jsx';
+import { GameLogPanel } from './components/sidebar/GameLogPanel.jsx';
+import { MatchStatsCard } from './components/sidebar/MatchStatsCard.jsx';
+import { SupportDropCard } from './components/sidebar/SupportDropCard.jsx';
+import { OutcomeNoticeCard, isSupportedOutcomeNotice } from './components/sidebar/OutcomeNoticeCard.jsx';
+import { useCalibrationHandlers } from './hooks/useCalibrationHandlers.js';
 import { getPerspectiveRotation } from './components/board/perspectiveUtils.js';
-import { StateSaveLoadModal } from './components/board/StateSaveLoadModal.jsx';
 import { getPendingPlayActivePlayer } from './domain/board.js';
-import { useBureaucracyBoard } from './components/board/useBureaucracyBoard.js';
-import { DraftPhaseCard } from './components/board/DraftPhaseCard.jsx';
-import { executeOnlineDraftTileSelect } from './domain/phases/draftPhase.js';
+import { useBureaucracyBoard } from './hooks/useBureaucracyBoard.js';
+import { DraftPhaseCard } from './components/sidebar/DraftPhaseCard.jsx';
 import { BoardHeaderControls } from './components/board/BoardHeaderControls.jsx';
 import { getBoardImageUrl } from './utils/assets.js';
-import {
-  executeOnlineReexecute,
-  executeOnlinePenaltyWithdraw,
-  executeOnlineFreeAdvance,
-  executeOnlineReceiverCredibilityReward,
-  executeOnlineChallengerCredibility
-} from './domain/onlineEngine.js';
 import { useBoardScale } from './hooks/useBoardScale.js';
 import { useStagedMoves } from './hooks/useStagedMoves.js';
-import { useTurnReplayAnimation } from './components/board/useTurnReplayAnimation.js';
+import { useTurnReplayAnimation } from './hooks/useTurnReplayAnimation.js';
 
-export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMode: propCalibrationMode, isOnline = false, isSolo = false, isAdmin = false, onToggleCalibration = null, botIds = [], botStatus = null, playerNames = [], dbMasterState = null, updateMasterGameState = null }) {
-  const G = (isOnline && dbMasterState) ? (dbMasterState.G || dbMasterState) : rawG;
-  const ctx = (isOnline && dbMasterState) ? (dbMasterState.ctx || rawCtx) : rawCtx;
+export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibrationMode, isSolo = false, isAdmin = false, onToggleCalibration = null, botIds = [], playerNames = [] }) {
 
   const { zoomLevel, autoScale } = useBoardScale();
   const [boardZoom, setBoardZoom] = useState(1);
@@ -96,7 +85,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   };
 
   const handleResetBoardView = () => { setBoardZoom(1); setBoardPan({ x: 0, y: 0 }); };
-  const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
 
   const numPlayers = (ctx && ctx.numPlayers) || (G && G.numPlayers) || 3;
   const currentPhase = ctx?.phase || 'draft';
@@ -111,12 +99,10 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     return `Player ${idx + 1}`;
   };
 
-  const staged = useStagedMoves({
-    G, ctx, playerID, moves, isOnline, updateMasterGameState, numPlayers, tilesPerPlayer, currentPhase
-  });
+  const staged = useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPhase });
 
   const bureaucracyBoard = useBureaucracyBoard({
-    G, ctx, playerID, moves, numPlayers, isOnline, updateMasterGameState, expertMode: isExpertMode
+    G, ctx, playerID, moves, numPlayers, expertMode: isExpertMode
   });
 
   useEffect(() => {
@@ -150,15 +136,11 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
   const hasDraftedThisRound = G?.draftSelectionsThisRound && G.draftSelectionsThisRound[playerID];
 
   const autoDraftingTileRef = useRef(null);
-  const latestGRef = useRef(G);
-  const latestUpdateRef = useRef(updateMasterGameState);
   const latestMovesRef = useRef(moves);
 
   useEffect(() => {
-    latestGRef.current = G;
-    latestUpdateRef.current = updateMasterGameState;
     latestMovesRef.current = moves;
-  }, [G, updateMasterGameState, moves]);
+  }, [moves]);
 
   useEffect(() => {
     if (currentPhase === 'draft' && !hasDraftedThisRound) {
@@ -169,12 +151,8 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         autoDraftingTileRef.current = autoTileId;
         setAutoDraftTileId(autoTileId);
 
-        const timer = setTimeout(() => {
-          if (isOnline) {
-            executeOnlineDraftTileSelect(latestGRef.current, playerID, autoTileId, latestUpdateRef.current);
-          } else if (latestMovesRef.current?.selectDraftTile) {
-            latestMovesRef.current.selectDraftTile(autoTileId);
-          }
+        setTimeout(() => {
+          latestMovesRef.current?.selectDraftTile?.(autoTileId);
           setAutoDraftTileId(null);
           autoDraftingTileRef.current = null;
         }, 900);
@@ -184,7 +162,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     }
     autoDraftingTileRef.current = null;
     setAutoDraftTileId(null);
-  }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID]?.length, playerID, isOnline]);
+  }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID]?.length, playerID]);
 
   if (!G || !G.players || !ctx) {
     return (
@@ -220,9 +198,7 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
     isReceiverRewardMe || (isPendingActiveMe && pendingStep === 'challengerReward')
   );
   const handleRestoreBoardCred = canRestoreRewardCred
-    ? () => (isReceiverRewardMe
-        ? (isOnline ? executeOnlineReceiverCredibilityReward(G, playerID, updateMasterGameState) : moves?.claimReceiverCredibilityReward?.())
-        : (isOnline ? executeOnlineChallengerCredibility(G, playerID, updateMasterGameState) : moves?.claimChallengerCredibility?.()))
+    ? () => (isReceiverRewardMe ? moves?.claimReceiverCredibilityReward?.() : moves?.claimChallengerCredibility?.())
     : (bureaucracyBoard.canRestoreCred ? bureaucracyBoard.handleRestoreCred : null);
 
   return (
@@ -244,7 +220,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
         activeHotspots={activeHotspots}
         numPlayers={numPlayers}
         tilesPerPlayer={tilesPerPlayer}
-        setShowSaveLoadModal={setShowSaveLoadModal}
         onResetTransientState={staged.handleResetTurn}
       />
 
@@ -337,8 +312,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
               moves={moves}
               hasDraftedThisRound={hasDraftedThisRound}
               autoDraftTileId={autoDraftTileId}
-              isOnline={isOnline}
-              updateMasterGameState={updateMasterGameState}
             />
           )}
 
@@ -354,8 +327,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
               handleRestoreCred={bureaucracyBoard.handleRestoreCred}
               G={G}
               playerID={playerID}
-              isOnline={isOnline}
-              updateMasterGameState={updateMasterGameState}
               expertMode={isExpertMode}
               effectiveFunding={bureaucracyBoard.effectiveFunding}
               effectiveCredNotchesLost={bureaucracyBoard.effectiveCredNotchesLost}
@@ -390,8 +361,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                     moves={moves}
                     peekPendingTile={staged.peekPendingTile}
                     onTogglePeekTile={staged.handleTogglePeekTile}
-                    isOnline={isOnline}
-                    updateMasterGameState={updateMasterGameState}
                     onReplayPieceMoves={replayAnimation.triggerPieceWalkReplay}
                     isReplaying={replayAnimation.isReplaying}
                     getPlayerLabel={getPlayerLabel}
@@ -405,11 +374,11 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                     handleResetTurn={staged.handleResetTurn}
                     handleSubmitTurn={
                       isReexecutingMe
-                        ? () => isOnline ? executeOnlineReexecute(G, playerID, staged.stagedMoves, updateMasterGameState) : moves?.reexecuteHonestly(staged.stagedMoves)
+                        ? () => moves?.reexecuteHonestly(staged.stagedMoves)
                         : isPenaltyWithdrawMe
-                        ? () => isOnline ? executeOnlinePenaltyWithdraw(G, playerID, staged.stagedMoves[0], updateMasterGameState) : moves?.executePenaltyWithdraw(staged.stagedMoves[0])
+                        ? () => moves?.executePenaltyWithdraw(staged.stagedMoves[0])
                         : isFreeAdvanceMe
-                        ? () => isOnline ? executeOnlineFreeAdvance(G, playerID, staged.stagedMoves[0], updateMasterGameState) : moves?.executeFreeAdvance(staged.stagedMoves[0])
+                        ? () => moves?.executeFreeAdvance(staged.stagedMoves[0])
                         : staged.handleSubmitTurn
                     }
                     isMyTurn={showTurnBuilderForPending || isMyTurn}
@@ -448,8 +417,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
                   handlePromoteSelected={bureaucracyBoard.handlePromoteSelected}
                   G={G}
                   playerID={playerID}
-                  isOnline={isOnline}
-                  updateMasterGameState={updateMasterGameState}
                   expertMode={isExpertMode}
                 />
               )}
@@ -477,8 +444,6 @@ export function KredBoard({ G: rawG, ctx: rawCtx, moves, playerID, calibrationMo
           )}
         </div>
       </div>
-
-      <StateSaveLoadModal G={G} ctx={ctx} moves={moves} isOpen={showSaveLoadModal} onClose={() => setShowSaveLoadModal(false)} onResetTransientState={staged.handleResetTurn} />
     </div>
   );
 }

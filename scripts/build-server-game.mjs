@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const kredDir = path.resolve(__dirname, '..');
 
 const entryContent = `
-import { createKredGame } from './src/srcGame.js';
+import { createKredGame } from './src/game.js';
 const kredGame = createKredGame(undefined, false, { hideOpponentHands: true });
 module.exports = kredGame;
 module.exports.default = kredGame;

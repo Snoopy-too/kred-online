@@ -6789,7 +6789,7 @@ function createCampaignPhase() {
   };
 }
 
-// src/srcGame.js
+// src/game.js
 function filterSoloPlayerView(G2, playerID) {
   if (!G2 || playerID === null || playerID === void 0) return G2;
   const pId = String(playerID);

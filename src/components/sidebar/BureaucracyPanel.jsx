@@ -1,9 +1,5 @@
 import React from 'react';
-import { BUREAUCRACY_PRICES, TILES } from '../domain/types.js';
-import {
-  executeOnlineBureaucracyAction,
-  executeOnlineEndBureaucracyTurn
-} from '../domain/onlineEngine.js';
+import { BUREAUCRACY_PRICES, TILES } from '../../domain/types.js';
 
 function KPrice({ amount, highlighted = false }) {
   return (
@@ -31,8 +27,6 @@ export function BureaucracyPanel({
   handleRestoreCred = null,
   G,
   playerID,
-  isOnline = false,
-  updateMasterGameState = null,
   expertMode = false,
   effectiveFunding = null,
   effectiveCredNotchesLost = null,
@@ -120,7 +114,6 @@ export function BureaucracyPanel({
                   disabled={!canAct || funding < prices.RESTORE_CRED || credibilityNotchesLost === 0}
                   onClick={() => {
                     if (handleRestoreCred) handleRestoreCred();
-                    else if (isOnline) executeOnlineBureaucracyAction(G, playerID, { actionType: 'RESTORE_CRED', shopCost: prices.RESTORE_CRED }, updateMasterGameState);
                     else moves?.buyBureaucracyAction({ actionType: 'RESTORE_CRED' });
                   }}
                 >
@@ -209,7 +202,6 @@ export function BureaucracyPanel({
                 disabled={!canAct}
                 onClick={() => {
                   if (onFinishTurn) onFinishTurn();
-                  else if (isOnline) executeOnlineEndBureaucracyTurn(G, playerID, updateMasterGameState);
                   else moves?.endBureaucracyTurn();
                 }}
               >

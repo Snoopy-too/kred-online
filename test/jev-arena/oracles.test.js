@@ -12,7 +12,7 @@ import {
   spy,
 } from './oracles.js';
 import { enumerateLegalActions } from './actionEnumerator.js';
-import { executeOnlineCampaignTurn } from '../../src/domain/onlineEngine.js';
+import { executeOnlineCampaignTurn } from './onlineEngine.js';
 import { makeInitialG, clone } from './gameSetup.js';
 
 describe('illegal-move oracle', () => {

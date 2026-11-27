@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { applyMoveToState } from '../../domain/moves.js';
+import { applyMoveToState } from '../domain/moves.js';
 
 function getSpotCoords(spotKey, activeHotspots) {
   if (!spotKey) return { left: '50%', top: '50%' };
