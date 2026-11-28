@@ -18,7 +18,7 @@ export function get3PHotspots() {
     "p1_bank7": { "left": "27.57%", "top": "5.91%", "rot": 180, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(180deg) scale(1.87)" },
     "p1_bank8": { "left": "32.93%", "top": "5.99%", "rot": 180, "scale": 1.87, "transform": "translate(-50%, -50%) rotate(180deg) scale(1.87)" },
     "p1_dropTile": { "left": "3.64%", "top": "46.75%", "rot": 168, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(168deg) scale(1.85)" },
-    "p1_cred": { "left": "9.12%", "top": "5.50%", "rot": 312, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(312deg) scale(2.25)" },
+    "p1_cred": { "left": "7.84%", "top": "5.61%", "rot": 312, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(312deg) scale(2.25)" },
 
     "p2_office": { "left": "77.13%", "top": "34.23%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p2_rostrum1": { "left": "50.13%", "top": "15.62%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
@@ -38,7 +38,7 @@ export function get3PHotspots() {
     "p2_bank7": { "left": "82.54%", "top": "45.73%", "rot": 300, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(300deg) scale(1.85)" },
     "p2_bank8": { "left": "79.66%", "top": "50.56%", "rot": 300, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(300deg) scale(1.85)" },
     "p2_dropTile": { "left": "60.55%", "top": "4.23%", "rot": 288, "scale": 1.85, "transform": "translate(-50%, -50%) rotate(288deg) scale(1.85)" },
-    "p2_cred": { "left": "93.47%", "top": "28.20%", "rot": 70, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(70deg) scale(2.25)" },
+    "p2_cred": { "left": "93.19%", "top": "27.43%", "rot": 70, "scale": 2.25, "transform": "translate(-50%, -50%) rotate(70deg) scale(2.25)" },
 
     "p3_office": { "left": "37.85%", "top": "75.95%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },
     "p3_rostrum1": { "left": "64.54%", "top": "60.38%", "rot": 0, "scale": 1, "transform": "translate(-50%, -50%) rotate(0deg) scale(1)" },

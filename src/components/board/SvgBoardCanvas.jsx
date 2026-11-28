@@ -232,7 +232,7 @@ export function SvgBoardCanvas({
           const isZeroCredibility = ((G?.players?.[targetPlayerId]?.credibilityNotchesLost || 0) >= 3);
           const isPendingActive = isPendingReceiver && G?.pendingPlay?.step === 'receipt';
           const isSelfReceiver = isPendingActive && isSelf && !isZeroCredibility;
-          const isTargetable = Boolean(selectedTileId) && !isReceiverLocked;
+          const isTargetable = Boolean(selectedTileId) && !isReceiverLocked && !(expertMode && Boolean(selectedReceiverId));
           const isPeekingTile = isSelfReceiver && peekPendingTile && Boolean(G?.pendingPlay?.tileIdPlayed);
 
           const pLabel = getPlayerLabel ? getPlayerLabel(targetPlayerId) : `Player ${domainNum}`;
@@ -240,7 +240,7 @@ export function SvgBoardCanvas({
           return (
             <div
               key={locKey}
-              className={`domino-tile-container ${isPeekingTile ? 'domino-tile-faceup peeked-tile-container' : isDropActive ? 'domino-tile-facedown' : 'drop-tile-box'} ${isSelfReceiver ? 'peekable-drop-target' : ''} ${isDropActive && !isPeekingTile ? 'active-drop-target' : ''} ${isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${isReceiverLocked && !isDropActive ? 'self-locked-drop-target' : ''}`}
+              className={`domino-tile-container ${isPeekingTile ? 'domino-tile-faceup peeked-tile-container' : isDropActive ? 'domino-tile-facedown' : 'drop-tile-box'} ${!expertMode && isSelfReceiver ? 'peekable-drop-target' : ''} ${!expertMode && isDropActive && !isPeekingTile ? 'active-drop-target' : ''} ${!expertMode && isTargetable && !isDropActive ? 'selectable-drop-target' : ''} ${!expertMode && isReceiverLocked && !isDropActive ? 'self-locked-drop-target' : ''}`}
               style={{
                 left: coords.left,
                 top: coords.top,
@@ -401,7 +401,7 @@ export function SvgBoardCanvas({
           <div
             key={locKey}
             data-drop-loc={locKey}
-            className={`board-hotspot ${!expertMode && playedPieceColor ? `hotspot-played-${playedPieceColor}` : ''} ${!expertMode && isSelectedPiece ? 'hotspot-selected-piece' : ''} ${!expertMode && isValidTarget ? 'hotspot-valid-target' : ''} ${!expertMode && isPromotionTarget ? 'hotspot-promotion-target' : ''}`}
+            className={`board-hotspot ${!expertMode && playedPieceColor ? `hotspot-played-${playedPieceColor}` : ''} ${isSelectedPiece ? 'hotspot-selected-piece' : ''} ${!expertMode && isValidTarget ? 'hotspot-valid-target' : ''} ${!expertMode && isPromotionTarget ? 'hotspot-promotion-target' : ''}`}
             style={{
               left: coords.left,
               top: coords.top,
@@ -456,13 +456,13 @@ export function SvgBoardCanvas({
         return (
           <div
             data-drop-loc={commTargetSpot}
-            className="large-community-target"
+            className={expertMode ? undefined : 'large-community-target'}
             style={{
               left: commTargetCoords.left,
               top: commTargetCoords.top,
               width: `${diameterPct}%`,
               height: `${diameterPct}%`,
-              ...(expertMode ? { background: 'transparent', border: 'none', boxShadow: 'none' } : {})
+              ...(expertMode ? { position: 'absolute', transform: 'translate(-50%, -50%)', borderRadius: '50%', zIndex: 100, cursor: 'pointer' } : {})
             }}
             onClick={(e) => {
               if (!onDestinationClick) return;

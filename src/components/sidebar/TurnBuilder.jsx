@@ -20,7 +20,9 @@ export function TurnBuilder({
   boardState = null,
   community = null,
   numPlayers = 3,
-  expertMode = false
+  expertMode = false,
+  stagedRewardCred = false,
+  isFullCredibility = false
 }) {
   const [showNoMovesModal, setShowNoMovesModal] = useState(false);
 
@@ -32,6 +34,7 @@ export function TurnBuilder({
   let titleText = 'Your Turn';
   let canFinish = isTileSelected && isReceiverSelected;
   let finishButtonLabel = 'Finish Turn';
+  const hasLegalAdvance = isFreeAdvance ? (!boardState || isMoveTypePossible(MOVE_TYPES.ADVANCE, playerID, boardState, community, numPlayers)) : true;
 
   if (isReexecuting) {
     titleText = isSmokingGun ? 'Smoking Gun!' : 'Whistle Blown!';
@@ -44,10 +47,9 @@ export function TurnBuilder({
     canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Withdraw' || (!hasLegalWithdraw && stagedMoves.length === 0);
     finishButtonLabel = canFinish ? (stagedMoves.length === 1 ? 'Submit Penalty Withdraw' : 'Skip (No Legal Withdraw)') : 'Withdraw Move Required';
   } else if (isFreeAdvance) {
-    titleText = 'Free Advance Bonus Action';
-    const hasLegalAdvance = !boardState || isMoveTypePossible(MOVE_TYPES.ADVANCE, playerID, boardState, community, numPlayers);
-    canFinish = stagedMoves.length === 1 && stagedMoves[0].type === 'Advance' || (!hasLegalAdvance && stagedMoves.length === 0);
-    finishButtonLabel = canFinish ? (stagedMoves.length === 1 ? 'Submit Free Advance' : 'Skip (No Legal Advance)') : 'Advance Move Required';
+    titleText = 'Bonus: Restore all Credibility or Advance';
+    canFinish = stagedRewardCred || (stagedMoves.length === 1 && stagedMoves[0].type === 'Advance') || (!hasLegalAdvance && isFullCredibility && stagedMoves.length === 0);
+    finishButtonLabel = (!hasLegalAdvance && isFullCredibility && stagedMoves.length === 0 && !stagedRewardCred) ? 'Skip (No Legal Advance)' : 'Finish Turn';
   }
 
   const handleFinishClick = () => {
@@ -61,9 +63,23 @@ export function TurnBuilder({
 
   const tileData = selectedTileId ? TILES[selectedTileId] : null;
 
-  const actionsRow = (
+  const isExpertAutoFinish = expertMode && !isReexecuting && !isPenaltyWithdraw && !isFreeAdvance;
+  const isExpertFreeAdvanceNoOptions = expertMode && isFreeAdvance && !hasLegalAdvance && isFullCredibility;
+  const isExpertFreeAdvanceAuto = expertMode && isFreeAdvance && !isExpertFreeAdvanceNoOptions;
+  const isReexecNoMovesNeeded = isReexecuting && canFinish && stagedMoves.length === 0;
+
+  const actionsRow = isExpertAutoFinish || isExpertFreeAdvanceAuto || (isReexecuting && !isReexecNoMovesNeeded) ? null : (isReexecNoMovesNeeded || isExpertFreeAdvanceNoOptions) ? (
     <div className="turn-actions-row">
-      {(!expertMode || isReexecuting) && (isTileSelected || isReceiverSelected || stagedMoves.length > 0) && (
+      <button
+        className="btn btn-primary finish-turn-btn active-finish"
+        onClick={handleFinishClick}
+      >
+        {isExpertFreeAdvanceNoOptions ? 'Skip (No Legal Advance)' : 'Continue (No Legal Moves)'}
+      </button>
+    </div>
+  ) : (
+    <div className="turn-actions-row">
+      {(!expertMode || isReexecuting) && (isTileSelected || isReceiverSelected || stagedMoves.length > 0 || stagedRewardCred) && (
         <button
           className="btn btn-secondary reset-turn-btn"
           onClick={handleResetTurn}
@@ -118,7 +134,10 @@ export function TurnBuilder({
             {isPenaltyWithdraw ? (
               <li>Click a piece on the board to Withdraw.</li>
             ) : isFreeAdvance ? (
-              <li>Click a piece on the board to Advance.</li>
+              <>
+                <li>Select a piece to Advance.</li>
+                <li>Or select your credibility token to restore all credibility.</li>
+              </>
             ) : (
               <>
                 <li>Move one or two pieces.</li>

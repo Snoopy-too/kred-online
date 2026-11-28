@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { MOVE_TYPES } from '../domain/types.js';
 import { getValidDestinations, inferMoveType } from '../domain/moveRulesUtils.js';
-import { applyMoveToState, isCommunityPieceAvailable } from '../domain/moves.js';
+import { applyMoveToState, classifyPlay, isCommunityPieceAvailable } from '../domain/moves.js';
 import { getPendingPlayActivePlayer, getValidReceivers } from '../domain/board.js';
 
-export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPhase }) {
+export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPhase, expertMode = false }) {
   const [selectedTileId, setSelectedTileId] = useState('');
   const [selectedReceiverId, setSelectedReceiverId] = useState('');
   const [stagedMoves, setStagedMoves] = useState([]);
@@ -15,6 +15,11 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
   const [peekPendingTile, setPeekPendingTile] = useState(false);
 
   const isMyTurn = ctx && String(ctx.currentPlayer) === String(playerID);
+  const isExpertLive = Boolean(expertMode && currentPhase === 'campaign' && !G?.pendingPlay && !G?.pendingSupport);
+  const myLiveTurn = isExpertLive && G?.liveTurn && String(G.liveTurn.moverId) === String(playerID) ? G.liveTurn : null;
+  const activeStagedMoves = isExpertLive ? (myLiveTurn?.moves || []) : stagedMoves;
+  const activeReceiverId = isExpertLive ? '' : selectedReceiverId;
+  const activeTileId = selectedTileId;
 
   const handleTogglePeekTile = () => {
     setPeekPendingTile(prev => !prev);
@@ -53,6 +58,7 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
 
   const handleSelectTile = (tileId) => {
     if (!isMyTurn || currentPhase !== 'campaign') return;
+    if (expertMode && activeReceiverId) return;
     if (selectedTileId === tileId) {
       setSelectedTileId('');
     } else {
@@ -61,8 +67,14 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
   };
 
   const handleSelectReceiver = (receiverId) => {
-    if (!isMyTurn || currentPhase !== 'campaign' || !selectedTileId) return;
+    if (!isMyTurn || currentPhase !== 'campaign' || !activeTileId) return;
     if (!validReceivers.includes(String(receiverId))) return;
+    if (isExpertLive) {
+      if (activeReceiverId) return;
+      moves?.commitExpertTileDrop?.({ tileId: activeTileId, receiverId: String(receiverId) });
+      setSelectedTileId('');
+      return;
+    }
     if (selectedReceiverId === String(receiverId)) {
       setSelectedReceiverId('');
     } else {
@@ -154,13 +166,13 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
     }
 
     if (!isMyTurn) return;
-    if (stagedMoves.length === 1 && stagedMoves[0].to === locKey) return;
+    if (activeStagedMoves.length === 1 && activeStagedMoves[0].to === locKey) return;
 
-    const currentBoard = transientBoardState || G.boardState;
+    const currentBoard = (isExpertLive ? G.boardState : transientBoardState) || G.boardState;
     const piece = currentBoard[locKey];
 
-    if (stagedMoves.length === 1 && piece && stagedMoves[0]?.pieceId && piece.id === stagedMoves[0].pieceId) return;
-    if (stagedMoves.length === 1 && stagedMoves[0].to === locKey) return;
+    if (activeStagedMoves.length === 1 && piece && activeStagedMoves[0]?.pieceId && piece.id === activeStagedMoves[0].pieceId) return;
+    if (activeStagedMoves.length === 1 && activeStagedMoves[0].to === locKey) return;
 
     if (selectedPieceLoc === locKey) {
       setSelectedPieceLoc('');
@@ -169,8 +181,8 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
     }
 
     if (piece) {
-      const currentComm = transientCommunity || G.community;
-      if (locKey.startsWith('community_') && !isCommunityPieceAvailable(piece.type, currentBoard, currentComm, stagedMoves)) {
+      const currentComm = (isExpertLive ? G.community : transientCommunity) || G.community;
+      if (locKey.startsWith('community_') && !isCommunityPieceAvailable(piece.type, currentBoard, currentComm, activeStagedMoves)) {
         return;
       }
 
@@ -180,8 +192,8 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
         currentBoard,
         currentComm,
         numPlayers,
-        stagedMoves,
-        selectedTileId
+        activeStagedMoves,
+        activeTileId
       );
       setSelectedPieceLoc(locKey);
       setValidDestinations(validTargets);
@@ -195,11 +207,11 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
     const isCommValid = toLoc.startsWith('community_') && validDestinations.some(d => d === 'community' || d.startsWith('community_'));
     if (!selectedPieceLoc || (!validDestinations.includes(toLoc) && !isCommValid)) return;
 
-    const currentBoard = JSON.parse(JSON.stringify(transientBoardState || G.boardState));
-    const currentComm = JSON.parse(JSON.stringify(transientCommunity || G.community));
+    const currentBoard = JSON.parse(JSON.stringify((isExpertLive ? G.boardState : transientBoardState) || G.boardState));
+    const currentComm = JSON.parse(JSON.stringify((isExpertLive ? G.community : transientCommunity) || G.community));
 
     const isReexecuting = G?.pendingPlay?.step === 'reexecute';
-    const tileContext = G?.pendingPlay ? (G.pendingPlay.reexecuteTileId || '') : selectedTileId;
+    const tileContext = G?.pendingPlay ? (G.pendingPlay.reexecuteTileId || '') : activeTileId;
 
     const inferredType = inferMoveType(
       selectedPieceLoc,
@@ -208,7 +220,7 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
       currentBoard,
       currentComm,
       numPlayers,
-      stagedMoves,
+      activeStagedMoves,
       tileContext,
       isReexecuting
     );
@@ -222,6 +234,29 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
       pieceId: pieceObj ? pieceObj.id : undefined
     };
 
+    if (isExpertLive) {
+      moves?.commitExpertMove?.(newMove);
+      setSelectedPieceLoc('');
+      setValidDestinations([]);
+      return;
+    }
+
+    const isFreeAdvanceStep = G?.pendingPlay?.step === 'freeAdvance' || G?.pendingPlay?.step === 'receiverReward';
+    if (expertMode && isFreeAdvanceStep) {
+      moves?.executeFreeAdvance?.(newMove);
+      handleResetTurn();
+      return;
+    }
+
+    if (isReexecuting) {
+      const nextMoves = [...stagedMoves, newMove];
+      if (classifyPlay(nextMoves, tileContext, playerID, G.boardState, G.community, numPlayers) === 'Honest') {
+        moves?.reexecuteHonestly?.(nextMoves);
+        handleResetTurn();
+        return;
+      }
+    }
+
     applyMoveToState(newMove, currentBoard, currentComm);
 
     setTransientBoardState(currentBoard);
@@ -233,13 +268,13 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
   };
 
   const handleSubmitTurn = () => {
-    if (!selectedTileId || !selectedReceiverId) return;
+    if (!activeTileId || !activeReceiverId) return;
 
     if (moves?.submitTurnMovesAndTile) {
       moves.submitTurnMovesAndTile({
-        tileId: selectedTileId,
-        receiverId: selectedReceiverId,
-        moves: stagedMoves
+        tileId: activeTileId,
+        receiverId: activeReceiverId,
+        moves: activeStagedMoves
       });
     }
 
@@ -247,13 +282,13 @@ export function useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPha
   };
 
   return {
-    selectedTileId,
+    selectedTileId: activeTileId,
     setSelectedTileId,
-    selectedReceiverId,
+    selectedReceiverId: activeReceiverId,
     setSelectedReceiverId,
-    stagedMoves,
+    stagedMoves: activeStagedMoves,
     setStagedMoves,
-    transientBoardState,
+    transientBoardState: isExpertLive ? null : transientBoardState,
     transientCommunity,
     selectedPieceLoc,
     validDestinations,

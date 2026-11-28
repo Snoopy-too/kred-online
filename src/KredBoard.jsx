@@ -36,7 +36,9 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
   const peekingBoardState = historyPeek.boardState;
   const displayG = historyPeek.G;
 
-  const outcomeNotice = isSupportedOutcomeNotice(G?.lastOutcomeNotice) ? G.lastOutcomeNotice : null;
+  const rawOutcomeNotice = isSupportedOutcomeNotice(G?.lastOutcomeNotice) ? G.lastOutcomeNotice : null;
+  const isPostBankNotice = rawOutcomeNotice && (rawOutcomeNotice.type === 'quiet' || rawOutcomeNotice.type === 'challengeFailed');
+  const outcomeNotice = rawOutcomeNotice && (G?.pendingPlay || isPostBankNotice) ? rawOutcomeNotice : null;
   const outcomeNoticeKey = outcomeNotice
     ? `${outcomeNotice.type}:${outcomeNotice.moverId}:${outcomeNotice.receiverId}:${outcomeNotice.tileIdPlayed}:${outcomeNotice.challengerId ?? ''}`
     : '';
@@ -48,7 +50,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
     }
     const timer = setTimeout(() => {
       setDismissedOutcomeKey(outcomeNoticeKey);
-    }, 4000);
+    }, 2500);
     return () => clearTimeout(timer);
   }, [outcomeNoticeKey]);
 
@@ -99,7 +101,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
     return `Player ${idx + 1}`;
   };
 
-  const staged = useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPhase });
+  const staged = useStagedMoves({ G, ctx, playerID, moves, numPlayers, currentPhase, expertMode: isExpertMode });
 
   const bureaucracyBoard = useBureaucracyBoard({
     G, ctx, playerID, moves, numPlayers, expertMode: isExpertMode
@@ -164,6 +166,12 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
     setAutoDraftTileId(null);
   }, [currentPhase, hasDraftedThisRound, G?.draftPacks?.[playerID]?.length, playerID]);
 
+  const [stagedRewardCred, setStagedRewardCred] = useState(false);
+
+  useEffect(() => {
+    setStagedRewardCred(false);
+  }, [G?.pendingPlay?.step, G?.pendingPlay, ctx?.phase, ctx?.currentPlayer]);
+
   if (!G || !G.players || !ctx) {
     return (
       <div className="kred-container">
@@ -192,14 +200,26 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
   const isReexecutingMe = isPendingActiveMe && pendingStep === 'reexecute';
   const isPenaltyWithdrawMe = isPendingActiveMe && pendingStep === 'penaltyWithdraw';
   const isReceiverRewardMe = isPendingActiveMe && (pendingStep === 'receiverReward' || pendingStep === 'freeAdvance');
-  const isFreeAdvanceMe = isPendingActiveMe && (pendingStep === 'freeAdvance' || (pendingStep === 'receiverReward' && staged.stagedMoves.length > 0));
+  const isFreeAdvanceMe = isReceiverRewardMe;
   const showTurnBuilderForPending = isReexecutingMe || isPenaltyWithdrawMe || isFreeAdvanceMe;
-  const canRestoreRewardCred = !isSupportPending && (myPlayer.credibilityNotchesLost || 0) > 0 && (
-    isReceiverRewardMe || (isPendingActiveMe && pendingStep === 'challengerReward')
+  const isFullCredibility = (myPlayer.credibilityNotchesLost || 0) === 0;
+  const canRestoreRewardCred = !isSupportPending && !isFullCredibility && !stagedRewardCred && (
+    (isReceiverRewardMe && staged.stagedMoves.length === 0) || (isPendingActiveMe && pendingStep === 'challengerReward')
   );
   const handleRestoreBoardCred = canRestoreRewardCred
-    ? () => (isReceiverRewardMe ? moves?.claimReceiverCredibilityReward?.() : moves?.claimChallengerCredibility?.())
+    ? () => {
+        if (isReceiverRewardMe) {
+          if (isExpertMode) moves?.claimReceiverCredibilityReward?.();
+          else setStagedRewardCred(true);
+        } else {
+          moves?.claimChallengerCredibility?.();
+        }
+      }
     : (bureaucracyBoard.canRestoreCred ? bureaucracyBoard.handleRestoreCred : null);
+  const handleResetTurnAll = () => {
+    setStagedRewardCred(false);
+    staged.handleResetTurn();
+  };
 
   return (
     <div className="kred-container">
@@ -259,7 +279,9 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
               handleBoardMouseDown={calibration.handleBoardMouseDown}
               handleRotateSelectedSpots={calibration.handleRotateSelectedSpots}
               G={
-                !peekingBoardState && isBureaucracyInteraction && bureaucracyBoard.effectiveCredNotchesLost !== (myPlayer.credibilityNotchesLost || 0)
+                !peekingBoardState && stagedRewardCred
+                  ? { ...displayG, players: { ...displayG.players, [String(playerID)]: { ...displayG.players?.[String(playerID)], credibilityNotchesLost: 0 } } }
+                  : !peekingBoardState && isBureaucracyInteraction && bureaucracyBoard.effectiveCredNotchesLost !== (myPlayer.credibilityNotchesLost || 0)
                   ? { ...displayG, players: { ...displayG.players, [String(playerID)]: { ...displayG.players?.[String(playerID)], credibilityNotchesLost: bureaucracyBoard.effectiveCredNotchesLost } } }
                   : displayG
               }
@@ -275,7 +297,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
               validDestinations={peekingBoardState ? [] : isSupportPending ? (isSupportOwnerMe ? G.pendingSupport.validDestinations : []) : isBureaucracyInteraction ? bureaucracyBoard.moveValidDestinations : staged.validDestinations}
               selectedPieceLoc={peekingBoardState ? '' : isSupportPending ? (isSupportOwnerMe ? G.pendingSupport.from : '') : isBureaucracyInteraction ? bureaucracyBoard.moveFromLoc : staged.selectedPieceLoc}
               stagedMoves={peekingBoardState || isSupportPending ? [] : isBureaucracyInteraction ? bureaucracyBoard.stagedMoves : staged.stagedMoves}
-              onPieceClick={peekingBoardState || isSupportPending ? noop : isBureaucracyInteraction ? bureaucracyBoard.handleBureaucracySpotClick : staged.handlePieceClick}
+              onPieceClick={peekingBoardState || isSupportPending || stagedRewardCred ? noop : isBureaucracyInteraction ? bureaucracyBoard.handleBureaucracySpotClick : staged.handlePieceClick}
               onDestinationClick={peekingBoardState ? noop : isSupportPending ? (isSupportOwnerMe ? (toLoc) => moves?.resolveSupportDrop?.(toLoc) : noop) : isBureaucracyInteraction ? bureaucracyBoard.handleBureaucracyDestinationClick : staged.handleDestinationClick}
               transientBoardState={peekingBoardState || (isSupportPending ? null : isBureaucracyInteraction ? bureaucracyBoard.transientBoardState : staged.transientBoardState)}
               zoomLevel={zoomLevel * autoScale * boardZoom}
@@ -341,12 +363,13 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
           {currentPhase === 'campaign' && (!isSupportPending || outcomeNotice?.type === 'quiet' || outcomeNotice?.type === 'challengeFailed') && (
             <>
               <div className="turn-builder-card campaign-action-panel">
-                {outcomeNotice && (isSupportPending || (outcomeNoticeKey !== dismissedOutcomeKey && staged.stagedMoves.length === 0)) ? (
+                {outcomeNotice && !isReexecutingMe && !isFreeAdvanceMe && (isSupportPending || (outcomeNoticeKey !== dismissedOutcomeKey && staged.stagedMoves.length === 0)) ? (
                   <OutcomeNoticeCard
                     notice={outcomeNotice}
                     getPlayerLabel={getPlayerLabel}
                     pendingSupport={isSupportPending ? G.pendingSupport : null}
                     playerID={playerID}
+                    expertMode={isExpertMode}
                     onDismiss={!isSupportPending && (isMyTurn || isPendingActiveMe) ? () => setDismissedOutcomeKey(outcomeNoticeKey) : null}
                     waitingLabel={
                       isSupportPending
@@ -371,14 +394,21 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
                     selectedTileId={isReexecutingMe ? G.pendingPlay.reexecuteTileId : staged.selectedTileId}
                     selectedReceiverId={isReexecutingMe ? G.pendingPlay.receiverId : staged.selectedReceiverId}
                     stagedMoves={staged.stagedMoves}
-                    handleResetTurn={staged.handleResetTurn}
+                    handleResetTurn={handleResetTurnAll}
                     handleSubmitTurn={
                       isReexecutingMe
                         ? () => moves?.reexecuteHonestly(staged.stagedMoves)
                         : isPenaltyWithdrawMe
                         ? () => moves?.executePenaltyWithdraw(staged.stagedMoves[0])
                         : isFreeAdvanceMe
-                        ? () => moves?.executeFreeAdvance(staged.stagedMoves[0])
+                        ? () => {
+                            if (stagedRewardCred) {
+                              setStagedRewardCred(false);
+                              moves?.claimReceiverCredibilityReward?.();
+                            } else {
+                              moves?.executeFreeAdvance?.(staged.stagedMoves[0]);
+                            }
+                          }
                         : staged.handleSubmitTurn
                     }
                     isMyTurn={showTurnBuilderForPending || isMyTurn}
@@ -392,8 +422,10 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
                     community={G.community}
                     numPlayers={numPlayers}
                     expertMode={isExpertMode}
+                    stagedRewardCred={stagedRewardCred}
+                    isFullCredibility={isFullCredibility}
                   />
-                ) : outcomeNotice ? (
+                ) : outcomeNotice && outcomeNoticeKey !== dismissedOutcomeKey ? (
                   <OutcomeNoticeCard
                     notice={outcomeNotice} playerID={playerID}
                     getPlayerLabel={getPlayerLabel}
@@ -431,7 +463,7 @@ export function KredBoard({ G, ctx, moves, playerID, calibrationMode: propCalibr
             currentPhase={historyPeek.hasTiles ? 'campaign' : currentPhase}
             selectedTileId={historyPeek.active ? null : staged.selectedTileId}
             onSelectTile={staged.handleSelectTile}
-            disabled={historyPeek.active || !isMyTurn || currentPhase !== 'campaign' || Boolean(G?.pendingPlay) || isSupportPending}
+            disabled={historyPeek.active || !isMyTurn || currentPhase !== 'campaign' || Boolean(G?.pendingPlay) || isSupportPending || (isExpertMode && Boolean(staged.selectedReceiverId))}
             getPlayerLabel={getPlayerLabel}
             isSolo={isSolo}
             botIds={botIds}

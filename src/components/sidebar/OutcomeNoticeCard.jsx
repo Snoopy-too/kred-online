@@ -13,7 +13,7 @@ export function isSupportedOutcomeNotice(notice) {
   return Boolean(notice && OUTCOME_META[notice.type]);
 }
 
-export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null, onDismiss = null, pendingSupport = null, playerID = null }) {
+export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null, onDismiss = null, pendingSupport = null, playerID = null, expertMode = false }) {
   if (!isSupportedOutcomeNotice(notice)) return null;
   const meta = OUTCOME_META[notice.type];
   const label = (id) => (getPlayerLabel ? getPlayerLabel(id) : `Player ${parseInt(id, 10) + 1}`);
@@ -63,7 +63,7 @@ export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null,
           alt={notice.tileIdPlayed === '___' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
           title={notice.tileIdPlayed === '___' ? 'Blank Tile' : `Tile ${notice.tileIdPlayed}`}
           style={{
-            width: '62px',
+            width: '50px',
             height: 'auto',
             aspectRatio: '2.5 / 5',
             objectFit: 'contain',
@@ -89,7 +89,7 @@ export function OutcomeNoticeCard({ notice, getPlayerLabel, waitingLabel = null,
         {isSupportOwnerMe && (
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#fbbf24', lineHeight: 1.35, marginTop: '2px' }}>
             Your piece in <strong>{supportFromLabel}</strong> has no piece in{' '}
-            {supportIsOffice ? 'either rostrum' : 'any supporting seat'} to support it. Click a highlighted {supportIsOffice ? 'rostrum' : 'seat'} on the board.
+            {supportIsOffice ? 'either rostrum' : 'any supporting seat'} to support it. Click {expertMode ? 'an open' : 'a highlighted'} {supportIsOffice ? 'rostrum' : 'seat'} on the board.
           </div>
         )}
         {waitingLabel && (

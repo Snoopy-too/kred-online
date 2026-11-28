@@ -208,6 +208,9 @@ export function useTurnReplayAnimation(G, activeHotspots, getPlayerLabel, player
     if (pendingPlay.step !== 'receipt' && pendingPlay.step !== 'challenge') {
       return;
     }
+    if (pendingPlay.alreadyAnimatedLive) {
+      return;
+    }
     if (playerID !== null && String(pendingPlay.moverId) === String(playerID)) {
       return;
     }

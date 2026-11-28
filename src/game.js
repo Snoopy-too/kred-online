@@ -29,6 +29,10 @@ export function filterSoloPlayerView(G, playerID) {
     });
   }
 
+  if (nextG.liveTurn && String(nextG.liveTurn.moverId) !== pId && nextG.liveTurn.tileId) {
+    nextG.liveTurn.tileId = 'HIDDEN';
+  }
+
   if (nextG.pendingPlay && (nextG.pendingPlay.step === 'receipt' || nextG.pendingPlay.step === 'challenge')) {
     const pp = nextG.pendingPlay;
     const isMover = String(pp.moverId) === pId;
@@ -89,9 +93,9 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
         boardState[`${domainKey}_rostrum1`] = null;
         boardState[`${domainKey}_rostrum2`] = null;
 
-        // Seats 1, 3, 5 get Marks; 2, 4, 6 start vacant
+        // Seats 2, 4, 6 get Marks; 1, 3, 5 start vacant
         for (let s = 1; s <= 6; s++) {
-          if (s % 2 !== 0) {
+          if (s % 2 === 0) {
             boardState[`${domainKey}_seat${s}`] = { id: `init_m_${domainKey}_s${s}`, type: PIECE_TYPES.MARK };
           } else {
             boardState[`${domainKey}_seat${s}`] = null;
@@ -176,6 +180,7 @@ export function createKredGame(numPlayers, skipDraft = false, options = {}) {
         draftPacks,
         draftSelectionsThisRound: {},
         draftSkippedPlayers: {},
+        liveTurn: null,
         pendingPlay: null,
         pendingSupport: null,
         nextMoverId: null,

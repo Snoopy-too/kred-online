@@ -170,10 +170,10 @@ select {
 }
 
 .campaign-action-panel {
-  height: 180px;
-  min-height: 180px;
-  max-height: 180px;
-  overflow-y: auto;
+  height: 176px;
+  min-height: 176px;
+  max-height: 176px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;

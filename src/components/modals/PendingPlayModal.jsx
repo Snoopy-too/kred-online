@@ -64,21 +64,24 @@ export function PendingPlayModal({
               <h3>Receive Tile</h3>
             </div>
             <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-              {!isZeroCredibility && (
-                <button
-                  className="btn btn-secondary"
-                  onClick={onTogglePeekTile}
-                  style={{ border: '1px solid rgba(200, 155, 60, 0.45)', color: 'var(--accent-gold)' }}
-                >
-                  {peekPendingTile ? 'Hide Tile' : 'Peek Tile'}
-                </button>
+              {(!isZeroCredibility || replayBtn) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))', gap: '8px' }}>
+                  {!isZeroCredibility && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={onTogglePeekTile}
+                      style={{ border: '1px solid rgba(200, 155, 60, 0.45)', color: 'var(--accent-gold)' }}
+                    >
+                      {peekPendingTile ? 'Hide Tile' : 'Peek Tile'}
+                    </button>
+                  )}
+                  {replayBtn}
+                </div>
               )}
-              {replayBtn}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))', gap: '8px' }}>
                 {pp.playType !== 'Honest' && !isZeroCredibility && (
                   <button
                     className="btn btn-danger"
-                    style={{ flex: 1 }}
                     onClick={() => handleAction(() => moves?.rejectTile())}
                   >
                     Expose
@@ -86,7 +89,6 @@ export function PendingPlayModal({
                 )}
                 <button
                   className="btn btn-success"
-                  style={{ flex: 1 }}
                   onClick={() => handleAction(() => moves?.acceptTile())}
                 >
                   Accept
@@ -101,17 +103,15 @@ export function PendingPlayModal({
             </div>
             <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
               {replayBtn}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <button
                   className="btn btn-danger"
-                  style={{ flex: 1 }}
                   onClick={() => handleAction(() => moves?.challengeTile())}
                 >
                   Challenge
                 </button>
                 <button
                   className="btn btn-success"
-                  style={{ flex: 1 }}
                   onClick={() => handleAction(() => moves?.passChallenge())}
                 >
                   Pass
@@ -119,73 +119,50 @@ export function PendingPlayModal({
               </div>
             </div>
           </>
-        ) : pp.step === 'receiverReward' && isReceiver ? (
-          <>
-            <div className="turn-card-header">
-              <h3>Choose Reward</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-              <button
-                className="btn btn-success"
-                disabled={isFullCredibility}
-                onClick={() => handleAction(() => moves?.claimReceiverCredibilityReward())}
-                style={{ opacity: isFullCredibility ? 0.5 : 1, cursor: isFullCredibility ? 'not-allowed' : 'pointer' }}
-              >
-                Restore Credibility {isFullCredibility ? '(Max)' : '(+2)'}
-              </button>
-              <button
-                className="btn btn-warning"
-                onClick={() => handleAction(() => moves?.chooseReceiverAdvanceReward())}
-              >
-                Take Free Advance
-              </button>
-            </div>
-          </>
         ) : pp.step === 'challengerReward' && isRewardChallenger ? (
-          <>
-            <div className="turn-card-header">
-              <h3>Choose Reward</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-              <button
-                className={isFullCredibility ? 'btn btn-secondary' : 'btn btn-success'}
-                onClick={() => handleAction(() => moves?.claimChallengerCredibility())}
-              >
-                {isFullCredibility ? 'Continue (Skip Reward)' : 'Restore Credibility (+1)'}
-              </button>
-              {(() => {
-                const facedownTiles = (myPlayer.bank || []).filter((item) => item.faceDown);
-                if (facedownTiles.length === 0) return null;
-                const facedownFunding = facedownTiles.reduce((sum, item) => sum + (TILES[item.tileId]?.funding || 0), 0);
-                return (
-                  <div className="reexecute-tile-banner challenger-reward-banner" style={{ margin: '2px 0 0' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                      {facedownTiles.map((item, idx) => {
-                        const tileFunding = TILES[item.tileId]?.funding || 0;
-                        return (
-                          <img
-                            key={`${item.tileId}-${idx}`}
-                            src={getTileImageUrl(item.tileId)}
-                            alt={item.tileId === '___' ? '' : `Tile ${item.tileId}`}
-                            title={`Tile ${item.tileId} (K${tileFunding})`}
-                            style={{ width: '53px', height: 'auto', aspectRatio: '2.5 / 5', objectFit: 'contain', flexShrink: 0 }}
-                          />
-                        );
-                      })}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '120px', flex: 1 }}>
-                      <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                        Or spend your face-down bank tile{facedownTiles.length === 1 ? '' : 's'} on 1 Bureaucracy action below.
-                      </span>
-                      <span style={{ color: 'var(--accent-gold)', fontWeight: 600, fontSize: '14px' }}>
-                        Available Funding: K{facedownFunding}
-                      </span>
-                    </div>
+          (() => {
+            const facedownTiles = (myPlayer.bank || []).filter((item) => item.faceDown);
+            const tileWord = facedownTiles.length === 1 ? 'tile' : 'tiles';
+            return (
+              <div className="reexecute-tile-banner challenger-reward-banner" style={{ flex: 1, margin: 0, padding: '10px', flexDirection: 'column', alignItems: 'stretch', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                    Choose Reward
+                  </span>
+                  {isFullCredibility && (
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: '2px 8px', fontSize: '11px' }}
+                      onClick={() => handleAction(() => moves?.claimChallengerCredibility())}
+                    >
+                      Skip Reward
+                    </button>
+                  )}
+                </div>
+                <span style={{ fontSize: '12px', color: 'var(--text-main)', lineHeight: 1.3 }}>
+                  {isFullCredibility
+                    ? `Spend your face-down bank ${tileWord} on 1 Bureaucracy action below.`
+                    : `Click your credibility token to restore +1 credibility, or spend your face-down bank ${tileWord} on 1 Bureaucracy action below.`}
+                </span>
+                {facedownTiles.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '4px', alignItems: 'center', overflow: 'hidden' }}>
+                    {facedownTiles.map((item, idx) => {
+                      const tileFunding = TILES[item.tileId]?.funding || 0;
+                      return (
+                        <img
+                          key={`${item.tileId}-${idx}`}
+                          src={getTileImageUrl(item.tileId)}
+                          alt={item.tileId === '___' ? '' : `Tile ${item.tileId}`}
+                          title={`Tile ${item.tileId} (K${tileFunding})`}
+                          style={{ width: '32px', height: 'auto', aspectRatio: '2.5 / 5', objectFit: 'contain', flexShrink: 0 }}
+                        />
+                      );
+                    })}
                   </div>
-                );
-              })()}
-            </div>
-          </>
+                )}
+              </div>
+            );
+          })()
         ) : isSupportedOutcomeNotice(G?.lastOutcomeNotice) ? (
           <OutcomeNoticeCard
             notice={G.lastOutcomeNotice}

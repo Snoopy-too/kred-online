@@ -20,7 +20,7 @@ export function SupportDropCard({ G, playerID, getPlayerLabel }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'center' }}>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.45 }}>
             Your piece in <strong>{fromLabel}</strong> has no piece in{' '}
-            {isOffice ? 'either rostrum' : 'any supporting seat'} to support it. Click a highlighted {isOffice ? 'rostrum' : 'seat'} on the board.
+            {isOffice ? 'either rostrum' : 'any supporting seat'} to support it. Click {G.expertMode ? 'an open' : 'a highlighted'} {isOffice ? 'rostrum' : 'seat'} on the board.
           </p>
         </div>
       ) : (

@@ -20,7 +20,7 @@ export function makeInitialG(numPlayers, seed) {
     boardState[`${domainKey}_rostrum1`] = null;
     boardState[`${domainKey}_rostrum2`] = null;
     for (let s = 1; s <= 6; s++) {
-      boardState[`${domainKey}_seat${s}`] = s % 2 !== 0
+      boardState[`${domainKey}_seat${s}`] = s % 2 === 0
         ? { id: `init_m_${domainKey}_s${s}`, type: PIECE_TYPES.MARK }
         : null;
     }

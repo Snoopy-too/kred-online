@@ -19,10 +19,46 @@ import {
 
 export { finishPendingPlayOrReward };
 
+function finalizeCampaignPlay(G, moverId, tileId, receiverId, moveActions, backupBoard, backupCommunity, alreadyAnimatedLive = false) {
+  const playType = classifyPlay(moveActions, tileId, moverId, backupBoard, backupCommunity, G.numPlayers);
+  G.nextMoverId = receiverId;
+  G.pendingPlay = {
+    moverId,
+    receiverId,
+    tileIdPlayed: tileId,
+    movesMade: moveActions,
+    playType,
+    backupBoard,
+    backupCommunity,
+    moverStartCredNotches: G.players[moverId].credibilityNotchesLost,
+    step: 'receipt',
+    challengesPassed: [],
+    ...(alreadyAnimatedLive ? { alreadyAnimatedLive: true } : {})
+  };
+  G.lastOutcomeNotice = null;
+  if (receiverId === moverId) {
+    recordPlayerStat(G, moverId, 'tilesPlayedToSelf');
+  }
+  const movesLog = formatTurnMovesLog(moverId, moveActions);
+  if (movesLog) appendGameLog(G, movesLog, 'info');
+  appendGameLog(G, `Player ${moverId} played a tile to Player ${receiverId}.`, 'play');
+  logKgnCampaignPlay(G, moverId, receiverId, moveActions, backupBoard);
+
+  if (receiverId === moverId || G.players[receiverId].credibilityNotchesLost >= 3) {
+    if (getOrderedChallengers(G).length === 0) {
+      resolvePlayToBank(G);
+      queuePendingSupport(G, { phase: 'campaign', afterResolve: 'victoryCheck', tileId });
+    } else {
+      G.pendingPlay.step = 'challenge';
+    }
+  }
+}
+
 export function createCampaignPhase() {
   return {
     onBegin: ({ G }) => {
       if (!G || !G.players) return;
+      G.liveTurn = null;
       G.lastOutcomeNotice = null;
       appendGameLog(G, 'CAMPAIGN', 'phase');
       logKgnPhase(G, 'campaign');
@@ -121,43 +157,48 @@ export function createCampaignPhase() {
         const backupCommunity = JSON.parse(JSON.stringify(G.community));
 
         moveActions.forEach(m => applyMoveToState(m, G.boardState, G.community));
-
-        const playType = classifyPlay(moveActions, tileId, moverId, backupBoard, backupCommunity, G.numPlayers);
         G.players[moverId].hand = G.players[moverId].hand.filter(t => t !== tileId);
+        G.liveTurn = null;
+        finalizeCampaignPlay(G, moverId, tileId, receiverId, moveActions, backupBoard, backupCommunity, false);
+        events.endTurn();
+      },
 
-        G.nextMoverId = receiverId;
-
-        G.pendingPlay = {
-          moverId,
-          receiverId,
-          tileIdPlayed: tileId,
-          movesMade: moveActions,
-          playType,
-          backupBoard,
-          backupCommunity,
-          moverStartCredNotches: G.players[moverId].credibilityNotchesLost,
-          step: 'receipt',
-          challengesPassed: []
-        };
-
-        G.lastOutcomeNotice = null;
-        if (receiverId === moverId) {
-          recordPlayerStat(G, moverId, 'tilesPlayedToSelf');
+      commitExpertMove: ({ G, playerID }, moveAction) => {
+        if (!G.expertMode || G.pendingSupport || G.pendingPlay || !moveAction) return INVALID_MOVE;
+        const moverId = String(playerID);
+        if (!G.liveTurn) {
+          G.liveTurn = {
+            moverId,
+            backupBoard: JSON.parse(JSON.stringify(G.boardState)),
+            backupCommunity: JSON.parse(JSON.stringify(G.community)),
+            moves: [],
+            tileId: null,
+            receiverId: null
+          };
         }
-        const movesLog = formatTurnMovesLog(moverId, moveActions);
-        if (movesLog) appendGameLog(G, movesLog, 'info');
-        appendGameLog(G, `Player ${moverId} played a tile to Player ${receiverId}.`, 'play');
-        logKgnCampaignPlay(G, moverId, receiverId, moveActions, backupBoard);
+        if (G.liveTurn.moverId !== moverId || G.liveTurn.moves.length >= 2) return INVALID_MOVE;
+        const nextMoves = [...G.liveTurn.moves, moveAction];
+        const val = validateMoveCombination(nextMoves, moverId, G.liveTurn.backupBoard, G.liveTurn.backupCommunity, G.numPlayers);
+        if (!val.valid) return INVALID_MOVE;
+        applyMoveToState(moveAction, G.boardState, G.community);
+        G.liveTurn.moves.push(moveAction);
+      },
 
-        if (G.players[receiverId].credibilityNotchesLost >= 3) {
-          if (getOrderedChallengers(G).length === 0) {
-            resolvePlayToBank(G);
-            queuePendingSupport(G, { phase: 'campaign', afterResolve: 'victoryCheck', tileId });
-          } else {
-            G.pendingPlay.step = 'challenge';
-          }
-        }
+      commitExpertTileDrop: ({ G, playerID, events }, { tileId, receiverId } = {}) => {
+        if (!G.expertMode || G.pendingSupport || G.pendingPlay || !tileId || !receiverId) return INVALID_MOVE;
+        const moverId = String(playerID);
+        const targetReceiver = String(receiverId);
+        if (G.liveTurn && G.liveTurn.moverId !== moverId) return INVALID_MOVE;
+        if (!G.players[moverId] || !G.players[moverId].hand.includes(tileId)) return INVALID_MOVE;
+        if (!getValidReceivers(G, moverId).includes(targetReceiver)) return INVALID_MOVE;
 
+        const movesMade = G.liveTurn ? G.liveTurn.moves : [];
+        const backupBoard = G.liveTurn ? G.liveTurn.backupBoard : JSON.parse(JSON.stringify(G.boardState));
+        const backupCommunity = G.liveTurn ? G.liveTurn.backupCommunity : JSON.parse(JSON.stringify(G.community));
+
+        G.players[moverId].hand = G.players[moverId].hand.filter(t => t !== tileId);
+        G.liveTurn = null;
+        finalizeCampaignPlay(G, moverId, tileId, targetReceiver, movesMade, backupBoard, backupCommunity, true);
         events.endTurn();
       },
 
@@ -410,7 +451,7 @@ export function createCampaignPhase() {
           return INVALID_MOVE;
         }
         if (G.players[receiverId].credibilityNotchesLost > 0) {
-          G.players[receiverId].credibilityNotchesLost = Math.max(0, G.players[receiverId].credibilityNotchesLost - 2);
+          G.players[receiverId].credibilityNotchesLost = 0;
         }
         logKgnReward(G, '2');
         finishPendingPlayOrReward(G);
@@ -484,7 +525,7 @@ export function createCampaignPhase() {
     next: 'bureaucracy',
     endIf: ({ G }) => {
       if (!G || !G.players) return false;
-      return Object.values(G.players).every(p => p && p.hand && p.hand.length === 0) && !G.pendingPlay && !G.pendingSupport;
+      return Object.values(G.players).every(p => p && p.hand && p.hand.length === 0) && !G.liveTurn && !G.pendingPlay && !G.pendingSupport;
     }
   };
 }

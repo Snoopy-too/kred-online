@@ -18358,10 +18358,44 @@ function createBureaucracyPhase() {
 }
 
 // src/domain/phases/campaignPhase.js
+function finalizeCampaignPlay(G2, moverId, tileId, receiverId, moveActions, backupBoard, backupCommunity, alreadyAnimatedLive = false) {
+  const playType = classifyPlay(moveActions, tileId, moverId, backupBoard, backupCommunity, G2.numPlayers);
+  G2.nextMoverId = receiverId;
+  G2.pendingPlay = {
+    moverId,
+    receiverId,
+    tileIdPlayed: tileId,
+    movesMade: moveActions,
+    playType,
+    backupBoard,
+    backupCommunity,
+    moverStartCredNotches: G2.players[moverId].credibilityNotchesLost,
+    step: "receipt",
+    challengesPassed: [],
+    ...alreadyAnimatedLive ? { alreadyAnimatedLive: true } : {}
+  };
+  G2.lastOutcomeNotice = null;
+  if (receiverId === moverId) {
+    recordPlayerStat(G2, moverId, "tilesPlayedToSelf");
+  }
+  const movesLog = formatTurnMovesLog(moverId, moveActions);
+  if (movesLog) appendGameLog(G2, movesLog, "info");
+  appendGameLog(G2, `Player ${moverId} played a tile to Player ${receiverId}.`, "play");
+  logKgnCampaignPlay(G2, moverId, receiverId, moveActions, backupBoard);
+  if (receiverId === moverId || G2.players[receiverId].credibilityNotchesLost >= 3) {
+    if (getOrderedChallengers(G2).length === 0) {
+      resolvePlayToBank(G2);
+      queuePendingSupport(G2, { phase: "campaign", afterResolve: "victoryCheck", tileId });
+    } else {
+      G2.pendingPlay.step = "challenge";
+    }
+  }
+}
 function createCampaignPhase() {
   return {
     onBegin: ({ G: G2 }) => {
       if (!G2 || !G2.players) return;
+      G2.liveTurn = null;
       G2.lastOutcomeNotice = null;
       appendGameLog(G2, "CAMPAIGN", "phase");
       logKgnPhase(G2, "campaign");
@@ -18451,37 +18485,44 @@ function createCampaignPhase() {
         const backupBoard = JSON.parse(JSON.stringify(G2.boardState));
         const backupCommunity = JSON.parse(JSON.stringify(G2.community));
         moveActions.forEach((m) => applyMoveToState(m, G2.boardState, G2.community));
-        const playType = classifyPlay(moveActions, tileId, moverId, backupBoard, backupCommunity, G2.numPlayers);
         G2.players[moverId].hand = G2.players[moverId].hand.filter((t2) => t2 !== tileId);
-        G2.nextMoverId = receiverId;
-        G2.pendingPlay = {
-          moverId,
-          receiverId,
-          tileIdPlayed: tileId,
-          movesMade: moveActions,
-          playType,
-          backupBoard,
-          backupCommunity,
-          moverStartCredNotches: G2.players[moverId].credibilityNotchesLost,
-          step: "receipt",
-          challengesPassed: []
-        };
-        G2.lastOutcomeNotice = null;
-        if (receiverId === moverId) {
-          recordPlayerStat(G2, moverId, "tilesPlayedToSelf");
+        G2.liveTurn = null;
+        finalizeCampaignPlay(G2, moverId, tileId, receiverId, moveActions, backupBoard, backupCommunity, false);
+        events.endTurn();
+      },
+      commitExpertMove: ({ G: G2, playerID }, moveAction) => {
+        if (!G2.expertMode || G2.pendingSupport || G2.pendingPlay || !moveAction) return INVALID_MOVE;
+        const moverId = String(playerID);
+        if (!G2.liveTurn) {
+          G2.liveTurn = {
+            moverId,
+            backupBoard: JSON.parse(JSON.stringify(G2.boardState)),
+            backupCommunity: JSON.parse(JSON.stringify(G2.community)),
+            moves: [],
+            tileId: null,
+            receiverId: null
+          };
         }
-        const movesLog = formatTurnMovesLog(moverId, moveActions);
-        if (movesLog) appendGameLog(G2, movesLog, "info");
-        appendGameLog(G2, `Player ${moverId} played a tile to Player ${receiverId}.`, "play");
-        logKgnCampaignPlay(G2, moverId, receiverId, moveActions, backupBoard);
-        if (G2.players[receiverId].credibilityNotchesLost >= 3) {
-          if (getOrderedChallengers(G2).length === 0) {
-            resolvePlayToBank(G2);
-            queuePendingSupport(G2, { phase: "campaign", afterResolve: "victoryCheck", tileId });
-          } else {
-            G2.pendingPlay.step = "challenge";
-          }
-        }
+        if (G2.liveTurn.moverId !== moverId || G2.liveTurn.moves.length >= 2) return INVALID_MOVE;
+        const nextMoves = [...G2.liveTurn.moves, moveAction];
+        const val = validateMoveCombination(nextMoves, moverId, G2.liveTurn.backupBoard, G2.liveTurn.backupCommunity, G2.numPlayers);
+        if (!val.valid) return INVALID_MOVE;
+        applyMoveToState(moveAction, G2.boardState, G2.community);
+        G2.liveTurn.moves.push(moveAction);
+      },
+      commitExpertTileDrop: ({ G: G2, playerID, events }, { tileId, receiverId } = {}) => {
+        if (!G2.expertMode || G2.pendingSupport || G2.pendingPlay || !tileId || !receiverId) return INVALID_MOVE;
+        const moverId = String(playerID);
+        const targetReceiver = String(receiverId);
+        if (G2.liveTurn && G2.liveTurn.moverId !== moverId) return INVALID_MOVE;
+        if (!G2.players[moverId] || !G2.players[moverId].hand.includes(tileId)) return INVALID_MOVE;
+        if (!getValidReceivers(G2, moverId).includes(targetReceiver)) return INVALID_MOVE;
+        const movesMade = G2.liveTurn ? G2.liveTurn.moves : [];
+        const backupBoard = G2.liveTurn ? G2.liveTurn.backupBoard : JSON.parse(JSON.stringify(G2.boardState));
+        const backupCommunity = G2.liveTurn ? G2.liveTurn.backupCommunity : JSON.parse(JSON.stringify(G2.community));
+        G2.players[moverId].hand = G2.players[moverId].hand.filter((t2) => t2 !== tileId);
+        G2.liveTurn = null;
+        finalizeCampaignPlay(G2, moverId, tileId, targetReceiver, movesMade, backupBoard, backupCommunity, true);
         events.endTurn();
       },
       acceptTile: ({ G: G2, ctx, playerID, events }) => {
@@ -18692,7 +18733,7 @@ function createCampaignPhase() {
           return INVALID_MOVE;
         }
         if (G2.players[receiverId].credibilityNotchesLost > 0) {
-          G2.players[receiverId].credibilityNotchesLost = Math.max(0, G2.players[receiverId].credibilityNotchesLost - 2);
+          G2.players[receiverId].credibilityNotchesLost = 0;
         }
         logKgnReward(G2, "2");
         finishPendingPlayOrReward(G2);
@@ -18758,7 +18799,7 @@ function createCampaignPhase() {
     next: "bureaucracy",
     endIf: ({ G: G2 }) => {
       if (!G2 || !G2.players) return false;
-      return Object.values(G2.players).every((p2) => p2 && p2.hand && p2.hand.length === 0) && !G2.pendingPlay && !G2.pendingSupport;
+      return Object.values(G2.players).every((p2) => p2 && p2.hand && p2.hand.length === 0) && !G2.liveTurn && !G2.pendingPlay && !G2.pendingSupport;
     }
   };
 }
@@ -18785,6 +18826,9 @@ function filterSoloPlayerView(G2, playerID) {
         nextG.draftPacks[id] = nextG.draftPacks[id].map(() => "HIDDEN");
       }
     });
+  }
+  if (nextG.liveTurn && String(nextG.liveTurn.moverId) !== pId && nextG.liveTurn.tileId) {
+    nextG.liveTurn.tileId = "HIDDEN";
   }
   if (nextG.pendingPlay && (nextG.pendingPlay.step === "receipt" || nextG.pendingPlay.step === "challenge")) {
     const pp = nextG.pendingPlay;
@@ -18830,7 +18874,7 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
         boardState[`${domainKey}_rostrum1`] = null;
         boardState[`${domainKey}_rostrum2`] = null;
         for (let s2 = 1; s2 <= 6; s2++) {
-          if (s2 % 2 !== 0) {
+          if (s2 % 2 === 0) {
             boardState[`${domainKey}_seat${s2}`] = { id: `init_m_${domainKey}_s${s2}`, type: PIECE_TYPES.MARK };
           } else {
             boardState[`${domainKey}_seat${s2}`] = null;
@@ -18904,6 +18948,7 @@ function createKredGame(numPlayers, skipDraft = false, options = {}) {
         draftPacks,
         draftSelectionsThisRound: {},
         draftSkippedPlayers: {},
+        liveTurn: null,
         pendingPlay: null,
         pendingSupport: null,
         nextMoverId: null,
